@@ -41,11 +41,14 @@ import {
   getStatusLabel,
   mapExtractedToPromoFormData,
   detectRewardArchetype,
+  detectGameDomain,
   getFieldStatus,
   type ExtractedPromo,
   type ExtractedPromoSubCategory,
   type ConfidenceLevel,
-  type RewardArchetype
+  type RewardArchetype,
+  type GameDomain,
+  type TogelEventReward
 } from "@/lib/openai-extractor";
 import { promoKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
@@ -664,6 +667,31 @@ export function PseudoKnowledgeSection() {
               <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-button-hover/40">
                 {extractedPromo.promo_type || "Unknown"}
               </Badge>
+              {(() => {
+                const domain = detectGameDomain(extractedPromo);
+                if (domain !== 'general') {
+                  const domainLabels: Record<GameDomain, string> = {
+                    togel: 'Togel / Lottery',
+                    slot: 'Slot',
+                    casino: 'Live Casino',
+                    sports: 'Sportsbook',
+                    general: 'Semua'
+                  };
+                  const domainColors: Record<GameDomain, string> = {
+                    togel: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
+                    slot: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
+                    casino: 'bg-pink-500/20 text-pink-400 border-pink-500/40',
+                    sports: 'bg-green-500/20 text-green-400 border-green-500/40',
+                    general: 'bg-muted text-muted-foreground'
+                  };
+                  return (
+                    <Badge variant="outline" className={`text-xs ${domainColors[domain]}`}>
+                      {domainLabels[domain]}
+                    </Badge>
+                  );
+                }
+                return null;
+              })()}
               {extractedPromo.subcategories.length > 0 && (
                 <Badge variant="outline" className="text-xs">
                   {extractedPromo.subcategories.length} Sub Kategori
@@ -750,6 +778,55 @@ export function PseudoKnowledgeSection() {
               </div>
             </div>
           )}
+
+          {/* Tabel Hadiah (Togel Event Rewards) - READ ONLY */}
+          {(() => {
+            const domain = detectGameDomain(extractedPromo);
+            const eventRewards = extractedPromo.event_rewards;
+            
+            if (domain === 'togel' && eventRewards && eventRewards.length > 0) {
+              return (
+                <div>
+                  <h4 className="text-base font-semibold text-button-hover mb-4">
+                    Tabel Hadiah
+                  </h4>
+                  {extractedPromo.applicable_markets && extractedPromo.applicable_markets.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="text-sm text-muted-foreground">Pasaran:</span>
+                      {extractedPromo.applicable_markets.map((market, i) => (
+                        <Badge key={i} variant="outline" className="text-xs bg-button-hover/20 text-button-hover border-button-hover/40">
+                          {market}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <div className="bg-muted rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-card">
+                          <th className="text-left py-2 px-4 text-muted-foreground font-medium">Prize</th>
+                          <th className="text-left py-2 px-4 text-muted-foreground font-medium">Digit</th>
+                          <th className="text-right py-2 px-4 text-muted-foreground font-medium">Hadiah</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {eventRewards.map((r, i) => (
+                          <tr key={i} className="border-b border-border/50 last:border-0">
+                            <td className="py-2 px-4 text-foreground">{r.prize_rank}</td>
+                            <td className="py-2 px-4 text-foreground">{r.digit_type}</td>
+                            <td className="py-2 px-4 text-right font-semibold text-amber-400">
+                              Rp {r.reward_amount.toLocaleString('id-ID')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
 
           {/* Terms */}
           {extractedPromo.terms_conditions && extractedPromo.terms_conditions.length > 0 && (
