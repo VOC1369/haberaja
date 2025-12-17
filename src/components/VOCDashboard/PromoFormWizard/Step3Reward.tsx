@@ -1225,45 +1225,45 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       : "Sub kategori set sendiri."}
                   </p>
                 </div>
-              </div>
-              
-              {/* Payout Direction (Global) */}
-              <div className="space-y-2 mb-6">
-                <div className="flex items-center justify-between">
-                  <Label>Payout Direction (Global)</Label>
-                  <Switch
-                    checked={data.global_payout_direction_enabled}
-                    onCheckedChange={(checked) => {
-                      onChange({ global_payout_direction_enabled: checked });
-                      if (checked && data.subcategories?.length) {
-                        const updatedSubcategories = data.subcategories.map(sub => ({
-                          ...sub,
-                          payout_direction_same_as_global: false
-                        }));
-                        onChange({ global_payout_direction_enabled: checked, subcategories: updatedSubcategories });
-                      }
-                    }}
-                  />
+                
+                {/* Payout Direction (Global) - Kolom 1, Row 2 */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Payout Direction (Global)</Label>
+                    <Switch
+                      checked={data.global_payout_direction_enabled}
+                      onCheckedChange={(checked) => {
+                        onChange({ global_payout_direction_enabled: checked });
+                        if (checked && data.subcategories?.length) {
+                          const updatedSubcategories = data.subcategories.map(sub => ({
+                            ...sub,
+                            payout_direction_same_as_global: false
+                          }));
+                          onChange({ global_payout_direction_enabled: checked, subcategories: updatedSubcategories });
+                        }
+                      }}
+                    />
+                  </div>
+                  <RadioGroup
+                    value={data.global_payout_direction || 'after'}
+                    onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })}
+                    className={cn("flex gap-6 pt-2", !data.global_payout_direction_enabled && "opacity-50 pointer-events-none")}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="before" id="global-payout-before" disabled={!data.global_payout_direction_enabled} />
+                      <Label htmlFor="global-payout-before" className="cursor-pointer font-normal">Didepan</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="after" id="global-payout-after" disabled={!data.global_payout_direction_enabled} />
+                      <Label htmlFor="global-payout-after" className="cursor-pointer font-normal">Dibelakang</Label>
+                    </div>
+                  </RadioGroup>
+                  <p className="text-xs text-muted-foreground">
+                    {data.global_payout_direction_enabled 
+                      ? "Semua sub kategori mengikuti."
+                      : "Sub kategori set sendiri."}
+                  </p>
                 </div>
-                <RadioGroup
-                  value={data.global_payout_direction || 'after'}
-                  onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })}
-                  className={cn("flex gap-6 pt-2", !data.global_payout_direction_enabled && "opacity-50 pointer-events-none")}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="before" id="global-payout-before" disabled={!data.global_payout_direction_enabled} />
-                    <Label htmlFor="global-payout-before" className="cursor-pointer font-normal">Didepan</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="after" id="global-payout-after" disabled={!data.global_payout_direction_enabled} />
-                    <Label htmlFor="global-payout-after" className="cursor-pointer font-normal">Dibelakang</Label>
-                  </div>
-                </RadioGroup>
-                <p className="text-xs text-muted-foreground">
-                  {data.global_payout_direction_enabled 
-                    ? "Semua sub kategori mengikuti."
-                    : "Sub kategori set sendiri."}
-                </p>
               </div>
 
               {/* Periode Klaim & Waktu Pembagian Bonus */}
