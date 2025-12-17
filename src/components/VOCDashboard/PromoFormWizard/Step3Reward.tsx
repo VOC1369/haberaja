@@ -695,19 +695,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
-              {/* Minimal Perhitungan - Compact, same row as Nilai Bonus */}
-              <div className="space-y-2">
-                <Label className="text-transparent select-none">Minimal</Label>
-                <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-xl h-10">
-                  <Switch
-                    checked={data.minimum_base_enabled}
-                    onCheckedChange={(checked) => onChange({ 
-                      minimum_base_enabled: checked,
-                      minimum_base: checked ? data.minimum_base : 0
-                    })}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-xs text-button-hover truncate">{getMinimumBaseLabel()}</div>
+              {/* Minimal Perhitungan - Standard toggle design */}
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center justify-between">
+                  <Label>{getMinimumBaseLabel()}</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Aktifkan</span>
+                    <Switch
+                      checked={data.minimum_base_enabled}
+                      onCheckedChange={(checked) => onChange({ 
+                        minimum_base_enabled: checked,
+                        minimum_base: checked ? data.minimum_base : 0
+                      })}
+                    />
                   </div>
                 </div>
                 {data.minimum_base_enabled && (
