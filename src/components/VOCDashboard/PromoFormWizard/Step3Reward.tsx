@@ -650,36 +650,31 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     Besaran bonus sesuai metode yang dipilih.
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>{getMinimumBaseLabel()}</Label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {data.minimum_base_enabled ? 'Ada Minimal' : 'Tanpa Minimal'}
-                      </span>
-                      <Switch
-                        checked={data.minimum_base_enabled}
-                        onCheckedChange={(checked) => onChange({ 
-                          minimum_base_enabled: checked,
-                          minimum_base: checked ? data.minimum_base : 0
-                        })}
-                      />
+                {/* Minimal Perhitungan - Styled like SubCategoryCard */}
+                <div className="space-y-2 md:col-span-2">
+                  <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+                    <Switch
+                      checked={data.minimum_base_enabled}
+                      onCheckedChange={(checked) => onChange({ 
+                        minimum_base_enabled: checked,
+                        minimum_base: checked ? data.minimum_base : 0
+                      })}
+                    />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm text-button-hover">{getMinimumBaseLabel()}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Aktifkan untuk menetapkan batas minimum perhitungan bonus
+                      </p>
                     </div>
                   </div>
-                  <Input
-                    type="text"
-                    value={data.minimum_base ? data.minimum_base.toLocaleString('id-ID') : ''}
-                    onChange={(e) => onChange({ minimum_base: Number(e.target.value.replace(/\D/g, '')) })}
-                    placeholder="Contoh: 1.000.000"
-                    disabled={!data.minimum_base_enabled}
-                    className={!data.minimum_base_enabled ? 'opacity-50' : ''}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {data.minimum_base_enabled 
-                      ? `Batas minimal ${getMinimumBaseType()} agar bonus dapat dihitung.`
-                      : `Tidak ada batas minimal — bonus dihitung dari ${getMinimumBaseType()} berapapun.`
-                    }
-                  </p>
+                  {data.minimum_base_enabled && (
+                    <Input
+                      type="text"
+                      value={data.minimum_base ? data.minimum_base.toLocaleString('id-ID') : ''}
+                      onChange={(e) => onChange({ minimum_base: Number(e.target.value.replace(/\D/g, '')) })}
+                      placeholder="Contoh: 1.000.000"
+                    />
+                  )}
                 </div>
               </div>
               {/* Ilustrasi Perhitungan - only show when percentage method */}
@@ -739,62 +734,54 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               )}
               
-              {/* Syarat Main Sebelum WD - Always visible, toggle controls validation */}
+              {/* Syarat Main Sebelum WD - Styled like SubCategoryCard */}
               <div className="md:col-span-2 mt-4">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label>Syarat Main Sebelum WD</Label>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {data.turnover_rule_enabled 
-                          ? 'Aktif — bonus harus dimainkan terlebih dahulu sebelum penarikan.'
-                          : 'Tidak aktif — bonus langsung bisa ditarik tanpa syarat main.'
-                        }
-                      </p>
-                    </div>
+                  <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
                     <Switch
                       checked={data.turnover_rule_enabled === true}
                       onCheckedChange={(checked) => onChange({ turnover_rule_enabled: checked })}
                     />
-                  </div>
-                  
-                  {/* Turnover fields - always visible for transparency */}
-                  <div className={cn(
-                    "grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 transition-opacity duration-200",
-                    !data.turnover_rule_enabled && "opacity-50"
-                  )}>
-                    <div className="space-y-2">
-                      <Label>
-                        Kelipatan Main Bonus (TO)
-                        {data.turnover_rule_enabled && <span className="text-destructive ml-1">*</span>}
-                      </Label>
-                      <SelectWithAddNew
-                        value={data.turnover_rule}
-                        onValueChange={(value) => onChange({ turnover_rule: value })}
-                        options={turnoverRuleOptions}
-                        onAddOption={(option) => setTurnoverRuleOptions([...turnoverRuleOptions, option])}
-                        onDeleteOption={handleDeleteTurnoverRule}
-                        placeholder="Pilih kelipatan main"
-                        disabled={!data.turnover_rule_enabled}
-                      />
+                    <div>
+                      <div className="font-medium text-sm text-button-hover">Syarat Main Sebelum WD</div>
                       <p className="text-xs text-muted-foreground">
-                        {data.turnover_rule_enabled 
-                          ? 'Berapa kali bonus harus dimainkan sebelum WD.'
-                          : 'Aktifkan toggle untuk mengatur syarat turnover.'
-                        }
+                        Aktifkan jika promo memiliki syarat kelipatan main (turnover) sebelum withdrawal
                       </p>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Nilai Custom</Label>
-                      <Input
-                        value={data.turnover_rule_custom || ''}
-                        onChange={(e) => onChange({ turnover_rule_custom: e.target.value })}
-                        placeholder="Contoh: 3x, 10x, 12x"
-                        disabled={!data.turnover_rule_enabled || data.turnover_rule !== 'custom'}
-                        className={(!data.turnover_rule_enabled || data.turnover_rule !== 'custom') ? 'opacity-50' : ''}
-                      />
-                    </div>
                   </div>
+                  
+                  {/* Turnover fields - only visible when enabled */}
+                  {data.turnover_rule_enabled && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      <div className="space-y-2">
+                        <Label>
+                          Kelipatan Main Bonus (TO)
+                          <span className="text-destructive ml-1">*</span>
+                        </Label>
+                        <SelectWithAddNew
+                          value={data.turnover_rule}
+                          onValueChange={(value) => onChange({ turnover_rule: value })}
+                          options={turnoverRuleOptions}
+                          onAddOption={(option) => setTurnoverRuleOptions([...turnoverRuleOptions, option])}
+                          onDeleteOption={handleDeleteTurnoverRule}
+                          placeholder="Pilih kelipatan main"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Berapa kali bonus harus dimainkan sebelum WD.
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nilai Custom</Label>
+                        <Input
+                          value={data.turnover_rule_custom || ''}
+                          onChange={(e) => onChange({ turnover_rule_custom: e.target.value })}
+                          placeholder="Contoh: 3x, 10x, 12x"
+                          disabled={data.turnover_rule !== 'custom'}
+                          className={data.turnover_rule !== 'custom' ? 'opacity-50' : ''}
+                        />
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Helper text based on promo type */}
                   {!data.turnover_rule_enabled && data.promo_type && (
@@ -944,21 +931,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </p>
               </div>
               
-              {/* Blok 2B - Game Dilarang (Blacklist) */}
+              {/* Blok 2B - Game Dilarang (Blacklist) - Styled like SubCategoryCard */}
               <div className="mt-6 pt-4 border-t border-border">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <Label className="text-sm font-semibold text-foreground">
-                      Game Dilarang (Blacklist)
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Aktifkan blacklist game untuk promo ini
-                    </p>
-                  </div>
+                <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-4">
                   <Switch
                     checked={data.game_blacklist_enabled ?? false}
                     onCheckedChange={(checked) => onChange({ game_blacklist_enabled: checked })}
                   />
+                  <div>
+                    <div className="font-medium text-sm text-button-hover">Game Dilarang (Blacklist)</div>
+                    <p className="text-xs text-muted-foreground">
+                      Aktifkan untuk kecualikan game tertentu dari promo ini
+                    </p>
+                  </div>
                 </div>
                 
                 {data.game_blacklist_enabled && (
@@ -1168,9 +1153,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     Bentuk bonus yang diterima player.
                   </p>
                 </div>
+                {/* Minimal Bonus Dicairkan - Styled like SubCategoryCard */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Minimal Bonus Dicairkan</Label>
+                  <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
                     <Switch
                       checked={data.dinamis_min_claim_enabled ?? false}
                       onCheckedChange={(checked) => onChange({ 
@@ -1178,27 +1163,21 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         dinamis_min_claim: checked ? data.dinamis_min_claim : 0
                       })}
                     />
+                    <div className="flex-1">
+                      <div className="font-medium text-sm text-button-hover">Minimal Bonus Dicairkan</div>
+                      <p className="text-xs text-muted-foreground">
+                        Aktifkan untuk menetapkan batas minimum bonus yang dapat dicairkan
+                      </p>
+                    </div>
                   </div>
-                  {data.dinamis_min_claim_enabled ? (
+                  {data.dinamis_min_claim_enabled && (
                     <Input
                       type="text"
                       value={data.dinamis_min_claim ? data.dinamis_min_claim.toLocaleString('id-ID') : ''}
                       onChange={(e) => onChange({ dinamis_min_claim: Number(e.target.value.replace(/\D/g, '')) })}
                       placeholder="Contoh: 1.000"
                     />
-                  ) : (
-                    <Input
-                      type="text"
-                      value="Tanpa minimal"
-                      disabled
-                      className="opacity-50"
-                    />
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    {data.dinamis_min_claim_enabled 
-                      ? 'Minimal nilai bonus yang bisa dicairkan player.'
-                      : 'Tidak ada batas minimal — bonus dapat dicairkan berapapun.'}
-                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Batas Maksimal Bonus</Label>
