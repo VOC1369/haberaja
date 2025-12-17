@@ -767,7 +767,7 @@ export function PseudoKnowledgeSection() {
           
           {/* INPUT SECTION - Unified Design */}
           {!extractedPromo && !isExtracting && (
-            <Card className="p-8 bg-card border border-border rounded-xl w-full max-w-2xl">
+            <Card className="form-card w-full max-w-3xl">
               {/* Header */}
               <div className="text-center mb-8">
                 <div className="icon-circle w-16 h-16 mx-auto mb-4">
