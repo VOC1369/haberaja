@@ -13,7 +13,7 @@ import { useState, useRef, useEffect } from "react";
 import { 
   Send, Sparkles, Loader2, FileText, ExternalLink, CheckCircle2, 
   AlertTriangle, Copy, XCircle, AlertCircle, ChevronDown,
-  X, RotateCcw, Terminal, HelpCircle, Paperclip, Lightbulb, Ban
+  X, RotateCcw, Terminal, HelpCircle, Paperclip, Lightbulb, Ban, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -355,10 +355,10 @@ export function PseudoKnowledgeSection() {
       const status = result.validation?.status || 'draft';
       if (status === 'ready') {
         toast.success("Ekstraksi selesai! Promo siap digunakan.");
-      } else if (status === 'draft_blocked') {
-        toast.error("Ekstraksi selesai, tapi ada error yang harus diperbaiki.");
       } else {
-        toast.warning("Ekstraksi selesai. Review warning sebelum commit.");
+        toast.info("Ekstraksi selesai. Review data sebelum melanjutkan.", {
+          description: "Klik 'Gunakan Promo' untuk edit manual di form wizard"
+        });
       }
       
     } catch (error) {
@@ -443,12 +443,8 @@ export function PseudoKnowledgeSection() {
       return;
     }
     
-    if (extractedPromo.validation?.status === 'draft_blocked') {
-      toast.error("Tidak bisa menyimpan: Ada error yang harus diperbaiki", {
-        description: "Perbaiki error terlebih dahulu atau edit dengan perintah"
-      });
-      return;
-    }
+    // No more blocking - user can always proceed
+    // Missing fields can be filled in PromoFormWizard
     
     try {
       const promoData = mapExtractedToPromoFormData(extractedPromo);
@@ -599,8 +595,6 @@ export function PseudoKnowledgeSection() {
     if (!extractedPromo) return null;
     
     const status = extractedPromo.validation?.status || 'draft';
-    const canCommit = status === 'ready';
-    const errors = extractedPromo.validation?.errors || [];
     const warnings = extractedPromo.validation?.warnings || [];
     
     return (
@@ -610,10 +604,8 @@ export function PseudoKnowledgeSection() {
           <div className="icon-circle">
             {status === 'ready' ? (
               <CheckCircle2 className="icon-circle-icon" />
-            ) : status === 'draft_blocked' ? (
-              <XCircle className="icon-circle-icon text-destructive" />
             ) : (
-              <AlertCircle className="icon-circle-icon text-warning" />
+              <Info className="icon-circle-icon text-blue-400" />
             )}
           </div>
           <div className="flex-1">
@@ -630,8 +622,7 @@ export function PseudoKnowledgeSection() {
               </Badge>
               <Badge variant="outline" className={getStatusBadgeStyle(status)}>
                 {status === 'ready' && <CheckCircle2 className="w-3 h-3 mr-1" />}
-                {status === 'draft_blocked' && <XCircle className="w-3 h-3 mr-1" />}
-                {status === 'draft' && <AlertCircle className="w-3 h-3 mr-1" />}
+                {status === 'draft' && <Info className="w-3 h-3 mr-1" />}
                 {getStatusLabel(status)}
               </Badge>
             </div>
@@ -698,27 +689,14 @@ export function PseudoKnowledgeSection() {
 
         {/* Content */}
         <div className="px-6 pb-6 space-y-6">
-          {/* Errors */}
-          {errors.length > 0 && (
-            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
-              <h4 className="text-destructive font-medium text-sm flex items-center gap-2 mb-2">
-                <XCircle className="w-4 h-4" />
-                Error ({errors.length}) — Harus diperbaiki
-              </h4>
-              <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
-                {errors.map((err, idx) => <li key={idx}>{err}</li>)}
-              </ul>
-            </div>
-          )}
-
-          {/* Warnings */}
+          {/* Review Info (was Errors/Warnings - now informational only) */}
           {warnings.length > 0 && (
-            <div className="bg-warning/10 border border-warning/30 rounded-lg p-4">
-              <h4 className="text-warning font-medium text-sm flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-4 h-4" />
-                Warning ({warnings.length})
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <h4 className="text-blue-400 font-medium text-sm flex items-center gap-2 mb-2">
+                <Info className="w-4 h-4" />
+                Review ({warnings.length}) — Dapat dilengkapi manual
               </h4>
-              <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
+              <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-muted-foreground">
                 {warnings.map((warn, idx) => <li key={idx}>{warn}</li>)}
               </ul>
             </div>
@@ -1000,7 +978,6 @@ export function PseudoKnowledgeSection() {
                   
                   <Button 
                     onClick={handleCommitPromo}
-                    disabled={extractedPromo.validation?.status === 'draft_blocked'}
                     variant="golden"
                     className="gap-2 rounded-full"
                   >
