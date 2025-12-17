@@ -38,6 +38,7 @@ export const PROMO_TYPES_WITHOUT_TURNOVER = [
   'merchandise',
   'loyalty_point',
   'referral',
+  'combo',  // Multi-tier promos biasanya tanpa TO
   // UI promo type names
   'Loyalty Point',
   'Merchandise',
@@ -46,6 +47,9 @@ export const PROMO_TYPES_WITHOUT_TURNOVER = [
   'Rollingan / Cashback',
   'Referral Bonus',
 ] as const;
+
+// Keywords di promo NAME yang mengindikasikan turnover exempt
+export const TURNOVER_EXEMPT_NAME_KEYWORDS = /event|level\s*up|naik\s*level|milestone|kejar\s*level/i;
 
 // Telco operators for deposit pulsa detection
 export const TELCO_OPERATORS = ['TELKOMSEL', 'XL', 'AXIS', 'INDOSAT', 'TRI', 'SMARTFREN'] as const;
@@ -194,7 +198,7 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
     return typeNormalized === exemptNormalized || 
            typeNormalized.includes(exemptNormalized) ||
            exemptNormalized.includes(typeNormalized);
-  });
+  }) || TURNOVER_EXEMPT_NAME_KEYWORDS.test(data.promo_name || '');
   
   data.subcategories.forEach((sub, idx) => {
     const subLabel = sub.sub_name || `Sub ${idx + 1}`;
@@ -487,6 +491,45 @@ Ciri-ciri:
 - calculation_base = "deposit"
 - payout_direction = "depan" (diberikan sebelum main)
 - turnover_rule = dari tabel/S&K (biasanya 5x-20x)
+
+🔹 Mini Game (Spin, Lucky Draw) — PROMO TYPE DETECTION
+KEYWORDS yang menunjukkan Mini Game:
+- "spin", "lucky spin", "daily spin", "free spin" (bukan free spin bonus)
+- "lucky draw", "gacha", "undian"
+- "wheel", "roda keberuntungan"
+
+JIKA terdeteksi keywords di atas:
+- promo_type: "minigame" atau "Mini Game (Spin, Lucky Draw)"
+❌ JANGAN set sebagai "welcome_bonus" atau "deposit_bonus"
+
+🔹 Event / Level Up — PROMO TYPE DETECTION  
+KEYWORDS yang menunjukkan Event/Level Up:
+- "event", "level up", "kejar level", "naik level"
+- "milestone", "achievement", "misi"
+- "challenge", "tantangan"
+
+JIKA terdeteksi keywords di atas:
+- promo_type: "event_level_up" atau "Event / Level Up"
+❌ JANGAN set sebagai "combo" atau "welcome_bonus"
+
+🔹 Max Bonus vs Max Claim — PERBEDAAN KRITIS!
+
+⚠️⚠️⚠️ WAJIB BEDAKAN:
+- "Max Bonus" / "Maksimal Bonus" = JUMLAH RUPIAH maksimal yang bisa didapat
+  → Masukkan ke field: max_bonus (angka dalam Rupiah)
+  
+- "Max Claim" / "Maksimal Claim" / "Maks Klaim" = FREKUENSI/JUMLAH KALI bisa claim
+  → Masukkan ke field: claim_limit_per_day atau mention di terms_conditions
+  → JANGAN masukkan ke max_bonus!
+
+CONTOH PARSING:
+Input: "Maksimal Claim 10 Tiket per hari"
+Output BENAR: terms_conditions: ["Maksimal claim 10 tiket per hari"]
+Output SALAH: max_bonus: 10 ❌ (INI BUKAN RUPIAH!)
+
+Input: "Max Bonus Rp 500.000"
+Output BENAR: max_bonus: 500000 ✅
+
 
 🚫 BLACKLIST EXTRACTION (PHASE 4 - GAME DIKECUALIKAN)
 
