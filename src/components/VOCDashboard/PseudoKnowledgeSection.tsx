@@ -763,11 +763,11 @@ export function PseudoKnowledgeSection() {
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
-        <div className={`p-6 max-w-5xl mx-auto ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex items-center justify-center' : 'space-y-6'}`}>
+        <div className="p-6 space-y-6 max-w-5xl mx-auto">
           
           {/* INPUT SECTION - Unified Design */}
           {!extractedPromo && !isExtracting && (
-            <Card className="form-card w-full max-w-3xl">
+            <Card className="form-card">
               {/* Header */}
               <div className="text-center mb-8">
                 <div className="icon-circle w-16 h-16 mx-auto mb-4">
