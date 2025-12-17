@@ -1,0 +1,435 @@
+@import url("https://fonts.cdnfonts.com/css/circular-std");
+@import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ====================================================================
+ * PATCH ANTI-LOVABLE VIEWPORT BUG V1.0 — Global Height Stabilizer
+ * ====================================================================
+ * Forces browser to use REAL viewport height instead of Lovable wrappers.
+ * Eliminates: multi-scroll behavior, viewport manipulation, unstable padding.
+ * ==================================================================== */
+
+/* Force browser to use REAL viewport height instead of Lovable wrappers */
+html, body {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow: hidden !important;
+  scroll-behavior: auto !important;
+  overscroll-behavior: none !important;
+}
+
+/* Ensure body behaves predictably */
+body {
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Restrict Lovable's wrapper from altering layout */
+#root,
+#__next,
+.lovable-preview,
+.lovable-preview-container,
+.lovable-editor-preview {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* APBE Main Content - Explicit scroll container with height calc */
+[data-scroll="apbe-main"] {
+  overflow-y: auto !important;
+  height: calc(100vh - 90px); /* footer height LOCKED at 90px */
+  overscroll-behavior: contain;
+}
+
+@layer base {
+  /* ====================================================================
+   * MANDATORY CSS STANDARD - LOCKED (V1.1)
+   * ====================================================================
+   * 
+   * 1. COLOR HIERARCHY (3 Layers):
+   *    bg-background (#1f1f1f) → Body/page background
+   *    bg-card       (#262626) → Cards, sections, collapsibles
+   *    bg-muted      (#353337) → Value boxes, inputs, nested content
+   * 
+   * 2. PADDING STANDARD (MANDATORY):
+   *    ┌─────────────────────────────────────────────────────────────────┐
+   *    │ Component           │ Padding Value   │ Class               │
+   *    ├─────────────────────────────────────────────────────────────────┤
+   *    │ Form Card (main)    │ 32px (p-8)     │ .form-card            │
+   *    │ Card (compact)      │ 24px (p-6)     │ p-6                   │
+   *    │ CardHeader          │ 24px (p-6)     │ default               │
+   *    │ CardContent         │ 24px (p-6)     │ default (no pt-0)     │
+   *    │ Collapsible Trigger │ 24px (p-6)     │ .collapsible-trigger  │
+   *    │ Collapsible Content │ 24px (p-6 pt-4)│ .collapsible-content  │
+   *    │ Nested Card/Box     │ 24px (p-6)     │ p-6                   │
+   *    │ Footer Bar (fixed)  │ 24px (p-6)     │ p-6                   │
+   *    │ Issue Mapping Items │ 24px (p-6)     │ p-6                   │
+   *    │ Value Box           │ 16px (p-4)     │ p-4 (exception)       │
+   *    └─────────────────────────────────────────────────────────────────┘
+   *    
+   *    BANNED PADDING VALUES: p-3, p-4 (except value boxes), p-5, pt-4 alone
+   *    USE ONLY: p-6 (standard), p-8 (form-card)
+   * 
+   * 3. CARD STANDARD:
+   *    - Uses <Card> component with default styling
+   *    - Padding: form-card (p-8) or p-6 for compact
+   *    - Border: border border-border (automatic from Card)
+   *    - Radius: rounded-xl (automatic from Card)
+   * 
+   * 4. FORM CARD LAYOUT:
+   *    - Header: form-card-header (mb-8, flex, gap-4)
+   *    - Title: form-card-title (text-lg font-semibold text-button-hover)
+   *    - Description: form-card-description (text-sm text-muted-foreground)
+   *    - Grid: form-grid (grid-cols-1 md:grid-cols-2 gap-6)
+   *    - Section: form-section (space-y-8)
+   * 
+   * 5. TABLE STANDARD:
+   *    - Container: border border-border rounded-lg overflow-hidden
+   *    - Header: bg-card hover:bg-card
+   *    - Row hover: hover:bg-muted
+   *    - Divider: border-t border-border
+   * 
+   * 6. COLLAPSIBLE STANDARD:
+   *    - Trigger: p-6 bg-card border border-border rounded-xl
+   *    - Content: p-6 pt-4 border border-t-0 border-border rounded-b-xl
+   * 
+   * 7. INPUT STANDARD:
+   *    - All inputs: rounded-lg (Input, Select, Textarea)
+   *    - Label: text-sm font-medium text-foreground
+   *    - Helper: text-sm text-muted-foreground
+   * 
+   * 8. FONT: Inter (--font-sans)
+   * 
+   * BANNED: All opacity variations (bg-card/50, bg-muted/20, border-border/50)
+   * BANNED PADDING: p-3, p-4 (except value boxes), p-5, pt-X alone
+   * ==================================================================== */
+  
+  /* Dark Theme ONLY - Full CSS Documentation */
+  :root {
+    /* ========== BACKGROUND COLORS (3-LAYER HIERARCHY) ========== */
+    --background: 0 0% 12%; /* #1f1f1f - Layer 1: Darkest (body) */
+    --card: 0 0% 15%; /* #262626 - Layer 2: Card backgrounds */
+    --muted: 260 2% 21%; /* #353337 - Layer 3: Value boxes, inputs */
+    --secondary: 260 2% 21%; /* #353337 - Secondary buttons bg */
+    --popover: 266 4% 20.8%; /* #353435 - Dropdown/popover bg */
+
+    /* ========== TEXT COLORS ========== */
+    --foreground: 248 0.3% 98.4%; /* #FBFBFB - Primary text */
+    --muted-foreground: 257 4% 70.4%; /* #B2B0B6 - Secondary/helper text */
+    --secondary-foreground: 248 0.3% 98.4%; /* #FBFBFB - Secondary text */
+    --card-foreground: 248 0.3% 98.4%; /* #FBFBFB */
+    --popover-foreground: 248 0.3% 98.4%; /* #FBFBFB */
+
+    /* ========== PRIMARY COLORS ========== */
+    --primary: 260 6% 93%; /* #EDECEE - Primary elements */
+    --primary-foreground: 266 4% 20.8%; /* Dark text on primary */
+
+    --accent: 260 4.1% 27.9%; /* #464447 */
+    --accent-foreground: 248 0.3% 98.4%; /* #FBFBFB */
+
+    /* ========== ACCENT & BRAND COLORS ========== */
+    --button-hover: 43 96% 56%; /* #F5BC1C - Primary yellow/gold */
+    --button-hover-foreground: 0 0% 10%; /* #1A1A1A - Text on yellow bg */
+
+    /* ========== STATUS COLORS ========== */
+    --success: 142 70% 45%; /* #22C55E - Green/approved */
+    --success-foreground: 0 0% 100%;
+    --declined: 0 84% 60%; /* #F43F5E - Red/declined */
+    --declined-foreground: 0 0% 100%;
+    --warning: 38 92% 55%; /* #F59E0B - Warning orange */
+    --warning-foreground: 0 0% 100%;
+    --destructive: 349 89% 60%; /* #F43F5E - Red (same as declined) */
+    --destructive-foreground: 0 0% 100%;
+
+    /* ========== BORDER & INPUT ========== */
+    --border: 0 0% 20%; /* #262626 - Darker border, subtle separation */
+    --input: 0 0% 25%; /* #404040 - Input background */
+    --ring: 264 2.7% 55.1%; /* #8A868F - Focus ring */
+
+    /* ========== BORDER RADIUS ========== */
+    --radius: 0.625rem; /* 10px - Base radius */
+
+    /* ========== SHADOWS & EFFECTS ========== */
+    --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+    --shadow-medium: 0 4px 16px -4px hsl(0 0% 0% / 0.4);
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.1);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.1);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.15), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.15), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.2), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.2), 0 4px 6px -1px hsl(0 0% 0% / 0.2);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.2), 0 8px 10px -1px hsl(0 0% 0% / 0.2);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.35);
+
+    /* ========== GLOW EFFECTS ========== */
+    --focus-ring: 0 0 0 3px hsla(43, 96%, 56%, 0.3);
+    --focus-glow: 0 0 20px hsla(43, 96%, 56%, 0.4);
+    --error-glow: 0 0 20px hsla(0, 84%, 60%, 0.4);
+    --success-glow: 0 0 20px hsla(142, 70%, 45%, 0.4);
+
+    /* ========== TRANSITIONS ========== */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* ========== SIDEBAR COLORS ========== */
+    --sidebar-background: 0 0% 12%;
+    --sidebar-foreground: 248 0.3% 98.4%;
+    --sidebar-primary: 43 96% 56%; /* Golden yellow for active */
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 260 4.1% 27.9%;
+    --sidebar-accent-foreground: 248 0.3% 98.4%;
+    --sidebar-border: 0 0% 100% / 10%;
+    --sidebar-ring: 43 96% 56%;
+    --sidebar: 266 4% 20.8%;
+
+    /* ========== CHART COLORS ========== */
+    --chart-1: 43 96% 56%;
+    --chart-2: 142 70% 45%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 257 4% 70.4%;
+
+    /* ========== OTHER COLORS ========== */
+    --purple: 280 65% 55%;
+    --purple-foreground: 0 0% 100%;
+
+    /* ========== FONT FAMILIES ========== */
+    --font-sans: 'Circular Std', 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-serif: 'Lora', ui-serif, Georgia, serif;
+    --font-mono: 'Space Mono', ui-monospace, monospace;
+
+    /* ========== GLASS EFFECTS ========== */
+    --glass-bg: hsla(0, 0%, 20%, 0.7);
+    --glass-border: hsla(0, 0%, 40%, 0.3);
+    --glass-shadow: 0 8px 32px 0 hsla(0, 0%, 0%, 0.4);
+
+    --gradient-liquid: linear-gradient(135deg,
+      hsla(0, 0%, 40%, 0.15) 0%,
+      hsla(0, 0%, 50%, 0.1) 50%,
+      hsla(0, 0%, 40%, 0.15) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--muted)));
+    --gradient-subtle: linear-gradient(180deg, hsl(var(--background)), hsl(var(--card)));
+  }
+}
+
+@layer utilities {
+  /* ========== GLASS CARD ========== */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    position: relative;
+  }
+
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg,
+      hsla(43, 96%, 56%, 0.2),
+      hsla(43, 96%, 56%, 0.1),
+      hsla(43, 96%, 56%, 0.2));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    animation: border-glow 4s ease-in-out infinite;
+  }
+
+  @keyframes border-glow {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+  }
+
+  /* ========== LIQUID GRADIENT ========== */
+  .liquid-gradient {
+    background: var(--gradient-liquid);
+    background-size: 200% 200%;
+    animation: liquid-flow 15s ease-in-out infinite;
+  }
+
+  @keyframes liquid-flow {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* ========== SHAKE ANIMATION ========== */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  .input-error {
+    animation: shake 0.3s ease-in-out;
+  }
+
+  /* ========== SIDEBAR MENU STYLING ========== */
+  .sidebar-menu-active {
+    background-color: hsl(var(--button-hover)) !important;
+    color: hsl(var(--button-hover-foreground)) !important;
+  }
+
+  .sidebar-submenu-active {
+    color: hsl(var(--button-hover)) !important;
+    font-weight: 700 !important;
+    background: transparent !important;
+  }
+
+  .sidebar-submenu-hover:hover {
+    color: hsl(var(--button-hover)) !important;
+    background: transparent !important;
+  }
+
+  /* ========== COLLAPSIBLE BLOCK STYLES ========== */
+  /* 
+   * MANDATORY COLLAPSIBLE PADDING STANDARD:
+   * - Trigger: p-6 (24px) - same as CardHeader
+   * - Content: p-6 pt-4 (24px sides/bottom, 16px top)
+   */
+  .collapsible-trigger {
+    @apply flex items-center justify-between p-6 bg-card rounded-t-xl border border-border cursor-pointer hover:bg-muted transition-colors;
+  }
+
+  .collapsible-content {
+    @apply p-6 pt-4 border border-t-0 border-border rounded-b-xl bg-card space-y-4;
+  }
+
+  /* ========== FORMULA INPUT ROW ========== */
+  .formula-input-row {
+    @apply flex items-center gap-3 p-3 bg-muted rounded-lg border border-border;
+  }
+
+  /* ========== INFO BOX (Blue) ========== */
+  .info-box {
+    @apply p-3 mb-4 bg-blue-500/10 border border-blue-500/20 rounded-lg;
+  }
+
+  .info-box-text {
+    @apply text-xs text-blue-400;
+  }
+
+  /* ========== REVIEW SECTION BOX ========== */
+  .review-section {
+    @apply space-y-4 p-4 bg-card rounded-lg border border-border;
+  }
+
+  .review-section-header {
+    @apply flex items-center justify-between border-b border-border pb-2;
+  }
+
+  /* ========== ICON CIRCLE ========== */
+  .icon-circle {
+    @apply w-10 h-10 rounded-full bg-button-hover/20 flex items-center justify-center flex-shrink-0;
+  }
+
+  .icon-circle-icon {
+    @apply h-5 w-5 text-button-hover;
+  }
+
+  /* ========== RADIO CARD STYLES ========== */
+  .radio-card {
+    @apply flex-1 p-4 rounded-lg border-2 cursor-pointer transition-all border-border hover:border-button-hover/50;
+  }
+
+  .radio-card-selected {
+    @apply flex-1 p-4 rounded-lg border-2 cursor-pointer transition-all border-button-hover bg-button-hover/10;
+  }
+
+  /* ========== FORM CARD STANDARD ========== */
+  /* 
+   * MANDATORY CARD STYLING FOR ALL FORMS:
+   * - Padding: p-8 (32px) for main cards, p-6 (24px) for nested
+   * - Header margin: mb-8 (32px) between header and content
+   * - Grid gap: gap-6 (24px) between form fields
+   * - Section gap: space-y-8 (32px) between sections
+   */
+  .form-card {
+    @apply p-8;
+  }
+
+  .form-card-header {
+    @apply mb-8 flex items-center gap-4;
+  }
+
+  .form-card-title {
+    @apply text-lg font-semibold text-button-hover;
+  }
+
+  .form-card-description {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .form-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+  }
+
+  .form-section {
+    @apply space-y-6;
+  }
+
+  /* ========== APBE LAYOUT SYSTEM V2.0 ========== */
+  /* 
+   * CLEAN LAYOUT ARCHITECTURE FOR ALL DASHBOARD PAGES
+   * Eliminates: stretching, excessive spacing, inconsistent padding
+   * 
+   * USAGE:
+   * 1. page-wrapper: Wraps all page content (inside <main>)
+   * 2. page-content: Direct child, contains actual content
+   * 3. fixed-footer-spacer: Bottom spacing for fixed footer pages
+   */
+  
+  /* Page wrapper - used inside main for all page content */
+  .page-wrapper {
+    @apply max-w-7xl mx-auto w-full;
+  }
+
+  /* Fixed footer spacer - adds space at bottom when fixed footer is visible */
+  .fixed-footer-spacer {
+    @apply pb-24;
+  }
+
+  /* Standard footer bar - responsive padding */
+.footer-bar {
+  @apply fixed bottom-0 left-0 md:left-64 right-0 bg-background border-t border-border px-6 py-4 z-50;
+}
+
+  .footer-bar-content {
+    @apply flex items-center justify-between max-w-7xl mx-auto;
+  }
+
+  /* ========== DIALOG RADIUS OVERRIDE ========== */
+  /* Override shadcn default rounded-lg → rounded-xl */
+  [role="dialog"],
+  [role="alertdialog"] {
+    @apply rounded-xl;
+  }
+}
+
+@layer base {
+  /* Global font override - memastikan semua elemen menggunakan Circular Std */
+  *, *::before, *::after {
+    @apply border-border;
+    font-family: var(--font-sans) !important;
+  }
+  
+  /* Exception untuk monospace elements - gunakan IBM Plex Mono */
+  code, pre, kbd, samp, .font-mono {
+    font-family: 'IBM Plex Mono', Consolas, Menlo, Monaco, 'Courier New', monospace !important;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans) !important;
+  }
+}

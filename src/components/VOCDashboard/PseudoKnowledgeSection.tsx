@@ -1,0 +1,1029 @@
+/**
+ * PROMO EXTRACTOR - Single-Session Extraction Tool
+ * 
+ * NOT a chat assistant, workspace, or draft manager.
+ * Simple: Parse → Mutate → Gate (commit or discard)
+ * 
+ * Storage:
+ * - sessionStorage for temporary state (via extractorSession)
+ * - localStorage for final commit to KB (via promoKB)
+ */
+
+import { useState, useRef, useEffect } from "react";
+import { 
+  Send, Link2, Sparkles, Loader2, FileText, ExternalLink, CheckCircle2, 
+  AlertTriangle, Copy, ShieldAlert, XCircle, AlertCircle, ChevronDown,
+  Upload, X, RotateCcw, Code, ImageIcon, Terminal, HelpCircle
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { 
+  extractPromoFromContent, 
+  extractPromoFromImage,
+  fetchUrlContent, 
+  getStatusBadgeStyle,
+  getStatusLabel,
+  mapExtractedToPromoFormData,
+  type ExtractedPromo,
+  type ExtractedPromoSubCategory,
+  type ConfidenceLevel
+} from "@/lib/openai-extractor";
+import { promoKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
+import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
+
+// Helper: Title Case for mode badges
+const formatPromoMode = (mode: string): string => {
+  if (mode === 'multi') return 'Multi Variant';
+  if (mode === 'single') return 'Single';
+  return mode.charAt(0).toUpperCase() + mode.slice(1);
+};
+
+// Helper: Format game type to Titlecase
+const formatGameType = (type: string): string => {
+  return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
+};
+
+// Helper: COMBO Summary - Payout direction
+const getPayoutSummary = (subs: ExtractedPromoSubCategory[]): string => {
+  const depan = subs.filter(s => s.payout_direction === 'depan').length;
+  const belakang = subs.filter(s => s.payout_direction === 'belakang').length;
+  if (depan > 0 && belakang > 0) return 'Campuran';
+  if (depan > 0) return 'Semua Depan';
+  if (belakang > 0) return 'Semua Belakang';
+  return '-';
+};
+
+// Helper: COMBO Summary - Game types
+const getGameTypesSummary = (subs: ExtractedPromoSubCategory[]): string => {
+  const types = [...new Set(subs.flatMap(s => s.game_types || []))];
+  if (types.length === 0) return '-';
+  const formatted = types.map(formatGameType);
+  if (formatted.length > 3) return `${formatted.slice(0, 2).join(', ')} +${formatted.length - 2}`;
+  return formatted.join(', ');
+};
+
+// Helper: COMBO Summary - Blacklist status
+const getBlacklistSummary = (data: ExtractedPromo): string => {
+  const subsWithBlacklist = data.subcategories.filter(s => s.blacklist?.enabled).length;
+  const globalActive = data.global_blacklist?.enabled;
+  if (globalActive && subsWithBlacklist > 0) return `Global + ${subsWithBlacklist} Varian`;
+  if (globalActive) return 'Global Aktif';
+  if (subsWithBlacklist > 0) return `${subsWithBlacklist} Varian`;
+  return 'Tidak Aktif';
+};
+
+export function PseudoKnowledgeSection() {
+  // Input state
+  const [inputMode, setInputMode] = useState<InputMode>('url');
+  const [currentInput, setCurrentInput] = useState('');
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  
+  // Extraction state
+  const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  
+  // Edit command state
+  const [editInput, setEditInput] = useState('');
+  const [editHistory, setEditHistory] = useState<EditHistoryItem[]>([]);
+  const [showEditHelp, setShowEditHelp] = useState(false);
+  
+  // Navigation guards
+  const [hasUnsavedData, setHasUnsavedData] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+  
+  const scrollBottomRef = useRef<HTMLDivElement>(null);
+
+  // ============================================
+  // SESSION RESTORE (SILENT - Toast Only)
+  // ============================================
+  
+  useEffect(() => {
+    const saved = extractorSession.load();
+    
+    if (saved?.extractedPromo) {
+      // Langsung restore TANPA modal/prompt
+      setExtractedPromo(saved.extractedPromo);
+      setEditHistory(saved.editHistory || []);
+      setInputMode(saved.inputMode || 'url');
+      setCurrentInput(saved.lastInput || '');
+      setImagePreview(saved.imagePreview || null);
+      
+      // Toast info saja (auto-dismiss 3 detik)
+      toast.info("Melanjutkan sesi sebelumnya", {
+        description: saved.extractedPromo.promo_name || "Draft promo",
+        duration: 3000
+      });
+    }
+  }, []);
+
+  // ============================================
+  // AUTO-SAVE ON CHANGES
+  // ============================================
+  
+  useEffect(() => {
+    if (extractedPromo) {
+      extractorSession.save({
+        extractedPromo,
+        editHistory,
+        inputMode,
+        lastInput: currentInput,
+        imagePreview
+      });
+    }
+    setHasUnsavedData(!!extractedPromo);
+  }, [extractedPromo, editHistory, inputMode, currentInput, imagePreview]);
+
+  // ============================================
+  // BROWSER CLOSE WARNING
+  // ============================================
+  
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedData) {
+        e.preventDefault();
+        e.returnValue = 'Hasil ekstraksi belum digunakan. Yakin mau keluar?';
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedData]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (extractedPromo || isExtracting) {
+      setTimeout(() => {
+        scrollBottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 100);
+    }
+  }, [extractedPromo, isExtracting]);
+
+  // ============================================
+  // IMAGE UPLOAD HANDLERS
+  // ============================================
+  
+  const processImageFile = async (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File terlalu besar. Maksimal 10MB");
+      return;
+    }
+    
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Format tidak didukung. Gunakan PNG, JPG, atau WebP");
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      setImagePreview(base64);
+      setImageBase64(base64);
+      toast.success("Image berhasil diupload", { description: file.name });
+    };
+    reader.onerror = () => toast.error("Gagal membaca file");
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processImageFile(file);
+  };
+
+  const handleImageDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-primary', 'bg-primary/5');
+    
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      toast.error("File harus berupa image (PNG, JPG, WebP)");
+      return;
+    }
+    
+    processImageFile(file);
+  };
+
+  // ============================================
+  // MAIN EXTRACT HANDLER
+  // ============================================
+  
+  const handleExtract = async () => {
+    setIsExtracting(true);
+    
+    try {
+      let result: ExtractedPromo;
+      
+      if (inputMode === 'image' && imageBase64) {
+        toast.info("Mengekstrak dari image dengan GPT-4o Vision...");
+        result = await extractPromoFromImage(imageBase64);
+      } else if (inputMode === 'url' && currentInput) {
+        toast.info("Mengambil konten dari URL...");
+        try {
+          const htmlContent = await fetchUrlContent(currentInput);
+          if (!htmlContent || htmlContent.length < 500) {
+            throw new Error("Konten tidak valid");
+          }
+          toast.success(`Berhasil fetch ${(htmlContent.length / 1024).toFixed(1)}KB`);
+          result = await extractPromoFromContent(htmlContent, currentInput);
+        } catch {
+          toast.error("Gagal fetch URL. Coba paste HTML manual atau upload screenshot.");
+          setIsExtracting(false);
+          return;
+        }
+      } else if (inputMode === 'html' && currentInput) {
+        toast.info("Mengekstrak dari konten HTML...");
+        result = await extractPromoFromContent(currentInput);
+      } else {
+        toast.error("Tidak ada input untuk diproses");
+        setIsExtracting(false);
+        return;
+      }
+      
+      setExtractedPromo(result);
+      setEditHistory([]);
+      
+      // Auto-save to session
+      extractorSession.save({
+        extractedPromo: result,
+        editHistory: [],
+        inputMode,
+        lastInput: currentInput,
+        imagePreview
+      });
+      
+      const status = result.validation?.status || 'draft';
+      if (status === 'ready') {
+        toast.success("Ekstraksi selesai! Promo siap digunakan.");
+      } else if (status === 'draft_blocked') {
+        toast.error("Ekstraksi selesai, tapi ada error yang harus diperbaiki.");
+      } else {
+        toast.warning("Ekstraksi selesai. Review warning sebelum commit.");
+      }
+      
+    } catch (error) {
+      console.error('Extraction error:', error);
+      toast.error("Gagal mengekstrak promo", {
+        description: error instanceof Error ? error.message : "Unknown error"
+      });
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  // ============================================
+  // EDIT COMMAND HANDLER (FAIL FAST)
+  // ============================================
+  
+  const handleEditCommand = () => {
+    if (!editInput.trim() || !extractedPromo) return;
+    
+    const command = parseEditCommand(editInput);
+    const result = executeEditCommand(command, extractedPromo);
+    
+    if (result.success) {
+      setExtractedPromo(result.data);
+    }
+    
+    const historyItem: EditHistoryItem = {
+      command: editInput,
+      success: result.success,
+      message: result.message,
+      timestamp: Date.now()
+    };
+    
+    setEditHistory(prev => [...prev, historyItem]);
+    
+    // Auto-save to session
+    extractorSession.save({
+      extractedPromo: result.success ? result.data : extractedPromo,
+      editHistory: [...editHistory, historyItem]
+    });
+    
+    setEditInput('');
+    
+    if (result.success) {
+      toast.success(result.message);
+    } else {
+      toast.error(result.message.split('\n')[0]); // Show first line only in toast
+    }
+  };
+
+  // ============================================
+  // ACTION HANDLERS
+  // ============================================
+  
+  const handleRestart = () => {
+    setExtractedPromo(null);
+    setEditHistory([]);
+    setInputMode('url');
+    setCurrentInput('');
+    setImagePreview(null);
+    setImageBase64(null);
+    setHasUnsavedData(false);
+    extractorSession.clear();
+    toast.success("Extractor direset", { description: "Siap untuk ekstraksi baru" });
+  };
+
+  const handleCopyJSON = async () => {
+    if (!extractedPromo) return;
+    
+    try {
+      const jsonString = JSON.stringify(extractedPromo, null, 2);
+      await navigator.clipboard.writeText(jsonString);
+      toast.success("JSON disalin ke clipboard", { description: `${jsonString.length} karakter` });
+    } catch {
+      toast.error("Gagal menyalin ke clipboard");
+    }
+  };
+
+  const handleCommitPromo = () => {
+    if (!extractedPromo) {
+      toast.error("Tidak ada promo untuk disimpan");
+      return;
+    }
+    
+    if (extractedPromo.validation?.status === 'draft_blocked') {
+      toast.error("Tidak bisa menyimpan: Ada error yang harus diperbaiki", {
+        description: "Perbaiki error terlebih dahulu atau edit dengan perintah"
+      });
+      return;
+    }
+    
+    try {
+      const promoData = mapExtractedToPromoFormData(extractedPromo);
+      const savedPromo = promoKB.add(promoData);
+      
+      toast.success("Promo berhasil ditambahkan!", {
+        description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`
+      });
+      
+      handleRestart();
+    } catch (error) {
+      console.error('Error saving promo:', error);
+      toast.error("Gagal menyimpan promo", {
+        description: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  };
+
+  // ============================================
+  // RENDER SUB CATEGORY CARD
+  // ============================================
+  
+  const renderSubCategoryCard = (sub: ExtractedPromoSubCategory, idx: number) => {
+    const hasBlacklist = sub.blacklist?.enabled && (
+      sub.blacklist.providers.length > 0 || 
+      sub.blacklist.games.length > 0 || 
+      sub.blacklist.rules.length > 0
+    );
+    
+    const hasCriticalIssue = ['calculation_value', 'turnover_rule', 'payout_direction'].some(
+      f => sub.confidence?.[f as keyof typeof sub.confidence] === 'ambiguous' || 
+           sub.confidence?.[f as keyof typeof sub.confidence] === 'missing'
+    );
+    
+    return (
+      <div 
+        key={idx} 
+        className={`bg-card border rounded-xl p-6 ${
+          hasCriticalIssue ? 'border-destructive/50' : 'border-border'
+        }`}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <h4 className="text-base font-semibold text-button-hover">
+              {sub.sub_name || `Varian ${idx + 1}`}
+            </h4>
+            {hasCriticalIssue && (
+              <Badge variant="outline" className="bg-destructive/20 text-destructive border-destructive/40 text-xs">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Needs Review
+              </Badge>
+            )}
+          </div>
+          <Badge variant="outline" className="text-xs text-muted-foreground">
+            Varian {idx + 1}
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div className="bg-muted rounded-lg p-3">
+            <span className="text-muted-foreground text-xs block mb-1">Nilai Bonus</span>
+            <span className="text-button-hover font-semibold">
+              {sub.calculation_value}{sub.calculation_method === 'percentage' ? '%' : ''}
+            </span>
+          </div>
+          <div className="bg-muted rounded-lg p-3">
+            <span className="text-muted-foreground text-xs block mb-1">Min Deposit</span>
+            <span className="text-foreground font-medium">
+              {sub.minimum_base ? `Rp ${sub.minimum_base.toLocaleString('id-ID')}` : "-"}
+            </span>
+          </div>
+          <div className="bg-muted rounded-lg p-3">
+            <span className="text-muted-foreground text-xs block mb-1">Max Bonus</span>
+            <span className="text-foreground font-medium">
+              {sub.max_bonus ? `Rp ${sub.max_bonus.toLocaleString('id-ID')}` : "-"}
+            </span>
+          </div>
+          <div className="bg-muted rounded-lg p-3">
+            <span className="text-muted-foreground text-xs block mb-1">Turnover</span>
+            <span className="text-foreground font-medium">
+              {sub.confidence?.turnover_rule === 'not_applicable' 
+                ? 'Tidak Berlaku'
+                : sub.turnover_rule != null ? `${sub.turnover_rule}x` : '-'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-muted rounded-lg p-3">
+            <span className="text-muted-foreground text-xs block mb-1">Payout</span>
+            <span className={`font-semibold ${sub.payout_direction === 'depan' ? 'text-success' : 'text-warning'}`}>
+              {sub.payout_direction === 'depan' ? 'DEPAN' : sub.payout_direction === 'belakang' ? 'BELAKANG' : '-'}
+            </span>
+          </div>
+          <div className="bg-muted rounded-lg p-3">
+            <span className="text-muted-foreground text-xs block mb-1">Jenis Game</span>
+            <span className="text-foreground font-medium">
+              {sub.game_types?.map(formatGameType).join(", ") || "-"}
+            </span>
+          </div>
+          <div className="bg-muted rounded-lg p-3">
+            <span className="text-muted-foreground text-xs block mb-1">Provider</span>
+            <span className="text-foreground font-medium">
+              {sub.game_providers?.length > 0 ? sub.game_providers.join(", ") : "-"}
+            </span>
+          </div>
+          <div className="bg-muted rounded-lg p-3">
+            <span className="text-muted-foreground text-xs block mb-1">Blacklist</span>
+            <span className={`font-medium ${hasBlacklist ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {hasBlacklist ? "Aktif" : "Tidak Aktif"}
+            </span>
+          </div>
+        </div>
+
+        {hasBlacklist && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <div className="bg-destructive/10 rounded-lg p-3">
+              <span className="text-destructive text-xs font-medium flex items-center gap-1 mb-2">
+                <ShieldAlert className="w-3 h-3" />
+                Blacklist:
+              </span>
+              {sub.blacklist.rules.length > 0 && (
+                <ul className="list-disc list-inside text-xs text-foreground">
+                  {sub.blacklist.rules.map((rule, i) => <li key={i}>{rule}</li>)}
+                </ul>
+              )}
+              {sub.blacklist.games.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {sub.blacklist.games.map((game, i) => (
+                    <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
+                      {game}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ============================================
+  // RENDER EXTRACTED DATA CARD
+  // ============================================
+  
+  const renderExtractedData = () => {
+    if (!extractedPromo) return null;
+    
+    const status = extractedPromo.validation?.status || 'draft';
+    const canCommit = status === 'ready';
+    const errors = extractedPromo.validation?.errors || [];
+    const warnings = extractedPromo.validation?.warnings || [];
+    
+    return (
+      <Card className="w-full bg-card border border-border rounded-xl overflow-hidden">
+        {/* Header */}
+        <div className="p-6 pb-4 flex items-start gap-4">
+          <div className="icon-circle">
+            {status === 'ready' ? (
+              <CheckCircle2 className="icon-circle-icon" />
+            ) : status === 'draft_blocked' ? (
+              <XCircle className="icon-circle-icon text-destructive" />
+            ) : (
+              <AlertCircle className="icon-circle-icon text-warning" />
+            )}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h3 className="text-lg font-semibold text-foreground">
+                {extractedPromo.promo_name || "Promo Tanpa Nama"}
+              </h3>
+              <Badge variant="outline" className={`
+                ${extractedPromo.promo_mode === 'multi' 
+                  ? 'bg-purple-500/20 text-purple-400 border-purple-500/40' 
+                  : 'bg-muted text-muted-foreground'}
+              `}>
+                {formatPromoMode(extractedPromo.promo_mode)}
+              </Badge>
+              <Badge variant="outline" className={getStatusBadgeStyle(status)}>
+                {status === 'ready' && <CheckCircle2 className="w-3 h-3 mr-1" />}
+                {status === 'draft_blocked' && <XCircle className="w-3 h-3 mr-1" />}
+                {status === 'draft' && <AlertCircle className="w-3 h-3 mr-1" />}
+                {getStatusLabel(status)}
+              </Badge>
+            </div>
+            <div className="flex gap-2 mt-2 flex-wrap">
+              <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-button-hover/40">
+                {extractedPromo.promo_type || "Unknown"}
+              </Badge>
+              {extractedPromo.subcategories.length > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  {extractedPromo.subcategories.length} Sub Kategori
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Image Source Warning */}
+        {extractedPromo._extraction_source === 'image' && (
+          <div className="px-6 pb-4">
+            <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <p className="text-sm text-amber-500">
+                Data diekstrak dari image — mohon verifikasi angka-angka penting sebelum commit.
+                Gunakan perintah edit jika perlu koreksi.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* COMBO Summary Bar */}
+        {extractedPromo.promo_mode === 'multi' && extractedPromo.subcategories.length > 1 && (
+          <div className="px-6 pb-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-muted rounded-lg p-3 text-center">
+                <span className="text-2xl font-bold text-button-hover">
+                  {extractedPromo.subcategories.length}
+                </span>
+                <span className="text-xs text-muted-foreground block mt-1">Sub Kategori</span>
+              </div>
+              <div className="bg-muted rounded-lg p-3 text-center">
+                <span className="text-sm font-semibold text-foreground">
+                  {getPayoutSummary(extractedPromo.subcategories)}
+                </span>
+                <span className="text-xs text-muted-foreground block mt-1">Payout</span>
+              </div>
+              <div className="bg-muted rounded-lg p-3 text-center">
+                <span className="text-sm font-semibold text-foreground capitalize">
+                  {getGameTypesSummary(extractedPromo.subcategories)}
+                </span>
+                <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
+              </div>
+              <div className="bg-muted rounded-lg p-3 text-center">
+                <span className={`text-sm font-semibold ${
+                  extractedPromo.global_blacklist?.enabled || extractedPromo.subcategories.some(s => s.blacklist?.enabled) 
+                    ? 'text-destructive' : 'text-muted-foreground'
+                }`}>
+                  {getBlacklistSummary(extractedPromo)}
+                </span>
+                <span className="text-xs text-muted-foreground block mt-1">Blacklist</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="px-6 pb-6 space-y-6">
+          {/* Errors */}
+          {errors.length > 0 && (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+              <h4 className="text-destructive font-medium text-sm flex items-center gap-2 mb-2">
+                <XCircle className="w-4 h-4" />
+                Error ({errors.length}) — Harus diperbaiki
+              </h4>
+              <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
+                {errors.map((err, idx) => <li key={idx}>{err}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {/* Warnings */}
+          {warnings.length > 0 && (
+            <div className="bg-warning/10 border border-warning/30 rounded-lg p-4">
+              <h4 className="text-warning font-medium text-sm flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-4 h-4" />
+                Warning ({warnings.length})
+              </h4>
+              <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
+                {warnings.map((warn, idx) => <li key={idx}>{warn}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {/* Subcategories */}
+          {extractedPromo.subcategories.length > 0 && (
+            <div>
+              <h4 className="text-base font-semibold text-button-hover mb-4">
+                Sub Kategori ({extractedPromo.subcategories.length} Varian)
+              </h4>
+              <div className="space-y-4">
+                {extractedPromo.subcategories.map((sub, idx) => renderSubCategoryCard(sub, idx))}
+              </div>
+            </div>
+          )}
+
+          {/* Terms */}
+          {extractedPromo.terms_conditions && extractedPromo.terms_conditions.length > 0 && (
+            <div>
+              <h4 className="text-base font-semibold text-button-hover mb-4">
+                Syarat & Ketentuan
+              </h4>
+              <div className="bg-muted rounded-lg p-4">
+                <ScrollArea className="max-h-48">
+                  <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
+                    {extractedPromo.terms_conditions.map((term, idx) => <li key={idx}>{term}</li>)}
+                  </ul>
+                </ScrollArea>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  };
+
+  // ============================================
+  // MAIN RENDER
+  // ============================================
+  
+  return (
+    <div className="flex flex-col h-[calc(100vh-120px)]">
+      <ScrollArea className="flex-1">
+        <div className="p-6 space-y-6 max-w-5xl mx-auto">
+          
+          {/* INPUT SECTION */}
+          {!extractedPromo && !isExtracting && (
+            <Card className="p-6 bg-card border border-border rounded-xl">
+              {/* Header */}
+              <div className="text-center mb-6">
+                <div className="icon-circle w-16 h-16 mx-auto mb-4">
+                  <Sparkles className="icon-circle-icon w-8 h-8" />
+                </div>
+                <h2 className="text-2xl font-semibold text-foreground">Promo Extractor</h2>
+                <p className="text-muted-foreground mt-2">
+                  Paste link, HTML, atau upload screenshot — AI akan mengekstrak ke format Knowledge Base.
+                </p>
+              </div>
+
+              {/* Mode Tabs */}
+              <div className="flex gap-2 mb-4">
+                <Button 
+                  variant={inputMode === 'url' ? 'golden' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setInputMode('url');
+                    setImagePreview(null);
+                    setImageBase64(null);
+                  }}
+                  className="gap-2 rounded-full"
+                >
+                  <Link2 className="w-4 h-4" />
+                  URL
+                </Button>
+                <Button 
+                  variant={inputMode === 'html' ? 'golden' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setInputMode('html');
+                    setImagePreview(null);
+                    setImageBase64(null);
+                  }}
+                  className="gap-2 rounded-full"
+                >
+                  <Code className="w-4 h-4" />
+                  HTML
+                </Button>
+                <Button 
+                  variant={inputMode === 'image' ? 'golden' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setInputMode('image');
+                    setCurrentInput('');
+                  }}
+                  className="gap-2 rounded-full"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  Image
+                </Button>
+              </div>
+
+              {/* URL Input */}
+              {inputMode === 'url' && (
+                <Input 
+                  value={currentInput}
+                  onChange={(e) => setCurrentInput(e.target.value)}
+                  placeholder="Paste URL halaman promo... (contoh: https://site.com/promo/welcome-bonus)"
+                  className="mb-4"
+                />
+              )}
+
+              {/* HTML Input */}
+              {inputMode === 'html' && (
+                <Textarea 
+                  value={currentInput}
+                  onChange={(e) => setCurrentInput(e.target.value)}
+                  placeholder="Paste HTML content dari halaman promo (Ctrl+U di browser untuk View Page Source)..."
+                  rows={8}
+                  className="mb-4 font-mono text-sm"
+                />
+              )}
+
+              {/* Image Input */}
+              {inputMode === 'image' && (
+                <div className="mb-4">
+                  <div 
+                    className={`
+                      border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+                      transition-colors duration-200
+                      ${imagePreview 
+                        ? 'border-success bg-success/5' 
+                        : 'border-border hover:border-button-hover hover:bg-button-hover/5'
+                      }
+                    `}
+                    onClick={() => document.getElementById('image-upload')?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.add('border-button-hover', 'bg-button-hover/5');
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove('border-button-hover', 'bg-button-hover/5');
+                    }}
+                    onDrop={handleImageDrop}
+                  >
+                    <input 
+                      type="file" 
+                      accept="image/png,image/jpeg,image/jpg,image/webp"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    
+                    {imagePreview ? (
+                      <div className="relative">
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          className="max-h-64 mx-auto rounded-lg shadow-lg" 
+                        />
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2 rounded-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setImagePreview(null);
+                            setImageBase64(null);
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                        <p className="mt-2 text-sm text-success">✓ Image siap diproses</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
+                        <p className="font-medium text-foreground">Klik atau drag screenshot promo</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          PNG, JPG, WebP — maksimal 10MB
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Extract Button */}
+              <Button 
+                onClick={handleExtract}
+                disabled={isExtracting || (!currentInput && !imageBase64)}
+                variant="golden"
+                className="w-full gap-2 rounded-full"
+              >
+                {isExtracting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Mengekstrak...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    Ekstrak Promo
+                  </>
+                )}
+              </Button>
+
+              {/* Strict Mode Notice */}
+              <div className="mt-4 p-3 rounded-lg bg-warning/10 border border-warning/30 text-center">
+                <p className="text-xs text-warning">
+                  <ShieldAlert className="w-4 h-4 inline-block mr-1" />
+                  <strong>BARA MODE</strong> — Mesin disiplin, bukan mesin pintar. Data harus eksplisit.
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {/* PROCESSING STATE */}
+          {isExtracting && (
+            <div className="flex items-center gap-3 p-6 bg-card border border-border rounded-xl">
+              <Loader2 className="w-6 h-6 animate-spin text-button-hover" />
+              <div>
+                <span className="text-foreground font-medium">Mengekstrak promo...</span>
+                <span className="text-muted-foreground ml-2">
+                  {inputMode === 'image' ? '(GPT-4o Vision)' : '(GPT-4o-mini)'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* RESULT SECTION */}
+          {extractedPromo && (
+            <>
+              {renderExtractedData()}
+
+              {/* EDIT SECTION */}
+              <Card className="p-4 bg-card border border-border rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-button-hover" />
+                    <span className="font-medium text-foreground">Edit dengan perintah</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowEditHelp(!showEditHelp)}
+                    className="rounded-full"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                {/* Command Help */}
+                {showEditHelp && (
+                  <div className="mb-4 p-3 bg-muted rounded-lg text-sm">
+                    <p className="font-medium mb-2 text-foreground">Contoh perintah:</p>
+                    <ul className="space-y-1 text-muted-foreground">
+                      {COMMAND_EXAMPLES.map((ex, i) => (
+                        <li key={i}>• <code className="bg-background px-1 rounded text-xs">{ex}</code></li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {/* Command Input */}
+                <div className="flex gap-2">
+                  <Input
+                    value={editInput}
+                    onChange={(e) => setEditInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleEditCommand();
+                      }
+                    }}
+                    placeholder='Ketik perintah, contoh: "set min deposit 50K semua varian"'
+                    className="flex-1 font-mono text-sm"
+                  />
+                  <Button 
+                    onClick={handleEditCommand}
+                    disabled={!editInput.trim()}
+                    size="sm"
+                    variant="golden"
+                    className="rounded-full"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+                
+                {/* Edit History */}
+                {editHistory.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-xs text-muted-foreground font-medium">Riwayat edit:</p>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {editHistory.map((item, idx) => (
+                        <div 
+                          key={idx}
+                          className={`text-sm px-2 py-1 rounded ${
+                            item.success 
+                              ? 'bg-success/10 text-success' 
+                              : 'bg-destructive/10 text-destructive'
+                          }`}
+                        >
+                          {item.message.split('\n')[0]}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              {/* ACTION BUTTONS */}
+              <div className="flex items-center justify-between pt-4 border-t border-border">
+                <Button 
+                  variant="ghost"
+                  onClick={handleRestart}
+                  className="gap-2 text-muted-foreground hover:text-foreground rounded-full"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Restart
+                </Button>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={handleCopyJSON}
+                    className="gap-2 rounded-full"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy JSON
+                  </Button>
+                  
+                  <Button 
+                    onClick={handleCommitPromo}
+                    disabled={extractedPromo.validation?.status === 'draft_blocked'}
+                    variant="golden"
+                    className="gap-2 rounded-full"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Gunakan Promo
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+          
+          <div ref={scrollBottomRef} />
+        </div>
+      </ScrollArea>
+
+      {/* Leave Warning Dialog */}
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Hasil ekstraksi belum digunakan
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Salin JSON atau klik "Gunakan Promo" sebelum keluar. 
+              Data akan hilang jika Anda meninggalkan halaman ini.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowLeaveDialog(false);
+              setPendingNavigation(null);
+            }}>
+              Kembali
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                extractorSession.clear();
+                setShowLeaveDialog(false);
+                if (pendingNavigation) {
+                  pendingNavigation();
+                }
+              }}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Lanjutkan Keluar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

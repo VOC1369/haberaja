@@ -1,0 +1,277 @@
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { ChevronLeft, ChevronRight, Save } from "lucide-react";
+import { PromoFormData, PromoItem, initialPromoData, savePromoDraft } from "./types";
+import { Step1Identity } from "./Step1Identity";
+import { Step2Access } from "./Step2Access";
+import { Step3Reward } from "./Step3Reward";
+import { Step4Review, generateTermsList, formatNumber } from "./Step4Review";
+
+const STEPS = [
+  { id: 1, title: "Identitas Promo" },
+  { id: 2, title: "Batasan & Akses" },
+  { id: 3, title: "Konfigurasi Reward" },
+  { id: 4, title: "Review & Simpan" },
+];
+
+interface PromoFormWizardProps {
+  onBack?: () => void;
+  initialData?: PromoItem;
+  onSaveSuccess?: () => void;
+}
+
+export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFormWizardProps) {
+  // Jump to Step 4 (Review) when editing existing promo
+  const [currentStep, setCurrentStep] = useState(initialData ? 4 : 1);
+  const [formData, setFormData] = useState<PromoFormData>(initialData || initialPromoData);
+  const [editingId, setEditingId] = useState<string | undefined>(initialData?.id);
+  const [isEditingFromReview, setIsEditingFromReview] = useState(false);
+
+  const handleChange = (updates: Partial<PromoFormData>) => {
+    setFormData((prev) => ({ ...prev, ...updates }));
+  };
+
+  const handleNext = () => {
+    // If editing from review, return to review instead of advancing
+    if (isEditingFromReview) {
+      setCurrentStep(4);
+      setIsEditingFromReview(false);
+      return;
+    }
+    if (currentStep < 4) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  // Handle navigation from Review to specific step for editing
+  const handleGoToStepFromReview = (step: number) => {
+    setIsEditingFromReview(true);
+    setCurrentStep(step);
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Generate full S&K string from promo data
+  const generateFullTermsString = (data: PromoFormData): string => {
+    let result = `${data.promo_name?.toUpperCase() || 'NAMA PROMO'}\n\n`;
+    
+    // Add calculation example for formula (dinamis) mode with percentage
+    if (data.reward_mode === 'formula' && data.calculation_value) {
+      result += `Contoh Perhitungan:\n`;
+      result += `Total ${data.calculation_base || 'turnover'} x ${data.calculation_value}% = Nilai Bonus\n`;
+      result += `-----------------------------------------------\n`;
+      const exampleBase = data.minimum_base && data.minimum_base > 0 ? data.minimum_base : 1000000;
+      const exampleReward = exampleBase * (data.calculation_value / 100);
+      result += `${formatNumber(exampleBase)} x ${data.calculation_value}% = ${formatNumber(exampleReward)} (Bonus yang didapat)\n\n`;
+    }
+    
+    result += `Syarat & Ketentuan:\n`;
+    const terms = generateTermsList(data);
+    terms.forEach((term, i) => {
+      result += `${i + 1}. ${term}\n`;
+    });
+    
+    return result;
+  };
+
+  const handleSaveDraft = () => {
+    const generatedTerms = generateFullTermsString(formData);
+    const dataToSave: PromoFormData = { ...formData, status: 'draft', custom_terms: generatedTerms };
+    const saved = savePromoDraft(dataToSave, editingId);
+    setEditingId(saved.id);
+    toast.success(`Draft "${formData.promo_name || 'Untitled'}" tersimpan!`);
+    console.log("Saved draft:", saved);
+  };
+
+  const handlePublish = () => {
+    const generatedTerms = generateFullTermsString(formData);
+    const dataToSave: PromoFormData = { ...formData, status: 'active', custom_terms: generatedTerms };
+    const saved = savePromoDraft(dataToSave, editingId);
+    toast.success(`Promo "${formData.promo_name}" berhasil dipublish!`);
+    console.log("Published promo:", saved);
+    
+    // Reset form and go back
+    setFormData(initialPromoData);
+    setEditingId(undefined);
+    setCurrentStep(1);
+    onSaveSuccess?.();
+  };
+
+  const progress = (currentStep / 4) * 100;
+
+  return (
+    <div className="page-wrapper space-y-6">
+      {/* Back Button */}
+      {onBack && (
+        <Button
+          variant="outline"
+          onClick={onBack}
+          className="rounded-full border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+        >
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          Kembali
+        </Button>
+      )}
+
+      {/* Progress Card */}
+      <Card className="p-6">
+        {/* Progress Bar with Thumb */}
+        <div className="relative w-full py-4 mb-2">
+          <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div 
+              className="h-full bg-button-hover transition-all" 
+              style={{ width: `${progress}%` }} 
+            />
+          </div>
+          {/* Slider Thumb */}
+          <div 
+            className="absolute top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-button-hover bg-background transition-all"
+            style={{ left: `calc(${progress}% - 10px)` }}
+          />
+        </div>
+
+        {/* Step Labels (Step 1 / Step 4) */}
+        <div className="flex items-center justify-between text-sm mb-4">
+          <span className="text-muted-foreground">Step 1</span>
+          <span className="text-lg font-bold text-foreground">{currentStep}/4</span>
+          <span className="text-muted-foreground">Step 4</span>
+        </div>
+
+        {/* Divider Line */}
+        <div className="border-t border-border mb-4" />
+
+        {/* Step Navigation */}
+        <div className="flex items-center justify-between text-sm">
+          {STEPS.map((step) => (
+            <button
+              key={step.id}
+              onClick={() => setCurrentStep(step.id)}
+              className={`transition-colors ${
+                currentStep === step.id
+                  ? "text-button-hover font-medium"
+                  : currentStep > step.id
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              } cursor-pointer`}
+            >
+              {step.title}
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Step Content */}
+      <Card className="p-6 animate-fade-in">
+        {currentStep === 1 && (
+          <Step1Identity 
+            data={formData} 
+            onChange={handleChange}
+            isEditingFromReview={isEditingFromReview}
+            onSaveAndReturn={() => {
+              setCurrentStep(4);
+              setIsEditingFromReview(false);
+            }}
+          />
+        )}
+        {currentStep === 2 && (
+          <Step2Access 
+            data={formData} 
+            onChange={handleChange}
+            isEditingFromReview={isEditingFromReview}
+            onSaveAndReturn={() => {
+              setCurrentStep(4);
+              setIsEditingFromReview(false);
+            }}
+          />
+        )}
+        {currentStep === 3 && (
+          <Step3Reward 
+            data={formData} 
+            onChange={handleChange}
+            isEditingFromReview={isEditingFromReview}
+            onSaveAndReturn={() => {
+              setCurrentStep(4);
+              setIsEditingFromReview(false);
+            }}
+          />
+        )}
+        {currentStep === 4 && <Step4Review data={formData} onGoToStep={handleGoToStepFromReview} />}
+      </Card>
+
+      {/* Bottom Navigation Bar */}
+      <div className="fixed bottom-0 left-64 right-0 bg-background border-t border-border p-4 z-50">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          {/* Left: Previous Button or Back to Review */}
+          {isEditingFromReview ? (
+             <Button
+              variant="outline"
+              onClick={() => {
+                setCurrentStep(4);
+                setIsEditingFromReview(false);
+              }}
+              className="h-11 px-6 rounded-full border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Kembali ke Review
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={handlePrevious}
+              disabled={currentStep === 1}
+              className="h-11 px-6 rounded-full border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover disabled:opacity-50"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Sebelumnya
+            </Button>
+          )}
+
+          {/* Center: Save Draft + Step Counter */}
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={handleSaveDraft} className="h-11 px-6 rounded-full border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover">
+              <Save className="h-4 w-4 mr-2" />
+              Simpan Draft
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Step {currentStep} / 4
+            </span>
+          </div>
+
+          {/* Right: Next/Publish Button or Save & Return */}
+          {isEditingFromReview ? (
+            <Button 
+              variant="golden" 
+              onClick={() => {
+                setCurrentStep(4);
+                setIsEditingFromReview(false);
+              }} 
+              className="rounded-full"
+            >
+              Simpan & Kembali
+              <ChevronRight className="h-4 w-4 ml-2" />
+            </Button>
+          ) : currentStep === 4 ? (
+            <Button variant="golden" onClick={handlePublish} className="rounded-full">
+              Publish Promo
+              <ChevronRight className="h-4 w-4 ml-2" />
+            </Button>
+          ) : (
+            <Button variant="golden" onClick={handleNext} className="rounded-full">
+              Selanjutnya
+              <ChevronRight className="h-4 w-4 ml-2" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Spacer for fixed bottom nav */}
+      <div className="h-20" />
+    </div>
+  );
+}
