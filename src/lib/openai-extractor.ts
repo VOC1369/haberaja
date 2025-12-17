@@ -37,7 +37,25 @@ export const PROMO_TYPES_WITHOUT_TURNOVER = [
   'redeem',
   'merchandise',
   'loyalty_point',
-  'referral'
+  'referral',
+  // UI promo type names
+  'Loyalty Point',
+  'Merchandise',
+  'Campaign / Informational',
+  'Event / Level Up',
+  'Rollingan / Cashback',
+] as const;
+
+// Telco operators for deposit pulsa detection
+export const TELCO_OPERATORS = ['TELKOMSEL', 'XL', 'AXIS', 'INDOSAT', 'TRI', 'SMARTFREN'] as const;
+
+// Deposit pulsa detection keywords
+export const DEPOSIT_PULSA_KEYWORDS = [
+  'deposit pulsa',
+  'pulsa tanpa potongan',
+  'rate pulsa',
+  'via pulsa',
+  'depo pulsa',
 ] as const;
 
 // ============= SUB KATEGORI (VARIAN) =============
@@ -90,6 +108,11 @@ export interface ExtractedPromo {
   // Dates
   valid_from?: string;
   valid_until?: string;
+  
+  // Payment Method Context (NEW - for Deposit Pulsa, E-Wallet, Crypto, etc.)
+  deposit_method?: 'bank' | 'pulsa' | 'ewallet' | 'crypto' | 'qris' | 'all';
+  deposit_method_providers?: string[];  // e.g., ["TELKOMSEL", "XL"] or ["DANA", "OVO"]
+  deposit_rate?: number;                // 100 = tanpa potongan, 90 = potongan 10%
   
   // Global blacklist — HANYA jika eksplisit "berlaku untuk semua"
   global_blacklist: {
@@ -547,6 +570,40 @@ DAN turnover_rule tidak ditemukan di konten:
 - JANGAN PERNAH mengartikan titik sebagai desimal dalam konteks Rupiah
 - Semua nilai monetary HARUS dalam format angka bulat tanpa titik
 
+📱 DEPOSIT PULSA DETECTION (NEW - PHASE 6)
+
+KEYWORDS yang menunjukkan Deposit Pulsa:
+- "deposit pulsa", "pulsa tanpa potongan", "rate pulsa", "via pulsa", "depo pulsa"
+- Nama operator: "TELKOMSEL", "XL", "AXIS", "INDOSAT", "TRI", "SMARTFREN"
+
+JIKA terdeteksi deposit pulsa:
+- promo_type: "deposit_bonus" (subcategory: pulsa)
+- deposit_method: "pulsa"
+- deposit_method_providers: ["TELKOMSEL", "XL", ...] — HANYA operator yang disebutkan
+- deposit_rate: 100 jika "tanpa potongan", atau (100 - potongan_persen) jika ada potongan
+
+⚠️ KRITIS — OPERATOR BUKAN GAME PROVIDER:
+- TELKOMSEL, XL, AXIS, INDOSAT, TRI, SMARTFREN = operator PULSA
+- JANGAN masukkan ke game_providers[]
+- Masukkan ke deposit_method_providers[]
+
+CONTOH PARSING:
+Input: "Deposit Pulsa TELKOMSEL & XL tanpa potongan"
+Output:
+{
+  "promo_type": "deposit_bonus",
+  "deposit_method": "pulsa",
+  "deposit_method_providers": ["TELKOMSEL", "XL"],
+  "deposit_rate": 100
+}
+
+Input: "Deposit via pulsa potongan 10%"
+Output:
+{
+  "deposit_method": "pulsa",
+  "deposit_rate": 90
+}
+
 🧾 OUTPUT FORMAT (STRICT JSON)
 Output HARUS:
 - Valid JSON
@@ -556,7 +613,7 @@ Output HARUS:
 
 Return HANYA JSON valid tanpa markdown code block.
 
-FORMAT OUTPUT (PHASE 5 - UPDATED EXAMPLE):
+FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
 {
   "promo_name": "nama promo utama",
   "promo_type": "combo|welcome_bonus|deposit_bonus|cashback|rollingan|referral",
@@ -564,6 +621,9 @@ FORMAT OUTPUT (PHASE 5 - UPDATED EXAMPLE):
   "promo_mode": "single|multi",
   "valid_from": "YYYY-MM-DD atau null",
   "valid_until": "YYYY-MM-DD atau null",
+  "deposit_method": "bank|pulsa|ewallet|crypto|qris|all atau null",
+  "deposit_method_providers": ["TELKOMSEL", "XL"] atau null,
+  "deposit_rate": 100 atau null,
   "has_subcategories": true,
   "expected_subcategory_count": 6,
   "subcategories": [
