@@ -570,7 +570,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           {!data.has_subcategories && (
             <>
           {/* Section 1 - Dasar Perhitungan Bonus */}
-          <Collapsible defaultOpen>
+          <Collapsible>
             <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
               <div className="flex items-center gap-3">
                 <Calculator className="h-5 w-5 text-button-hover" />
@@ -827,7 +827,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           </Collapsible>
 
           {/* Section 2 - Permainan & Provider */}
-          <Collapsible defaultOpen>
+          <Collapsible>
             <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
               <div className="flex items-center gap-3">
                 <Gamepad2 className="h-5 w-5 text-button-hover" />
