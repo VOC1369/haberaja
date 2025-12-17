@@ -146,7 +146,7 @@ export interface ExtractedPromo {
   
   // Validation Status
   validation: {
-    is_valid: boolean;
+    is_structurally_complete: boolean;  // true if no warnings
     status: 'draft' | 'ready';  // Simplified: no more draft_blocked
     warnings: string[];  // All issues are warnings, not blocking errors
   };
@@ -156,7 +156,7 @@ export interface ExtractedPromo {
 
 // ============= VALIDATION =============
 export interface ValidationResult {
-  is_valid: boolean;
+  is_structurally_complete: boolean;  // true if no warnings (all fields filled)
   status: 'draft' | 'ready';  // Simplified: no more draft_blocked
   warnings: string[];  // All issues are warnings (informational)
   can_commit: boolean;  // Always true - user can always proceed
@@ -274,7 +274,7 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
   const status: 'draft' | 'ready' = warnings.length > 0 ? 'draft' : 'ready';
   
   return {
-    is_valid: true,  // Always valid - validation is informational only
+    is_structurally_complete: warnings.length === 0,  // True only if all fields filled
     status,
     warnings,
     can_commit: true  // ALWAYS true - user can always proceed
@@ -867,7 +867,7 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     // Run validation
     const validationResult = validateExtractedPromo(downgraded);
     downgraded.validation = {
-      is_valid: validationResult.is_valid,
+      is_structurally_complete: validationResult.is_structurally_complete,
       status: validationResult.status,
       warnings: validationResult.warnings
     };
@@ -1005,7 +1005,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     // Run validation
     const validationResult = validateExtractedPromo(parsed);
     parsed.validation = {
-      is_valid: validationResult.is_valid,
+      is_structurally_complete: validationResult.is_structurally_complete,
       status: validationResult.status,
       warnings: validationResult.warnings
     };
