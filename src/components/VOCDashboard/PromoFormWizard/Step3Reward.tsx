@@ -645,6 +645,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Potongan admin pada perhitungan komisi.
+                </p>
               </div>
             </div>
             
