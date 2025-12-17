@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,8 @@ import {
   TRIGGER_EVENTS,
 } from "./types";
 import { SelectWithAddNew, SelectOption } from "./SelectWithAddNew";
+import { applyPromoTypeDefaults } from "@/lib/promo-type-defaults";
+import { toast } from "sonner";
 
 interface Step1Props {
   data: PromoFormData;
@@ -169,7 +171,23 @@ export function Step1Identity({ data, onChange, isEditingFromReview, onSaveAndRe
               <Label htmlFor="promo_type">Tipe Promo *</Label>
               <SelectWithAddNew
                 value={data.promo_type}
-                onValueChange={(value) => onChange({ promo_type: value })}
+                onValueChange={(value) => {
+                  // Apply defaults when promo type changes (only for empty fields)
+                  const defaults = applyPromoTypeDefaults(data, value);
+                  const hasDefaults = Object.keys(defaults).length > 0;
+                  
+                  onChange({ 
+                    promo_type: value,
+                    ...defaults 
+                  });
+                  
+                  if (hasDefaults) {
+                    toast.success(`Default untuk "${value}" diterapkan`, {
+                      description: 'Hanya field kosong yang diisi otomatis',
+                      duration: 3000,
+                    });
+                  }
+                }}
                 options={promoTypeOptions}
                 onAddOption={(option) => setCustomPromoTypes([...customPromoTypes, option])}
                 onDeleteOption={handleDeletePromoType}

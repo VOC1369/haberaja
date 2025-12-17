@@ -92,6 +92,11 @@ export const PKB_FIELD_WHITELIST = [
   'geo_restriction',
   'require_apk',
   'promo_risk_level', // Metadata deskriptif - level risiko komunikasi AI
+  
+  // Payment Method Context (NEW - for Deposit Pulsa, E-Wallet, Crypto, etc.)
+  'deposit_method',
+  'deposit_method_providers',
+  'deposit_rate',
 ] as const;
 
 // ============================================
@@ -221,6 +226,12 @@ export interface PromoFormData {
   geo_restriction: string;
   require_apk: boolean;
   promo_risk_level?: 'no' | 'low' | 'medium' | 'high'; // Enum value, bukan label UI
+  
+  // Payment Method Context (NEW - for Deposit Pulsa, E-Wallet, Crypto, etc.)
+  // These are OPTIONAL fields - backward compatible with existing promos
+  deposit_method?: 'bank' | 'pulsa' | 'ewallet' | 'crypto' | 'qris' | 'all';
+  deposit_method_providers?: string[];  // e.g., ["TELKOMSEL", "XL"] or ["DANA", "OVO"] or ["USDT", "BTC"]
+  deposit_rate?: number;                // Conversion rate: 100 = no fee, 90 = 10% fee
 
   // Contact Channel
   contact_channel_enabled: boolean;
@@ -536,8 +547,29 @@ export const PROMO_TYPES = [
   'Event / Level Up',
   'Mini Game (Spin, Lucky Draw)',
   'Merchandise',
+  'Referral Bonus',
   'Campaign / Informational'
 ];
+
+// Deposit method options for payment-specific promos
+export const DEPOSIT_METHODS = [
+  { value: 'all', label: 'Semua Metode' },
+  { value: 'bank', label: 'Bank Transfer' },
+  { value: 'pulsa', label: 'Pulsa' },
+  { value: 'ewallet', label: 'E-Wallet (DANA, OVO, GOPAY)' },
+  { value: 'crypto', label: 'Crypto' },
+  { value: 'qris', label: 'QRIS' },
+] as const;
+
+// Telco operators for pulsa deposits
+export const TELCO_OPERATORS = [
+  'TELKOMSEL',
+  'XL', 
+  'AXIS',
+  'INDOSAT',
+  'TRI',
+  'SMARTFREN',
+] as const;
 export const INTENT_CATEGORIES = ['Acquisition', 'Retention', 'Reactivation', 'VIP'];
 export const TARGET_SEGMENTS = ['Baru', 'Existing', 'VIP', 'Dormant', 'Semua'];
 export const TRIGGER_EVENTS = ['First Deposit', 'Login', 'Loss Streak', 'APK Download', 'Turnover', 'Mission Completed'];
@@ -782,10 +814,16 @@ export const initialPromoData: PromoFormData = {
   geo_restriction: 'indonesia',
   require_apk: false,
   promo_risk_level: undefined,  // OPTIONAL - gunakan enum value ('high'), bukan label ('tinggi')
+  
+  // Payment Method Context (NEW - for Deposit Pulsa, E-Wallet, Crypto, etc.)
+  deposit_method: undefined,
+  deposit_method_providers: undefined,
+  deposit_rate: undefined,
+  
   contact_channel_enabled: false,
   contact_channel: '',
   contact_link: '',
-  
+
   // Global Jenis Hadiah, Max Bonus & Payout Direction (untuk Dinamis mode)
   global_jenis_hadiah_enabled: true,  // default ON - semua subcategory ikut global
   global_jenis_hadiah: '',

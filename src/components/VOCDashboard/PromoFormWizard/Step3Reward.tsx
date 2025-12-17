@@ -756,14 +756,17 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               )}
               
-              {/* Syarat Main Sebelum WD - Toggle */}
+              {/* Syarat Main Sebelum WD - Always visible, toggle controls validation */}
               <div className="md:col-span-2 mt-4">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <Label>Syarat Main Sebelum WD</Label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Jika aktif, bonus harus dimainkan terlebih dahulu sebelum penarikan.
+                        {data.turnover_rule_enabled 
+                          ? 'Aktif — bonus harus dimainkan terlebih dahulu sebelum penarikan.'
+                          : 'Tidak aktif — bonus langsung bisa ditarik tanpa syarat main.'
+                        }
                       </p>
                     </div>
                     <Switch
@@ -771,30 +774,53 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       onCheckedChange={(checked) => onChange({ turnover_rule_enabled: checked })}
                     />
                   </div>
-                  {data.turnover_rule_enabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                      <div className="space-y-2">
-                        <Label>Kelipatan Main Bonus (TO)</Label>
-                        <SelectWithAddNew
-                          value={data.turnover_rule}
-                          onValueChange={(value) => onChange({ turnover_rule: value })}
-                          options={turnoverRuleOptions}
-                          onAddOption={(option) => setTurnoverRuleOptions([...turnoverRuleOptions, option])}
-                          onDeleteOption={handleDeleteTurnoverRule}
-                          placeholder="Pilih kelipatan main"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Nilai Custom</Label>
-                        <Input
-                          value={data.turnover_rule_custom || ''}
-                          onChange={(e) => onChange({ turnover_rule_custom: e.target.value })}
-                          placeholder="Contoh: 3x, 10x, 12x"
-                          disabled={data.turnover_rule !== 'custom'}
-                          className={data.turnover_rule !== 'custom' ? 'opacity-50' : ''}
-                        />
-                      </div>
+                  
+                  {/* Turnover fields - always visible for transparency */}
+                  <div className={cn(
+                    "grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 transition-opacity duration-200",
+                    !data.turnover_rule_enabled && "opacity-50"
+                  )}>
+                    <div className="space-y-2">
+                      <Label>
+                        Kelipatan Main Bonus (TO)
+                        {data.turnover_rule_enabled && <span className="text-destructive ml-1">*</span>}
+                      </Label>
+                      <SelectWithAddNew
+                        value={data.turnover_rule}
+                        onValueChange={(value) => onChange({ turnover_rule: value })}
+                        options={turnoverRuleOptions}
+                        onAddOption={(option) => setTurnoverRuleOptions([...turnoverRuleOptions, option])}
+                        onDeleteOption={handleDeleteTurnoverRule}
+                        placeholder="Pilih kelipatan main"
+                        disabled={!data.turnover_rule_enabled}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {data.turnover_rule_enabled 
+                          ? 'Berapa kali bonus harus dimainkan sebelum WD.'
+                          : 'Aktifkan toggle untuk mengatur syarat turnover.'
+                        }
+                      </p>
                     </div>
+                    <div className="space-y-2">
+                      <Label>Nilai Custom</Label>
+                      <Input
+                        value={data.turnover_rule_custom || ''}
+                        onChange={(e) => onChange({ turnover_rule_custom: e.target.value })}
+                        placeholder="Contoh: 3x, 10x, 12x"
+                        disabled={!data.turnover_rule_enabled || data.turnover_rule !== 'custom'}
+                        className={(!data.turnover_rule_enabled || data.turnover_rule !== 'custom') ? 'opacity-50' : ''}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Helper text based on promo type */}
+                  {!data.turnover_rule_enabled && data.promo_type && (
+                    ['Welcome Bonus', 'Deposit Bonus', 'Freechip', 'Referral Bonus'].includes(data.promo_type) && (
+                      <p className="text-xs text-warning flex items-center gap-1.5 mt-2">
+                        <AlertTriangle className="h-3.5 w-3.5" />
+                        Promo "{data.promo_type}" biasanya memiliki syarat turnover. Pastikan ini disengaja.
+                      </p>
+                    )
                   )}
                 </div>
               </div>
