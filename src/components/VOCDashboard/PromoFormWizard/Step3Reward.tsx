@@ -695,9 +695,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
-              {/* Minimal Perhitungan - Styled like SubCategoryCard */}
-              <div className="space-y-2 md:col-span-2">
-                <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+              {/* Minimal Perhitungan - Compact, same row as Nilai Bonus */}
+              <div className="space-y-2">
+                <Label className="text-transparent select-none">Minimal</Label>
+                <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-xl h-10">
                   <Switch
                     checked={data.minimum_base_enabled}
                     onCheckedChange={(checked) => onChange({ 
@@ -705,11 +706,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       minimum_base: checked ? data.minimum_base : 0
                     })}
                   />
-                  <div className="flex-1">
-                    <div className="font-medium text-sm text-button-hover">{getMinimumBaseLabel()}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Aktifkan untuk menetapkan batas minimum perhitungan bonus
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-xs text-button-hover truncate">{getMinimumBaseLabel()}</div>
                   </div>
                 </div>
                 {data.minimum_base_enabled && (
