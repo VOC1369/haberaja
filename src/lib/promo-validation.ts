@@ -33,12 +33,19 @@ export interface ValidationResult {
 /**
  * Promo types that typically don't have turnover requirements.
  * Used for context-aware validation - NOT to hide turnover fields.
+ * 
+ * NOTE: Rollingan/Cashback is INCLUDED here because:
+ * - Bonus is rebate/cashback = instantly withdrawable
+ * - "Turnover" in S&K refers to min TO to QUALIFY for bonus, NOT TO to withdraw
+ * - This is fundamentally different from Welcome/Deposit bonus turnover
  */
 export const PROMO_TYPES_WITHOUT_TURNOVER = [
+  'Rollingan / Cashback',  // Rebate bonus - no TO for withdrawal
   'Loyalty Point',
   'Merchandise',
   'Campaign / Informational',
   'Event / Level Up',
+  'Referral Bonus',        // Usually instant bonus
 ] as const;
 
 // ============================================
@@ -115,7 +122,7 @@ export function validatePromoFormData(
     );
     
     if (typicallyHasTurnover && data.promo_type && 
-        ['Welcome Bonus', 'Deposit Bonus', 'Freechip', 'Referral Bonus'].includes(data.promo_type)) {
+        ['Welcome Bonus', 'Deposit Bonus', 'Freechip'].includes(data.promo_type)) {
       warnings.push({
         field: 'turnover_rule_enabled',
         message: `Promo "${data.promo_type}" biasanya memiliki syarat turnover. Pastikan ini disengaja.`,
