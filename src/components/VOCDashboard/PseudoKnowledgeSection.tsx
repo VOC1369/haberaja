@@ -128,8 +128,8 @@ export function PseudoKnowledgeSection() {
       setCurrentInput(saved.lastInput || '');
       setImagePreview(saved.imagePreview || null);
       
-      // Toast info saja (auto-dismiss 3 detik)
-      toast.info("Melanjutkan sesi sebelumnya", {
+      // Toast info saja (auto-dismiss 3 detik) - tekankan sifat temporary
+      toast.info("Sesi ekstraksi aktif dipulihkan (sementara)", {
         description: saved.extractedPromo.promo_name || "Draft promo",
         duration: 3000
       });
