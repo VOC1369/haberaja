@@ -828,51 +828,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Admin Fee - HANYA untuk Referral Bonus, SEMUA reward_mode */}
-          {data.promo_type === 'Referral Bonus' && (
-            <div className="p-4 bg-card border border-border rounded-xl">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <Label className="text-sm font-semibold text-foreground">Admin Fee (Opsional)</Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Aktifkan hanya jika ada potongan admin pada perhitungan komisi.
-                  </p>
-                </div>
-                <Switch
-                  checked={data.admin_fee_enabled ?? false}
-                  onCheckedChange={(checked) => {
-                    onChange({ 
-                      admin_fee_enabled: checked,
-                      admin_fee_percentage: checked ? data.admin_fee_percentage : null
-                    });
-                  }}
-                />
-              </div>
-              
-              {data.admin_fee_enabled && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <Label>Persentase Admin Fee <span className="text-destructive">*</span></Label>
-                  <div className="relative">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={data.admin_fee_percentage ?? ''}
-                      onChange={(e) => onChange({ admin_fee_percentage: e.target.value ? Number(e.target.value) : null })}
-                      placeholder="Contoh: 20"
-                      autoFocus
-                      className="pr-10"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Masukkan persentase admin fee (0-100%).
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Section 2 - Permainan & Provider */}
           <Collapsible>
             <CollapsibleTrigger className="collapsible-trigger w-full">
@@ -1398,44 +1353,81 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
-              {/* Payout Direction (Global) - Full Width */}
-              <div className="space-y-2 mb-6">
-                <div className="flex items-center justify-between">
-                  <Label>Payout Direction (Global)</Label>
-                  <Switch
-                    checked={data.global_payout_direction_enabled}
-                    onCheckedChange={(checked) => {
-                      onChange({ global_payout_direction_enabled: checked });
-                      // Inverse logic: jika global ON, semua subcategory toggle harus OFF
-                      if (checked && data.subcategories?.length) {
-                        const updatedSubcategories = data.subcategories.map(sub => ({
-                          ...sub,
-                          payout_direction_same_as_global: false
-                        }));
-                        onChange({ global_payout_direction_enabled: checked, subcategories: updatedSubcategories });
-                      }
-                    }}
-                  />
+              {/* Row: Payout Direction + Admin Fee */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Kolom Kiri: Payout Direction */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Payout Direction (Global)</Label>
+                    <Switch
+                      checked={data.global_payout_direction_enabled}
+                      onCheckedChange={(checked) => {
+                        onChange({ global_payout_direction_enabled: checked });
+                        if (checked && data.subcategories?.length) {
+                          const updatedSubcategories = data.subcategories.map(sub => ({
+                            ...sub,
+                            payout_direction_same_as_global: false
+                          }));
+                          onChange({ global_payout_direction_enabled: checked, subcategories: updatedSubcategories });
+                        }
+                      }}
+                    />
+                  </div>
+                  <RadioGroup
+                    value={data.global_payout_direction || 'after'}
+                    onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })}
+                    className={cn("flex gap-6 pt-2", !data.global_payout_direction_enabled && "opacity-50 pointer-events-none")}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="before" id="global-payout-before" disabled={!data.global_payout_direction_enabled} />
+                      <Label htmlFor="global-payout-before" className="cursor-pointer font-normal">Didepan</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="after" id="global-payout-after" disabled={!data.global_payout_direction_enabled} />
+                      <Label htmlFor="global-payout-after" className="cursor-pointer font-normal">Dibelakang</Label>
+                    </div>
+                  </RadioGroup>
+                  <p className="text-xs text-muted-foreground">
+                    {data.global_payout_direction_enabled 
+                      ? "Semua sub kategori mengikuti."
+                      : "Sub kategori set sendiri."}
+                  </p>
                 </div>
-                <RadioGroup
-                  value={data.global_payout_direction || 'after'}
-                  onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })}
-                  className={cn("flex gap-6 pt-2", !data.global_payout_direction_enabled && "opacity-50 pointer-events-none")}
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="before" id="global-payout-before" disabled={!data.global_payout_direction_enabled} />
-                    <Label htmlFor="global-payout-before" className="cursor-pointer font-normal">Didepan</Label>
+                
+                {/* Kolom Kanan: Admin Fee - HANYA untuk Referral Bonus */}
+                {data.promo_type === 'Referral Bonus' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Admin Fee (Opsional)</Label>
+                      <Switch
+                        checked={data.admin_fee_enabled ?? false}
+                        onCheckedChange={(checked) => {
+                          onChange({ 
+                            admin_fee_enabled: checked,
+                            admin_fee_percentage: checked ? data.admin_fee_percentage : null
+                          });
+                        }}
+                      />
+                    </div>
+                    {data.admin_fee_enabled && (
+                      <div className="relative animate-in fade-in slide-in-from-top-2 duration-200">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={data.admin_fee_percentage ?? ''}
+                          onChange={(e) => onChange({ admin_fee_percentage: e.target.value ? Number(e.target.value) : null })}
+                          placeholder="Contoh: 20"
+                          className="pr-10"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Potongan admin pada perhitungan komisi.
+                    </p>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="after" id="global-payout-after" disabled={!data.global_payout_direction_enabled} />
-                    <Label htmlFor="global-payout-after" className="cursor-pointer font-normal">Dibelakang</Label>
-                  </div>
-                </RadioGroup>
-                <p className="text-xs text-muted-foreground">
-                  {data.global_payout_direction_enabled 
-                    ? "Semua sub kategori mengikuti."
-                    : "Sub kategori set sendiri."}
-                </p>
+                )}
               </div>
 
               {/* Periode Klaim & Waktu Pembagian Bonus */}
