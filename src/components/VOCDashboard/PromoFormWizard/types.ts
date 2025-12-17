@@ -320,6 +320,11 @@ export interface PromoSubCategory {
   payout_direction_same_as_global: boolean;
   payout_direction: 'before' | 'after';
   
+  // Admin Fee (dengan opsi ikut global)
+  admin_fee_same_as_global: boolean;
+  admin_fee_enabled: boolean;
+  admin_fee_percentage: number | null;
+  
   // Permainan & Provider (Whitelist) - Multi-select arrays
   game_types: string[];
   game_providers: string[];
@@ -999,6 +1004,9 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       max_bonus: 2000000,
       payout_direction_same_as_global: true,
       payout_direction: 'before',
+      admin_fee_same_as_global: true,
+      admin_fee_enabled: false,
+      admin_fee_percentage: null,
       game_types: ['Slot'],
       game_providers: ['PG SOFT', 'Pragmatic Play', 'Spadegaming', 'Habanero'],
       game_names: [],
@@ -1031,6 +1039,9 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       max_bonus: 1000000,
       payout_direction_same_as_global: true,
       payout_direction: 'before',
+      admin_fee_same_as_global: true,
+      admin_fee_enabled: false,
+      admin_fee_percentage: null,
       game_types: ['Casino'],
       game_providers: ['Evolution Gaming', 'Pragmatic Play', 'Microgaming'],
       game_names: [],
@@ -1063,6 +1074,9 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       max_bonus: 1000000,
       payout_direction_same_as_global: true,
       payout_direction: 'before',
+      admin_fee_same_as_global: true,
+      admin_fee_enabled: false,
+      admin_fee_percentage: null,
       game_types: ['Sports'],
       game_providers: ['SBOBET', 'CMD368', 'Maxbet'],
       game_names: [],
