@@ -804,6 +804,13 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       label="Syarat Main Sebelum WD" 
                       value={data.turnover_rule_enabled ? data.turnover_rule : 'Tidak aktif'} 
                     />
+                    {/* Admin Fee - hanya tampil jika enabled dan promo_type referral */}
+                    {data.promo_type === 'Referral Bonus' && data.admin_fee_enabled && data.admin_fee_percentage !== null && (
+                      <ValueBox 
+                        label="Admin Fee" 
+                        value={`${data.admin_fee_percentage}%`} 
+                      />
+                    )}
                   </>
                 )}
                 {data.reward_mode === 'tier' && (
