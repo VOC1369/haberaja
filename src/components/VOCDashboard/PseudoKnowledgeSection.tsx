@@ -54,7 +54,8 @@ import { promoKB, extractorSession, type InputMode, type EditHistoryItem } from 
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
 
 // Helper: Title Case for mode badges
-const formatPromoMode = (mode: string): string => {
+const formatPromoMode = (mode: string | null | undefined): string => {
+  if (!mode) return '-';
   if (mode === 'multi') return 'Multi Variant';
   if (mode === 'single') return 'Single';
   return mode.charAt(0).toUpperCase() + mode.slice(1);
