@@ -763,7 +763,7 @@ export function PseudoKnowledgeSection() {
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
-        <div className="p-6 space-y-6 max-w-5xl mx-auto">
+        <div className={`p-6 max-w-5xl mx-auto ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
           
           {/* INPUT SECTION - Unified Design */}
           {!extractedPromo && !isExtracting && (
