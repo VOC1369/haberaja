@@ -377,8 +377,8 @@ export function SubCategoryCard({
                 {subCategory.calculation_method === 'percentage' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>}
               </div>
             </div>
-            {/* Minimal Perhitungan - Standard toggle design */}
-            <div className="space-y-2 md:col-span-2">
+            {/* Minimal Perhitungan - Same row as Nilai Bonus */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>{getMinimumBaseLabel()}</Label>
                 <div className="flex items-center gap-2">
@@ -392,16 +392,16 @@ export function SubCategoryCard({
                   />
                 </div>
               </div>
-              {subCategory.minimum_base_enabled && (
-                <Input 
-                  type="text" 
-                  value={subCategory.minimum_base ? subCategory.minimum_base.toLocaleString('id-ID') : ''} 
-                  onChange={e => onChange({
-                    minimum_base: Number(e.target.value.replace(/\D/g, ''))
-                  })} 
-                  placeholder="Contoh: 1.000.000" 
-                />
-              )}
+              <Input 
+                type="text" 
+                value={subCategory.minimum_base_enabled && subCategory.minimum_base ? subCategory.minimum_base.toLocaleString('id-ID') : ''} 
+                onChange={e => onChange({
+                  minimum_base: Number(e.target.value.replace(/\D/g, ''))
+                })} 
+                placeholder={subCategory.minimum_base_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
+                disabled={!subCategory.minimum_base_enabled}
+                className={!subCategory.minimum_base_enabled ? "opacity-50" : ""}
+              />
             </div>
           </div>
           

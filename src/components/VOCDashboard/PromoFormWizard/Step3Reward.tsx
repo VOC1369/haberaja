@@ -695,8 +695,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
-              {/* Minimal Perhitungan - Standard toggle design */}
-              <div className="space-y-2 md:col-span-2">
+              {/* Minimal Perhitungan - Same row as Nilai Bonus */}
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>{getMinimumBaseLabel()}</Label>
                   <div className="flex items-center gap-2">
@@ -710,14 +710,14 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     />
                   </div>
                 </div>
-                {data.minimum_base_enabled && (
-                  <Input
-                    type="text"
-                    value={data.minimum_base ? data.minimum_base.toLocaleString('id-ID') : ''}
-                    onChange={(e) => onChange({ minimum_base: Number(e.target.value.replace(/\D/g, '')) })}
-                    placeholder="Contoh: 1.000.000"
-                  />
-                )}
+                <Input
+                  type="text"
+                  value={data.minimum_base_enabled && data.minimum_base ? data.minimum_base.toLocaleString('id-ID') : ''}
+                  onChange={(e) => onChange({ minimum_base: Number(e.target.value.replace(/\D/g, '')) })}
+                  placeholder={data.minimum_base_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
+                  disabled={!data.minimum_base_enabled}
+                  className={!data.minimum_base_enabled ? "opacity-50" : ""}
+                />
               </div>
             </div>
             
