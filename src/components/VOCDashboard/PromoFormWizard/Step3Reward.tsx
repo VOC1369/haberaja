@@ -500,11 +500,11 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="icon-circle">
                     <Layers className="icon-circle-icon" />
                   </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-button-hover">
+                  <div className="text-left">
+                    <div className="text-sm font-semibold text-button-hover">
                       Sub Kategori Promo ({data.subcategories?.length || 0})
-                    </h4>
-                    <p className="text-xs text-muted-foreground">Varian bonus untuk promo ini</p>
+                    </div>
+                    <div className="text-xs text-muted-foreground">Varian bonus untuk promo ini</div>
                   </div>
                 </div>
                 <Button
