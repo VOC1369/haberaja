@@ -463,19 +463,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
       {/* Blok F - Mode Formula (UI: Dinamis) */}
       {data.reward_mode === 'formula' && (
         <>
-          {/* Guard Header - Audit Safety */}
-          <div className="p-4 bg-muted rounded-lg border border-border">
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">Catatan Penting</p>
-                <p className="text-xs text-muted-foreground">
-                  Perhitungan di halaman ini bersifat ilustratif untuk pemahaman admin. 
-                  Perhitungan final reward dilakukan oleh sistem dan diverifikasi oleh Human Agent.
-                </p>
-              </div>
-            </div>
-          </div>
 
           {/* Toggle Sub Kategori (Combo Promo) */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
