@@ -981,9 +981,10 @@ export function PseudoKnowledgeSection() {
               <Loader2 className="w-6 h-6 animate-spin text-button-hover" />
               <div>
                 <span className="text-foreground font-medium">Mengekstrak promo...</span>
-                <span className="text-muted-foreground ml-2">
-                  (VOC AI Knowledge)
-                </span>
+                <Badge variant="outline" className="bg-success/10 text-success border-success/30 ml-2">
+                  <span className="w-2 h-2 rounded-full bg-success mr-2" />
+                  VOC AI Knowledge
+                </Badge>
               </div>
             </div>
           )}
