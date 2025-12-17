@@ -483,53 +483,40 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <div className="flex-1">
               <div className="font-medium text-sm text-button-hover flex items-center gap-2">
                 <Layers className="h-4 w-4" />
-                Aktifkan Sub Kategori (Combo Promo)
+                Aktifkan Sub Kategori (Combo Promo){data.has_subcategories && ` (${data.subcategories?.length || 0})`}
               </div>
               <p className="text-xs text-muted-foreground">
                 Jika diaktifkan, promo ini memiliki beberapa sub kategori / varian bonus.
               </p>
             </div>
+            
+            {/* Button - HANYA tampil jika toggle ON */}
+            {data.has_subcategories && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const currentCount = data.subcategories?.length || 0;
+                  if (currentCount >= 10) {
+                    toast.error("Maksimum 10 sub kategori");
+                    return;
+                  }
+                  const newSubCategory = createInitialSubCategory(currentCount + 1);
+                  onChange({ subcategories: [...(data.subcategories || []), newSubCategory] });
+                  toast.success(`Sub Kategori ${currentCount + 1} ditambahkan`);
+                }}
+                disabled={(data.subcategories?.length || 0) >= 10}
+                className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Tambah Sub Kategori
+              </Button>
+            )}
           </div>
 
-          {/* Sub Kategori Section - Only when toggle ON */}
+          {/* Sub Category Cards - Only when toggle ON */}
           {data.has_subcategories && (
             <div className="space-y-4 mt-4">
-              {/* Header with counter and add button */}
-              <div className="flex items-center justify-between p-4 bg-card border border-border rounded-xl">
-                <div className="flex items-center gap-3">
-                  <div className="icon-circle">
-                    <Layers className="icon-circle-icon" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-sm font-semibold text-button-hover">
-                      Sub Kategori Promo ({data.subcategories?.length || 0})
-                    </div>
-                    <div className="text-xs text-muted-foreground">Varian bonus untuk promo ini</div>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const currentCount = data.subcategories?.length || 0;
-                    if (currentCount >= 10) {
-                      toast.error("Maksimum 10 sub kategori");
-                      return;
-                    }
-                    const newSubCategory = createInitialSubCategory(currentCount + 1);
-                    onChange({ subcategories: [...(data.subcategories || []), newSubCategory] });
-                    toast.success(`Sub Kategori ${currentCount + 1} ditambahkan`);
-                  }}
-                  disabled={(data.subcategories?.length || 0) >= 10}
-                  className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Tambah Sub Kategori
-                </Button>
-              </div>
-
-              {/* Sub Category Cards */}
-              <div className="space-y-4">
                 {(data.subcategories || []).map((subCategory, index) => (
                   <SubCategoryCard
                     key={subCategory.id}
@@ -562,7 +549,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     }}
                   />
                 ))}
-              </div>
             </div>
           )}
 
