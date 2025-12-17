@@ -1492,6 +1492,10 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     require_apk: false,
     promo_risk_level: 'medium',
 
+    // Admin Fee (untuk Referral Bonus)
+    admin_fee_enabled: false,
+    admin_fee_percentage: null,
+
     // Contact Channel
     contact_channel_enabled: false,
     contact_channel: '',

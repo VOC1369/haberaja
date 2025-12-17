@@ -824,6 +824,52 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   )}
                 </div>
               </div>
+              
+              {/* Admin Fee - HANYA untuk Referral Bonus */}
+              {data.promo_type === 'Referral Bonus' && (
+                <div className="mt-6 pt-4 border-t border-border">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <Label className="text-sm font-semibold text-foreground">Admin Fee</Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Aktifkan jika ada potongan admin fee pada rumus referral.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={data.admin_fee_enabled ?? false}
+                      onCheckedChange={(checked) => {
+                        onChange({ 
+                          admin_fee_enabled: checked,
+                          admin_fee_percentage: checked ? data.admin_fee_percentage : null
+                        });
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Input persen - HANYA tampil jika toggle ON */}
+                  {data.admin_fee_enabled && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <Label>Persentase Admin Fee <span className="text-destructive">*</span></Label>
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={data.admin_fee_percentage ?? ''}
+                          onChange={(e) => onChange({ admin_fee_percentage: e.target.value ? Number(e.target.value) : null })}
+                          placeholder="Contoh: 20"
+                          autoFocus
+                          className="pr-10"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Masukkan persentase admin fee (0-100%).
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CollapsibleContent>
           </Collapsible>
 

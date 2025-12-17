@@ -97,6 +97,10 @@ export const PKB_FIELD_WHITELIST = [
   'deposit_method',
   'deposit_method_providers',
   'deposit_rate',
+  
+  // Admin Fee (untuk Referral Bonus)
+  'admin_fee_enabled',
+  'admin_fee_percentage',
 ] as const;
 
 // ============================================
@@ -232,6 +236,10 @@ export interface PromoFormData {
   deposit_method?: 'bank' | 'pulsa' | 'ewallet' | 'crypto' | 'qris' | 'all';
   deposit_method_providers?: string[];  // e.g., ["TELKOMSEL", "XL"] or ["DANA", "OVO"] or ["USDT", "BTC"]
   deposit_rate?: number;                // Conversion rate: 100 = no fee, 90 = 10% fee
+
+  // Admin Fee (hanya untuk promo_type = 'Referral Bonus')
+  admin_fee_enabled: boolean;
+  admin_fee_percentage: number | null;
 
   // Contact Channel
   contact_channel_enabled: boolean;
@@ -821,6 +829,10 @@ export const initialPromoData: PromoFormData = {
   deposit_method_providers: undefined,
   deposit_rate: undefined,
   
+  // Admin Fee (untuk Referral Bonus)
+  admin_fee_enabled: false,
+  admin_fee_percentage: null,
+  
   contact_channel_enabled: false,
   contact_channel: '',
   contact_link: '',
@@ -949,6 +961,10 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   geo_restriction: 'indonesia',
   require_apk: false,
   promo_risk_level: 'medium',
+  
+  // Admin Fee (untuk Referral Bonus)
+  admin_fee_enabled: false,
+  admin_fee_percentage: null,
   
   // Contact
   contact_channel_enabled: true,
