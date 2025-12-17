@@ -570,8 +570,18 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           {!data.has_subcategories && (
             <>
           {/* Section 1 - Dasar Perhitungan Bonus */}
-          <div className="space-y-4 mb-6">
-            <h4 className="font-semibold text-button-hover mb-4 text-sm">1. Dasar Perhitungan Bonus</h4>
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
+              <div className="flex items-center gap-3">
+                <Calculator className="h-5 w-5 text-button-hover" />
+                <div className="text-left">
+                  <div className="text-sm font-semibold text-foreground">1. Dasar Perhitungan Bonus</div>
+                  <div className="text-xs text-muted-foreground">Konfigurasi dasar kalkulasi reward</div>
+                </div>
+              </div>
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 mb-6">
             
             {/* Row 1: Jenis Hadiah & Max Bonus (2 kolom) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -813,11 +823,22 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               )}
             </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Section 2 - Permainan & Provider */}
-          <div className="space-y-4 mb-6">
-            <h4 className="text-sm font-semibold text-button-hover">2. Permainan & Provider</h4>
+          <Collapsible defaultOpen>
+            <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
+              <div className="flex items-center gap-3">
+                <Gamepad2 className="h-5 w-5 text-button-hover" />
+                <div className="text-left">
+                  <div className="text-sm font-semibold text-foreground">2. Permainan & Provider</div>
+                  <div className="text-xs text-muted-foreground">Target game dan provider untuk promo</div>
+                </div>
+              </div>
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 mb-6">
               {/* Jenis Game - Multi-select dengan Badges */}
               <div className="space-y-2 mb-4">
                 <Label>Jenis Game</Label>
@@ -1129,7 +1150,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </div>
                 )}
               </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
             </>
           )}
 
