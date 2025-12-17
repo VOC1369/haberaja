@@ -38,6 +38,18 @@ export type RewardArchetype =
   | 'tiered_fixed'     // Point redemption, Loyalty tiers
   | 'referral';        // Referral bonus
 
+// ============= GAME DOMAIN SYSTEM (v1) =============
+// System-derived - NOT user editable
+export type GameDomain = 'slot' | 'casino' | 'togel' | 'sports' | 'general';
+
+// Togel event reward structure
+export interface TogelEventReward {
+  prize_rank: string;      // "2nd", "3rd"
+  digit_type: string;      // "3D", "4D"
+  market?: string;         // "Singapore", "Hongkong" (optional)
+  reward_amount: number;   // 20000, 200000
+}
+
 // Field applicability status per archetype
 export type FieldStatus = 'required' | 'optional' | 'not_applicable';
 
@@ -46,7 +58,7 @@ const ARCHETYPE_KEYWORDS = {
   event_table: [
     'scatter', 'event', 'level up', 'naik level', 'milestone', 'achievement',
     'tournament', 'race', 'kejar level', 'bonus scatter', 'hadiah scatter',
-    'misi', 'quest', 'challenge'
+    'misi', 'quest', 'challenge', 'prize 2nd', 'prize 3rd', 'prize 1st'
   ],
   tiered_fixed: [
     'point', 'redeem', 'tukar', 'loyalty', 'reward point', 'poin', 'penukaran'
@@ -55,6 +67,95 @@ const ARCHETYPE_KEYWORDS = {
     'referral', 'ajak teman', 'undang', 'invite', 'ref bonus', 'rekrut'
   ]
 } as const;
+
+// Game domain detection patterns
+const DOMAIN_PATTERNS = {
+  togel: [
+    /togel|lottery|lotre/i,
+    /\b[234]d\b/i,
+    /pasaran/i,
+    /prize\s*(1st|2nd|3rd|first|second|third)/i,
+    /singapore|hongkong|sydney|cambodia|china|taiwan/i,
+    /angka\s*(jitu|main|mati)/i,
+  ],
+  sports: [
+    /sportsbook|taruhan\s*bola|handicap|over\s*under|parlay/i
+  ],
+  casino: [
+    /live\s*casino|baccarat|roulette|blackjack|sic\s*bo/i
+  ],
+  slot: [
+    /\bslot\b|pragmatic|pg\s*soft|habanero|spadegaming/i
+  ]
+} as const;
+
+// Domain-aware defaults
+interface DomainDefaults {
+  metode: 'percentage' | 'fixed';
+  dasar: 'deposit' | 'turnover' | 'bet_amount';
+  jenis_game: string;
+}
+
+const DOMAIN_DEFAULTS: Record<GameDomain, DomainDefaults> = {
+  togel: {
+    metode: 'fixed',           // NEVER percentage for togel
+    dasar: 'bet_amount',       // NEVER deposit for togel
+    jenis_game: 'Togel',
+  },
+  slot: {
+    metode: 'percentage',
+    dasar: 'deposit',
+    jenis_game: 'Slot',
+  },
+  casino: {
+    metode: 'percentage',
+    dasar: 'turnover',
+    jenis_game: 'Live Casino',
+  },
+  sports: {
+    metode: 'percentage',
+    dasar: 'bet_amount',
+    jenis_game: 'Sportsbook',
+  },
+  general: {
+    metode: 'fixed',           // Safe default
+    dasar: 'deposit',          // Safe default
+    jenis_game: 'Semua',       // No assumption
+  },
+};
+
+// Detect game domain from promo data (SYSTEM-DERIVED)
+export function detectGameDomain(data: { promo_name?: string; terms_conditions?: string[] }): GameDomain {
+  const text = `${data.promo_name || ''} ${(data.terms_conditions || []).join(' ')}`.toLowerCase();
+  
+  // Togel/Lottery patterns (highest priority for specificity)
+  if (DOMAIN_PATTERNS.togel.some(p => p.test(text))) {
+    return 'togel';
+  }
+  
+  // Sports patterns
+  if (DOMAIN_PATTERNS.sports.some(p => p.test(text))) {
+    return 'sports';
+  }
+  
+  // Casino patterns
+  if (DOMAIN_PATTERNS.casino.some(p => p.test(text))) {
+    return 'casino';
+  }
+  
+  // Slot patterns (only if explicitly mentioned)
+  if (DOMAIN_PATTERNS.slot.some(p => p.test(text))) {
+    return 'slot';
+  }
+  
+  // DEFAULT = GENERAL (not slot!) - prevents slot bias
+  return 'general';
+}
+
+// Get domain defaults
+export function getDomainDefaults(domain: GameDomain): DomainDefaults {
+  return DOMAIN_DEFAULTS[domain];
+}
 
 // Detect archetype from promo data (SYSTEM-DERIVED - not user input)
 export function detectRewardArchetype(data: { promo_name?: string; promo_type?: string }): RewardArchetype {
@@ -206,6 +307,11 @@ export interface ExtractedPromo {
   deposit_method?: 'bank' | 'pulsa' | 'ewallet' | 'crypto' | 'qris' | 'all';
   deposit_method_providers?: string[];  // e.g., ["TELKOMSEL", "XL"] or ["DANA", "OVO"]
   deposit_rate?: number;                // 100 = tanpa potongan, 90 = potongan 10%
+  
+  // Game Domain Detection (v1) - SYSTEM-DERIVED
+  game_domain?: GameDomain;             // Auto-detected from content
+  applicable_markets?: string[];        // For togel: ["Singapore", "Hongkong", ...]
+  event_rewards?: TogelEventReward[];   // For event_table archetype (togel prizes)
   
   // Global blacklist — HANYA jika eksplisit "berlaku untuk semua"
   global_blacklist: {
