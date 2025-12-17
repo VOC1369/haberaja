@@ -186,10 +186,15 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
   }
   
   // Rule 3: Check setiap sub kategori
-  // Check if promo type is exempt from turnover validation
-  const isTurnoverExempt = PROMO_TYPES_WITHOUT_TURNOVER.some(
-    t => data.promo_type?.toLowerCase().includes(t.toLowerCase())
-  );
+  // Check if promo type is exempt from turnover validation (robust matching)
+  const isTurnoverExempt = PROMO_TYPES_WITHOUT_TURNOVER.some(t => {
+    const typeNormalized = data.promo_type?.toLowerCase().trim() || '';
+    const exemptNormalized = t.toLowerCase().trim();
+    
+    return typeNormalized === exemptNormalized || 
+           typeNormalized.includes(exemptNormalized) ||
+           exemptNormalized.includes(typeNormalized);
+  });
   
   data.subcategories.forEach((sub, idx) => {
     const subLabel = sub.sub_name || `Sub ${idx + 1}`;
