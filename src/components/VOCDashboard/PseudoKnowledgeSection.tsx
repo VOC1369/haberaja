@@ -40,9 +40,12 @@ import {
   getStatusBadgeStyle,
   getStatusLabel,
   mapExtractedToPromoFormData,
+  detectRewardArchetype,
+  getFieldStatus,
   type ExtractedPromo,
   type ExtractedPromoSubCategory,
-  type ConfidenceLevel
+  type ConfidenceLevel,
+  type RewardArchetype
 } from "@/lib/openai-extractor";
 import { promoKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
@@ -467,17 +470,38 @@ export function PseudoKnowledgeSection() {
   // RENDER SUB CATEGORY CARD
   // ============================================
   
-  const renderSubCategoryCard = (sub: ExtractedPromoSubCategory, idx: number) => {
+  const renderSubCategoryCard = (sub: ExtractedPromoSubCategory, idx: number, archetype: RewardArchetype) => {
     const hasBlacklist = sub.blacklist?.enabled && (
       sub.blacklist.providers.length > 0 || 
       sub.blacklist.games.length > 0 || 
       sub.blacklist.rules.length > 0
     );
     
-    const hasCriticalIssue = ['calculation_value', 'turnover_rule', 'payout_direction'].some(
-      f => sub.confidence?.[f as keyof typeof sub.confidence] === 'ambiguous' || 
-           sub.confidence?.[f as keyof typeof sub.confidence] === 'missing'
-    );
+    // Only flag critical issues for REQUIRED fields based on archetype
+    const hasCriticalIssue = ['calculation_value', 'turnover_rule', 'payout_direction'].some(f => {
+      const status = getFieldStatus(f, archetype);
+      if (status !== 'required') return false; // Skip non-required fields
+      const conf = sub.confidence?.[f as keyof typeof sub.confidence];
+      return conf === 'ambiguous' || conf === 'missing';
+    });
+    
+    // Helper: Get display value for a field based on archetype
+    const getFieldDisplay = (field: string, value: any, suffix?: string) => {
+      const status = getFieldStatus(field, archetype);
+      
+      // Not applicable → show "Tidak Berlaku" in muted/italic style
+      if (status === 'not_applicable') {
+        return <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>;
+      }
+      
+      // Has value → show normally
+      if (value != null && value !== '') {
+        return <span className="text-foreground font-medium">{value}{suffix || ''}</span>;
+      }
+      
+      // Empty → show dash
+      return <span className="text-muted-foreground">-</span>;
+    };
     
     return (
       <div 
@@ -506,15 +530,23 @@ export function PseudoKnowledgeSection() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Nilai Bonus</span>
-            <span className="text-button-hover font-semibold">
-              {sub.calculation_value}{sub.calculation_method === 'percentage' ? '%' : ''}
-            </span>
+            {getFieldStatus('calculation_value', archetype) === 'not_applicable' ? (
+              <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
+            ) : (
+              <span className="text-button-hover font-semibold">
+                {sub.calculation_value != null ? `${sub.calculation_value}${sub.calculation_method === 'percentage' ? '%' : ''}` : '-'}
+              </span>
+            )}
           </div>
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Min Deposit</span>
-            <span className="text-foreground font-medium">
-              {sub.minimum_base ? `Rp ${sub.minimum_base.toLocaleString('id-ID')}` : "-"}
-            </span>
+            {getFieldStatus('minimum_base', archetype) === 'not_applicable' ? (
+              <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
+            ) : (
+              <span className="text-foreground font-medium">
+                {sub.minimum_base ? `Rp ${sub.minimum_base.toLocaleString('id-ID')}` : "-"}
+              </span>
+            )}
           </div>
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Max Bonus</span>
@@ -524,11 +556,13 @@ export function PseudoKnowledgeSection() {
           </div>
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Turnover</span>
-            <span className="text-foreground font-medium">
-              {sub.confidence?.turnover_rule === 'not_applicable' 
-                ? 'Tidak Berlaku'
-                : sub.turnover_rule != null ? `${sub.turnover_rule}x` : '-'}
-            </span>
+            {getFieldStatus('turnover_rule', archetype) === 'not_applicable' ? (
+              <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
+            ) : (
+              <span className="text-foreground font-medium">
+                {sub.turnover_rule != null ? `${sub.turnover_rule}x` : '-'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -709,7 +743,10 @@ export function PseudoKnowledgeSection() {
                 Sub Kategori ({extractedPromo.subcategories.length} Varian)
               </h4>
               <div className="space-y-4">
-                {extractedPromo.subcategories.map((sub, idx) => renderSubCategoryCard(sub, idx))}
+                {extractedPromo.subcategories.map((sub, idx) => {
+                  const archetype = detectRewardArchetype(extractedPromo);
+                  return renderSubCategoryCard(sub, idx, archetype);
+                })}
               </div>
             </div>
           )}
