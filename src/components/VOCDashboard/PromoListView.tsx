@@ -305,7 +305,7 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm px-4 py-3">
-                        {sub.game_types?.length > 0 ? sub.game_types.join(', ') : 'Semua Game'}
+                        {sub.game_types?.length > 0 ? sub.game_types.map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).join(', ') : 'Semua Game'}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm px-4 py-3">
                         {sub.calculation_value ? `${sub.calculation_value}%` : '-'}
