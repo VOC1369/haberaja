@@ -438,13 +438,21 @@ export function SubCategoryCard({
               </div>
             </Collapsible>}
 
-          {/* Syarat Main Sebelum WD */}
+          {/* Syarat Main Sebelum WD - Styled like Wajib APK */}
           <div className="pt-4">
-            <div className="flex items-center justify-between mb-2">
-              <Label>Syarat Main Sebelum WD</Label>
-              <Switch checked={subCategory.turnover_rule_enabled} onCheckedChange={checked => onChange({
-              turnover_rule_enabled: checked
-            })} />
+            <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-2">
+              <Switch 
+                checked={subCategory.turnover_rule_enabled} 
+                onCheckedChange={checked => onChange({
+                  turnover_rule_enabled: checked
+                })} 
+              />
+              <div>
+                <div className="font-medium text-sm text-button-hover">Syarat Main Sebelum WD</div>
+                <p className="text-xs text-muted-foreground">
+                  Aktifkan jika promo memiliki syarat kelipatan main (turnover) sebelum withdrawal
+                </p>
+              </div>
             </div>
             {subCategory.turnover_rule_enabled && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
