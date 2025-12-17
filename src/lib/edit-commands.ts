@@ -328,6 +328,7 @@ Contoh yang valid:
           ...sub,
           blacklist: {
             enabled: false,
+            types: [],
             providers: [],
             games: [],
             rules: [],
@@ -354,6 +355,7 @@ Contoh yang valid:
         ...newData.subcategories[idx],
         blacklist: {
           enabled: false,
+          types: [],
           providers: [],
           games: [],
           rules: [],

@@ -273,9 +273,10 @@ export interface ExtractedPromoSubCategory {
   // Blacklist per Sub (default behavior)
   blacklist: {
     enabled: boolean;
-    providers: string[];
-    games: string[];
-    rules: string[];
+    types: string[];       // e.g., ["Slot"] - game types blacklist
+    providers: string[];   // e.g., ["Pragmatic Play"]
+    games: string[];       // e.g., ["HEROES", "SPACEMAN"]
+    rules: string[];       // e.g., ["Semua slot 3 line", "Old game slot"]
   };
   
   // Confidence per field (WAJIB)
@@ -317,6 +318,7 @@ export interface ExtractedPromo {
   global_blacklist: {
     enabled: boolean;
     is_explicit: boolean;  // true = eksplisit tertulis, false = derived
+    types: string[];       // e.g., ["Slot"] - game types blacklist
     providers: string[];
     games: string[];
     rules: string[];
@@ -1030,7 +1032,7 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     
     // Ensure defaults
     if (!parsed.global_blacklist) {
-      parsed.global_blacklist = { enabled: false, is_explicit: false, providers: [], games: [], rules: [] };
+      parsed.global_blacklist = { enabled: false, is_explicit: false, types: [], providers: [], games: [], rules: [] };
     }
     if (!parsed.subcategories) {
       parsed.subcategories = [];
@@ -1045,7 +1047,7 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     // Ensure each subcategory has blacklist and confidence
     parsed.subcategories = parsed.subcategories.map(sub => ({
       ...sub,
-      blacklist: sub.blacklist || { enabled: false, providers: [], games: [], rules: [] },
+      blacklist: sub.blacklist || { enabled: false, types: [], providers: [], games: [], rules: [] },
       confidence: sub.confidence || {
         calculation_value: 'derived',
         minimum_base: 'derived',
@@ -1118,7 +1120,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     
     // Ensure defaults
     if (!parsed.global_blacklist) {
-      parsed.global_blacklist = { enabled: false, is_explicit: false, providers: [], games: [], rules: [] };
+      parsed.global_blacklist = { enabled: false, is_explicit: false, types: [], providers: [], games: [], rules: [] };
     }
     if (!parsed.subcategories) {
       parsed.subcategories = [];
@@ -1186,7 +1188,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     // Ensure each subcategory has blacklist and confidence
     parsed.subcategories = parsed.subcategories.map(sub => ({
       ...sub,
-      blacklist: sub.blacklist || { enabled: false, providers: [], games: [], rules: [] },
+      blacklist: sub.blacklist || { enabled: false, types: [], providers: [], games: [], rules: [] },
       confidence: sub.confidence || {
         calculation_value: 'missing',
         minimum_base: 'missing',
@@ -1384,9 +1386,13 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     game_providers: mapGameProviders(sub.game_providers),
     game_names: sub.game_names || [],
     
-    // Game blacklist
-    game_blacklist_enabled: sub.blacklist?.enabled || false,
-    game_types_blacklist: [],
+    // Game blacklist - Auto-enable if any array has content
+    game_blacklist_enabled: sub.blacklist?.enabled || 
+      (sub.blacklist?.types?.length || 0) > 0 ||
+      (sub.blacklist?.providers?.length || 0) > 0 ||
+      (sub.blacklist?.games?.length || 0) > 0 ||
+      (sub.blacklist?.rules?.length || 0) > 0,
+    game_types_blacklist: sub.blacklist?.types || [],
     game_providers_blacklist: sub.blacklist?.providers || [],
     game_names_blacklist: sub.blacklist?.games || [],
     game_exclusion_rules: sub.blacklist?.rules || [],
@@ -1482,9 +1488,13 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     game_providers: subcategories[0]?.game_providers || [],
     game_names: subcategories[0]?.game_names || [],
     
-    // Blacklist from global
-    game_blacklist_enabled: extracted.global_blacklist?.enabled || false,
-    game_types_blacklist: [],
+    // Blacklist from global - Auto-enable if any array has content
+    game_blacklist_enabled: extracted.global_blacklist?.enabled || 
+      (extracted.global_blacklist?.types?.length || 0) > 0 ||
+      (extracted.global_blacklist?.providers?.length || 0) > 0 ||
+      (extracted.global_blacklist?.games?.length || 0) > 0 ||
+      (extracted.global_blacklist?.rules?.length || 0) > 0,
+    game_types_blacklist: extracted.global_blacklist?.types || [],
     game_providers_blacklist: extracted.global_blacklist?.providers || [],
     game_names_blacklist: extracted.global_blacklist?.games || [],
     game_exclusion_rules: extracted.global_blacklist?.rules || [],

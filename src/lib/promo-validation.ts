@@ -222,6 +222,21 @@ export function validatePromoFormData(
     
     // Validate each subcategory
     data.subcategories.forEach((sub, index) => {
+      // Blacklist-only validation: If blacklist is enabled with content, this is a valid business rule
+      // Do NOT flag missing whitelist as an error
+      if (sub.game_blacklist_enabled) {
+        const hasBlacklistContent = 
+          (sub.game_types_blacklist?.length || 0) > 0 ||
+          (sub.game_providers_blacklist?.length || 0) > 0 ||
+          (sub.game_names_blacklist?.length || 0) > 0 ||
+          (sub.game_exclusion_rules?.length || 0) > 0;
+        
+        if (hasBlacklistContent) {
+          // Valid - blacklist-only promo, skip whitelist validation for this sub
+          // Only validate name and turnover below
+        }
+      }
+      
       if (!sub.name?.trim()) {
         warnings.push({
           field: `subcategories[${index}].name`,
