@@ -298,11 +298,11 @@ body {
    * - Content: p-6 pt-4 (24px sides/bottom, 16px top)
    */
   .collapsible-trigger {
-    @apply flex items-center justify-between p-6 bg-card rounded-xl border border-border cursor-pointer hover:bg-muted transition-colors;
+    @apply flex items-center justify-between p-4 bg-card rounded-xl border border-border cursor-pointer hover:bg-muted transition-colors;
   }
 
   .collapsible-content {
-    @apply mt-2 p-6 pt-4 border border-border rounded-xl bg-card space-y-4;
+    @apply mt-4 p-4 border border-border rounded-xl bg-card space-y-4;
   }
 
   /* ========== FORMULA INPUT ROW ========== */
