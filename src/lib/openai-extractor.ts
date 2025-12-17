@@ -44,6 +44,7 @@ export const PROMO_TYPES_WITHOUT_TURNOVER = [
   'Campaign / Informational',
   'Event / Level Up',
   'Rollingan / Cashback',
+  'Referral Bonus',
 ] as const;
 
 // Telco operators for deposit pulsa detection
@@ -168,6 +169,8 @@ const REQUIRED_SUB_FIELDS = [
 
 // Note: max_bonus is NOT in required fields because null = unlimited is valid
 
+// Note: max_bonus is NOT in required fields because null = unlimited is valid
+
 export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -183,11 +186,18 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
   }
   
   // Rule 3: Check setiap sub kategori
+  // Check if promo type is exempt from turnover validation
+  const isTurnoverExempt = PROMO_TYPES_WITHOUT_TURNOVER.some(
+    t => data.promo_type?.toLowerCase().includes(t.toLowerCase())
+  );
+  
   data.subcategories.forEach((sub, idx) => {
     const subLabel = sub.sub_name || `Sub ${idx + 1}`;
     
-    // Check field wajib (excluding max_bonus and minimum_base which can be null)
-    const checkFields = ['calculation_value', 'turnover_rule', 'payout_direction'] as const;
+    // Check field wajib - SKIP turnover_rule for exempt promo types
+    const checkFields = isTurnoverExempt 
+      ? ['calculation_value', 'payout_direction'] as const
+      : ['calculation_value', 'turnover_rule', 'payout_direction'] as const;
     checkFields.forEach(field => {
       const value = sub[field as keyof ExtractedPromoSubCategory];
       if (value === undefined || value === null || (typeof value === 'string' && value === '')) {
@@ -215,8 +225,10 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
       }
     }
     
-    // Check confidence — critical fields
-    const criticalFields = ['calculation_value', 'turnover_rule', 'payout_direction'] as const;
+    // Check confidence — critical fields (promo-type aware)
+    const criticalFields = isTurnoverExempt
+      ? ['calculation_value', 'payout_direction'] as const
+      : ['calculation_value', 'turnover_rule', 'payout_direction'] as const;
     criticalFields.forEach(field => {
       const conf = sub.confidence?.[field];
       if (conf) {
@@ -251,8 +263,12 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
   
   const is_valid = errors.length === 0;
   // not_applicable TIDAK dianggap ambiguous/blocking
+  // Check ambiguous critical fields (promo-type aware)
+  const ambiguousCheckFields = isTurnoverExempt
+    ? ['calculation_value', 'payout_direction']
+    : ['calculation_value', 'turnover_rule', 'payout_direction'];
   const hasAmbiguousCritical = data.subcategories.some(sub => {
-    return ['calculation_value', 'turnover_rule', 'payout_direction'].some(
+    return ambiguousCheckFields.some(
       f => {
         const conf = sub.confidence?.[f as keyof typeof sub.confidence];
         // not_applicable is OK, only ambiguous/missing blocks
