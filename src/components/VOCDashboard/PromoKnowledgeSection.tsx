@@ -465,7 +465,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                             <span className="text-sm text-foreground">{sub.name || `Varian ${subIndex + 1}`}</span>
                             {sub.game_types && sub.game_types.length > 0 && (
                               <Badge className="bg-button-hover/20 text-button-hover border-0 rounded-full px-2 py-0.5 text-xs">
-                                {sub.game_types.join(", ")}
+                                {sub.game_types.map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).join(", ")}
                               </Badge>
                             )}
                           </div>
