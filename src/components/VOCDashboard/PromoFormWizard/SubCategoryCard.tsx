@@ -377,17 +377,33 @@ export function SubCategoryCard({
                 {subCategory.calculation_method === 'percentage' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>}
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>{getMinimumBaseLabel()}</Label>
-                <Switch checked={subCategory.minimum_base_enabled} onCheckedChange={checked => onChange({
-                minimum_base_enabled: checked,
-                minimum_base: checked ? subCategory.minimum_base : 0
-              })} />
+            {/* Minimal Perhitungan - Styled like Wajib APK */}
+            <div className="space-y-2 md:col-span-2">
+              <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+                <Switch 
+                  checked={subCategory.minimum_base_enabled} 
+                  onCheckedChange={checked => onChange({
+                    minimum_base_enabled: checked,
+                    minimum_base: checked ? subCategory.minimum_base : 0
+                  })} 
+                />
+                <div className="flex-1">
+                  <div className="font-medium text-sm text-button-hover">{getMinimumBaseLabel()}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Aktifkan untuk menetapkan batas minimum perhitungan bonus
+                  </p>
+                </div>
               </div>
-              <Input type="text" value={subCategory.minimum_base ? subCategory.minimum_base.toLocaleString('id-ID') : ''} onChange={e => onChange({
-              minimum_base: Number(e.target.value.replace(/\D/g, ''))
-            })} placeholder="Contoh: 1.000.000" disabled={!subCategory.minimum_base_enabled} className={!subCategory.minimum_base_enabled ? 'opacity-50' : ''} />
+              {subCategory.minimum_base_enabled && (
+                <Input 
+                  type="text" 
+                  value={subCategory.minimum_base ? subCategory.minimum_base.toLocaleString('id-ID') : ''} 
+                  onChange={e => onChange({
+                    minimum_base: Number(e.target.value.replace(/\D/g, ''))
+                  })} 
+                  placeholder="Contoh: 1.000.000" 
+                />
+              )}
             </div>
           </div>
           
@@ -554,16 +570,21 @@ export function SubCategoryCard({
           }} options={gameNameOptions} onAddOption={option => setGameNameOptions([...gameNameOptions, option])} onDeleteOption={value => setGameNameOptions(gameNameOptions.filter(n => n.value !== value))} placeholder="Pilih nama game" />
           </div>
 
-          {/* Blacklist */}
+          {/* Blacklist - Styled like Wajib APK */}
           <div className="pt-4 border-t border-border">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-4">
+              <Switch 
+                checked={subCategory.game_blacklist_enabled} 
+                onCheckedChange={checked => onChange({
+                  game_blacklist_enabled: checked
+                })} 
+              />
               <div>
-                <Label className="text-sm font-medium">Game Dilarang (Blacklist)</Label>
-                <p className="text-xs text-muted-foreground mt-1">Aktifkan untuk kecualikan game tertentu</p>
+                <div className="font-medium text-sm text-button-hover">Game Dilarang (Blacklist)</div>
+                <p className="text-xs text-muted-foreground">
+                  Aktifkan untuk kecualikan game tertentu dari promo ini
+                </p>
               </div>
-              <Switch checked={subCategory.game_blacklist_enabled} onCheckedChange={checked => onChange({
-              game_blacklist_enabled: checked
-            })} />
             </div>
             {subCategory.game_blacklist_enabled && <div className="space-y-4">
                 <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
