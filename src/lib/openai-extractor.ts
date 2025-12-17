@@ -147,9 +147,8 @@ export interface ExtractedPromo {
   // Validation Status
   validation: {
     is_valid: boolean;
-    status: 'draft' | 'draft_blocked' | 'ready';
-    errors: string[];
-    warnings: string[];
+    status: 'draft' | 'ready';  // Simplified: no more draft_blocked
+    warnings: string[];  // All issues are warnings, not blocking errors
   };
   
   ready_to_commit: boolean;  // SELALU false sampai user confirm
@@ -158,10 +157,9 @@ export interface ExtractedPromo {
 // ============= VALIDATION =============
 export interface ValidationResult {
   is_valid: boolean;
-  status: 'draft' | 'draft_blocked' | 'ready';
-  errors: string[];
-  warnings: string[];
-  can_commit: boolean;
+  status: 'draft' | 'ready';  // Simplified: no more draft_blocked
+  warnings: string[];  // All issues are warnings (informational)
+  can_commit: boolean;  // Always true - user can always proceed
 }
 
 const REQUIRED_SUB_FIELDS = [
@@ -176,17 +174,16 @@ const REQUIRED_SUB_FIELDS = [
 // Note: max_bonus is NOT in required fields because null = unlimited is valid
 
 export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
-  const errors: string[] = [];
   const warnings: string[] = [];
   
-  // Rule 1: Multi-variant tapi hanya 1 sub → BLOCK
+  // Rule 1: Multi-variant tapi hanya 1 sub → WARNING (not blocking)
   if (data.promo_mode === 'multi' && data.subcategories.length < 2) {
-    errors.push(`Promo multi-variant tapi hanya ${data.subcategories.length} sub kategori terdeteksi`);
+    warnings.push(`Promo multi-variant tapi hanya ${data.subcategories.length} sub kategori terdeteksi — dapat diedit manual`);
   }
   
-  // Rule 2: Mismatch jumlah sub dengan expected → BLOCK
+  // Rule 2: Mismatch jumlah sub dengan expected → WARNING
   if (data.expected_subcategory_count > 0 && data.subcategories.length !== data.expected_subcategory_count) {
-    errors.push(`Jumlah sub kategori (${data.subcategories.length}) tidak sesuai dengan baris tabel (${data.expected_subcategory_count})`);
+    warnings.push(`Jumlah sub kategori (${data.subcategories.length}) tidak sesuai dengan baris tabel (${data.expected_subcategory_count}) — dapat diedit manual`);
   }
   
   // Rule 3: Check setiap sub kategori
@@ -210,27 +207,28 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
     checkFields.forEach(field => {
       const value = sub[field as keyof ExtractedPromoSubCategory];
       if (value === undefined || value === null || (typeof value === 'string' && value === '')) {
-        errors.push(`${subLabel}: Field "${field}" kosong`);
+        // Changed from error to warning - can be filled manually
+        warnings.push(`${subLabel}: "${field}" tidak terdeteksi — dapat diisi manual`);
       }
     });
     
     // Phase 1: Check minimum_base === max_bonus (likely extraction error)
     if (sub.minimum_base != null && sub.max_bonus != null && sub.minimum_base === sub.max_bonus) {
-      warnings.push(`${subLabel}: Min Deposit (Rp ${sub.minimum_base.toLocaleString('id-ID')}) sama dengan Max Bonus — kemungkinan parsing error, perlu verifikasi manual`);
+      warnings.push(`${subLabel}: Min Deposit (Rp ${sub.minimum_base.toLocaleString('id-ID')}) sama dengan Max Bonus — perlu verifikasi`);
     }
     
     // Phase 5: SWAP Detection Warning - minimum_base tinggi + max_bonus null = likely swapped
     if (sub.minimum_base != null && sub.minimum_base >= 100000 && sub.max_bonus === null) {
-      warnings.push(`${subLabel}: Min Deposit (Rp ${sub.minimum_base.toLocaleString('id-ID')}) tinggi tapi Max Bonus null — kemungkinan field tertukar (auto-fixed)`);
+      warnings.push(`${subLabel}: Min Deposit tinggi tapi Max Bonus null — kemungkinan field tertukar`);
     }
     
     // Special handling for max_bonus: null is valid if confidence = explicit_from_terms
     if (sub.max_bonus === null) {
       if (sub.confidence?.max_bonus === 'explicit_from_terms') {
-        // Valid - explicitly unlimited from terms, just add info
+        // Valid - explicitly unlimited from terms, just info
         warnings.push(`${subLabel}: Max bonus unlimited (dari S&K)`);
       } else if (sub.confidence?.max_bonus !== 'explicit') {
-        warnings.push(`${subLabel}: Max bonus null tapi bukan dari S&K — perlu verifikasi`);
+        warnings.push(`${subLabel}: Max bonus tidak terdeteksi — dapat diisi manual`);
       }
     }
     
@@ -247,60 +245,39 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
         } 
         // not_applicable = ALLOW (field memang tidak berlaku untuk tipe promo ini)
         else if (conf === 'not_applicable') {
-          // OK - field tidak relevan (e.g., turnover untuk cashback/point_reward)
+          // OK - field tidak relevan
         }
         else if (conf === 'ambiguous' || conf === 'missing') {
-          errors.push(`${subLabel}: Field "${field}" memiliki confidence "${conf}" — butuh review`);
+          // Changed from error to warning
+          warnings.push(`${subLabel}: "${field}" perlu review (${conf}) — dapat diisi manual`);
         } else if (conf === 'unknown') {
-          warnings.push(`${subLabel}: Field "${field}" tidak ditemukan data (unknown)`);
+          warnings.push(`${subLabel}: "${field}" tidak ditemukan — dapat diisi manual`);
         } else if (conf === 'derived') {
-          warnings.push(`${subLabel}: Field "${field}" adalah hasil parsing (derived)`);
+          warnings.push(`${subLabel}: "${field}" adalah hasil parsing — mohon verifikasi`);
         }
       }
     });
     
     // Check game_providers confidence for "ALL" special case
     if (sub.game_providers?.includes('ALL') && sub.confidence?.game_providers !== 'explicit_from_terms') {
-      warnings.push(`${subLabel}: "Semua provider" sebaiknya dari S&K (explicit_from_terms)`);
+      warnings.push(`${subLabel}: "Semua provider" sebaiknya diverifikasi dari S&K`);
     }
   });
   
   // Rule 4: Global blacklist tanpa eksplisit → warning
   if (data.global_blacklist?.enabled && !data.global_blacklist.is_explicit) {
-    warnings.push('Global blacklist tidak eksplisit tertulis — mungkin seharusnya per-sub');
+    warnings.push('Global blacklist tidak eksplisit tertulis — mohon verifikasi');
   }
   
-  const is_valid = errors.length === 0;
-  // not_applicable TIDAK dianggap ambiguous/blocking
-  // Check ambiguous critical fields (promo-type aware)
-  const ambiguousCheckFields = isTurnoverExempt
-    ? ['calculation_value', 'payout_direction']
-    : ['calculation_value', 'turnover_rule', 'payout_direction'];
-  const hasAmbiguousCritical = data.subcategories.some(sub => {
-    return ambiguousCheckFields.some(
-      f => {
-        const conf = sub.confidence?.[f as keyof typeof sub.confidence];
-        // not_applicable is OK, only ambiguous/missing blocks
-        return conf === 'ambiguous' || conf === 'missing';
-      }
-    );
-  });
-  
-  let status: 'draft' | 'draft_blocked' | 'ready';
-  if (errors.length > 0 || hasAmbiguousCritical) {
-    status = 'draft_blocked';
-  } else if (warnings.length > 0) {
-    status = 'draft';
-  } else {
-    status = 'ready';
-  }
+  // Simplified status: ready if no warnings, draft if has warnings
+  // User can always proceed regardless of status
+  const status: 'draft' | 'ready' = warnings.length > 0 ? 'draft' : 'ready';
   
   return {
-    is_valid,
+    is_valid: true,  // Always valid - validation is informational only
     status,
-    errors,
     warnings,
-    can_commit: status === 'ready'
+    can_commit: true  // ALWAYS true - user can always proceed
   };
 }
 
@@ -892,7 +869,6 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     downgraded.validation = {
       is_valid: validationResult.is_valid,
       status: validationResult.status,
-      errors: validationResult.errors,
       warnings: validationResult.warnings
     };
     
@@ -1031,7 +1007,6 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     parsed.validation = {
       is_valid: validationResult.is_valid,
       status: validationResult.status,
-      errors: validationResult.errors,
       warnings: validationResult.warnings
     };
     
@@ -1130,20 +1105,18 @@ export function formatConfidenceLabel(confidence: ConfidenceLevel): string {
 }
 
 // Helper untuk get status badge
-export function getStatusBadgeStyle(status: 'draft' | 'draft_blocked' | 'ready'): string {
+export function getStatusBadgeStyle(status: 'draft' | 'ready'): string {
   switch (status) {
     case 'ready': return 'bg-success/20 text-success border-success/40';
-    case 'draft': return 'bg-warning/20 text-warning border-warning/40';
-    case 'draft_blocked': return 'bg-destructive/20 text-destructive border-destructive/40';
+    case 'draft': return 'bg-blue-500/20 text-blue-400 border-blue-500/40';  // Info style, not warning
     default: return 'bg-muted text-muted-foreground';
   }
 }
 
-export function getStatusLabel(status: 'draft' | 'draft_blocked' | 'ready'): string {
+export function getStatusLabel(status: 'draft' | 'ready'): string {
   switch (status) {
-    case 'ready': return 'Ready';
-    case 'draft': return 'Draft';
-    case 'draft_blocked': return 'Draft Blocked';
+    case 'ready': return 'Siap Digunakan';
+    case 'draft': return 'Perlu Review';
     default: return 'Unknown';
   }
 }
