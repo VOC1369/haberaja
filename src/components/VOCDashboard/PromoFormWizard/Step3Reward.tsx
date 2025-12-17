@@ -1394,9 +1394,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </p>
                 </div>
                 
-                {/* Kolom Kanan: Admin Fee - HANYA untuk Referral Bonus */}
-                {data.promo_type === 'Referral Bonus' && (
-                  <div className="space-y-2">
+                {/* Kolom Kanan: Admin Fee (Global) - untuk SEMUA promo type */}
+                <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label>Admin Fee (Opsional)</Label>
                       <Switch
@@ -1427,7 +1426,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       Potongan admin pada perhitungan komisi.
                     </p>
                   </div>
-                )}
               </div>
 
               {/* Periode Klaim & Waktu Pembagian Bonus */}

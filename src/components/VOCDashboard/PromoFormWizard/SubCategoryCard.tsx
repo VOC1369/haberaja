@@ -294,8 +294,66 @@ export function SubCategoryCard({
             </RadioGroup>
           </div>
           
-          {/* Kolom Kanan - Kosong untuk alignment */}
-          <div></div>
+          {/* Kolom Kanan: Admin Fee */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Admin Fee (Opsional)</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Sama dengan Promo Global</span>
+                <Switch
+                  checked={subCategory.admin_fee_same_as_global}
+                  onCheckedChange={(checked) => {
+                    onChange({
+                      admin_fee_same_as_global: checked,
+                      admin_fee_enabled: checked ? false : subCategory.admin_fee_enabled,
+                      admin_fee_percentage: checked ? null : subCategory.admin_fee_percentage
+                    });
+                  }}
+                />
+              </div>
+            </div>
+            
+            {/* Toggle Enable + Input (hanya jika tidak ikut global) */}
+            {!subCategory.admin_fee_same_as_global && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={subCategory.admin_fee_enabled}
+                    onCheckedChange={(checked) => {
+                      onChange({
+                        admin_fee_enabled: checked,
+                        admin_fee_percentage: checked ? subCategory.admin_fee_percentage : null
+                      });
+                    }}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    {subCategory.admin_fee_enabled ? 'Aktif' : 'Non-aktif'}
+                  </span>
+                </div>
+                
+                {subCategory.admin_fee_enabled && (
+                  <div className="relative animate-in fade-in slide-in-from-top-2 duration-200">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={subCategory.admin_fee_percentage ?? ''}
+                      onChange={(e) => onChange({ 
+                        admin_fee_percentage: e.target.value ? Number(e.target.value) : null 
+                      })}
+                      placeholder="Contoh: 20"
+                      className="pr-10"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {subCategory.admin_fee_same_as_global && (
+              <p className="text-xs text-muted-foreground">Mengikuti pengaturan global</p>
+            )}
+          </div>
         </div>
 
         {/* Section 1: Dasar Perhitungan Bonus */}
@@ -667,6 +725,9 @@ export function createInitialSubCategory(index: number): PromoSubCategory {
     max_bonus: 0,
     payout_direction_same_as_global: true,
     payout_direction: 'after',
+    admin_fee_same_as_global: true,
+    admin_fee_enabled: false,
+    admin_fee_percentage: null,
     game_types: [],
     game_providers: [],
     game_names: [],

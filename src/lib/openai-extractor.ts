@@ -1374,6 +1374,11 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     payout_direction_same_as_global: !sub.payout_direction,
     payout_direction: sub.payout_direction === 'depan' ? 'before' : 'after',
     
+    // Admin Fee (default ikut global)
+    admin_fee_same_as_global: true,
+    admin_fee_enabled: false,
+    admin_fee_percentage: null,
+    
     // Game whitelist (handle "ALL")
     game_types: sub.game_types?.includes('ALL') ? ['Semua'] : (sub.game_types || []),
     game_providers: mapGameProviders(sub.game_providers),
