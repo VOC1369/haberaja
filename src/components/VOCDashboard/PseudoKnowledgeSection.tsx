@@ -310,7 +310,7 @@ export function PseudoKnowledgeSection() {
       // Priority: Image > URL > HTML (auto-detect)
       if (imageBase64) {
         setInputMode('image');
-        toast.info("Mengekstrak dari image dengan GPT-4o Vision...");
+        toast.info("Mengekstrak dari image dengan VOC AI Knowledge...");
         result = await extractPromoFromImage(imageBase64);
       } else if (currentInput.trim()) {
         const detectedType = detectInputType(currentInput.trim());
@@ -890,7 +890,7 @@ export function PseudoKnowledgeSection() {
               <div>
                 <span className="text-foreground font-medium">Mengekstrak promo...</span>
                 <span className="text-muted-foreground ml-2">
-                  {inputMode === 'image' ? '(GPT-4o Vision)' : '(GPT-4o-mini)'}
+                  (VOC AI Knowledge)
                 </span>
               </div>
             </div>
