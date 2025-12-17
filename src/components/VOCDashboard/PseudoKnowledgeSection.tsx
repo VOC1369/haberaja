@@ -763,11 +763,11 @@ export function PseudoKnowledgeSection() {
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
-        <div className="p-6 space-y-6 max-w-5xl mx-auto">
+        <div className={`p-6 max-w-5xl mx-auto ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex items-center justify-center' : 'space-y-6'}`}>
           
           {/* INPUT SECTION - Unified Design */}
           {!extractedPromo && !isExtracting && (
-            <Card className="p-8 bg-card border border-border rounded-xl">
+            <Card className="p-8 bg-card border border-border rounded-xl w-full max-w-2xl">
               {/* Header */}
               <div className="text-center mb-8">
                 <div className="icon-circle w-16 h-16 mx-auto mb-4">
@@ -783,7 +783,7 @@ export function PseudoKnowledgeSection() {
               <div className="flex justify-center mb-6">
                 <Badge variant="outline" className="bg-success/10 text-success border-success/30">
                   <span className="w-2 h-2 rounded-full bg-success mr-2" />
-                  OpenAI API aktif (dev)
+                  VOC AI Knowledge
                 </Badge>
               </div>
 
