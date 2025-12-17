@@ -50,6 +50,13 @@ export interface TogelEventReward {
   reward_amount: number;   // 20000, 200000
 }
 
+// Referral tier structure (NEW)
+export interface ReferralTier {
+  commission_rate: string;     // "5%", "10%", "15%"
+  min_active_downline: number; // 5, 10, 15
+  period: string;              // "sebulan", "mingguan"
+}
+
 // Field applicability status per archetype
 export type FieldStatus = 'required' | 'optional' | 'not_applicable';
 
@@ -312,6 +319,11 @@ export interface ExtractedPromo {
   game_domain?: GameDomain;             // Auto-detected from content
   applicable_markets?: string[];        // For togel: ["Singapore", "Hongkong", ...]
   event_rewards?: TogelEventReward[];   // For event_table archetype (togel prizes)
+  
+  // Referral-specific fields (NEW)
+  referral_tiers?: ReferralTier[];      // Tier unlock conditions for referral
+  calculation_formula?: string;          // e.g., "Winlose - commision - cashback - admin fee 20%"
+  admin_fee_percentage?: number;         // e.g., 20
   
   // Global blacklist — HANYA jika eksplisit "berlaku untuk semua"
   global_blacklist: {
@@ -685,6 +697,55 @@ JIKA terdeteksi keywords di atas:
 - promo_type: "event_level_up" atau "Event / Level Up"
 ❌ JANGAN set sebagai "combo" atau "welcome_bonus"
 
+🔹 Referral Bonus — PROMO TYPE DETECTION + TIER EXTRACTION (NEW)
+
+KEYWORDS yang menunjukkan Referral:
+- "referral", "ajak teman", "undang teman", "invite", "rekrut"
+- "downline", "member baru", "komisi"
+
+JIKA terdeteksi referral promo:
+1. Extract tier unlock conditions:
+   - Look for pattern: "X ID aktif" → commission rate
+   - Capture: min_active_downline, commission_rate, period
+
+2. Extract calculation formula:
+   - Look for: "Hitungan komisi", "Rumus", "Perhitungan"
+   - Capture full formula string
+
+3. Extract admin fee:
+   - Look for: "admin fee X%", "potongan X%"
+   - Capture percentage value
+
+CONTOH PARSING REFERRAL:
+Input: "5 ID aktif dalam sebulan maka mendapatkan KOMISI 5%"
+Output:
+{
+  "referral_tiers": [
+    { "commission_rate": "5%", "min_active_downline": 5, "period": "sebulan" }
+  ]
+}
+
+Input: "Winlose - commision - cashback - admin fee 20%"
+Output:
+{
+  "calculation_formula": "Winlose - commision - cashback - admin fee 20%",
+  "admin_fee_percentage": 20
+}
+
+MULTI-TIER REFERRAL:
+Input:
+"5 ID aktif = 5% komisi
+10 ID aktif = 10% komisi  
+15 ID aktif = 15% komisi"
+Output:
+{
+  "referral_tiers": [
+    { "commission_rate": "5%", "min_active_downline": 5, "period": "sebulan" },
+    { "commission_rate": "10%", "min_active_downline": 10, "period": "sebulan" },
+    { "commission_rate": "15%", "min_active_downline": 15, "period": "sebulan" }
+  ]
+}
+
 🔹 Max Bonus vs Max Claim — PERBEDAAN KRITIS!
 
 ⚠️⚠️⚠️ WAJIB BEDAKAN:
@@ -902,6 +963,11 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
   },
   "terms_conditions": ["syarat dari S&K"],
   "claim_method": "cara klaim",
+  "referral_tiers": [
+    { "commission_rate": "5%", "min_active_downline": 5, "period": "sebulan" }
+  ],
+  "calculation_formula": "Winlose - commision - cashback - admin fee 20%" atau null,
+  "admin_fee_percentage": 20 atau null,
   "ready_to_commit": false,
   "validation": {
     "is_valid": true,
