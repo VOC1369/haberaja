@@ -313,40 +313,21 @@ export function SubCategoryCard({
               </div>
             </div>
             
-            {/* Toggle Enable + Input (hanya jika tidak ikut global) */}
+            {/* Input langsung (hanya jika tidak ikut global) */}
             {!subCategory.admin_fee_same_as_global && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    checked={subCategory.admin_fee_enabled}
-                    onCheckedChange={(checked) => {
-                      onChange({
-                        admin_fee_enabled: checked,
-                        admin_fee_percentage: checked ? subCategory.admin_fee_percentage : null
-                      });
-                    }}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {subCategory.admin_fee_enabled ? 'Aktif' : 'Non-aktif'}
-                  </span>
-                </div>
-                
-                {subCategory.admin_fee_enabled && (
-                  <div className="relative animate-in fade-in slide-in-from-top-2 duration-200">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={subCategory.admin_fee_percentage ?? ''}
-                      onChange={(e) => onChange({ 
-                        admin_fee_percentage: e.target.value ? Number(e.target.value) : null 
-                      })}
-                      placeholder="Contoh: 20"
-                      className="pr-10"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-                  </div>
-                )}
+              <div className="relative">
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={subCategory.admin_fee_percentage ?? 0}
+                  onChange={(e) => onChange({ 
+                    admin_fee_percentage: Number(e.target.value) || 0 
+                  })}
+                  placeholder="0"
+                  className="pr-10"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
               </div>
             )}
             

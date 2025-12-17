@@ -287,10 +287,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             Atur mode dan detail reward promo
           </p>
         </div>
-        <Button variant="ghost" size="sm" className="ml-auto h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground">
-          <Plus className="h-4 w-4 mr-1" />
-          Tambah Kategori
-        </Button>
       </div>
 
       {/* Blok A - Mode Reward (Radio Cards) */}
