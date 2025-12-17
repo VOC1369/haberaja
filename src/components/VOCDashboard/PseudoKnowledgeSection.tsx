@@ -828,6 +828,57 @@ export function PseudoKnowledgeSection() {
             return null;
           })()}
 
+          {/* Referral Tiers - READ ONLY */}
+          {extractedPromo.referral_tiers && extractedPromo.referral_tiers.length > 0 && (
+            <div>
+              <h4 className="text-base font-semibold text-button-hover mb-4">
+                Tier Komisi Referral
+              </h4>
+              <div className="bg-muted rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-card">
+                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Min Downline Aktif</th>
+                      <th className="text-right py-2 px-4 text-muted-foreground font-medium">Komisi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {extractedPromo.referral_tiers.map((tier, i) => (
+                      <tr key={i} className="border-b border-border/50 last:border-0">
+                        <td className="py-2 px-4 text-foreground">
+                          {tier.min_active_downline} ID / {tier.period}
+                        </td>
+                        <td className="py-2 px-4 text-right font-semibold text-amber-400">
+                          {tier.commission_rate}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Calculation Formula */}
+              {extractedPromo.calculation_formula && (
+                <div className="mt-3 p-3 bg-muted/50 rounded-lg border border-border/50">
+                  <span className="text-xs text-muted-foreground">Rumus Perhitungan:</span>
+                  <p className="text-sm text-foreground font-mono mt-1">
+                    {extractedPromo.calculation_formula}
+                  </p>
+                </div>
+              )}
+              
+              {/* Admin Fee */}
+              {extractedPromo.admin_fee_percentage != null && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Admin Fee:</span>
+                  <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+                    {extractedPromo.admin_fee_percentage}%
+                  </Badge>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Terms */}
           {extractedPromo.terms_conditions && extractedPromo.terms_conditions.length > 0 && (
             <div>
