@@ -320,7 +320,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <div className="flex items-center gap-3">
               <Zap className="h-5 w-5 text-button-hover" />
               <div className="text-left">
-                <div className="text-sm font-semibold text-foreground">Mode Fixed</div>
+                <div className="text-sm font-semibold text-foreground">1. Mode Fixed</div>
                 <div className="text-xs text-muted-foreground">Konfigurasi bonus tetap</div>
               </div>
             </div>
@@ -1147,7 +1147,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">4. Hadiah dan Waktu</div>
+                  <div className="text-sm font-semibold text-foreground">3. Hadiah dan Waktu</div>
                   <div className="text-xs text-muted-foreground">Jenis hadiah, waktu claim, dan periode pembagian</div>
                 </div>
               </div>
@@ -1612,7 +1612,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="flex items-center gap-3">
                 <Zap className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">5. Syarat Khusus</div>
+                  <div className="text-sm font-semibold text-foreground">4. Syarat Khusus</div>
                   <div className="text-xs text-muted-foreground">Ketentuan tambahan</div>
                 </div>
               </div>
@@ -1890,7 +1890,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <div className="flex items-center gap-3">
               <Settings className="h-5 w-5 text-button-hover" />
               <div className="text-left">
-                <div className="text-sm font-semibold text-foreground">Waktu Distribusi Hadiah</div>
+                <div className="text-sm font-semibold text-foreground">2. Waktu Distribusi Hadiah</div>
                 <div className="text-xs text-muted-foreground">Kapan sistem mendistribusikan reward setelah klaim disetujui</div>
               </div>
             </div>
@@ -2061,7 +2061,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <div className="flex items-center gap-3">
               <Settings className="h-5 w-5 text-button-hover" />
               <div className="text-left">
-                <div className="text-sm font-semibold text-foreground">Syarat Khusus</div>
+                <div className="text-sm font-semibold text-foreground">3. Syarat Khusus</div>
                 <div className="text-xs text-muted-foreground">Terms & Conditions tambahan</div>
               </div>
             </div>
