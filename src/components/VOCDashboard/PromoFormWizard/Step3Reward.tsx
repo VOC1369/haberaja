@@ -493,9 +493,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
           {/* Sub Kategori Section - Only when toggle ON */}
           {data.has_subcategories && (
-            <div className="space-y-4">
+            <div className="space-y-4 mt-4">
               {/* Header with counter and add button */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-4 bg-card border border-border rounded-xl">
                 <div className="flex items-center gap-3">
                   <div className="icon-circle">
                     <Layers className="icon-circle-icon" />
