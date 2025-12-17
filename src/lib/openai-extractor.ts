@@ -30,7 +30,95 @@ export type ConfidenceLevel =
   | 'missing'            // field tidak ditemukan sama sekali
   | 'not_applicable';    // field tidak relevan untuk tipe promo ini
 
-// Promo types yang tidak memiliki konsep turnover
+// ============= REWARD ARCHETYPE SYSTEM =============
+// System-derived field - NOT user editable, NOT shown as input field
+export type RewardArchetype = 
+  | 'formula_based'    // Rollingan, Cashback, Deposit Bonus, Welcome Bonus
+  | 'event_table'      // Scatter bonus, Level up, Achievement, Milestone
+  | 'tiered_fixed'     // Point redemption, Loyalty tiers
+  | 'referral';        // Referral bonus
+
+// Field applicability status per archetype
+export type FieldStatus = 'required' | 'optional' | 'not_applicable';
+
+// Archetype detection keywords
+const ARCHETYPE_KEYWORDS = {
+  event_table: [
+    'scatter', 'event', 'level up', 'naik level', 'milestone', 'achievement',
+    'tournament', 'race', 'kejar level', 'bonus scatter', 'hadiah scatter',
+    'misi', 'quest', 'challenge'
+  ],
+  tiered_fixed: [
+    'point', 'redeem', 'tukar', 'loyalty', 'reward point', 'poin', 'penukaran'
+  ],
+  referral: [
+    'referral', 'ajak teman', 'undang', 'invite', 'ref bonus', 'rekrut'
+  ]
+} as const;
+
+// Detect archetype from promo data (SYSTEM-DERIVED - not user input)
+export function detectRewardArchetype(data: { promo_name?: string; promo_type?: string }): RewardArchetype {
+  const name = (data.promo_name || '').toLowerCase();
+  const type = (data.promo_type || '').toLowerCase();
+  const combined = `${name} ${type}`;
+  
+  // Event-based detection (highest priority for event-like promos)
+  if (ARCHETYPE_KEYWORDS.event_table.some(kw => combined.includes(kw))) {
+    return 'event_table';
+  }
+  
+  // Referral detection
+  if (ARCHETYPE_KEYWORDS.referral.some(kw => combined.includes(kw))) {
+    return 'referral';
+  }
+  
+  // Tiered/Point detection
+  if (ARCHETYPE_KEYWORDS.tiered_fixed.some(kw => combined.includes(kw))) {
+    return 'tiered_fixed';
+  }
+  
+  // Default: formula-based (rollingan, cashback, deposit bonus, etc)
+  return 'formula_based';
+}
+
+// Field status matrix per archetype
+const FIELD_STATUS_MATRIX: Record<RewardArchetype, Record<string, FieldStatus>> = {
+  formula_based: {
+    calculation_value: 'required',
+    turnover_rule: 'required',
+    payout_direction: 'required',
+    max_bonus: 'optional',
+    minimum_base: 'optional',
+  },
+  event_table: {
+    calculation_value: 'not_applicable',
+    turnover_rule: 'not_applicable',
+    payout_direction: 'optional',
+    max_bonus: 'optional',
+    minimum_base: 'not_applicable',
+  },
+  tiered_fixed: {
+    calculation_value: 'not_applicable',
+    turnover_rule: 'not_applicable',
+    payout_direction: 'required',
+    max_bonus: 'optional',
+    minimum_base: 'optional',
+  },
+  referral: {
+    calculation_value: 'optional',
+    turnover_rule: 'not_applicable',
+    payout_direction: 'required',
+    max_bonus: 'optional',
+    minimum_base: 'not_applicable',
+  },
+};
+
+// Get field status for archetype (exported for UI use)
+export function getFieldStatus(field: string, archetype: RewardArchetype): FieldStatus {
+  return FIELD_STATUS_MATRIX[archetype]?.[field] || 'optional';
+}
+
+// Promo types yang tidak memiliki konsep turnover (legacy - kept for backward compat)
 export const PROMO_TYPES_WITHOUT_TURNOVER = [
   'point_reward',
   'cashback',
@@ -176,6 +264,9 @@ const REQUIRED_SUB_FIELDS = [
 export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
   const warnings: string[] = [];
   
+  // PHASE 1: Detect archetype (system-derived)
+  const archetype = detectRewardArchetype(data);
+  
   // Rule 1: Multi-variant tapi hanya 1 sub → WARNING (not blocking)
   if (data.promo_mode === 'multi' && data.subcategories.length < 2) {
     warnings.push(`Promo multi-variant tapi hanya ${data.subcategories.length} sub kategori terdeteksi — dapat diedit manual`);
@@ -186,59 +277,59 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
     warnings.push(`Jumlah sub kategori (${data.subcategories.length}) tidak sesuai dengan baris tabel (${data.expected_subcategory_count}) — dapat diedit manual`);
   }
   
-  // Rule 3: Check setiap sub kategori
-  // Check if promo type is exempt from turnover validation (robust matching)
-  const isTurnoverExempt = PROMO_TYPES_WITHOUT_TURNOVER.some(t => {
-    const typeNormalized = data.promo_type?.toLowerCase().trim() || '';
-    const exemptNormalized = t.toLowerCase().trim();
-    
-    return typeNormalized === exemptNormalized || 
-           typeNormalized.includes(exemptNormalized) ||
-           exemptNormalized.includes(typeNormalized);
-  }) || TURNOVER_EXEMPT_NAME_KEYWORDS.test(data.promo_name || '');
-  
+  // Rule 3: Check setiap sub kategori with ARCHETYPE-AWARE validation
   data.subcategories.forEach((sub, idx) => {
     const subLabel = sub.sub_name || `Sub ${idx + 1}`;
     
-    // Check field wajib - SKIP turnover_rule for exempt promo types
-    const checkFields = isTurnoverExempt 
-      ? ['calculation_value', 'payout_direction'] as const
-      : ['calculation_value', 'turnover_rule', 'payout_direction'] as const;
-    checkFields.forEach(field => {
+    // Fields to validate - only check REQUIRED fields for this archetype
+    const fieldsToCheck = ['calculation_value', 'turnover_rule', 'payout_direction'];
+    
+    fieldsToCheck.forEach(field => {
+      const status = getFieldStatus(field, archetype);
       const value = sub[field as keyof ExtractedPromoSubCategory];
-      if (value === undefined || value === null || (typeof value === 'string' && value === '')) {
-        // Changed from error to warning - can be filled manually
+      const isEmpty = value === undefined || value === null || (typeof value === 'string' && value === '');
+      
+      // ONLY warn if REQUIRED and empty
+      // not_applicable → SKIP completely, no warning
+      // optional → SKIP warning even if empty
+      if (status === 'required' && isEmpty) {
         warnings.push(`${subLabel}: "${field}" tidak terdeteksi — dapat diisi manual`);
       }
     });
     
     // Phase 1: Check minimum_base === max_bonus (likely extraction error)
-    if (sub.minimum_base != null && sub.max_bonus != null && sub.minimum_base === sub.max_bonus) {
-      warnings.push(`${subLabel}: Min Deposit (Rp ${sub.minimum_base.toLocaleString('id-ID')}) sama dengan Max Bonus — perlu verifikasi`);
-    }
-    
-    // Phase 5: SWAP Detection Warning - minimum_base tinggi + max_bonus null = likely swapped
-    if (sub.minimum_base != null && sub.minimum_base >= 100000 && sub.max_bonus === null) {
-      warnings.push(`${subLabel}: Min Deposit tinggi tapi Max Bonus null — kemungkinan field tertukar`);
+    // Only for formula_based archetype where these fields matter
+    if (archetype === 'formula_based') {
+      if (sub.minimum_base != null && sub.max_bonus != null && sub.minimum_base === sub.max_bonus) {
+        warnings.push(`${subLabel}: Min Deposit (Rp ${sub.minimum_base.toLocaleString('id-ID')}) sama dengan Max Bonus — perlu verifikasi`);
+      }
+      
+      // Phase 5: SWAP Detection Warning - minimum_base tinggi + max_bonus null = likely swapped
+      if (sub.minimum_base != null && sub.minimum_base >= 100000 && sub.max_bonus === null) {
+        warnings.push(`${subLabel}: Min Deposit tinggi tapi Max Bonus null — kemungkinan field tertukar`);
+      }
     }
     
     // Special handling for max_bonus: null is valid if confidence = explicit_from_terms
-    if (sub.max_bonus === null) {
+    // Only check for formula_based archetype
+    if (archetype === 'formula_based' && sub.max_bonus === null) {
       if (sub.confidence?.max_bonus === 'explicit_from_terms') {
         // Valid - explicitly unlimited from terms, just info
         warnings.push(`${subLabel}: Max bonus unlimited (dari S&K)`);
-      } else if (sub.confidence?.max_bonus !== 'explicit') {
+      } else if (sub.confidence?.max_bonus !== 'explicit' && sub.confidence?.max_bonus !== 'not_applicable') {
         warnings.push(`${subLabel}: Max bonus tidak terdeteksi — dapat diisi manual`);
       }
     }
     
-    // Check confidence — critical fields (promo-type aware)
-    const criticalFields = isTurnoverExempt
-      ? ['calculation_value', 'payout_direction'] as const
-      : ['calculation_value', 'turnover_rule', 'payout_direction'] as const;
-    criticalFields.forEach(field => {
-      const conf = sub.confidence?.[field];
-      if (conf) {
+    // Check confidence — only for REQUIRED fields based on archetype
+    fieldsToCheck.forEach(field => {
+      const fieldStatus = getFieldStatus(field, archetype);
+      
+      // Skip confidence check for not_applicable fields
+      if (fieldStatus === 'not_applicable') return;
+      
+      const conf = sub.confidence?.[field as keyof typeof sub.confidence];
+      if (conf && fieldStatus === 'required') {
         // explicit dan explicit_from_terms = trusted sources
         if (conf === 'explicit' || conf === 'explicit_from_terms') {
           // OK - trusted source
@@ -248,7 +339,6 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
           // OK - field tidak relevan
         }
         else if (conf === 'ambiguous' || conf === 'missing') {
-          // Changed from error to warning
           warnings.push(`${subLabel}: "${field}" perlu review (${conf}) — dapat diisi manual`);
         } else if (conf === 'unknown') {
           warnings.push(`${subLabel}: "${field}" tidak ditemukan — dapat diisi manual`);
