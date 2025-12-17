@@ -629,6 +629,7 @@ export const GAME_RESTRICTIONS = [
   { value: 'poker', label: 'Poker' },
   { value: 'sports', label: 'Sports' },
   { value: 'e_sports', label: 'E-Sports' },
+  { value: 'togel', label: 'Togel / Lottery (2D / 3D / 4D)' },
 ];
 
 // Game Provider Options
