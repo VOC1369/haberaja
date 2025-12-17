@@ -11,9 +11,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { 
-  Send, Link2, Sparkles, Loader2, FileText, ExternalLink, CheckCircle2, 
-  AlertTriangle, Copy, ShieldAlert, XCircle, AlertCircle, ChevronDown,
-  Upload, X, RotateCcw, Code, ImageIcon, Terminal, HelpCircle
+  Send, Sparkles, Loader2, FileText, ExternalLink, CheckCircle2, 
+  AlertTriangle, Copy, XCircle, AlertCircle, ChevronDown,
+  X, RotateCcw, Terminal, HelpCircle, Paperclip, Lightbulb, Ban
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -94,6 +94,7 @@ export function PseudoKnowledgeSection() {
   const [currentInput, setCurrentInput] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   
   // Extraction state
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
@@ -110,6 +111,7 @@ export function PseudoKnowledgeSection() {
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
   
   const scrollBottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ============================================
   // SESSION RESTORE (SILENT - Toast Only)
@@ -224,6 +226,78 @@ export function PseudoKnowledgeSection() {
   };
 
   // ============================================
+  // AUTO-DETECTION HELPER
+  // ============================================
+  
+  const detectInputType = (input: string): 'url' | 'html' => {
+    if (input.startsWith('http://') || input.startsWith('https://')) return 'url';
+    return 'html';
+  };
+
+  // ============================================
+  // DRAG & DROP HANDLERS
+  // ============================================
+  
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      processImageFile(file);
+    }
+  };
+
+  const clearImage = () => {
+    setImagePreview(null);
+    setImageBase64(null);
+  };
+
+  // ============================================
+  // CLIPBOARD PASTE HANDLER
+  // ============================================
+  
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          await processImageFile(file);
+          toast.success("Image dari clipboard berhasil di-paste");
+        }
+        return;
+      }
+    }
+  };
+
+  // ============================================
+  // KEYBOARD HANDLER
+  // ============================================
+  
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!isExtracting && (currentInput.trim() || imageBase64)) {
+        handleExtract();
+      }
+    }
+  };
+
+  // ============================================
   // MAIN EXTRACT HANDLER
   // ============================================
   
@@ -233,26 +307,33 @@ export function PseudoKnowledgeSection() {
     try {
       let result: ExtractedPromo;
       
-      if (inputMode === 'image' && imageBase64) {
+      // Priority: Image > URL > HTML (auto-detect)
+      if (imageBase64) {
+        setInputMode('image');
         toast.info("Mengekstrak dari image dengan GPT-4o Vision...");
         result = await extractPromoFromImage(imageBase64);
-      } else if (inputMode === 'url' && currentInput) {
-        toast.info("Mengambil konten dari URL...");
-        try {
-          const htmlContent = await fetchUrlContent(currentInput);
-          if (!htmlContent || htmlContent.length < 500) {
-            throw new Error("Konten tidak valid");
+      } else if (currentInput.trim()) {
+        const detectedType = detectInputType(currentInput.trim());
+        setInputMode(detectedType);
+        
+        if (detectedType === 'url') {
+          toast.info("Mengambil konten dari URL...");
+          try {
+            const htmlContent = await fetchUrlContent(currentInput);
+            if (!htmlContent || htmlContent.length < 500) {
+              throw new Error("Konten tidak valid");
+            }
+            toast.success(`Berhasil fetch ${(htmlContent.length / 1024).toFixed(1)}KB`);
+            result = await extractPromoFromContent(htmlContent, currentInput);
+          } catch {
+            toast.error("Gagal fetch URL. Coba paste HTML manual atau upload screenshot.");
+            setIsExtracting(false);
+            return;
           }
-          toast.success(`Berhasil fetch ${(htmlContent.length / 1024).toFixed(1)}KB`);
-          result = await extractPromoFromContent(htmlContent, currentInput);
-        } catch {
-          toast.error("Gagal fetch URL. Coba paste HTML manual atau upload screenshot.");
-          setIsExtracting(false);
-          return;
+        } else {
+          toast.info("Mengekstrak dari konten HTML...");
+          result = await extractPromoFromContent(currentInput);
         }
-      } else if (inputMode === 'html' && currentInput) {
-        toast.info("Mengekstrak dari konten HTML...");
-        result = await extractPromoFromContent(currentInput);
       } else {
         toast.error("Tidak ada input untuk diproses");
         setIsExtracting(false);
@@ -486,7 +567,7 @@ export function PseudoKnowledgeSection() {
           <div className="mt-4 pt-4 border-t border-border">
             <div className="bg-destructive/10 rounded-lg p-3">
               <span className="text-destructive text-xs font-medium flex items-center gap-1 mb-2">
-                <ShieldAlert className="w-3 h-3" />
+                <Ban className="w-3 h-3" />
                 Blacklist:
               </span>
               {sub.blacklist.rules.length > 0 && (
@@ -684,175 +765,121 @@ export function PseudoKnowledgeSection() {
       <ScrollArea className="flex-1">
         <div className="p-6 space-y-6 max-w-5xl mx-auto">
           
-          {/* INPUT SECTION */}
+          {/* INPUT SECTION - Unified Design */}
           {!extractedPromo && !isExtracting && (
-            <Card className="p-6 bg-card border border-border rounded-xl">
+            <Card className="p-8 bg-card border border-border rounded-xl">
               {/* Header */}
-              <div className="text-center mb-6">
+              <div className="text-center mb-8">
                 <div className="icon-circle w-16 h-16 mx-auto mb-4">
                   <Sparkles className="icon-circle-icon w-8 h-8" />
                 </div>
                 <h2 className="text-2xl font-semibold text-foreground">Promo Extractor</h2>
                 <p className="text-muted-foreground mt-2">
-                  Paste link, HTML, atau upload screenshot — AI akan mengekstrak ke format Knowledge Base.
+                  Paste link, HTML, atau drop screenshot — AI akan mengekstrak ke format Knowledge Base.
                 </p>
               </div>
 
-              {/* Mode Tabs */}
-              <div className="flex gap-2 mb-4">
-                <Button 
-                  variant={inputMode === 'url' ? 'golden' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setInputMode('url');
-                    setImagePreview(null);
-                    setImageBase64(null);
-                  }}
-                  className="gap-2 rounded-full"
-                >
-                  <Link2 className="w-4 h-4" />
-                  URL
-                </Button>
-                <Button 
-                  variant={inputMode === 'html' ? 'golden' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setInputMode('html');
-                    setImagePreview(null);
-                    setImageBase64(null);
-                  }}
-                  className="gap-2 rounded-full"
-                >
-                  <Code className="w-4 h-4" />
-                  HTML
-                </Button>
-                <Button 
-                  variant={inputMode === 'image' ? 'golden' : 'outline'}
-                  size="sm"
-                  onClick={() => {
-                    setInputMode('image');
-                    setCurrentInput('');
-                  }}
-                  className="gap-2 rounded-full"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  Image
-                </Button>
+              {/* API Status Badge */}
+              <div className="flex justify-center mb-6">
+                <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                  <span className="w-2 h-2 rounded-full bg-success mr-2" />
+                  OpenAI API aktif (dev)
+                </Badge>
               </div>
 
-              {/* URL Input */}
-              {inputMode === 'url' && (
-                <Input 
-                  value={currentInput}
-                  onChange={(e) => setCurrentInput(e.target.value)}
-                  placeholder="Paste URL halaman promo... (contoh: https://site.com/promo/welcome-bonus)"
-                  className="mb-4"
-                />
+              {/* Hint Text */}
+              {!imagePreview && !currentInput && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/70 mb-8">
+                  <Lightbulb className="w-4 h-4" />
+                  <span>Contoh: URL promo, HTML content, atau drag & drop screenshot</span>
+                </div>
               )}
 
-              {/* HTML Input */}
-              {inputMode === 'html' && (
-                <Textarea 
-                  value={currentInput}
-                  onChange={(e) => setCurrentInput(e.target.value)}
-                  placeholder="Paste HTML content dari halaman promo (Ctrl+U di browser untuk View Page Source)..."
-                  rows={8}
-                  className="mb-4 font-mono text-sm"
-                />
-              )}
-
-              {/* Image Input */}
-              {inputMode === 'image' && (
-                <div className="mb-4">
-                  <div 
-                    className={`
-                      border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-                      transition-colors duration-200
-                      ${imagePreview 
-                        ? 'border-success bg-success/5' 
-                        : 'border-border hover:border-button-hover hover:bg-button-hover/5'
-                      }
-                    `}
-                    onClick={() => document.getElementById('image-upload')?.click()}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.classList.add('border-button-hover', 'bg-button-hover/5');
-                    }}
-                    onDragLeave={(e) => {
-                      e.preventDefault();
-                      e.currentTarget.classList.remove('border-button-hover', 'bg-button-hover/5');
-                    }}
-                    onDrop={handleImageDrop}
-                  >
-                    <input 
-                      type="file" 
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      id="image-upload"
+              {/* Image Preview */}
+              {imagePreview && (
+                <div className="relative mb-6 flex justify-center">
+                  <div className="relative inline-block">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="max-h-48 rounded-lg shadow-md border border-border" 
                     />
-                    
-                    {imagePreview ? (
-                      <div className="relative">
-                        <img 
-                          src={imagePreview} 
-                          alt="Preview" 
-                          className="max-h-64 mx-auto rounded-lg shadow-lg" 
-                        />
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="absolute top-2 right-2 rounded-full"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setImagePreview(null);
-                            setImageBase64(null);
-                          }}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                        <p className="mt-2 text-sm text-success">✓ Image siap diproses</p>
-                      </div>
-                    ) : (
-                      <>
-                        <Upload className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
-                        <p className="font-medium text-foreground">Klik atau drag screenshot promo</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          PNG, JPG, WebP — maksimal 10MB
-                        </p>
-                      </>
-                    )}
+                    <Button
+                      variant="destructive"
+                      size="icon-sm"
+                      className="absolute -top-2 -right-2 rounded-full"
+                      onClick={clearImage}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
                   </div>
                 </div>
               )}
 
-              {/* Extract Button */}
-              <Button 
-                onClick={handleExtract}
-                disabled={isExtracting || (!currentInput && !imageBase64)}
-                variant="golden"
-                className="w-full gap-2 rounded-full"
+              {/* Unified Input Bar */}
+              <div 
+                className={`
+                  relative flex items-end gap-2 p-2 rounded-xl border-2
+                  transition-all duration-200
+                  ${isDragOver 
+                    ? 'border-button-hover bg-button-hover/5' 
+                    : 'border-border bg-muted/30'
+                  }
+                `}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
               >
-                {isExtracting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Mengekstrak...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    Ekstrak Promo
-                  </>
-                )}
-              </Button>
-
-              {/* Strict Mode Notice */}
-              <div className="mt-4 p-3 rounded-lg bg-warning/10 border border-warning/30 text-center">
-                <p className="text-xs text-warning">
-                  <ShieldAlert className="w-4 h-4 inline-block mr-1" />
-                  <strong>BARA MODE</strong> — Mesin disiplin, bukan mesin pintar. Data harus eksplisit.
-                </p>
+                {/* Attachment Button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+                  title="Upload image"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </Button>
+                <input 
+                  type="file" 
+                  ref={fileInputRef}
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+                
+                {/* Textarea */}
+                <Textarea
+                  value={currentInput}
+                  onChange={(e) => setCurrentInput(e.target.value)}
+                  onPaste={handlePaste}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Paste link promo atau konten promo..."
+                  className="flex-1 min-h-[44px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  rows={1}
+                />
+                
+                {/* Send Button */}
+                <Button
+                  variant="golden"
+                  size="icon"
+                  onClick={handleExtract}
+                  disabled={isExtracting || (!currentInput.trim() && !imageBase64)}
+                  className="flex-shrink-0 rounded-full"
+                  title="Ekstrak promo"
+                >
+                  {isExtracting ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-5 h-5" />
+                  )}
+                </Button>
               </div>
+
+              {/* Helper Text */}
+              <p className="text-xs text-muted-foreground text-center mt-3">
+                Tekan Enter untuk mengirim, Shift+Enter untuk baris baru
+              </p>
             </Card>
           )}
 
