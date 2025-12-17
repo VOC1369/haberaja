@@ -977,15 +977,15 @@ export function PseudoKnowledgeSection() {
 
           {/* PROCESSING STATE */}
           {isExtracting && (
-            <div className="flex items-center gap-3 p-6 bg-card border border-border rounded-xl">
-              <Loader2 className="w-6 h-6 animate-spin text-button-hover" />
-              <div>
+            <div className="flex items-center justify-between p-6 bg-card border border-border rounded-xl">
+              <div className="flex items-center gap-3">
+                <Loader2 className="w-6 h-6 animate-spin text-button-hover" />
                 <span className="text-foreground font-medium">Mengekstrak promo...</span>
-                <Badge variant="outline" className="bg-success/10 text-success border-success/30 ml-2">
-                  <span className="w-2 h-2 rounded-full bg-success mr-2" />
-                  VOC AI Knowledge
-                </Badge>
               </div>
+              <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                <span className="w-2 h-2 rounded-full bg-success mr-2" />
+                VOC AI Knowledge
+              </Badge>
             </div>
           )}
 
