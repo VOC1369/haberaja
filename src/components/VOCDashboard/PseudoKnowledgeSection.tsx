@@ -476,9 +476,10 @@ export function PseudoKnowledgeSection() {
   
   const renderSubCategoryCard = (sub: ExtractedPromoSubCategory, idx: number, archetype: RewardArchetype) => {
     const hasBlacklist = sub.blacklist?.enabled && (
-      sub.blacklist.providers.length > 0 || 
-      sub.blacklist.games.length > 0 || 
-      sub.blacklist.rules.length > 0
+      (sub.blacklist.types?.length || 0) > 0 ||
+      (sub.blacklist.providers?.length || 0) > 0 || 
+      (sub.blacklist.games?.length || 0) > 0 || 
+      (sub.blacklist.rules?.length || 0) > 0
     );
     
     // Only flag critical issues for REQUIRED fields based on archetype
