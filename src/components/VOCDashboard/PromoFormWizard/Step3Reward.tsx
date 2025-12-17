@@ -619,16 +619,29 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               
               {/* Admin Fee */}
               <div className="space-y-2">
-                <Label>Admin Fee (Opsional)</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Admin Fee (Opsional)</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Aktifkan</span>
+                    <Switch
+                      checked={data.admin_fee_enabled ?? false}
+                      onCheckedChange={(checked) => onChange({ 
+                        admin_fee_enabled: checked,
+                        admin_fee_percentage: checked ? data.admin_fee_percentage : null
+                      })}
+                    />
+                  </div>
+                </div>
                 <div className="relative">
                   <Input
                     type="number"
                     min={0}
                     max={100}
-                    value={data.admin_fee_percentage ?? 0}
-                    onChange={(e) => onChange({ admin_fee_percentage: Number(e.target.value) || 0 })}
-                    placeholder="0"
-                    className="pr-10"
+                    value={data.admin_fee_enabled && data.admin_fee_percentage ? data.admin_fee_percentage : ''}
+                    onChange={(e) => onChange({ admin_fee_percentage: e.target.value ? Number(e.target.value) : null })}
+                    placeholder={data.admin_fee_enabled ? "Contoh: 20" : "Tidak aktif"}
+                    disabled={!data.admin_fee_enabled}
+                    className={cn("pr-10", !data.admin_fee_enabled && "opacity-50")}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                 </div>
@@ -1227,7 +1240,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
-              {/* Row: Payout Direction + Admin Fee */}
+              {/* Row: Payout Direction */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {/* Kolom Kiri: Payout Direction */}
                 <div className="space-y-2">
@@ -1267,39 +1280,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       : "Sub kategori set sendiri."}
                   </p>
                 </div>
-                
-                {/* Kolom Kanan: Admin Fee (Global) - untuk SEMUA promo type */}
-                <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>Admin Fee (Opsional)</Label>
-                      <Switch
-                        checked={data.admin_fee_enabled ?? false}
-                        onCheckedChange={(checked) => {
-                          onChange({ 
-                            admin_fee_enabled: checked,
-                            admin_fee_percentage: checked ? data.admin_fee_percentage : null
-                          });
-                        }}
-                      />
-                    </div>
-                    {data.admin_fee_enabled && (
-                      <div className="relative animate-in fade-in slide-in-from-top-2 duration-200">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={data.admin_fee_percentage ?? ''}
-                          onChange={(e) => onChange({ admin_fee_percentage: e.target.value ? Number(e.target.value) : null })}
-                          placeholder="Contoh: 20"
-                          className="pr-10"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Potongan admin pada perhitungan komisi.
-                    </p>
-                  </div>
               </div>
 
               {/* Periode Klaim & Waktu Pembagian Bonus */}
