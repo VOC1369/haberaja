@@ -68,6 +68,22 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     });
   };
 
+  // Simple loadPromos - just read from localStorage, no seeding
+  const loadPromos = () => {
+    const stored = localStorage.getItem(PROMO_STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setItems(Array.isArray(parsed) ? parsed : []);
+        console.log('[PromoKnowledgeSection] Loaded promos:', parsed?.length || 0);
+      } catch {
+        setItems([]);
+      }
+    } else {
+      setItems([]);
+    }
+  };
+
   // Reset viewMode to list when forceResetKey changes (sidebar navigation)
   useEffect(() => {
     if (forceResetKey !== undefined) {
@@ -77,20 +93,29 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     }
   }, [forceResetKey]);
 
-  // Simple loadPromos - just read from localStorage, no seeding
-  const loadPromos = () => {
-    const stored = localStorage.getItem(PROMO_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setItems(Array.isArray(parsed) ? parsed : []);
-      } catch {
-        setItems([]);
+  // Listen for storage changes (when promo added from PseudoKnowledgeSection)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === PROMO_STORAGE_KEY) {
+        console.log('[PromoKnowledgeSection] Storage changed, reloading promos...');
+        loadPromos();
       }
-    } else {
-      setItems([]);
-    }
-  };
+    };
+    
+    // Also listen for custom event from same-window storage updates
+    const handleCustomStorageEvent = () => {
+      console.log('[PromoKnowledgeSection] Custom storage event, reloading promos...');
+      loadPromos();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('promo-storage-updated', handleCustomStorageEvent);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('promo-storage-updated', handleCustomStorageEvent);
+    };
+  }, []);
 
   useEffect(() => {
     // One-time seed: hanya jalankan sekali saja (flag disimpan di localStorage, bukan sessionStorage)
