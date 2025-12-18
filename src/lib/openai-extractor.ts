@@ -122,6 +122,9 @@ import {
   extractTablesFromHtml,
   PROPAGATABLE_FIELDS,
   isPropagatableField,
+  normalizeHtmlTables,
+  hasRowspanTables,
+  needsNormalization,
 } from './extractors';
 
 // Known brand patterns for auto-detection (legacy - kept for backward compat)
@@ -412,6 +415,7 @@ export interface ExtractedPromo {
   // NEW: Extraction metadata for debugging and audit
   _extraction_meta?: {
     has_rowspan_tables: boolean;
+    html_was_normalized: boolean;
     client_id_source: string | null;
     propagated_fields: string[];
     ambiguous_blacklists: number;
@@ -1221,6 +1225,23 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     throw new Error("Konten tidak boleh kosong");
   }
 
+  // ============================================
+  // STEP 0: PRE-PROCESS - Normalize HTML tables
+  // This MUST happen BEFORE AI extraction
+  // ============================================
+  let normalizedContent = content;
+  let hadRowspan = false;
+
+  if (needsNormalization(content)) {
+    hadRowspan = hasRowspanTables(content);
+    normalizedContent = normalizeHtmlTables(content);
+    console.log('[Extractor] Pre-processed HTML: rowspan/colspan tables normalized');
+  }
+
+  // ============================================
+  // STEP 1: AI Extraction - NOW RECEIVES CLEAN HTML
+  // AI will see tables with ALL cells filled (no "-" for rowspan)
+  // ============================================
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -1231,7 +1252,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: EXTRACTION_PROMPT },
-        { role: "user", content: `Ekstrak informasi promo dari konten berikut:\n\n${content}` }
+        { role: "user", content: `Ekstrak informasi promo dari konten berikut:\n\n${normalizedContent}` }
       ],
       temperature: 0.1,
       max_tokens: 4000,
@@ -1356,6 +1377,13 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       is_structurally_complete: validationResult.is_structurally_complete,
       status: validationResult.status,
       warnings: validationResult.warnings
+    };
+    
+    // Track pre-processing metadata
+    parsed._extraction_meta = {
+      ...parsed._extraction_meta,
+      has_rowspan_tables: hadRowspan,
+      html_was_normalized: hadRowspan,
     };
     
     // DERIVE ready_to_commit from validation - never hardcode
