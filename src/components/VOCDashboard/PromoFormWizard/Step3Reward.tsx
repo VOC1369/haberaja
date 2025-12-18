@@ -1154,117 +1154,119 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <ChevronDown className="h-5 w-5 text-muted-foreground" />
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content">
-              {/* Global Jenis Hadiah & Max Bonus - 2 kolom */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {/* Jenis Hadiah (Global) */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Jenis Hadiah (Global)</Label>
-                    <Switch
-                      checked={data.global_jenis_hadiah_enabled}
-                      onCheckedChange={(checked) => {
-                        onChange({ global_jenis_hadiah_enabled: checked });
-                        // Inverse logic: jika global ON, semua subcategory toggle harus OFF
-                        if (checked && data.subcategories?.length) {
-                          const updatedSubcategories = data.subcategories.map(sub => ({
-                            ...sub,
-                            jenis_hadiah_same_as_global: false
-                          }));
-                          onChange({ global_jenis_hadiah_enabled: checked, subcategories: updatedSubcategories });
-                        }
-                      }}
-                    />
-                  </div>
-                  <SelectWithAddNew
-                    value={data.global_jenis_hadiah || ''}
-                    onValueChange={(value) => onChange({ global_jenis_hadiah: value })}
-                    options={dinamisRewardTypeOptions}
-                    onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
-                    onDeleteOption={handleDeleteDinamisRewardType}
-                    placeholder="Pilih jenis hadiah"
-                    disabled={!data.global_jenis_hadiah_enabled}
-                    className={!data.global_jenis_hadiah_enabled ? "opacity-50" : ""}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {data.global_jenis_hadiah_enabled 
-                      ? "Semua sub kategori mengikuti."
-                      : "Sub kategori set sendiri."}
-                  </p>
-                </div>
-                
-                {/* Max Bonus (Global) */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Max Bonus (Global)</Label>
-                    <Switch
-                      checked={data.global_max_bonus_enabled}
-                      onCheckedChange={(checked) => {
-                        onChange({ global_max_bonus_enabled: checked });
-                        // Inverse logic: jika global ON, semua subcategory toggle harus OFF
-                        if (checked && data.subcategories?.length) {
-                          const updatedSubcategories = data.subcategories.map(sub => ({
-                            ...sub,
-                            max_bonus_same_as_global: false
-                          }));
-                          onChange({ global_max_bonus_enabled: checked, subcategories: updatedSubcategories });
-                        }
-                      }}
-                    />
-                  </div>
-                  <Input
-                    type="text"
-                    value={data.global_max_bonus ? data.global_max_bonus.toLocaleString('id-ID') : ''}
-                    onChange={(e) => onChange({ global_max_bonus: Number(e.target.value.replace(/\D/g, '')) })}
-                    placeholder="Contoh: 100.000.000"
-                    disabled={!data.global_max_bonus_enabled}
-                    className={!data.global_max_bonus_enabled ? "opacity-50" : ""}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {data.global_max_bonus_enabled 
-                      ? "Semua sub kategori mengikuti."
-                      : "Sub kategori set sendiri."}
-                  </p>
-                </div>
-                
-                {/* Payout Direction (Global) - Kolom 1, Row 2 */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Payout Direction (Global)</Label>
-                    <Switch
-                      checked={data.global_payout_direction_enabled}
-                      onCheckedChange={(checked) => {
-                        onChange({ global_payout_direction_enabled: checked });
-                        if (checked && data.subcategories?.length) {
-                          const updatedSubcategories = data.subcategories.map(sub => ({
-                            ...sub,
-                            payout_direction_same_as_global: false
-                          }));
-                          onChange({ global_payout_direction_enabled: checked, subcategories: updatedSubcategories });
-                        }
-                      }}
-                    />
-                  </div>
-                  <RadioGroup
-                    value={data.global_payout_direction || 'after'}
-                    onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })}
-                    className={cn("flex gap-6 pt-2", !data.global_payout_direction_enabled && "opacity-50 pointer-events-none")}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="before" id="global-payout-before" disabled={!data.global_payout_direction_enabled} />
-                      <Label htmlFor="global-payout-before" className="cursor-pointer font-normal">Didepan</Label>
+              {/* Global Jenis Hadiah, Max Bonus, Payout Direction - ONLY show when subcategories enabled */}
+              {data.has_subcategories && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {/* Jenis Hadiah (Global) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Jenis Hadiah (Global)</Label>
+                      <Switch
+                        checked={data.global_jenis_hadiah_enabled}
+                        onCheckedChange={(checked) => {
+                          onChange({ global_jenis_hadiah_enabled: checked });
+                          // Inverse logic: jika global ON, semua subcategory toggle harus OFF
+                          if (checked && data.subcategories?.length) {
+                            const updatedSubcategories = data.subcategories.map(sub => ({
+                              ...sub,
+                              jenis_hadiah_same_as_global: false
+                            }));
+                            onChange({ global_jenis_hadiah_enabled: checked, subcategories: updatedSubcategories });
+                          }
+                        }}
+                      />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="after" id="global-payout-after" disabled={!data.global_payout_direction_enabled} />
-                      <Label htmlFor="global-payout-after" className="cursor-pointer font-normal">Dibelakang</Label>
+                    <SelectWithAddNew
+                      value={data.global_jenis_hadiah || ''}
+                      onValueChange={(value) => onChange({ global_jenis_hadiah: value })}
+                      options={dinamisRewardTypeOptions}
+                      onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
+                      onDeleteOption={handleDeleteDinamisRewardType}
+                      placeholder="Pilih jenis hadiah"
+                      disabled={!data.global_jenis_hadiah_enabled}
+                      className={!data.global_jenis_hadiah_enabled ? "opacity-50" : ""}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {data.global_jenis_hadiah_enabled 
+                        ? "Semua sub kategori mengikuti."
+                        : "Sub kategori set sendiri."}
+                    </p>
+                  </div>
+                  
+                  {/* Max Bonus (Global) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Max Bonus (Global)</Label>
+                      <Switch
+                        checked={data.global_max_bonus_enabled}
+                        onCheckedChange={(checked) => {
+                          onChange({ global_max_bonus_enabled: checked });
+                          // Inverse logic: jika global ON, semua subcategory toggle harus OFF
+                          if (checked && data.subcategories?.length) {
+                            const updatedSubcategories = data.subcategories.map(sub => ({
+                              ...sub,
+                              max_bonus_same_as_global: false
+                            }));
+                            onChange({ global_max_bonus_enabled: checked, subcategories: updatedSubcategories });
+                          }
+                        }}
+                      />
                     </div>
-                  </RadioGroup>
-                  <p className="text-xs text-muted-foreground">
-                    {data.global_payout_direction_enabled 
-                      ? "Semua sub kategori mengikuti."
-                      : "Sub kategori set sendiri."}
-                  </p>
+                    <Input
+                      type="text"
+                      value={data.global_max_bonus ? data.global_max_bonus.toLocaleString('id-ID') : ''}
+                      onChange={(e) => onChange({ global_max_bonus: Number(e.target.value.replace(/\D/g, '')) })}
+                      placeholder="Contoh: 100.000.000"
+                      disabled={!data.global_max_bonus_enabled}
+                      className={!data.global_max_bonus_enabled ? "opacity-50" : ""}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {data.global_max_bonus_enabled 
+                        ? "Semua sub kategori mengikuti."
+                        : "Sub kategori set sendiri."}
+                    </p>
+                  </div>
+                  
+                  {/* Payout Direction (Global) - Kolom 1, Row 2 */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Payout Direction (Global)</Label>
+                      <Switch
+                        checked={data.global_payout_direction_enabled}
+                        onCheckedChange={(checked) => {
+                          onChange({ global_payout_direction_enabled: checked });
+                          if (checked && data.subcategories?.length) {
+                            const updatedSubcategories = data.subcategories.map(sub => ({
+                              ...sub,
+                              payout_direction_same_as_global: false
+                            }));
+                            onChange({ global_payout_direction_enabled: checked, subcategories: updatedSubcategories });
+                          }
+                        }}
+                      />
+                    </div>
+                    <RadioGroup
+                      value={data.global_payout_direction || 'after'}
+                      onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })}
+                      className={cn("flex gap-6 pt-2", !data.global_payout_direction_enabled && "opacity-50 pointer-events-none")}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="before" id="global-payout-before" disabled={!data.global_payout_direction_enabled} />
+                        <Label htmlFor="global-payout-before" className="cursor-pointer font-normal">Didepan</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="after" id="global-payout-after" disabled={!data.global_payout_direction_enabled} />
+                        <Label htmlFor="global-payout-after" className="cursor-pointer font-normal">Dibelakang</Label>
+                      </div>
+                    </RadioGroup>
+                    <p className="text-xs text-muted-foreground">
+                      {data.global_payout_direction_enabled 
+                        ? "Semua sub kategori mengikuti."
+                        : "Sub kategori set sendiri."}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Periode Klaim & Waktu Pembagian Bonus */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
