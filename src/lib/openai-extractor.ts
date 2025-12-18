@@ -1283,6 +1283,9 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       warnings: validationResult.warnings
     };
     
+    // DERIVE ready_to_commit from validation - never hardcode
+    parsed.ready_to_commit = validationResult.status === 'ready' && validationResult.warnings.length === 0;
+    
     return parsed;
   } catch (parseError) {
     console.error("Failed to parse OpenAI response:", resultText);
