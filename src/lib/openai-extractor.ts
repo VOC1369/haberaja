@@ -50,6 +50,26 @@ export interface TogelEventReward {
   reward_amount: number;   // 20000, 200000
 }
 
+// Level Up / Event Unlock Condition (progress gate, NOT financial requirement)
+export interface UnlockCondition {
+  from_tier?: string;        // "Bronze", "Level 1"
+  to_tier?: string;          // "Silver", "Level 2"
+  condition_text: string;    // Full condition text for display
+  condition_type: 'history_deposit' | 'previous_level' | 'cumulative_turnover' | 'other';
+}
+
+// Patterns to detect unlock conditions (NOT min_deposit!)
+export const UNLOCK_CONDITION_PATTERNS = [
+  /history\s*deposit\s*(rp\.?\s*[\d.,]+)/i,
+  /telah\s*mencapai\s*level/i,
+  /syarat\s*naik\s*level/i,
+  /tier\s*\w+\s*(ke|to)\s*\w+\s*wajib/i,
+  /sebelum(nya)?\s*(harus|wajib)/i,
+  /total\s*deposit\s*(rp\.?\s*[\d.,]+)/i,
+  /akumulasi\s*(deposit|turnover)/i,
+  /untuk\s*naik\s*(ke\s*)?(level|tier)/i,
+];
+
 // Field applicability status per archetype
 export type FieldStatus = 'required' | 'optional' | 'not_applicable';
 
@@ -313,6 +333,10 @@ export interface ExtractedPromo {
   game_domain?: GameDomain;             // Auto-detected from content
   applicable_markets?: string[];        // For togel: ["Singapore", "Hongkong", ...]
   event_rewards?: TogelEventReward[];   // For event_table archetype (togel prizes)
+  
+  // Level Up / Event Unlock Conditions (progress gates, NOT financial requirements)
+  // These are NOT min_deposit! They are tier progression conditions
+  unlock_conditions?: UnlockCondition[];
   
   // Global blacklist — HANYA jika eksplisit "berlaku untuk semua"
   global_blacklist: {
@@ -686,6 +710,57 @@ KEYWORDS yang menunjukkan Event/Level Up:
 JIKA terdeteksi keywords di atas:
 - promo_type: "event_level_up" atau "Event / Level Up"
 ❌ JANGAN set sebagai "combo" atau "welcome_bonus"
+
+🔹 UNLOCK CONDITION ≠ MIN DEPOSIT (LEVEL UP PROMO - KRITIKAL!)
+
+⚠️⚠️⚠️ PERBEDAAN KRITIS UNTUK EVENT / LEVEL UP:
+Unlock condition (syarat naik level) adalah PROGRESS GATE, BUKAN syarat finansial per klaim.
+
+PATTERN UNLOCK CONDITION (JANGAN map ke min_deposit!):
+- "History Deposit Rp 100.000" → UNLOCK CONDITION untuk naik tier
+- "Telah mencapai level sebelumnya" → UNLOCK CONDITION  
+- "Syarat naik level: total deposit X" → UNLOCK CONDITION
+- "Tier Bronze ke Silver wajib X" → UNLOCK CONDITION
+- "Total deposit Rp X untuk naik ke Level Y" → UNLOCK CONDITION
+- "Akumulasi turnover X" → UNLOCK CONDITION
+
+⚠️ JIKA promo adalah Event / Level Up DAN ada pola unlock condition di atas:
+1. JANGAN masukkan ke minimum_base (min_deposit)!
+2. JANGAN masukkan ke turnover_rule!
+3. Masukkan ke terms_conditions[] sebagai catatan syarat
+4. Set minimum_base = null, confidence.minimum_base = "not_applicable"
+5. Set turnover_rule = null, confidence.turnover_rule = "not_applicable"
+
+CONTOH PARSING:
+Input: "KEJAR LEVEL UP DAPET UANG!
+Level 1 → Rp 50.000
+Level 2 → Rp 100.000  
+Level 3 → Rp 200.000
+Syarat: History deposit Rp 100.000 untuk setiap level"
+
+OUTPUT BENAR:
+{
+  "promo_type": "event_level_up",
+  "subcategories": [
+    { "sub_name": "Level 1", "max_bonus": 50000, "minimum_base": null, "turnover_rule": null, 
+      "confidence": { "minimum_base": "not_applicable", "turnover_rule": "not_applicable" } },
+    { "sub_name": "Level 2", "max_bonus": 100000, ... },
+    { "sub_name": "Level 3", "max_bonus": 200000, ... }
+  ],
+  "terms_conditions": ["Syarat naik level: History deposit Rp 100.000 untuk setiap level"]
+}
+
+OUTPUT SALAH (❌ JANGAN!):
+{
+  "subcategories": [
+    { "sub_name": "Level 1", "minimum_base": 100000 } ← SALAH! Ini unlock condition!
+  ]
+}
+
+❌ ATURAN KERAS untuk Event / Level Up:
+- minimum_base selalu null (tidak ada syarat deposit per klaim)
+- turnover_rule selalu null (hadiah level langsung diberikan)
+- "History deposit X" masuk ke terms_conditions, BUKAN minimum_base
 
 🔹 Max Bonus vs Max Claim — PERBEDAAN KRITIS!
 
