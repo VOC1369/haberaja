@@ -25,6 +25,15 @@ export {
   type ParsedTable,
 } from './table-parser';
 
+// HTML table normalization (pre-processor)
+export {
+  normalizeHtmlTables,
+  hasRowspanTables,
+  hasColspanTables,
+  needsNormalization,
+  type NormalizedTable,
+} from './html-normalizer';
+
 // Blacklist extraction with ambiguity handling
 export {
   extractBlacklist,
