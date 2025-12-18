@@ -52,6 +52,7 @@ import {
 } from "@/lib/openai-extractor";
 import { promoKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
+import { formatPromoType } from "@/lib/utils";
 
 // Helper: Title Case for mode badges
 const formatPromoMode = (mode: string | null | undefined): string => {
@@ -667,7 +668,7 @@ export function PseudoKnowledgeSection() {
             </div>
             <div className="flex gap-2 mt-2 flex-wrap">
               <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-button-hover/40">
-                {extractedPromo.promo_type || "Unknown"}
+                {formatPromoType(extractedPromo.promo_type)}
               </Badge>
               {(() => {
                 const domain = detectGameDomain(extractedPromo);

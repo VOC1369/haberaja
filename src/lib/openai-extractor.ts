@@ -698,8 +698,8 @@ KEYWORDS yang menunjukkan Mini Game:
 - "wheel", "roda keberuntungan"
 
 JIKA terdeteksi keywords di atas:
-- promo_type: "minigame" atau "Mini Game (Spin, Lucky Draw)"
-❌ JANGAN set sebagai "welcome_bonus" atau "deposit_bonus"
+- promo_type: "Mini Game" (Title Case)
+❌ JANGAN set sebagai "Welcome Bonus" atau "Deposit Bonus"
 
 🔹 Event / Level Up — PROMO TYPE DETECTION  
 KEYWORDS yang menunjukkan Event/Level Up:
@@ -708,7 +708,7 @@ KEYWORDS yang menunjukkan Event/Level Up:
 - "challenge", "tantangan"
 
 JIKA terdeteksi keywords di atas:
-- promo_type: "event_level_up" atau "Event / Level Up"
+- promo_type: "Event Level Up" (Title Case, tanpa underscore)
 ❌ JANGAN set sebagai "combo" atau "welcome_bonus"
 
 🔹 UNLOCK CONDITION ≠ MIN DEPOSIT (LEVEL UP PROMO - KRITIKAL!)
@@ -740,7 +740,7 @@ Syarat: History deposit Rp 100.000 untuk setiap level"
 
 OUTPUT BENAR:
 {
-  "promo_type": "event_level_up",
+  "promo_type": "Event Level Up",
   "subcategories": [
     { "sub_name": "Level 1", "max_bonus": 50000, "minimum_base": null, "turnover_rule": null, 
       "confidence": { "minimum_base": "not_applicable", "turnover_rule": "not_applicable" } },
@@ -860,12 +860,12 @@ Jika tabel berisi >1 baris data promo:
 
 🔹 TURNOVER RULE — CONTEXT AWARENESS (NOT_APPLICABLE)
 Jika promo_type adalah salah satu dari:
-- "point_reward"
-- "cashback"
-- "redeem"
-- "merchandise"
-- "loyalty_point"
-- "referral"
+- "Loyalty Point"
+- "Rollingan Cashback"
+- "Merchandise"
+- "Referral Bonus"
+- "Campaign Informational"
+- "Event Level Up"
 
 DAN turnover_rule tidak ditemukan di konten:
 
@@ -891,7 +891,7 @@ KEYWORDS yang menunjukkan Deposit Pulsa:
 - Nama operator: "TELKOMSEL", "XL", "AXIS", "INDOSAT", "TRI", "SMARTFREN"
 
 JIKA terdeteksi deposit pulsa:
-- promo_type: "deposit_bonus" (subcategory: pulsa)
+- promo_type: "Deposit Bonus" (subcategory: pulsa)
 - deposit_method: "pulsa"
 - deposit_method_providers: ["TELKOMSEL", "XL", ...] — HANYA operator yang disebutkan
 - deposit_rate: 100 jika "tanpa potongan", atau (100 - potongan_persen) jika ada potongan
@@ -905,7 +905,7 @@ CONTOH PARSING:
 Input: "Deposit Pulsa TELKOMSEL & XL tanpa potongan"
 Output:
 {
-  "promo_type": "deposit_bonus",
+  "promo_type": "Deposit Bonus",
   "deposit_method": "pulsa",
   "deposit_method_providers": ["TELKOMSEL", "XL"],
   "deposit_rate": 100
@@ -930,7 +930,7 @@ Return HANYA JSON valid tanpa markdown code block.
 FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
 {
   "promo_name": "nama promo utama",
-  "promo_type": "combo|welcome_bonus|deposit_bonus|cashback|rollingan|referral",
+  "promo_type": "Welcome Bonus|Deposit Bonus|Rollingan Cashback|Referral Bonus|Event Level Up|Mini Game|Freechip|Loyalty Point|Merchandise|Campaign Informational",
   "target_user": "new_member|all|vip",
   "promo_mode": "single|multi",
   "valid_from": "YYYY-MM-DD atau null",
