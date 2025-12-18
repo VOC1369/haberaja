@@ -110,75 +110,37 @@ const DOMAIN_PATTERNS = {
 } as const;
 
 // ============= CLIENT/BRAND DETECTION =============
-// Known brand patterns for auto-detection
+// Import modular extractors
+import { 
+  extractClientId as extractClientIdModular,
+  type ClientIdResult,
+  extractBlacklistFromSK,
+  extractBlacklist,
+  type BlacklistResult,
+  parseTableWithRowspan,
+  applySharedValues,
+  extractTablesFromHtml,
+  PROPAGATABLE_FIELDS,
+  isPropagatableField,
+} from './extractors';
+
+// Known brand patterns for auto-detection (legacy - kept for backward compat)
 const KNOWN_BRANDS = [
   'CITRA77', 'SLOT25', 'WIN25', 'WG77', 'SLOT88', 'WIN88', 'MEGA88',
   'MAJU77', 'HOKI77', 'ZEUS77', 'NAGA77', 'RAJA77', 'SULTAN77',
   // Add more known client brands as needed
 ];
 
-// Brand detection patterns from Indonesian promo text
-const BRAND_PATTERNS = [
-  /(?:di|oleh|dari|ke|untuk|member)\s+([A-Z][A-Z0-9]{2,})/gi,   // "di CITRA77", "member CITRA77"
-  /(?:keputusan|kebijakan|pihak)\s+([A-Z][A-Z0-9]{2,})/gi,       // "keputusan CITRA77"
-  /(?:tim|cs|admin|customer\s*service)\s+([A-Z][A-Z0-9]{2,})/gi, // "tim CITRA77"
-  /(?:akun|saldo|deposit).+?(?:di|ke)\s+([A-Z][A-Z0-9]{2,})/gi,  // "deposit di CITRA77"
-  /(?:bermain|main|daftar|login).+?(?:di|ke)\s+([A-Z][A-Z0-9]{2,})/gi, // "bermain di CITRA77"
-];
-
 /**
  * Extract client_id (brand/website) from promo content
- * Priority: Known brands > Pattern matching with validation
+ * Uses modular extractor with enhanced patterns
  */
 export function extractClientId(content: string): { client_id: string | null; confidence: ConfidenceLevel } {
-  const upperContent = content.toUpperCase();
-  
-  // 1. Check for known brands first (highest confidence)
-  for (const brand of KNOWN_BRANDS) {
-    if (upperContent.includes(brand)) {
-      console.log(`[extractClientId] Found known brand: ${brand}`);
-      return { client_id: brand, confidence: 'explicit' };
-    }
-  }
-  
-  // 2. Try pattern matching for unknown brands
-  const candidateCounts: Record<string, number> = {};
-  
-  for (const pattern of BRAND_PATTERNS) {
-    const matches = content.matchAll(new RegExp(pattern));
-    for (const match of matches) {
-      const candidate = match[1]?.toUpperCase();
-      if (candidate) {
-        // Validate: must be 3+ chars, alphanumeric, typically contains number
-        const isValidFormat = candidate.length >= 3 && 
-                             /[A-Z]/.test(candidate) && 
-                             /\d/.test(candidate) &&
-                             candidate.length <= 15; // Not too long
-        
-        // Exclude common false positives
-        const excludeWords = ['SLOT', 'BANK', 'DANA', 'QRIS', 'PULSA', 'EWALLET', 'CRYPTO', 'VIP', 'NEW', 'ALL'];
-        const isExcluded = excludeWords.includes(candidate);
-        
-        if (isValidFormat && !isExcluded) {
-          candidateCounts[candidate] = (candidateCounts[candidate] || 0) + 1;
-        }
-      }
-    }
-  }
-  
-  // Get the most frequently mentioned candidate
-  const sortedCandidates = Object.entries(candidateCounts)
-    .sort((a, b) => b[1] - a[1]);
-  
-  if (sortedCandidates.length > 0 && sortedCandidates[0][1] >= 2) {
-    // Must appear at least twice to be considered derived
-    const [brand, count] = sortedCandidates[0];
-    console.log(`[extractClientId] Derived brand: ${brand} (mentioned ${count} times)`);
-    return { client_id: brand, confidence: 'derived' };
-  }
-  
-  console.log(`[extractClientId] No brand detected`);
-  return { client_id: null, confidence: 'unknown' };
+  const result = extractClientIdModular(content);
+  return {
+    client_id: result.client_id,
+    confidence: result.confidence,
+  };
 }
 
 // Domain-aware defaults
@@ -371,6 +333,13 @@ export interface ExtractedPromoSubCategory {
     rules: string[];       // e.g., ["Semua slot 3 line", "Old game slot"]
   };
   
+  // NEW: Enhanced blacklist with confidence tracking
+  blacklist_confidence?: 'explicit' | 'derived' | 'ambiguous' | 'none';
+  blacklist_note?: string; // Explains why blacklist is/isn't applicable
+  
+  // NEW: Source tracking for propagated fields
+  minimum_base_source?: 'explicit' | 'propagated_from_rowspan';
+  
   // Confidence per field (WAJIB)
   confidence: {
     calculation_value: ConfidenceLevel;
@@ -439,6 +408,15 @@ export interface ExtractedPromo {
   
   // NEW: Extraction source marker for image confidence downgrade
   _extraction_source?: 'url' | 'html' | 'image';
+  
+  // NEW: Extraction metadata for debugging and audit
+  _extraction_meta?: {
+    has_rowspan_tables: boolean;
+    client_id_source: string | null;
+    propagated_fields: string[];
+    ambiguous_blacklists: number;
+    extracted_at: string;
+  };
   
   // Validation Status
   validation: {
