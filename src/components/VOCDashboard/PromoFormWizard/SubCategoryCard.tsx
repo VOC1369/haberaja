@@ -299,41 +299,34 @@ export function SubCategoryCard({
             <div className="flex items-center justify-between">
               <Label>Admin Fee (Opsional)</Label>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Sama dengan Promo Global</span>
+                <span className="text-xs text-muted-foreground">Aktifkan</span>
                 <Switch
-                  checked={subCategory.admin_fee_same_as_global}
+                  checked={subCategory.admin_fee_enabled ?? false}
                   onCheckedChange={(checked) => {
                     onChange({
-                      admin_fee_same_as_global: checked,
-                      admin_fee_enabled: checked ? false : subCategory.admin_fee_enabled,
-                      admin_fee_percentage: checked ? null : subCategory.admin_fee_percentage
+                      admin_fee_enabled: checked,
+                      admin_fee_percentage: checked ? (subCategory.admin_fee_percentage ?? 0) : 0
                     });
                   }}
                 />
               </div>
             </div>
             
-            {/* Input langsung (hanya jika tidak ikut global) */}
-            {!subCategory.admin_fee_same_as_global && (
-              <div className="relative">
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={subCategory.admin_fee_percentage ?? 0}
-                  onChange={(e) => onChange({ 
-                    admin_fee_percentage: Number(e.target.value) || 0 
-                  })}
-                  placeholder="0"
-                  className="pr-10"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-              </div>
-            )}
-            
-            {subCategory.admin_fee_same_as_global && (
-              <p className="text-xs text-muted-foreground">Mengikuti pengaturan global</p>
-            )}
+            <div className="relative">
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                value={subCategory.admin_fee_enabled ? (subCategory.admin_fee_percentage ?? 0) : ''}
+                onChange={(e) => onChange({ 
+                  admin_fee_percentage: Number(e.target.value) || 0 
+                })}
+                placeholder={subCategory.admin_fee_enabled ? "0" : "Tidak aktif"}
+                disabled={!subCategory.admin_fee_enabled}
+                className={cn("pr-10", !subCategory.admin_fee_enabled && "opacity-50")}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+            </div>
           </div>
         </div>
 
