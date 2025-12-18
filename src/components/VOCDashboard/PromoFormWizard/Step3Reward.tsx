@@ -617,18 +617,31 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </RadioGroup>
               </div>
               
-              {/* Admin Fee */}
+              {/* Admin Fee with Toggle */}
               <div className="space-y-2">
-                <Label>Admin Fee (Opsional)</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Admin Fee</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Aktifkan</span>
+                    <Switch
+                      checked={data.admin_fee_enabled ?? false}
+                      onCheckedChange={(checked) => onChange({ 
+                        admin_fee_enabled: checked,
+                        admin_fee_percentage: checked ? (data.admin_fee_percentage ?? 0) : 0
+                      })}
+                    />
+                  </div>
+                </div>
                 <div className="relative">
                   <Input
                     type="number"
                     min={0}
                     max={100}
-                    value={data.admin_fee_percentage ?? 0}
+                    value={data.admin_fee_enabled ? (data.admin_fee_percentage ?? 0) : ''}
                     onChange={(e) => onChange({ admin_fee_percentage: Number(e.target.value) || 0 })}
-                    placeholder="0"
-                    className="pr-10"
+                    placeholder={data.admin_fee_enabled ? "0" : "Tidak aktif"}
+                    disabled={!data.admin_fee_enabled}
+                    className={cn("pr-10", !data.admin_fee_enabled && "opacity-50")}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                 </div>
