@@ -67,13 +67,13 @@ const formatGameType = (type: string): string => {
   return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 };
 
-// Helper: COMBO Summary - Payout direction
+// Helper: COMBO Summary - Payout direction (simplified: "Payout: Depan")
 const getPayoutSummary = (subs: ExtractedPromoSubCategory[]): string => {
   const depan = subs.filter(s => s.payout_direction === 'depan').length;
   const belakang = subs.filter(s => s.payout_direction === 'belakang').length;
-  if (depan > 0 && belakang > 0) return 'Campuran';
-  if (depan > 0) return 'Semua Depan';
-  if (belakang > 0) return 'Semua Belakang';
+  if (depan > 0 && belakang > 0) return 'Payout: Campuran';
+  if (depan > 0) return 'Payout: Depan';
+  if (belakang > 0) return 'Payout: Belakang';
   return '-';
 };
 
@@ -838,11 +838,9 @@ export function PseudoKnowledgeSection() {
                 Syarat & Ketentuan
               </h4>
               <div className="bg-muted rounded-lg p-4">
-                <ScrollArea className="max-h-48">
-                  <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
-                    {extractedPromo.terms_conditions.map((term, idx) => <li key={idx}>{term}</li>)}
-                  </ul>
-                </ScrollArea>
+                <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
+                  {extractedPromo.terms_conditions.map((term, idx) => <li key={idx}>{term}</li>)}
+                </ul>
               </div>
             </div>
           )}
