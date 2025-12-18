@@ -56,7 +56,7 @@ export const promoKB = {
       id: promoWithId.id || `promo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       version: 1,
       is_active: false,
-      status: 'active',
+      status: promo.status || 'draft', // Preserve status from promo or default to draft
       created_at: now,
       updated_at: now,
       updated_by: 'Admin',
@@ -65,7 +65,10 @@ export const promoKB = {
     existing.push(newPromo);
     localStorage.setItem(PROMO_KB_KEY, JSON.stringify(existing));
     
-    console.log('[promoKB] Added promo:', newPromo.id);
+    // Dispatch custom event for same-window listeners (storage event only fires for other windows)
+    window.dispatchEvent(new CustomEvent('promo-storage-updated'));
+    
+    console.log('[promoKB] Added promo:', newPromo.id, newPromo.promo_name);
     return newPromo;
   },
 
