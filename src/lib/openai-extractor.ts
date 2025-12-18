@@ -109,6 +109,78 @@ const DOMAIN_PATTERNS = {
   ]
 } as const;
 
+// ============= CLIENT/BRAND DETECTION =============
+// Known brand patterns for auto-detection
+const KNOWN_BRANDS = [
+  'CITRA77', 'SLOT25', 'WIN25', 'WG77', 'SLOT88', 'WIN88', 'MEGA88',
+  'MAJU77', 'HOKI77', 'ZEUS77', 'NAGA77', 'RAJA77', 'SULTAN77',
+  // Add more known client brands as needed
+];
+
+// Brand detection patterns from Indonesian promo text
+const BRAND_PATTERNS = [
+  /(?:di|oleh|dari|ke|untuk|member)\s+([A-Z][A-Z0-9]{2,})/gi,   // "di CITRA77", "member CITRA77"
+  /(?:keputusan|kebijakan|pihak)\s+([A-Z][A-Z0-9]{2,})/gi,       // "keputusan CITRA77"
+  /(?:tim|cs|admin|customer\s*service)\s+([A-Z][A-Z0-9]{2,})/gi, // "tim CITRA77"
+  /(?:akun|saldo|deposit).+?(?:di|ke)\s+([A-Z][A-Z0-9]{2,})/gi,  // "deposit di CITRA77"
+  /(?:bermain|main|daftar|login).+?(?:di|ke)\s+([A-Z][A-Z0-9]{2,})/gi, // "bermain di CITRA77"
+];
+
+/**
+ * Extract client_id (brand/website) from promo content
+ * Priority: Known brands > Pattern matching with validation
+ */
+export function extractClientId(content: string): { client_id: string | null; confidence: ConfidenceLevel } {
+  const upperContent = content.toUpperCase();
+  
+  // 1. Check for known brands first (highest confidence)
+  for (const brand of KNOWN_BRANDS) {
+    if (upperContent.includes(brand)) {
+      console.log(`[extractClientId] Found known brand: ${brand}`);
+      return { client_id: brand, confidence: 'explicit' };
+    }
+  }
+  
+  // 2. Try pattern matching for unknown brands
+  const candidateCounts: Record<string, number> = {};
+  
+  for (const pattern of BRAND_PATTERNS) {
+    const matches = content.matchAll(new RegExp(pattern));
+    for (const match of matches) {
+      const candidate = match[1]?.toUpperCase();
+      if (candidate) {
+        // Validate: must be 3+ chars, alphanumeric, typically contains number
+        const isValidFormat = candidate.length >= 3 && 
+                             /[A-Z]/.test(candidate) && 
+                             /\d/.test(candidate) &&
+                             candidate.length <= 15; // Not too long
+        
+        // Exclude common false positives
+        const excludeWords = ['SLOT', 'BANK', 'DANA', 'QRIS', 'PULSA', 'EWALLET', 'CRYPTO', 'VIP', 'NEW', 'ALL'];
+        const isExcluded = excludeWords.includes(candidate);
+        
+        if (isValidFormat && !isExcluded) {
+          candidateCounts[candidate] = (candidateCounts[candidate] || 0) + 1;
+        }
+      }
+    }
+  }
+  
+  // Get the most frequently mentioned candidate
+  const sortedCandidates = Object.entries(candidateCounts)
+    .sort((a, b) => b[1] - a[1]);
+  
+  if (sortedCandidates.length > 0 && sortedCandidates[0][1] >= 2) {
+    // Must appear at least twice to be considered derived
+    const [brand, count] = sortedCandidates[0];
+    console.log(`[extractClientId] Derived brand: ${brand} (mentioned ${count} times)`);
+    return { client_id: brand, confidence: 'derived' };
+  }
+  
+  console.log(`[extractClientId] No brand detected`);
+  return { client_id: null, confidence: 'unknown' };
+}
+
 // Domain-aware defaults
 interface DomainDefaults {
   metode: 'percentage' | 'fixed';
@@ -319,6 +391,10 @@ export interface ExtractedPromo {
   promo_type: 'combo' | 'welcome_bonus' | 'deposit_bonus' | 'cashback' | 'rollingan' | 'referral' | string;
   target_user: 'new_member' | 'all' | 'vip' | string;
   promo_mode: 'single' | 'multi';  // KRITIS: single atau multi-variant
+  
+  // Client/Brand Identification (auto-detected)
+  client_id?: string;              // e.g., "CITRA77", "SLOT25"
+  client_id_confidence?: ConfidenceLevel;
   
   // Dates
   valid_from?: string;
@@ -1105,6 +1181,17 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     parsed.raw_content = "[Image extraction]";
     parsed.ready_to_commit = false;
     
+    // Auto-extract client_id if not provided by AI
+    if (!parsed.client_id && parsed.raw_content) {
+      // For image, use terms_conditions if available
+      const termsText = (parsed.terms_conditions || []).join(' ');
+      const { client_id, confidence } = extractClientId(termsText);
+      if (client_id) {
+        parsed.client_id = client_id;
+        parsed.client_id_confidence = confidence;
+      }
+    }
+    
     // Ensure defaults
     if (!parsed.global_blacklist) {
       parsed.global_blacklist = { enabled: false, is_explicit: false, types: [], providers: [], games: [], rules: [] };
@@ -1192,6 +1279,16 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     parsed.raw_content = content.substring(0, 1000);
     parsed.source_url = sourceUrl;
     parsed.ready_to_commit = false;
+    
+    // Auto-extract client_id if not provided by AI
+    if (!parsed.client_id) {
+      const { client_id, confidence } = extractClientId(content);
+      if (client_id) {
+        parsed.client_id = client_id;
+        parsed.client_id_confidence = confidence;
+        console.log(`[extractPromoFromContent] Auto-detected client_id: ${client_id} (${confidence})`);
+      }
+    }
     
     // Ensure defaults
     if (!parsed.global_blacklist) {
@@ -1491,7 +1588,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   // Build base PromoFormData
   const promoData: PromoFormData = {
     // Step 1 - Identitas
-    client_id: '',
+    client_id: extracted.client_id || '',  // Auto-detected from content
     promo_name: extracted.promo_name || 'Promo Baru',
     promo_type: promoTypeMap[extracted.promo_type] || extracted.promo_type || 'Deposit Bonus',
     intent_category: 'bonus_claim',

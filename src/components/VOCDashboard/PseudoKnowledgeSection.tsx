@@ -667,6 +667,15 @@ export function PseudoKnowledgeSection() {
               </Badge>
             </div>
             <div className="flex gap-2 mt-2 flex-wrap">
+              {/* Client/Website Badge */}
+              {extractedPromo.client_id && (
+                <Badge variant="outline" className="bg-cyan-500/20 text-cyan-400 border-cyan-500/40">
+                  🌐 {extractedPromo.client_id}
+                  {extractedPromo.client_id_confidence === 'derived' && (
+                    <span className="ml-1 text-xs opacity-60">(derived)</span>
+                  )}
+                </Badge>
+              )}
               <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-button-hover/40">
                 {formatPromoType(extractedPromo.promo_type)}
               </Badge>
