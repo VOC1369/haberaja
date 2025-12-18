@@ -9,7 +9,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useState, useMemo } from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatPromoType } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 
@@ -640,7 +640,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
           >
             <ValueBox label="Website" value={data.client_id} />
             <ValueBox label="Nama Promo" value={data.promo_name} />
-            <ValueBox label="Tipe" value={data.promo_type} />
+            <ValueBox label="Tipe" value={formatPromoType(data.promo_type)} />
             <ValueBox label="Tujuan" value={data.intent_category} />
             <ValueBox label="Target" value={data.target_segment} />
             <ValueBox label="Trigger" value={data.trigger_event} />
