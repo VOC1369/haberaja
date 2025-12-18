@@ -473,7 +473,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   // Auto-create first sub-category when toggle ON
                   onChange({ 
                     has_subcategories: true, 
-                    subcategories: [createInitialSubCategory(1)] 
+                    subcategories: [createInitialSubCategory(0)] 
                   });
                 } else {
                   onChange({ has_subcategories: checked });
