@@ -6,14 +6,16 @@ import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { PromoFormData, PromoItem, initialPromoData, savePromoDraft } from "./types";
 import { Step1Identity } from "./Step1Identity";
 import { Step2Access } from "./Step2Access";
+import { StepProgramClassification, type ProgramType } from "./StepProgramClassification";
 import { Step3Reward } from "./Step3Reward";
 import { Step4Review, generateTermsList, formatNumber } from "./Step4Review";
 
 const STEPS = [
   { id: 1, title: "Identitas Promo" },
   { id: 2, title: "Batasan & Akses" },
-  { id: 3, title: "Konfigurasi Reward" },
-  { id: 4, title: "Review & Simpan" },
+  { id: 3, title: "Jenis Program" },
+  { id: 4, title: "Konfigurasi Reward" },
+  { id: 5, title: "Review & Simpan" },
 ];
 
 interface PromoFormWizardProps {
@@ -23,11 +25,12 @@ interface PromoFormWizardProps {
 }
 
 export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFormWizardProps) {
-  // Jump to Step 4 (Review) when editing existing promo
-  const [currentStep, setCurrentStep] = useState(initialData ? 4 : 1);
+  // Jump to Step 5 (Review) when editing existing promo
+  const [currentStep, setCurrentStep] = useState(initialData ? 5 : 1);
   const [formData, setFormData] = useState<PromoFormData>(initialData || initialPromoData);
   const [editingId, setEditingId] = useState<string | undefined>(initialData?.id);
   const [isEditingFromReview, setIsEditingFromReview] = useState(false);
+  const [selectedProgram, setSelectedProgram] = useState<ProgramType>(null);
 
   const handleChange = (updates: Partial<PromoFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -36,11 +39,15 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   const handleNext = () => {
     // If editing from review, return to review instead of advancing
     if (isEditingFromReview) {
-      setCurrentStep(4);
+      setCurrentStep(5);
       setIsEditingFromReview(false);
       return;
     }
-    if (currentStep < 4) {
+    // Block proceeding from step 3 without program selection
+    if (currentStep === 3 && !selectedProgram) {
+      return;
+    }
+    if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -100,10 +107,12 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
     setFormData(initialPromoData);
     setEditingId(undefined);
     setCurrentStep(1);
+    setSelectedProgram(null);
     onSaveSuccess?.();
   };
 
-  const progress = (currentStep / 4) * 100;
+  const progress = (currentStep / 5) * 100;
+  const canProceedFromStep3 = selectedProgram !== null;
 
   return (
     <div className="page-wrapper space-y-6">
@@ -136,11 +145,11 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
           />
         </div>
 
-        {/* Step Labels (Step 1 / Step 4) */}
+        {/* Step Labels (Step 1 / Step 5) */}
         <div className="flex items-center justify-between text-sm mb-4">
           <span className="text-muted-foreground">Step 1</span>
-          <span className="text-lg font-bold text-foreground">{currentStep}/4</span>
-          <span className="text-muted-foreground">Step 4</span>
+          <span className="text-lg font-bold text-foreground">{currentStep}/5</span>
+          <span className="text-muted-foreground">Step 5</span>
         </div>
 
         {/* Divider Line */}
@@ -174,7 +183,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
             onChange={handleChange}
             isEditingFromReview={isEditingFromReview}
             onSaveAndReturn={() => {
-              setCurrentStep(4);
+              setCurrentStep(5);
               setIsEditingFromReview(false);
             }}
           />
@@ -185,23 +194,29 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
             onChange={handleChange}
             isEditingFromReview={isEditingFromReview}
             onSaveAndReturn={() => {
-              setCurrentStep(4);
+              setCurrentStep(5);
               setIsEditingFromReview(false);
             }}
           />
         )}
         {currentStep === 3 && (
+          <StepProgramClassification 
+            selectedProgram={selectedProgram}
+            onSelect={setSelectedProgram}
+          />
+        )}
+        {currentStep === 4 && (
           <Step3Reward 
             data={formData} 
             onChange={handleChange}
             isEditingFromReview={isEditingFromReview}
             onSaveAndReturn={() => {
-              setCurrentStep(4);
+              setCurrentStep(5);
               setIsEditingFromReview(false);
             }}
           />
         )}
-        {currentStep === 4 && <Step4Review data={formData} onGoToStep={handleGoToStepFromReview} />}
+        {currentStep === 5 && <Step4Review data={formData} onGoToStep={handleGoToStepFromReview} />}
       </Card>
 
       {/* Bottom Navigation Bar */}
@@ -212,7 +227,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
              <Button
               variant="outline"
               onClick={() => {
-                setCurrentStep(4);
+                setCurrentStep(5);
                 setIsEditingFromReview(false);
               }}
               className="h-11 px-6 rounded-full border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
@@ -239,7 +254,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
               Simpan Draft
             </Button>
             <span className="text-sm text-muted-foreground">
-              Step {currentStep} / 4
+              Step {currentStep} / 5
             </span>
           </div>
 
@@ -248,7 +263,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
             <Button 
               variant="golden" 
               onClick={() => {
-                setCurrentStep(4);
+                setCurrentStep(5);
                 setIsEditingFromReview(false);
               }} 
               className="rounded-full"
@@ -256,13 +271,18 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
               Simpan & Kembali
               <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
-          ) : currentStep === 4 ? (
+          ) : currentStep === 5 ? (
             <Button variant="golden" onClick={handlePublish} className="rounded-full">
               Publish Promo
               <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
           ) : (
-            <Button variant="golden" onClick={handleNext} className="rounded-full">
+            <Button 
+              variant="golden" 
+              onClick={handleNext} 
+              disabled={currentStep === 3 && !canProceedFromStep3}
+              className="rounded-full disabled:opacity-50"
+            >
               Selanjutnya
               <ChevronRight className="h-4 w-4 ml-2" />
             </Button>
