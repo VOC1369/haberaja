@@ -125,6 +125,12 @@ import {
   normalizeHtmlTables,
   hasRowspanTables,
   needsNormalization,
+  // Category Classification
+  classifyContent,
+  getExtractionPrompt,
+  getCategoryDisplayInfo,
+  type ProgramCategory,
+  type ClassificationResult,
 } from './extractors';
 
 // Known brand patterns for auto-detection (legacy - kept for backward compat)
@@ -358,6 +364,13 @@ export interface ExtractedPromoSubCategory {
 // ============= PARENT PROMO (PAYUNG) =============
 // Parent TIDAK BOLEH punya nilai numerik (bonus, min, TO, payout)
 export interface ExtractedPromo {
+  // Category Classification (NEW - A/B/C detection)
+  program_classification?: ProgramCategory;      // 'A' | 'B' | 'C'
+  program_classification_name?: string;          // 'Reward Program' | 'Event Program' | 'Policy Program'
+  classification_confidence?: 'high' | 'medium' | 'low';
+  classification_signals?: string[];
+  classification_reasoning?: string;
+  
   // Parent Info ONLY
   promo_name: string;
   promo_type: 'combo' | 'welcome_bonus' | 'deposit_bonus' | 'cashback' | 'rollingan' | 'referral' | string;
@@ -1239,6 +1252,36 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
   }
 
   // ============================================
+  // STEP 0.5: CATEGORY CLASSIFICATION (NEW)
+  // Detect A/B/C category BEFORE AI extraction
+  // This determines which prompt and schema to use
+  // ============================================
+  const classification = classifyContent(normalizedContent);
+  
+  console.log('[Extractor] Category Classification:', {
+    category: classification.category,
+    name: classification.category_name,
+    confidence: classification.confidence,
+    signals: classification.signals.slice(0, 5), // Log first 5 signals
+    scores: classification.scores,
+  });
+
+  // For now, Category B (Event) and C (Policy) detection are logged but extraction still uses Reward schema
+  // This will be enhanced in Phase 2 to route to different extraction prompts
+  const isRewardProgram = classification.category === 'A';
+  const isPolicyProgram = classification.category === 'C';
+  const isEventProgram = classification.category === 'B';
+  
+  // Select extraction prompt based on category (Phase 1: log only, use default for all)
+  // Phase 2 TODO: Actually use different prompts for B and C
+  const extractionPrompt = EXTRACTION_PROMPT; // For now, always use reward prompt
+  
+  if (!isRewardProgram) {
+    console.warn(`[Extractor] ⚠️ Detected ${classification.category_name} but using Reward extraction (Phase 1).`);
+    console.warn(`[Extractor] Signals: ${classification.signals.join(', ')}`);
+  }
+
+  // ============================================
   // STEP 1: AI Extraction - NOW RECEIVES CLEAN HTML
   // AI will see tables with ALL cells filled (no "-" for rowspan)
   // ============================================
@@ -1251,7 +1294,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: EXTRACTION_PROMPT },
+        { role: "system", content: extractionPrompt },
         { role: "user", content: `Ekstrak informasi promo dari konten berikut:\n\n${normalizedContent}` }
       ],
       temperature: 0.1,
@@ -1275,6 +1318,14 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     }
     
     const parsed = JSON.parse(cleanJson) as ExtractedPromo;
+    
+    // Add classification data to result
+    parsed.program_classification = classification.category;
+    parsed.program_classification_name = classification.category_name;
+    parsed.classification_confidence = classification.confidence;
+    parsed.classification_signals = classification.signals;
+    parsed.classification_reasoning = classification.reasoning;
+    
     parsed.raw_content = content.substring(0, 1000);
     parsed.source_url = sourceUrl;
     parsed.ready_to_commit = false;
@@ -1720,3 +1771,12 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
 
   return promoData;
 }
+
+// Re-export classification types for external use
+export { 
+  classifyContent, 
+  getCategoryDisplayInfo,
+  type ProgramCategory, 
+  type ClassificationResult 
+} from './extractors';
+
