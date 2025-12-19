@@ -1,14 +1,47 @@
 /**
- * Category Classifier
- * Detects program type BEFORE extraction to route to correct schema
+ * Category Classifier v2.0 — EPISTEMICALLY CORRECT
+ * 
+ * FUNDAMENTAL DISTINCTION:
+ * | Kategori          | Sifat                    | Contoh                      | Classification |
+ * |-------------------|--------------------------|-----------------------------|----------------|
+ * | Temporal Event    | Punya periode, random    | Lucky Draw, Spin Wheel      | B (Event)      |
+ * | Persistent System | Ongoing, deterministik   | Loyalty Point, Referral     | C (Policy)     |
  * 
  * Categories:
- * A = Reward Programs (deterministic, calculable)
- * B = Event Programs (non-deterministic, random/undian)
- * C = Policy Programs (rules, no reward)
+ * A = Reward Programs (deterministic, calculable bonus)
+ * B = Event Programs (non-deterministic, random/undian, temporal)
+ * C = Policy Programs (rules, persistent systems, no formula reward)
+ * 
+ * EXECUTION ORDER (LOCKED - DO NOT MODIFY):
+ * 0. HARD POLICY OVERRIDE    ← RUNS FIRST
+ * 1. Loyalty Program
+ * 2. Referral
+ * 3. Cashback / Rebate
+ * 4. Welcome Bonus
+ * 5. Lucky Draw / Event      ← RUNS LAST
  */
 
 export type ProgramCategory = 'A' | 'B' | 'C';
+export type ProgramNature = 'persistent_system' | 'temporal_event';
+export type CategoryCSubtype = 
+  | 'deposit_policy'
+  | 'withdrawal_policy'
+  | 'betting_restriction'
+  | 'loyalty_program'
+  | 'referral_program'
+  | 'cashback_program'
+  | 'general_policy';
+
+export type EnhancedEventType = 
+  | 'welcome_bonus'
+  | 'deposit_bonus' 
+  | 'cashback'
+  | 'rebate'
+  | 'referral'
+  | 'lucky_draw'
+  | 'loyalty_point'
+  | 'policy'
+  | 'event';
 
 export interface ClassificationResult {
   category: ProgramCategory;
@@ -21,9 +54,75 @@ export interface ClassificationResult {
     B: number;
     C: number;
   };
+  // NEW: Enhanced classification fields
+  event_type?: EnhancedEventType;
+  program_nature?: ProgramNature;
+  program_subtype?: CategoryCSubtype;
+  program_classification_name?: string;
 }
 
-// Signals that indicate Category A (Reward)
+// ╔═══════════════════════════════════════════════════════════════╗
+// ║  HARD POLICY KEYWORDS — MUST RUN BEFORE ALL OTHER DETECTION  ║
+// ║  DO NOT MOVE THIS BLOCK. DO NOT SKIP THIS CHECK.             ║
+// ╚═══════════════════════════════════════════════════════════════╝
+const HARD_POLICY_KEYWORDS = [
+  'tanpa potongan',
+  'tidak mendapatkan bonus',
+  'tidak akan mendapatkan bonus',
+  'kemenangan dianggap tidak sah',
+  'dihanguskan',
+  'dibatalkan',
+  'penalti',
+  'potongan withdraw',
+  'ip dilarang',
+  'akun dibekukan',
+  'tidak berhak',
+  'syarat wajib',
+  'wajib mengikuti',
+  'pelanggaran',
+  'deposit pulsa',
+  'rate pulsa',
+  'via pulsa',
+];
+
+// ════════════════════════════════════════════════════════════════
+// LOYALTY PROGRAM SIGNALS (persistent_system, NOT event)
+// ════════════════════════════════════════════════════════════════
+const LOYALTY_SIGNALS = [
+  'loyalty point',
+  'loyality point',      // common typo in ID
+  'penukaran point',
+  'penukaran poin',
+  'tukar point',
+  'tukar poin',
+  'lp bonus',
+  'turnover = 1',
+  'to = 1 lp',
+  'hadiah loyalitas',
+  '1,000 turnover',
+  '1.000 turnover',
+];
+
+const LOYALTY_PATTERNS = [
+  /\bLP\b/i,             // "LP" as word
+  /\d+\s*LP/i,           // "250 LP"
+  /\d+\s*poin\s*(=|→)/i, // "250 poin = xxx"
+  /\d+\s*point\s*(=|→)/i,// "250 point = xxx"
+];
+
+// Referral signals
+const REFERRAL_SIGNALS = ['referral', 'ajak teman', 'kode referral', 'bonus ajak', 'undang teman'];
+
+// Cashback signals
+const CASHBACK_SIGNALS = ['cashback', 'rebate', 'komisi', 'rollingan'];
+
+// Welcome bonus signals
+const WELCOME_SIGNALS = ['welcome bonus', 'member baru', 'first deposit', 'new member', 'bonus selamat datang'];
+
+// Lucky draw / Event signals (CHECK LAST!)
+const LUCKY_DRAW_SIGNALS = ['lucky draw', 'undian', 'spin wheel', 'gacha', 'random', 'acak'];
+
+// Standard reward signals for Category A
 const REWARD_SIGNALS = {
   keywords: [
     'bonus', 'cashback', 'rollingan', 'rebate', 'komisi',
@@ -33,21 +132,18 @@ const REWARD_SIGNALS = {
     'bonus bulanan', 'bonus selamat datang', 'promo bonus',
   ],
   patterns: [
-    /bonus\s*\d+%/i,           // "bonus 100%"
-    /cashback\s*\d+%/i,        // "cashback 5%"
-    /rollingan\s*\d+%/i,       // "rollingan 0.5%"
-    /komisi\s*\d+%/i,          // "komisi 10%"
-    /max\s*bonus\s*rp/i,       // "max bonus Rp 1.000.000"
-    /turnover\s*\d+x/i,        // "turnover 10x"
-    /to\s*x\s*\d+/i,           // "TO x 20"
-    /bonus\s*hingga/i,         // "bonus hingga"
-    /dapat\s*bonus/i,          // "dapat bonus"
-    /mendapat(kan)?\s*bonus/i, // "mendapatkan bonus"
+    /bonus\s*\d+%/i,
+    /cashback\s*\d+%/i,
+    /rollingan\s*\d+%/i,
+    /komisi\s*\d+%/i,
+    /max\s*bonus\s*rp/i,
+    /turnover\s*\d+x/i,
+    /to\s*x\s*\d+/i,
   ],
   negative: ['tidak ada bonus', 'tidak mendapatkan bonus', 'tanpa bonus', 'bukan bonus'],
 };
 
-// Signals that indicate Category B (Event)
+// Standard event signals for Category B
 const EVENT_SIGNALS = {
   keywords: [
     'lucky', 'undian', 'draw', 'acak', 'random', 'spin',
@@ -64,13 +160,11 @@ const EVENT_SIGNALS = {
     /lucky\s*(box|draw|spin)/i,
     /grand\s*prize/i,
     /event\s*(spesial|khusus|natal|tahun)/i,
-    /berhadiah\s*(langsung|menarik)/i,
-    /kumpul(kan)?\s*(poin|kupon|tiket)/i,
   ],
   negative: ['pasti dapat', 'otomatis masuk', 'langsung dikreditkan'],
 };
 
-// Signals that indicate Category C (Policy)
+// Standard policy signals for Category C
 const POLICY_SIGNALS = {
   keywords: [
     'tanpa potongan', 'potongan', 'penalti', 'penalty',
@@ -84,17 +178,13 @@ const POLICY_SIGNALS = {
   ],
   patterns: [
     /tidak\s*(akan\s*)?mendapat(kan)?\s*bonus/i,
-    /potongan\s*\d+%/i,                          // "potongan 50%"
+    /potongan\s*\d+%/i,
     /penalti\s*\d+%/i,
     /akan\s*(di)?(hangus|suspend|bekukan|blokir)/i,
     /deposit\s*pulsa/i,
     /tanpa\s*potongan/i,
     /max(imal)?\s*bet/i,
-    /\d+x\s*(jumlah\s*)?(credit|kredit)/i,       // "5x jumlah credit" (for WD, not reward)
-    /syarat\s*(wd|withdraw|penarikan)/i,
-    /wajib\s*(dimainkan|dipertaruhkan)/i,
   ],
-  // Strong indicator: if these exist, almost certainly Policy
   strongIndicators: [
     'tidak akan mendapatkan bonus',
     'tidak mendapatkan bonus',
@@ -103,53 +193,158 @@ const POLICY_SIGNALS = {
     'aturan deposit',
     'kebijakan deposit',
     'peraturan deposit',
-    'syarat dan ketentuan deposit',
   ],
 };
 
 /**
- * Classify content into program category
+ * Classify content into program category with CORRECT priority order
+ * 
+ * ╔═══════════════════════════════════════════════════════════════╗
+ * ║  WARNING: CLASSIFICATION PRIORITY ORDER                       ║
+ * ║  Lucky Draw detection MUST be LAST.                           ║
+ * ║  Loyalty programs contain "Hadiah" tables = false positive.   ║
+ * ║  DO NOT reorder without understanding full implications.      ║
+ * ╚═══════════════════════════════════════════════════════════════╝
  */
 export function classifyContent(content: string): ClassificationResult {
   const contentLower = content.toLowerCase();
   
-  // Score each category
-  const scores = {
-    A: 0,
-    B: 0,
-    C: 0,
-  };
+  // ════════════════════════════════════════════════════════════
+  // STEP 0: HARD POLICY OVERRIDE (RUNS FIRST - NON-NEGOTIABLE)
+  // ════════════════════════════════════════════════════════════
+  const isPolicyContent = HARD_POLICY_KEYWORDS.some(keyword => {
+    const regex = new RegExp(keyword, 'i');
+    return regex.test(contentLower);
+  });
   
-  const signalsFound = {
-    A: [] as string[],
-    B: [] as string[],
-    C: [] as string[],
-  };
-
-  // Check Category C (Policy) FIRST - it has explicit "no bonus" signals
-  // Strong indicators override everything
-  for (const indicator of POLICY_SIGNALS.strongIndicators) {
-    if (contentLower.includes(indicator)) {
+  if (isPolicyContent) {
+    // Check if it's specifically deposit pulsa
+    const isDepositPulsa = /deposit\s*pulsa|via\s*pulsa|rate\s*pulsa/i.test(contentLower);
+    
+    return {
+      category: 'C',
+      category_name: 'Policy Program',
+      confidence: 'high',
+      signals: ['hard_policy_keyword_detected'],
+      reasoning: 'Hard policy enforcement keywords detected',
+      scores: { A: 0, B: 0, C: 100 },
+      event_type: 'policy',
+      program_nature: 'persistent_system',
+      program_subtype: isDepositPulsa ? 'deposit_policy' : 'general_policy',
+      program_classification_name: 'Policy / Syarat Ketentuan',
+    };
+  }
+  
+  // ════════════════════════════════════════════════════════════
+  // STEP 1: LOYALTY PROGRAM (persistent_system) - BEFORE EVENT!
+  // ════════════════════════════════════════════════════════════
+  const hasLoyaltyKeyword = LOYALTY_SIGNALS.some(signal => contentLower.includes(signal));
+  const hasLoyaltyPattern = LOYALTY_PATTERNS.some(pattern => pattern.test(content));
+  
+  // Also check for point exchange tables
+  const hasPointExchangeTable = /\d+\s*(lp|point|poin).*(?:credit|hadiah|reward)/i.test(contentLower) ||
+                                 /(?:credit|hadiah|reward).*\d+\s*(lp|point|poin)/i.test(contentLower);
+  
+  if (hasLoyaltyKeyword || hasLoyaltyPattern || hasPointExchangeTable) {
+    return {
+      category: 'C',
+      category_name: 'Policy Program',
+      confidence: 'high',
+      signals: ['loyalty_keyword_detected', hasPointExchangeTable ? 'point_exchange_table' : 'pattern_match'],
+      reasoning: 'Loyalty Point = Persistent System (rule-based exchange)',
+      scores: { A: 0, B: 0, C: 100 },
+      event_type: 'loyalty_point',
+      program_nature: 'persistent_system',
+      program_subtype: 'loyalty_program',
+      program_classification_name: 'Loyalty Program',
+    };
+  }
+  
+  // ════════════════════════════════════════════════════════════
+  // STEP 2: REFERRAL (persistent_system)
+  // ════════════════════════════════════════════════════════════
+  if (REFERRAL_SIGNALS.some(s => contentLower.includes(s))) {
+    return {
+      category: 'C',
+      category_name: 'Policy Program',
+      confidence: 'high',
+      signals: ['referral_keyword'],
+      reasoning: 'Referral = Persistent System',
+      scores: { A: 5, B: 0, C: 100 },
+      event_type: 'referral',
+      program_nature: 'persistent_system',
+      program_subtype: 'referral_program',
+      program_classification_name: 'Referral Program',
+    };
+  }
+  
+  // ════════════════════════════════════════════════════════════
+  // STEP 3: CASHBACK / REBATE (can be persistent)
+  // ════════════════════════════════════════════════════════════
+  if (CASHBACK_SIGNALS.some(s => contentLower.includes(s))) {
+    // Check if it's a formula-based reward (Category A) or just a policy
+    const hasFormula = /\d+%/.test(content);
+    
+    if (hasFormula) {
+      return {
+        category: 'A',
+        category_name: 'Reward Program',
+        confidence: 'high',
+        signals: ['cashback_keyword', 'has_percentage'],
+        reasoning: 'Cashback with formula = Reward Program',
+        scores: { A: 100, B: 0, C: 20 },
+        event_type: 'cashback',
+        program_nature: 'temporal_event',
+        program_classification_name: 'Cashback / Rebate',
+      };
+    } else {
       return {
         category: 'C',
         category_name: 'Policy Program',
-        confidence: 'high',
-        signals: [indicator],
-        reasoning: `Strong indicator found: "${indicator}"`,
-        scores: { A: 0, B: 0, C: 100 },
+        confidence: 'medium',
+        signals: ['cashback_keyword'],
+        reasoning: 'Cashback rules without formula',
+        scores: { A: 30, B: 0, C: 70 },
+        event_type: 'cashback',
+        program_nature: 'persistent_system',
+        program_subtype: 'cashback_program',
+        program_classification_name: 'Cashback Policy',
       };
     }
   }
-
-  // Check negative signals for Reward (if present, likely NOT reward)
+  
+  // ════════════════════════════════════════════════════════════
+  // STEP 4: WELCOME BONUS (temporal_event, Category A)
+  // ════════════════════════════════════════════════════════════
+  if (WELCOME_SIGNALS.some(s => contentLower.includes(s))) {
+    return {
+      category: 'A',
+      category_name: 'Reward Program',
+      confidence: 'high',
+      signals: ['welcome_keyword'],
+      reasoning: 'Welcome Bonus = Reward with formula',
+      scores: { A: 100, B: 10, C: 0 },
+      event_type: 'welcome_bonus',
+      program_nature: 'temporal_event',
+      program_classification_name: 'Welcome Bonus',
+    };
+  }
+  
+  // ════════════════════════════════════════════════════════════
+  // STEP 5: Score-based detection (for remaining cases)
+  // ════════════════════════════════════════════════════════════
+  const scores = { A: 0, B: 0, C: 0 };
+  const signalsFound = { A: [] as string[], B: [] as string[], C: [] as string[] };
+  
+  // Check negative signals for Reward
   for (const neg of REWARD_SIGNALS.negative) {
     if (contentLower.includes(neg)) {
-      scores.A -= 10; // Heavy penalty
+      scores.A -= 10;
       signalsFound.C.push(`Anti-reward: ${neg}`);
     }
   }
-
-  // Score Category A (Reward)
+  
+  // Score Category A
   for (const keyword of REWARD_SIGNALS.keywords) {
     if (contentLower.includes(keyword)) {
       scores.A += 2;
@@ -162,8 +357,8 @@ export function classifyContent(content: string): ClassificationResult {
       signalsFound.A.push(`pattern: ${pattern.source}`);
     }
   }
-
-  // Score Category B (Event)
+  
+  // Score Category B
   for (const keyword of EVENT_SIGNALS.keywords) {
     if (contentLower.includes(keyword)) {
       scores.B += 2;
@@ -177,14 +372,7 @@ export function classifyContent(content: string): ClassificationResult {
     }
   }
   
-  // Check negative signals for Event
-  for (const neg of EVENT_SIGNALS.negative) {
-    if (contentLower.includes(neg)) {
-      scores.B -= 5;
-    }
-  }
-
-  // Score Category C (Policy)
+  // Score Category C
   for (const keyword of POLICY_SIGNALS.keywords) {
     if (contentLower.includes(keyword)) {
       scores.C += 2;
@@ -197,11 +385,47 @@ export function classifyContent(content: string): ClassificationResult {
       signalsFound.C.push(`pattern: ${pattern.source}`);
     }
   }
-
+  
+  // Strong indicators override
+  for (const indicator of POLICY_SIGNALS.strongIndicators) {
+    if (contentLower.includes(indicator)) {
+      return {
+        category: 'C',
+        category_name: 'Policy Program',
+        confidence: 'high',
+        signals: [indicator],
+        reasoning: `Strong indicator found: "${indicator}"`,
+        scores: { A: 0, B: 0, C: 100 },
+        event_type: 'policy',
+        program_nature: 'persistent_system',
+        program_subtype: 'general_policy',
+        program_classification_name: 'Policy / Syarat Ketentuan',
+      };
+    }
+  }
+  
+  // ════════════════════════════════════════════════════════════
+  // STEP 6 (LAST): LUCKY DRAW / EVENT (temporal_event)
+  // Only reach here if NO OTHER type matched
+  // ════════════════════════════════════════════════════════════
+  if (LUCKY_DRAW_SIGNALS.some(s => contentLower.includes(s))) {
+    return {
+      category: 'B',
+      category_name: 'Event Program',
+      confidence: 'medium',
+      signals: ['lucky_draw_keyword'],
+      reasoning: 'Lucky draw keywords detected (checked last)',
+      scores: { A: scores.A, B: 50, C: scores.C },
+      event_type: 'lucky_draw',
+      program_nature: 'temporal_event',
+      program_classification_name: 'Lucky Draw / Event',
+    };
+  }
+  
   // Determine winner
   const maxScore = Math.max(scores.A, scores.B, scores.C);
   
-  // If all scores low, default to A (Reward) with low confidence
+  // Default with low confidence
   if (maxScore < 3) {
     return {
       category: 'A',
@@ -210,26 +434,37 @@ export function classifyContent(content: string): ClassificationResult {
       signals: [],
       reasoning: 'No strong signals detected, defaulting to Reward',
       scores,
+      event_type: 'event',
+      program_nature: 'temporal_event',
+      program_classification_name: 'Generic Promo',
     };
   }
-
-  // Determine winner and confidence
+  
+  // Winner based on scores
   let winner: ProgramCategory;
   let winnerName: string;
+  let eventType: EnhancedEventType = 'event';
+  let programNature: ProgramNature = 'temporal_event';
   
   if (scores.C >= scores.A && scores.C >= scores.B) {
     winner = 'C';
     winnerName = 'Policy Program';
+    eventType = 'policy';
+    programNature = 'persistent_system';
   } else if (scores.B >= scores.A && scores.B >= scores.C) {
     winner = 'B';
     winnerName = 'Event Program';
+    eventType = 'event';
+    programNature = 'temporal_event';
   } else {
     winner = 'A';
     winnerName = 'Reward Program';
+    eventType = 'deposit_bonus';
+    programNature = 'temporal_event';
   }
-
+  
   const confidence = maxScore >= 8 ? 'high' : maxScore >= 5 ? 'medium' : 'low';
-
+  
   return {
     category: winner,
     category_name: winnerName,
@@ -237,7 +472,64 @@ export function classifyContent(content: string): ClassificationResult {
     signals: signalsFound[winner],
     reasoning: `Score: A=${scores.A}, B=${scores.B}, C=${scores.C}`,
     scores,
+    event_type: eventType,
+    program_nature: programNature,
+    program_classification_name: winnerName,
   };
+}
+
+/**
+ * Apply hard lock routing rules
+ * This MUST be called after extraction to enforce classification constraints
+ * 
+ * ⚠️ CRITICAL: ROUTING RULES - DO NOT MODIFY WITHOUT REVIEW
+ */
+export function applyHardLockRouting(data: {
+  event_type?: string;
+  program_nature?: ProgramNature;
+  program_classification?: ProgramCategory;
+  program_subtype?: CategoryCSubtype;
+  program_classification_name?: string;
+  prizes?: any[];
+}): typeof data {
+  const result = { ...data };
+  
+  // RULE 1: persistent_system → FORCE Category C
+  if (result.program_nature === 'persistent_system') {
+    result.program_classification = 'C';
+    
+    // PROHIBIT event-style fields
+    if (result.event_type === 'lucky_draw') {
+      console.error('ROUTING VIOLATION: persistent_system cannot be lucky_draw');
+      result.event_type = 'policy';
+    }
+    
+    // Clear prizes array - not applicable for systems
+    result.prizes = undefined;
+  }
+  
+  // RULE 2: loyalty_point → LOCK to persistent_system + Category C
+  if (result.event_type === 'loyalty_point') {
+    result.program_nature = 'persistent_system';
+    result.program_classification = 'C';
+    result.program_subtype = 'loyalty_program';
+    result.program_classification_name = 'Loyalty Program';
+  }
+  
+  // RULE 3: referral → LOCK to persistent_system + Category C
+  if (result.event_type === 'referral') {
+    result.program_nature = 'persistent_system';
+    result.program_classification = 'C';
+    result.program_subtype = 'referral_program';
+  }
+  
+  // RULE 4: lucky_draw → MUST be temporal_event + Category B
+  if (result.event_type === 'lucky_draw') {
+    result.program_nature = 'temporal_event';
+    result.program_classification = 'B';
+  }
+  
+  return result;
 }
 
 /**
@@ -267,7 +559,7 @@ export function getCategoryDisplayInfo(category: ProgramCategory): {
     case 'C':
       return {
         name: 'Policy Program',
-        description: 'Aturan/kebijakan tanpa reward (deposit rules, restrictions, penalties)',
+        description: 'Aturan/kebijakan atau sistem persisten (deposit rules, loyalty point, referral)',
         color: 'text-blue-400',
         bgColor: 'bg-blue-500/20',
       };
@@ -281,6 +573,7 @@ Kamu adalah Reward Program Extractor untuk iGaming Knowledge Base.
 KLASIFIKASI:
 - program_type: "reward"
 - program_classification: "A"
+- program_nature: "temporal_event"
 
 Ekstrak semua informasi reward/bonus menjadi JSON VALID.
 
@@ -305,6 +598,7 @@ Kamu adalah Event Program Extractor untuk iGaming Knowledge Base.
 KLASIFIKASI:
 - program_type: "event"
 - program_classification: "B"
+- program_nature: "temporal_event"
 
 PENTING:
 - Ini adalah EVENT dengan hadiah ACAK/UNDIAN
@@ -335,37 +629,38 @@ Kamu adalah Policy Extractor untuk iGaming Knowledge Base.
 KLASIFIKASI:
 - program_type: "policy"  
 - program_classification: "C"
+- program_nature: "persistent_system"
 
 PENTING:
-- Ini adalah ATURAN/KEBIJAKAN, BUKAN bonus
-- TIDAK ADA reward yang diberikan
-- Kata "deposit", "tanpa potongan" BUKAN berarti ada bonus
+- Ini adalah ATURAN/KEBIJAKAN atau SISTEM PERSISTEN
+- Loyalty Point = sistem ekonomi ruled-based, BUKAN event lucky draw
+- Referral = sistem persisten, BUKAN promo temporal
+- TIDAK ADA reward formula (kecuali loyalty point exchange table)
 
 FOKUS EKSTRAK:
-- policy_name
-- policy_type (deposit_policy, discount_policy, betting_restriction, game_restriction, account_policy)
+- policy_name / event_name (untuk loyalty)
+- policy_type / event_type
+- program_subtype (deposit_policy, loyalty_program, referral_program, dll)
+
+UNTUK LOYALTY POINT:
+- Extract "earning_rule" (contoh: "1,000 TO = 1 LP")
+- Extract subcategories dengan tiers dari tabel
+- Tabel "Hadiah Utama" = exchange rate table, BUKAN prize pool
+- claim_limit per subcategory (1x per hari, 1x per bulan)
+
+UNTUK POLICY:
 - deposit_method / provider
 - eligible_games / excluded_games
-- usage_requirement (x kali kredit untuk WD, bukan untuk dapat bonus)
-- max_bet_rule
 - withdrawal_penalty
-- violation_actions (hangus, suspend, blokir)
-- confirmation_requirement
+- violation_actions
 - authority_clause
 
-FIELD YANG WAJIB NULL (TIDAK ADA REWARD):
-- reward_type: null
+FIELD YANG WAJIB NULL (TIDAK ADA FORMULA REWARD):
 - bonus_percentage: null
-- bonus_amount: null
+- calculation_formula: null (kecuali loyalty exchange)
 - turnover_for_reward: null
-- max_bonus: null
 
-ATURAN KERAS:
-1. Jika ada "tidak akan mendapatkan bonus" → SEMUA field bonus = null
-2. Jika ada penalti/sanksi → ini POLICY
-3. Syarat kredit untuk WITHDRAW ≠ turnover untuk dapat bonus
-
-OUTPUT: JSON VALID sesuai Policy schema.
+OUTPUT: JSON VALID sesuai Policy/Loyalty schema.
 `;
 
 /**
