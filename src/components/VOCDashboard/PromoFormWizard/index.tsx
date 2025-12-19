@@ -9,7 +9,6 @@ import { Step2Access } from "./Step2Access";
 import { StepProgramClassification, type ProgramType } from "./StepProgramClassification";
 import { Step3Reward } from "./Step3Reward";
 import { Step4BEventConfig, EventConfigData, initialEventData } from "./Step4BEventConfig";
-import { Step4CPolicyConfig, PolicyConfigData, initialPolicyData } from "./Step4CPolicyConfig";
 import { Step4Review, generateTermsList, formatNumber } from "./Step4Review";
 
 // Dynamic step title generator for Step 4
@@ -39,7 +38,6 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   const [isEditingFromReview, setIsEditingFromReview] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<ProgramType>(null);
   const [eventData, setEventData] = useState<EventConfigData>(initialEventData);
-  const [policyData, setPolicyData] = useState<PolicyConfigData>(initialPolicyData);
 
   const handleChange = (updates: Partial<PromoFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -54,6 +52,13 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
     }
     // Block proceeding from step 3 without program selection
     if (currentStep === 3 && !selectedProgram) {
+      return;
+    }
+    // Policy is coming soon - show toast and block
+    if (currentStep === 3 && selectedProgram === 'policy') {
+      toast.info("Coming Soon", {
+        description: "Konfigurasi Policy Program sedang dalam pengembangan.",
+      });
       return;
     }
     if (currentStep < 5) {
@@ -121,7 +126,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   };
 
   const progress = (currentStep / 5) * 100;
-  const canProceedFromStep3 = selectedProgram !== null;
+  const canProceedFromStep3 = selectedProgram !== null && selectedProgram !== 'policy';
   
   // Dynamic STEPS array based on program selection
   const STEPS = [
@@ -229,13 +234,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
             onChange={setEventData}
           />
         )}
-        {currentStep === 4 && selectedProgram === 'policy' && (
-          <Step4CPolicyConfig
-            data={policyData}
-            onChange={setPolicyData}
-          />
-        )}
-        {currentStep === 4 && selectedProgram === 'reward' && (
+        {currentStep === 4 && selectedProgram !== 'event' && (
           <Step3Reward 
             data={formData} 
             onChange={handleChange}

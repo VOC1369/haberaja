@@ -20,35 +20,6 @@
 // TEMPORARY API KEY - HAPUS SEBELUM PUBLISH
 const OPENAI_API_KEY = "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";
 
-function cleanModelJson(raw: string, label: string): string {
-  let t = (raw || "").trim();
-
-  // Strip markdown fences if present
-  if (t.includes("```")) {
-    console.log(`[${label}] Detected markdown wrapper, cleaning...`);
-    const jsonMatch = t.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      t = jsonMatch[0];
-    } else {
-      t = t
-        .replace(/^```json?\s*/i, "")
-        .replace(/\s*```\s*$/i, "")
-        .trim();
-    }
-  } else {
-    // If model included extra prose, try to extract the first JSON object
-    const jsonMatch = t.match(/\{[\s\S]*\}/);
-    if (jsonMatch) t = jsonMatch[0];
-  }
-
-  // Remove BOM + normalize common JSON glitches
-  t = t.replace(/^\uFEFF/, "");
-  // Trailing commas (very common in model output)
-  t = t.replace(/,\s*([}\]])/g, "$1");
-
-  return t;
-}
-
 // ============= CONFIDENCE LEVELS (EXPANDED + NOT_APPLICABLE) =============
 export type ConfidenceLevel = 
   | 'explicit'           // tertulis jelas di halaman
@@ -154,19 +125,6 @@ import {
   normalizeHtmlTables,
   hasRowspanTables,
   needsNormalization,
-  // Category Classification (Enhanced)
-  classifyContent,
-  getExtractionPrompt,
-  getCategoryDisplayInfo,
-  applyHardLockRouting,
-  type ProgramCategory,
-  type ProgramNature,
-  type CategoryCSubtype,
-  type EnhancedEventType,
-  type ClassificationResult,
-  // Loyalty Program Extraction
-  extractLoyaltyData,
-  isLoyaltyProgram,
 } from './extractors';
 
 // Known brand patterns for auto-detection (legacy - kept for backward compat)
@@ -400,16 +358,6 @@ export interface ExtractedPromoSubCategory {
 // ============= PARENT PROMO (PAYUNG) =============
 // Parent TIDAK BOLEH punya nilai numerik (bonus, min, TO, payout)
 export interface ExtractedPromo {
-  // Category Classification (Enhanced - A/B/C with nature and subtype)
-  program_classification?: ProgramCategory;      // 'A' | 'B' | 'C'
-  program_classification_name?: string;          // 'Reward Program' | 'Event Program' | 'Policy Program'
-  program_nature?: ProgramNature;                // 'persistent_system' | 'temporal_event'
-  program_subtype?: CategoryCSubtype;            // For Category C: 'loyalty_program', 'referral_program', etc.
-  event_type?: EnhancedEventType;                // 'loyalty_point', 'referral', 'policy', 'lucky_draw', etc.
-  classification_confidence?: 'high' | 'medium' | 'low';
-  classification_signals?: string[];
-  classification_reasoning?: string;
-  
   // Parent Info ONLY
   promo_name: string;
   promo_type: 'combo' | 'welcome_bonus' | 'deposit_bonus' | 'cashback' | 'rollingan' | 'referral' | string;
@@ -1206,10 +1154,11 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
 
   // Parse JSON dari response
   try {
-    const cleanJson = cleanModelJson(resultText, "Extractor/Image");
-    console.log('[Extractor/Image] After cleanup, first 100 chars:', cleanJson.substring(0, 100));
-    console.log('[Extractor/Image] After cleanup, last 100 chars:', cleanJson.substring(Math.max(0, cleanJson.length - 100)));
-
+    let cleanJson = resultText.trim();
+    if (cleanJson.startsWith("```")) {
+      cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
+    }
+    
     const parsed = JSON.parse(cleanJson) as ExtractedPromo;
     parsed.raw_content = "[Image extraction]";
     parsed.ready_to_commit = false;
@@ -1268,10 +1217,6 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     return downgraded;
   } catch (parseError) {
     console.error("Failed to parse OpenAI Vision response:", resultText);
-    console.error("[Extractor/Image] JSON.parse error:", parseError);
-    const attempted = cleanModelJson(resultText, "Extractor/Image");
-    console.error("[Extractor/Image] Attempted cleaned JSON head:", attempted.substring(0, 200));
-    console.error("[Extractor/Image] Attempted cleaned JSON tail:", attempted.substring(Math.max(0, attempted.length - 200)));
     throw new Error("Gagal parsing hasil ekstraksi dari image. Response bukan JSON valid.");
   }
 }
@@ -1294,37 +1239,6 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
   }
 
   // ============================================
-  // STEP 0.5: CATEGORY CLASSIFICATION (NEW)
-  // Detect A/B/C category BEFORE AI extraction
-  // This determines which prompt and schema to use
-  // ============================================
-  const classification = classifyContent(normalizedContent);
-  
-  console.log('[Extractor] Category Classification:', {
-    category: classification.category,
-    name: classification.category_name,
-    confidence: classification.confidence,
-    signals: classification.signals.slice(0, 5), // Log first 5 signals
-    scores: classification.scores,
-  });
-
-  // ============================================
-  // PHASE 2: CATEGORY-AWARE EXTRACTION PROMPTS
-  // Use different prompts for A (Reward), B (Event), C (Policy)
-  // ============================================
-  const isRewardProgram = classification.category === 'A';
-  const isPolicyProgram = classification.category === 'C';
-  const isEventProgram = classification.category === 'B';
-  
-  // Select extraction prompt based on detected category
-  const extractionPrompt = getExtractionPrompt(classification.category);
-  
-  console.log(`[Extractor] Using ${classification.category_name} extraction prompt`);
-  if (!isRewardProgram) {
-    console.log(`[Extractor] Non-Reward detected. Signals: ${classification.signals.slice(0, 3).join(', ')}`);
-  }
-
-  // ============================================
   // STEP 1: AI Extraction - NOW RECEIVES CLEAN HTML
   // AI will see tables with ALL cells filled (no "-" for rowspan)
   // ============================================
@@ -1337,7 +1251,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: extractionPrompt },
+        { role: "system", content: EXTRACTION_PROMPT },
         { role: "user", content: `Ekstrak informasi promo dari konten berikut:\n\n${normalizedContent}` }
       ],
       temperature: 0.1,
@@ -1355,55 +1269,12 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
 
   // Parse JSON dari response
   try {
-    const cleanJson = cleanModelJson(resultText, "Extractor/Text");
-    console.log('[Extractor/Text] After cleanup, first 100 chars:', cleanJson.substring(0, 100));
-    console.log('[Extractor/Text] After cleanup, last 100 chars:', cleanJson.substring(Math.max(0, cleanJson.length - 100)));
-
-    const parsed = JSON.parse(cleanJson) as ExtractedPromo;
-    
-    // Add classification data to result
-    parsed.program_classification = classification.category;
-    parsed.program_classification_name = classification.category_name;
-    parsed.program_nature = classification.program_nature;
-    parsed.program_subtype = classification.program_subtype;
-    parsed.event_type = classification.event_type;
-    parsed.classification_confidence = classification.confidence;
-    parsed.classification_signals = classification.signals;
-    parsed.classification_reasoning = classification.reasoning;
-    
-    // Apply hard lock routing rules (enforces classification constraints)
-    const routed = applyHardLockRouting(parsed);
-    Object.assign(parsed, routed);
-    
-    // ============================================
-    // PHASE 2: POLICY-SPECIFIC POST-PROCESSING
-    // Ensure reward fields are null for Policy programs
-    // ============================================
-    if (isPolicyProgram) {
-      console.log('[Extractor] Policy detected - enforcing null reward fields');
-      // Nullify reward fields at parent level
-      (parsed as any).reward_type = null;
-      (parsed as any).bonus_percentage = null;
-      (parsed as any).turnover_for_reward = null;
-      (parsed as any).max_bonus = null;
-      
-      // Also nullify in subcategories if any
-      if (parsed.subcategories) {
-        parsed.subcategories = parsed.subcategories.map(sub => ({
-          ...sub,
-          calculation_value: 0,
-          turnover_rule: 0,
-          max_bonus: null,
-          confidence: {
-            ...sub.confidence,
-            calculation_value: 'not_applicable' as ConfidenceLevel,
-            turnover_rule: 'not_applicable' as ConfidenceLevel,
-            max_bonus: 'not_applicable' as ConfidenceLevel,
-          }
-        }));
-      }
+    let cleanJson = resultText.trim();
+    if (cleanJson.startsWith("```")) {
+      cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
     }
     
+    const parsed = JSON.parse(cleanJson) as ExtractedPromo;
     parsed.raw_content = content.substring(0, 1000);
     parsed.source_url = sourceUrl;
     parsed.ready_to_commit = false;
@@ -1521,10 +1392,6 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     return parsed;
   } catch (parseError) {
     console.error("Failed to parse OpenAI response:", resultText);
-    console.error("[Extractor/Text] JSON.parse error:", parseError);
-    const attempted = cleanModelJson(resultText, "Extractor/Text");
-    console.error("[Extractor/Text] Attempted cleaned JSON head:", attempted.substring(0, 200));
-    console.error("[Extractor/Text] Attempted cleaned JSON tail:", attempted.substring(Math.max(0, attempted.length - 200)));
     throw new Error("Gagal parsing hasil ekstraksi. Response bukan JSON valid.");
   }
 }
@@ -1853,12 +1720,3 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
 
   return promoData;
 }
-
-// Re-export classification types for external use
-export { 
-  classifyContent, 
-  getCategoryDisplayInfo,
-  type ProgramCategory, 
-  type ClassificationResult 
-} from './extractors';
-

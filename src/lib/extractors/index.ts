@@ -5,37 +5,7 @@
  * - Confidence tracking (explicit/derived/ambiguous/unknown)
  * - Source tracking (meta_tag/copyright/content_mention/etc)
  * - Field-aware propagation rules
- * - Category classification (A/B/C)
  */
-
-// Category Classification (NEW) with program_nature & hard lock routing
-export {
-  classifyContent,
-  getExtractionPrompt,
-  getCategoryDisplayInfo,
-  applyHardLockRouting,
-  REWARD_EXTRACTION_PROMPT,
-  EVENT_EXTRACTION_PROMPT,
-  POLICY_EXTRACTION_PROMPT,
-  type ProgramCategory,
-  type ProgramNature,
-  type CategoryCSubtype,
-  type EnhancedEventType,
-  type ClassificationResult,
-} from './category-classifier';
-
-// Loyalty Program Extraction
-export {
-  extractLoyaltyData,
-  isLoyaltyProgram,
-  parseIndonesianNumber,
-  LOYALTY_SIGNALS,
-  LOYALTY_PATTERNS,
-  type LoyaltyTier,
-  type LoyaltySubcategory,
-  type LoyaltyConfig,
-  type LoyaltyExtractionResult,
-} from './loyalty-extractor';
 
 // Client ID extraction
 export { 
