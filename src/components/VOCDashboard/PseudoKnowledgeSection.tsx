@@ -51,6 +51,7 @@ import {
   type TogelEventReward
 } from "@/lib/openai-extractor";
 import { promoKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
+import { policyKB, mapExtractedToPolicyFormData } from "@/lib/policy-storage";
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
 import { formatPromoType } from "@/lib/utils";
 
@@ -447,25 +448,60 @@ export function PseudoKnowledgeSection() {
 
   const handleCommitPromo = () => {
     if (!extractedPromo) {
-      toast.error("Tidak ada promo untuk disimpan");
+      toast.error("Tidak ada data untuk disimpan");
       return;
     }
     
-    // No more blocking - user can always proceed
-    // Missing fields can be filled in PromoFormWizard
+    const category = extractedPromo.program_classification;
     
     try {
-      const promoData = mapExtractedToPromoFormData(extractedPromo);
-      const savedPromo = promoKB.add(promoData);
+      // ============================================
+      // PHASE 3: CATEGORY-AWARE COMMIT BRANCHING
+      // ============================================
       
-      toast.success("Promo berhasil ditambahkan!", {
-        description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`
-      });
+      if (category === 'C') {
+        // POLICY FLOW - Use policyKB, NOT promoKB
+        console.log('[Commit] Using POLICY flow');
+        
+        const policyData = mapExtractedToPolicyFormData(extractedPromo);
+        const savedPolicy = policyKB.add(policyData, {
+          source_url: extractedPromo.source_url,
+          raw_content: extractedPromo.raw_content,
+        });
+        
+        toast.success("Policy berhasil disimpan!", {
+          description: `"${savedPolicy.identity?.policy_name || 'Policy'}" ada di Policy Knowledge Base`
+        });
+        
+        console.log('[Commit] Policy saved to policyKB:', savedPolicy.id);
+        
+      } else if (category === 'B') {
+        // EVENT FLOW - Placeholder (TODO: eventKB)
+        console.log('[Commit] Using EVENT flow (placeholder - saving to promoKB for now)');
+        
+        const promoData = mapExtractedToPromoFormData(extractedPromo);
+        const savedPromo = promoKB.add(promoData);
+        
+        toast.success("Event berhasil ditambahkan!", {
+          description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`
+        });
+        
+      } else {
+        // REWARD FLOW (Category A) - Default
+        console.log('[Commit] Using REWARD flow');
+        
+        const promoData = mapExtractedToPromoFormData(extractedPromo);
+        const savedPromo = promoKB.add(promoData);
+        
+        toast.success("Promo berhasil ditambahkan!", {
+          description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`
+        });
+      }
       
       handleRestart();
     } catch (error) {
-      console.error('Error saving promo:', error);
-      toast.error("Gagal menyimpan promo", {
+      console.error('[Commit] Error saving:', error);
+      toast.error("Gagal menyimpan", {
         description: error instanceof Error ? error.message : "Unknown error"
       });
     }
@@ -747,8 +783,77 @@ export function PseudoKnowledgeSection() {
           </div>
         )}
 
-        {/* COMBO Summary Bar */}
-        {extractedPromo.promo_mode === 'multi' && extractedPromo.subcategories.length > 1 && (
+        {/* POLICY PREVIEW CARD - Category C Only */}
+        {extractedPromo.program_classification === 'C' && (
+          <div className="px-6 pb-4">
+            <div className="bg-slate-800/50 border border-slate-600 rounded-lg p-4">
+              <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
+                <span>📋</span>
+                {(extractedPromo as any).policy_name || extractedPromo.promo_name || 'Policy Program'}
+              </h4>
+              
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                {(extractedPromo as any).policy_type && (
+                  <div>
+                    <span className="text-muted-foreground">Tipe:</span>
+                    <span className="ml-2 text-foreground capitalize">
+                      {(extractedPromo as any).policy_type.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                )}
+                {((extractedPromo as any).deposit_rules?.accepted_providers || (extractedPromo as any).accepted_providers) && (
+                  <div>
+                    <span className="text-muted-foreground">Provider:</span>
+                    <span className="ml-2 text-foreground">
+                      {(extractedPromo as any).deposit_rules?.accepted_providers || (extractedPromo as any).accepted_providers}
+                    </span>
+                  </div>
+                )}
+                {((extractedPromo as any).deposit_rules?.minimal_deposit || (extractedPromo as any).minimal_deposit) && (
+                  <div>
+                    <span className="text-muted-foreground">Min Deposit:</span>
+                    <span className="ml-2 text-foreground">
+                      {(extractedPromo as any).deposit_rules?.minimal_deposit || (extractedPromo as any).minimal_deposit}
+                    </span>
+                  </div>
+                )}
+                {(extractedPromo as any).game_scope?.excluded_games?.length > 0 && (
+                  <div>
+                    <span className="text-muted-foreground">Game Dikecualikan:</span>
+                    <span className="ml-2 text-foreground">
+                      {(extractedPromo as any).game_scope.excluded_games.join(', ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              {/* Penalties */}
+              {(extractedPromo as any).penalties?.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-slate-600">
+                  <span className="text-muted-foreground text-sm">Penalti:</span>
+                  <ul className="list-disc list-inside ml-2 text-sm text-foreground">
+                    {(extractedPromo as any).penalties.map((p: any, i: number) => (
+                      <li key={i}>
+                        {p.type.replace(/_/g, ' ')}: {p.detail || `${p.percentage}%`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {/* Warning Banner */}
+              <div className="mt-4 p-3 bg-amber-900/30 rounded border border-amber-700/50">
+                <p className="text-amber-400 text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Ini adalah ATURAN / KEBIJAKAN, bukan bonus. Tidak ada reward yang diberikan.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* COMBO Summary Bar - NOT for Policy (Category C) */}
+        {extractedPromo.program_classification !== 'C' && extractedPromo.promo_mode === 'multi' && extractedPromo.subcategories.length > 1 && (
           <div className="px-6 pb-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-muted rounded-lg p-3 text-center">
@@ -797,8 +902,8 @@ export function PseudoKnowledgeSection() {
             </div>
           )}
 
-          {/* Subcategories */}
-          {extractedPromo.subcategories.length > 0 && (
+          {/* Subcategories - NOT for Policy (Category C) */}
+          {extractedPromo.program_classification !== 'C' && extractedPromo.subcategories.length > 0 && (
             <div>
               <h4 className="text-base font-semibold text-button-hover mb-4">
                 Sub Kategori ({extractedPromo.subcategories.length} Varian)
@@ -1128,7 +1233,11 @@ export function PseudoKnowledgeSection() {
                     className="gap-2 rounded-full"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    Gunakan Promo
+                    {extractedPromo?.program_classification === 'C' 
+                      ? 'Simpan Policy ke KB'
+                      : extractedPromo?.program_classification === 'B'
+                      ? 'Simpan Event ke KB'
+                      : 'Gunakan Promo'}
                   </Button>
                 </div>
               </div>
@@ -1148,7 +1257,7 @@ export function PseudoKnowledgeSection() {
               Hasil ekstraksi belum digunakan
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Salin JSON atau klik "Gunakan Promo" sebelum keluar. 
+              Salin JSON atau simpan ke Knowledge Base sebelum keluar. 
               Data akan hilang jika Anda meninggalkan halaman ini.
             </AlertDialogDescription>
           </AlertDialogHeader>
