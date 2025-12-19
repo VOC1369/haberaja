@@ -178,7 +178,7 @@ export const REQUIREMENT_TYPES = [
 export const GAME_CATEGORIES = [
   { value: 'all', label: 'All' },
   { value: 'slots', label: 'Slots' },
-  { value: 'sportbook', label: 'Sportbook' },
+  { value: 'sportsbook', label: 'Sportsbook' },
   { value: 'live_casino', label: 'Live Casino' },
   { value: 'togel', label: 'Togel' },
   { value: 'poker', label: 'Poker' },
@@ -193,3 +193,22 @@ export const PENALTY_TYPES = [
   { value: 'akun_blokir', label: 'Akun Diblokir Permanen' },
   { value: 'lainnya', label: 'Lainnya' },
 ];
+
+// Helper to convert boolean flags to array format for extraction
+export function getBonusArrays(data: BonusExclusionData) {
+  const excluded: string[] = [];
+  const allowed: string[] = [];
+
+  if (data.no_deposit_bonus) excluded.push('deposit_bonus');
+  else allowed.push('deposit_bonus');
+
+  if (data.no_newmember_bonus) excluded.push('newmember_bonus');
+  else allowed.push('newmember_bonus');
+
+  if (data.no_daily_bonus) excluded.push('daily_bonus');
+  else allowed.push('daily_bonus');
+
+  if (data.only_weekly_bonus) allowed.push('weekly_bonus');
+
+  return { excluded_bonuses: excluded, allowed_bonuses: allowed };
+}
