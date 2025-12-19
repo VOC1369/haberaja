@@ -269,6 +269,15 @@ export function PseudoKnowledgeSection() {
   const clearImage = () => {
     setImagePreview(null);
     setImageBase64(null);
+    
+    // HOTFIX: If current extraction was from image, clear it too to prevent stale data
+    if (extractedPromo?._extraction_source === 'image') {
+      setExtractedPromo(null);
+      setEditHistory([]);
+      setEditInput('');
+      extractorSession.clear();
+      toast.info("Image dan hasil ekstraksi dihapus");
+    }
   };
 
   // ============================================
@@ -422,14 +431,26 @@ export function PseudoKnowledgeSection() {
   // ============================================
   
   const handleRestart = () => {
+    // HOTFIX: Complete state reset to prevent carryover
+    // Clear ALL extraction state
     setExtractedPromo(null);
     setEditHistory([]);
+    setEditInput('');        // Reset edit input
+    setShowEditHelp(false);  // Reset help visibility
+    setIsExtracting(false);  // Safety reset
+    
+    // Clear ALL input state
     setInputMode('url');
     setCurrentInput('');
     setImagePreview(null);
     setImageBase64(null);
+    
+    // Clear flags
     setHasUnsavedData(false);
+    
+    // Clear session storage
     extractorSession.clear();
+    
     toast.success("Extractor direset", { description: "Siap untuk ekstraksi baru" });
   };
 

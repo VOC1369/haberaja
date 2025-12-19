@@ -12,6 +12,15 @@
 
 import type { ConfidenceLevel } from '../openai-extractor';
 
+/**
+ * Ensure regex has global flag for matchAll compatibility
+ * CRITICAL: matchAll() throws if regex doesn't have 'g' flag
+ */
+const ensureGlobal = (rx: RegExp): RegExp => {
+  if (rx.flags.includes('g')) return rx;
+  return new RegExp(rx.source, rx.flags + 'g');
+};
+
 // Patterns ordered by confidence level
 const CLIENT_ID_PATTERNS = {
   // Meta tags (highest confidence)
@@ -126,7 +135,11 @@ export const extractClientId = (
   const candidateCounts: Record<string, { count: number; match: string }> = {};
   
   for (const pattern of CLIENT_ID_PATTERNS.contentMention) {
-    const matches = [...content.matchAll(new RegExp(pattern))];
+    // HOTFIX: Ensure regex has global flag for matchAll compatibility
+    const regex = pattern instanceof RegExp 
+      ? ensureGlobal(pattern) 
+      : new RegExp(pattern, 'gi');
+    const matches = [...content.matchAll(regex)];
     for (const match of matches) {
       const candidate = match[1]?.toUpperCase();
       if (candidate && isValidBrandName(candidate) && !EXCLUDED_WORDS.has(candidate)) {
