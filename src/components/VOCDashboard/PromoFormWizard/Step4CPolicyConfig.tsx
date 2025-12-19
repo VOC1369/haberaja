@@ -109,10 +109,25 @@ export function Step4CPolicyConfig({
     section: K,
     updates: Partial<PolicyConfigData[K]>
   ) => {
-    const newData = {
+    let newData = {
       ...data,
       [section]: { ...data[section], ...updates },
     };
+
+    // Lock: If policy_type changes to non-deposit, clear deposit_rules
+    if (section === 'identity' && 'policy_type' in updates) {
+      if ((updates as Partial<PolicyConfigData['identity']>).policy_type !== 'deposit_policy') {
+        newData.deposit_rules = {
+          deposit_methods: [],
+          accepted_providers: '',
+          minimal_deposit: '',
+          maximal_deposit: '',
+          confirmation_required: false,
+          confirmation_method: '',
+        };
+      }
+    }
+
     if (onChange) {
       onChange(newData);
     } else {
