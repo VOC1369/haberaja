@@ -11,13 +11,18 @@ import { Step3Reward } from "./Step3Reward";
 import { Step4BEventConfig, EventConfigData, initialEventData } from "./Step4BEventConfig";
 import { Step4Review, generateTermsList, formatNumber } from "./Step4Review";
 
-const STEPS = [
-  { id: 1, title: "Identitas Promo" },
-  { id: 2, title: "Batasan & Akses" },
-  { id: 3, title: "Jenis Program" },
-  { id: 4, title: "Konfigurasi Reward" },
-  { id: 5, title: "Review & Simpan" },
-];
+// Dynamic step title generator for Step 4
+const getStep4Title = (program: ProgramType) => {
+  switch (program) {
+    case 'event':
+      return "Konfigurasi Event";
+    case 'policy':
+      return "Konfigurasi Policy";
+    case 'reward':
+    default:
+      return "Konfigurasi Reward";
+  }
+};
 
 interface PromoFormWizardProps {
   onBack?: () => void;
@@ -47,6 +52,13 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
     }
     // Block proceeding from step 3 without program selection
     if (currentStep === 3 && !selectedProgram) {
+      return;
+    }
+    // Policy is coming soon - show toast and block
+    if (currentStep === 3 && selectedProgram === 'policy') {
+      toast.info("Coming Soon", {
+        description: "Konfigurasi Policy Program sedang dalam pengembangan.",
+      });
       return;
     }
     if (currentStep < 5) {
@@ -114,7 +126,16 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   };
 
   const progress = (currentStep / 5) * 100;
-  const canProceedFromStep3 = selectedProgram !== null;
+  const canProceedFromStep3 = selectedProgram !== null && selectedProgram !== 'policy';
+  
+  // Dynamic STEPS array based on program selection
+  const STEPS = [
+    { id: 1, title: "Identitas Promo" },
+    { id: 2, title: "Batasan & Akses" },
+    { id: 3, title: "Jenis Program" },
+    { id: 4, title: getStep4Title(selectedProgram) },
+    { id: 5, title: "Review & Simpan" },
+  ];
 
   return (
     <div className="page-wrapper space-y-6">
