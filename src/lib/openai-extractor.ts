@@ -1266,19 +1266,20 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     scores: classification.scores,
   });
 
-  // For now, Category B (Event) and C (Policy) detection are logged but extraction still uses Reward schema
-  // This will be enhanced in Phase 2 to route to different extraction prompts
+  // ============================================
+  // PHASE 2: CATEGORY-AWARE EXTRACTION PROMPTS
+  // Use different prompts for A (Reward), B (Event), C (Policy)
+  // ============================================
   const isRewardProgram = classification.category === 'A';
   const isPolicyProgram = classification.category === 'C';
   const isEventProgram = classification.category === 'B';
   
-  // Select extraction prompt based on category (Phase 1: log only, use default for all)
-  // Phase 2 TODO: Actually use different prompts for B and C
-  const extractionPrompt = EXTRACTION_PROMPT; // For now, always use reward prompt
+  // Select extraction prompt based on detected category
+  const extractionPrompt = getExtractionPrompt(classification.category);
   
+  console.log(`[Extractor] Using ${classification.category_name} extraction prompt`);
   if (!isRewardProgram) {
-    console.warn(`[Extractor] ⚠️ Detected ${classification.category_name} but using Reward extraction (Phase 1).`);
-    console.warn(`[Extractor] Signals: ${classification.signals.join(', ')}`);
+    console.log(`[Extractor] Non-Reward detected. Signals: ${classification.signals.slice(0, 3).join(', ')}`);
   }
 
   // ============================================
@@ -1325,6 +1326,35 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     parsed.classification_confidence = classification.confidence;
     parsed.classification_signals = classification.signals;
     parsed.classification_reasoning = classification.reasoning;
+    
+    // ============================================
+    // PHASE 2: POLICY-SPECIFIC POST-PROCESSING
+    // Ensure reward fields are null for Policy programs
+    // ============================================
+    if (isPolicyProgram) {
+      console.log('[Extractor] Policy detected - enforcing null reward fields');
+      // Nullify reward fields at parent level
+      (parsed as any).reward_type = null;
+      (parsed as any).bonus_percentage = null;
+      (parsed as any).turnover_for_reward = null;
+      (parsed as any).max_bonus = null;
+      
+      // Also nullify in subcategories if any
+      if (parsed.subcategories) {
+        parsed.subcategories = parsed.subcategories.map(sub => ({
+          ...sub,
+          calculation_value: 0,
+          turnover_rule: 0,
+          max_bonus: null,
+          confidence: {
+            ...sub.confidence,
+            calculation_value: 'not_applicable' as ConfidenceLevel,
+            turnover_rule: 'not_applicable' as ConfidenceLevel,
+            max_bonus: 'not_applicable' as ConfidenceLevel,
+          }
+        }));
+      }
+    }
     
     parsed.raw_content = content.substring(0, 1000);
     parsed.source_url = sourceUrl;

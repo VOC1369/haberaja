@@ -667,6 +667,27 @@ export function PseudoKnowledgeSection() {
               </Badge>
             </div>
             <div className="flex gap-2 mt-2 flex-wrap">
+              {/* Category Classification Badge (A/B/C) */}
+              {extractedPromo.program_classification && (
+                <Badge 
+                  variant="outline" 
+                  className={`
+                    ${extractedPromo.program_classification === 'A' 
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                      : extractedPromo.program_classification === 'B'
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : 'bg-slate-500/20 text-slate-400 border-slate-500/40'}
+                  `}
+                >
+                  {extractedPromo.program_classification === 'A' && '🎁'}
+                  {extractedPromo.program_classification === 'B' && '🎲'}
+                  {extractedPromo.program_classification === 'C' && '📋'}
+                  {' '}{extractedPromo.program_classification_name || `Category ${extractedPromo.program_classification}`}
+                  {extractedPromo.classification_confidence && extractedPromo.classification_confidence !== 'high' && (
+                    <span className="ml-1 text-xs opacity-60">({extractedPromo.classification_confidence})</span>
+                  )}
+                </Badge>
+              )}
               {/* Client/Website Badge */}
               {extractedPromo.client_id && (
                 <Badge variant="outline" className="bg-cyan-500/20 text-cyan-400 border-cyan-500/40">
