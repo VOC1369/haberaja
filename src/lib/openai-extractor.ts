@@ -1163,14 +1163,20 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     parsed.raw_content = "[Image extraction]";
     parsed.ready_to_commit = false;
     
-    // Auto-extract client_id if not provided by AI
-    if (!parsed.client_id && parsed.raw_content) {
-      // For image, use terms_conditions if available
-      const termsText = (parsed.terms_conditions || []).join(' ');
-      const { client_id, confidence } = extractClientId(termsText);
-      if (client_id) {
-        parsed.client_id = client_id;
-        parsed.client_id_confidence = confidence;
+    // Auto-extract client_id if not provided by AI (ISOLATED try/catch)
+    // HOTFIX: Don't fail entire extraction if client_id extraction fails
+    if (!parsed.client_id && parsed.terms_conditions?.length) {
+      try {
+        const termsText = parsed.terms_conditions.join(' ');
+        const { client_id, confidence } = extractClientId(termsText);
+        if (client_id) {
+          parsed.client_id = client_id;
+          parsed.client_id_confidence = confidence;
+        }
+      } catch (clientIdError) {
+        // Non-fatal: client_id extraction failed but don't fail the entire extraction
+        console.warn('[extractPromoFromImage] Client ID extraction failed:', clientIdError);
+        // Continue without client_id - user can add manually
       }
     }
     
@@ -1279,13 +1285,20 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     parsed.source_url = sourceUrl;
     parsed.ready_to_commit = false;
     
-    // Auto-extract client_id if not provided by AI
+    // Auto-extract client_id if not provided by AI (ISOLATED try/catch)
+    // HOTFIX: Don't fail entire extraction if client_id extraction fails
     if (!parsed.client_id) {
-      const { client_id, confidence } = extractClientId(content);
-      if (client_id) {
-        parsed.client_id = client_id;
-        parsed.client_id_confidence = confidence;
-        console.log(`[extractPromoFromContent] Auto-detected client_id: ${client_id} (${confidence})`);
+      try {
+        const { client_id, confidence } = extractClientId(content);
+        if (client_id) {
+          parsed.client_id = client_id;
+          parsed.client_id_confidence = confidence;
+          console.log(`[extractPromoFromContent] Auto-detected client_id: ${client_id} (${confidence})`);
+        }
+      } catch (clientIdError) {
+        // Non-fatal: client_id extraction failed but don't fail the entire extraction
+        console.warn('[extractPromoFromContent] Client ID extraction failed:', clientIdError);
+        // Continue without client_id - user can add manually
       }
     }
     
