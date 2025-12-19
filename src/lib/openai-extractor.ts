@@ -154,12 +154,19 @@ import {
   normalizeHtmlTables,
   hasRowspanTables,
   needsNormalization,
-  // Category Classification
+  // Category Classification (Enhanced)
   classifyContent,
   getExtractionPrompt,
   getCategoryDisplayInfo,
+  applyHardLockRouting,
   type ProgramCategory,
+  type ProgramNature,
+  type CategoryCSubtype,
+  type EnhancedEventType,
   type ClassificationResult,
+  // Loyalty Program Extraction
+  extractLoyaltyData,
+  isLoyaltyProgram,
 } from './extractors';
 
 // Known brand patterns for auto-detection (legacy - kept for backward compat)
@@ -393,9 +400,12 @@ export interface ExtractedPromoSubCategory {
 // ============= PARENT PROMO (PAYUNG) =============
 // Parent TIDAK BOLEH punya nilai numerik (bonus, min, TO, payout)
 export interface ExtractedPromo {
-  // Category Classification (NEW - A/B/C detection)
+  // Category Classification (Enhanced - A/B/C with nature and subtype)
   program_classification?: ProgramCategory;      // 'A' | 'B' | 'C'
   program_classification_name?: string;          // 'Reward Program' | 'Event Program' | 'Policy Program'
+  program_nature?: ProgramNature;                // 'persistent_system' | 'temporal_event'
+  program_subtype?: CategoryCSubtype;            // For Category C: 'loyalty_program', 'referral_program', etc.
+  event_type?: EnhancedEventType;                // 'loyalty_point', 'referral', 'policy', 'lucky_draw', etc.
   classification_confidence?: 'high' | 'medium' | 'low';
   classification_signals?: string[];
   classification_reasoning?: string;
@@ -1354,9 +1364,16 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     // Add classification data to result
     parsed.program_classification = classification.category;
     parsed.program_classification_name = classification.category_name;
+    parsed.program_nature = classification.program_nature;
+    parsed.program_subtype = classification.program_subtype;
+    parsed.event_type = classification.event_type;
     parsed.classification_confidence = classification.confidence;
     parsed.classification_signals = classification.signals;
     parsed.classification_reasoning = classification.reasoning;
+    
+    // Apply hard lock routing rules (enforces classification constraints)
+    const routed = applyHardLockRouting(parsed);
+    Object.assign(parsed, routed);
     
     // ============================================
     // PHASE 2: POLICY-SPECIFIC POST-PROCESSING
