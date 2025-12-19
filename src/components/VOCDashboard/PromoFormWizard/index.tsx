@@ -8,6 +8,7 @@ import { Step1Identity } from "./Step1Identity";
 import { Step2Access } from "./Step2Access";
 import { StepProgramClassification, type ProgramType } from "./StepProgramClassification";
 import { Step3Reward } from "./Step3Reward";
+import { Step4BEventConfig, EventConfigData, initialEventData } from "./Step4BEventConfig";
 import { Step4Review, generateTermsList, formatNumber } from "./Step4Review";
 
 const STEPS = [
@@ -31,6 +32,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   const [editingId, setEditingId] = useState<string | undefined>(initialData?.id);
   const [isEditingFromReview, setIsEditingFromReview] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<ProgramType>(null);
+  const [eventData, setEventData] = useState<EventConfigData>(initialEventData);
 
   const handleChange = (updates: Partial<PromoFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -205,7 +207,13 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
             onSelect={setSelectedProgram}
           />
         )}
-        {currentStep === 4 && (
+        {currentStep === 4 && selectedProgram === 'event' && (
+          <Step4BEventConfig
+            data={eventData}
+            onChange={setEventData}
+          />
+        )}
+        {currentStep === 4 && selectedProgram !== 'event' && (
           <Step3Reward 
             data={formData} 
             onChange={handleChange}
