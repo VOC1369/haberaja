@@ -20,6 +20,35 @@
 // TEMPORARY API KEY - HAPUS SEBELUM PUBLISH
 const OPENAI_API_KEY = "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";
 
+function cleanModelJson(raw: string, label: string): string {
+  let t = (raw || "").trim();
+
+  // Strip markdown fences if present
+  if (t.includes("```")) {
+    console.log(`[${label}] Detected markdown wrapper, cleaning...`);
+    const jsonMatch = t.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      t = jsonMatch[0];
+    } else {
+      t = t
+        .replace(/^```json?\s*/i, "")
+        .replace(/\s*```\s*$/i, "")
+        .trim();
+    }
+  } else {
+    // If model included extra prose, try to extract the first JSON object
+    const jsonMatch = t.match(/\{[\s\S]*\}/);
+    if (jsonMatch) t = jsonMatch[0];
+  }
+
+  // Remove BOM + normalize common JSON glitches
+  t = t.replace(/^\uFEFF/, "");
+  // Trailing commas (very common in model output)
+  t = t.replace(/,\s*([}\]])/g, "$1");
+
+  return t;
+}
+
 // ============= CONFIDENCE LEVELS (EXPANDED + NOT_APPLICABLE) =============
 export type ConfidenceLevel = 
   | 'explicit'           // tertulis jelas di halaman
@@ -1167,25 +1196,10 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
 
   // Parse JSON dari response
   try {
-    let cleanJson = resultText.trim();
-    
-    // Robust markdown cleanup - handle ALL variations
-    if (cleanJson.includes("```")) {
-      console.log('[Extractor/Image] Detected markdown wrapper, cleaning...');
-      // Method 1: Try to extract JSON between { and }
-      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        cleanJson = jsonMatch[0];
-      } else {
-        // Method 2: Fallback - strip markdown markers manually
-        cleanJson = cleanJson
-          .replace(/^```json?\s*/i, '')
-          .replace(/\s*```\s*$/i, '')
-          .trim();
-      }
-    }
-    
+    const cleanJson = cleanModelJson(resultText, "Extractor/Image");
     console.log('[Extractor/Image] After cleanup, first 100 chars:', cleanJson.substring(0, 100));
+    console.log('[Extractor/Image] After cleanup, last 100 chars:', cleanJson.substring(Math.max(0, cleanJson.length - 100)));
+
     const parsed = JSON.parse(cleanJson) as ExtractedPromo;
     parsed.raw_content = "[Image extraction]";
     parsed.ready_to_commit = false;
@@ -1244,6 +1258,10 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     return downgraded;
   } catch (parseError) {
     console.error("Failed to parse OpenAI Vision response:", resultText);
+    console.error("[Extractor/Image] JSON.parse error:", parseError);
+    const attempted = cleanModelJson(resultText, "Extractor/Image");
+    console.error("[Extractor/Image] Attempted cleaned JSON head:", attempted.substring(0, 200));
+    console.error("[Extractor/Image] Attempted cleaned JSON tail:", attempted.substring(Math.max(0, attempted.length - 200)));
     throw new Error("Gagal parsing hasil ekstraksi dari image. Response bukan JSON valid.");
   }
 }
@@ -1327,25 +1345,10 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
 
   // Parse JSON dari response
   try {
-    let cleanJson = resultText.trim();
-    
-    // Robust markdown cleanup - handle ALL variations
-    if (cleanJson.includes("```")) {
-      console.log('[Extractor/Text] Detected markdown wrapper, cleaning...');
-      // Method 1: Try to extract JSON between { and }
-      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        cleanJson = jsonMatch[0];
-      } else {
-        // Method 2: Fallback - strip markdown markers manually
-        cleanJson = cleanJson
-          .replace(/^```json?\s*/i, '')
-          .replace(/\s*```\s*$/i, '')
-          .trim();
-      }
-    }
-    
+    const cleanJson = cleanModelJson(resultText, "Extractor/Text");
     console.log('[Extractor/Text] After cleanup, first 100 chars:', cleanJson.substring(0, 100));
+    console.log('[Extractor/Text] After cleanup, last 100 chars:', cleanJson.substring(Math.max(0, cleanJson.length - 100)));
+
     const parsed = JSON.parse(cleanJson) as ExtractedPromo;
     
     // Add classification data to result
@@ -1501,6 +1504,10 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     return parsed;
   } catch (parseError) {
     console.error("Failed to parse OpenAI response:", resultText);
+    console.error("[Extractor/Text] JSON.parse error:", parseError);
+    const attempted = cleanModelJson(resultText, "Extractor/Text");
+    console.error("[Extractor/Text] Attempted cleaned JSON head:", attempted.substring(0, 200));
+    console.error("[Extractor/Text] Attempted cleaned JSON tail:", attempted.substring(Math.max(0, attempted.length - 200)));
     throw new Error("Gagal parsing hasil ekstraksi. Response bukan JSON valid.");
   }
 }
