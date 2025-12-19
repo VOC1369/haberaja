@@ -1168,10 +1168,24 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
   // Parse JSON dari response
   try {
     let cleanJson = resultText.trim();
-    if (cleanJson.startsWith("```")) {
-      cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
+    
+    // Robust markdown cleanup - handle ALL variations
+    if (cleanJson.includes("```")) {
+      console.log('[Extractor/Image] Detected markdown wrapper, cleaning...');
+      // Method 1: Try to extract JSON between { and }
+      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanJson = jsonMatch[0];
+      } else {
+        // Method 2: Fallback - strip markdown markers manually
+        cleanJson = cleanJson
+          .replace(/^```json?\s*/i, '')
+          .replace(/\s*```\s*$/i, '')
+          .trim();
+      }
     }
     
+    console.log('[Extractor/Image] After cleanup, first 100 chars:', cleanJson.substring(0, 100));
     const parsed = JSON.parse(cleanJson) as ExtractedPromo;
     parsed.raw_content = "[Image extraction]";
     parsed.ready_to_commit = false;
@@ -1314,10 +1328,24 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
   // Parse JSON dari response
   try {
     let cleanJson = resultText.trim();
-    if (cleanJson.startsWith("```")) {
-      cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
+    
+    // Robust markdown cleanup - handle ALL variations
+    if (cleanJson.includes("```")) {
+      console.log('[Extractor/Text] Detected markdown wrapper, cleaning...');
+      // Method 1: Try to extract JSON between { and }
+      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        cleanJson = jsonMatch[0];
+      } else {
+        // Method 2: Fallback - strip markdown markers manually
+        cleanJson = cleanJson
+          .replace(/^```json?\s*/i, '')
+          .replace(/\s*```\s*$/i, '')
+          .trim();
+      }
     }
     
+    console.log('[Extractor/Text] After cleanup, first 100 chars:', cleanJson.substring(0, 100));
     const parsed = JSON.parse(cleanJson) as ExtractedPromo;
     
     // Add classification data to result
