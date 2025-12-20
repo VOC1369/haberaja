@@ -5,21 +5,7 @@
  * - Confidence tracking (explicit/derived/ambiguous/unknown)
  * - Source tracking (meta_tag/copyright/content_mention/etc)
  * - Field-aware propagation rules
- * - Category classification (A/B/C) with reasoning tree
  */
-
-// Category Classification (NEW)
-export {
-  classifyContent,
-  getExtractionPrompt,
-  getCategoryBadgeStyle,
-  getCategoryLabel,
-  REWARD_EXTRACTION_PROMPT,
-  EVENT_EXTRACTION_PROMPT,
-  POLICY_EXTRACTION_PROMPT,
-  type ContentClassification,
-  type ProgramCategory,
-} from './category-classifier';
 
 // Client ID extraction
 export { 

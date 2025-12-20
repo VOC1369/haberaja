@@ -125,11 +125,6 @@ import {
   normalizeHtmlTables,
   hasRowspanTables,
   needsNormalization,
-  // NEW: Category classification
-  classifyContent,
-  getExtractionPrompt,
-  type ContentClassification,
-  type ProgramCategory,
 } from './extractors';
 
 // Known brand patterns for auto-detection (legacy - kept for backward compat)
@@ -369,13 +364,6 @@ export interface ExtractedPromo {
   target_user: 'new_member' | 'all' | 'vip' | string;
   promo_mode: 'single' | 'multi';  // KRITIS: single atau multi-variant
   
-  // NEW: Program Classification (A/B/C)
-  program_classification?: ProgramCategory;
-  program_classification_name?: string;
-  classification_confidence?: 'high' | 'medium' | 'low';
-  classification_signals?: string[];
-  classification_reasoning?: string;
-  
   // Client/Brand Identification (auto-detected)
   client_id?: string;              // e.g., "CITRA77", "SLOT25"
   client_id_confidence?: ConfidenceLevel;
@@ -433,29 +421,6 @@ export interface ExtractedPromo {
     ambiguous_blacklists: number;
     extracted_at: string;
   };
-  
-  // Policy-specific fields (only for program_classification === 'C')
-  policy_name?: string;
-  policy_type?: string;
-  deposit_rules?: {
-    deposit_method?: string[];
-    accepted_providers?: string;
-    minimal_deposit?: string;
-    maximal_deposit?: string;
-  };
-  usage_requirements?: Array<{
-    game_category?: string;
-    credit_multiplier?: string;
-    max_bet_rule?: string | null;
-  }>;
-  penalties?: Array<{
-    type: string;
-    detail?: string;
-    percentage?: number;
-    minimum_amount?: string;
-  }>;
-  restrictions?: string[];
-  prohibitions?: string[];
   
   // Validation Status
   validation: {
@@ -1280,28 +1245,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
   }
 
   // ============================================
-  // STEP 1: CLASSIFY CONTENT (GUARDRAIL A - OUTSIDE try/catch)
-  // This MUST happen BEFORE OpenAI call
-  // ============================================
-  const classification = classifyContent(normalizedContent);
-  
-  console.log('[Extractor] === CLASSIFICATION ===');
-  console.log('[Extractor] Category:', classification.category);
-  console.log('[Extractor] Name:', classification.category_name);
-  console.log('[Extractor] Confidence:', classification.confidence);
-  console.log('[Extractor] Signals:', classification.signals.slice(0, 5));
-  console.log('[Extractor] Reasoning:', classification.reasoning);
-
-  // ============================================
-  // STEP 2: GET CATEGORY-SPECIFIC PROMPT (GUARDRAIL C)
-  // Different prompt based on classification
-  // ============================================
-  const categoryPrompt = getExtractionPrompt(classification.category);
-  
-  console.log('[Extractor] Using prompt for category:', classification.category);
-
-  // ============================================
-  // STEP 3: AI EXTRACTION - with DYNAMIC prompt
+  // STEP 1: AI Extraction - NOW RECEIVES CLEAN HTML
   // AI will see tables with ALL cells filled (no "-" for rowspan)
   // ============================================
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -1313,8 +1257,8 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: categoryPrompt }, // DYNAMIC based on classification
-        { role: "user", content: `Ekstrak informasi dari konten berikut:\n\n${normalizedContent}` }
+        { role: "system", content: EXTRACTION_PROMPT },
+        { role: "user", content: `Ekstrak informasi promo dari konten berikut:\n\n${normalizedContent}` }
       ],
       temperature: 0.1,
       max_tokens: 4000,
@@ -1328,59 +1272,18 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
 
   const data = await response.json();
   const resultText = data.choices?.[0]?.message?.content || "";
-  
-  console.log('[Extractor] Raw response length:', resultText.length);
 
-  // ============================================
-  // STEP 4: PARSE JSON (separate try/catch)
-  // ============================================
-  let parsed: ExtractedPromo;
-  
+  // Parse JSON dari response
   try {
     let cleanJson = resultText.trim();
     if (cleanJson.startsWith("```")) {
       cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
-      console.log('[Extractor] Cleaned markdown wrapper');
     }
     
-    parsed = JSON.parse(cleanJson) as ExtractedPromo;
-    console.log('[Extractor] JSON parse SUCCESS');
-  } catch (parseError) {
-    console.error("[Extractor] Failed to parse OpenAI response:", resultText.substring(0, 500));
-    throw new Error("Gagal parsing hasil ekstraksi. Response bukan JSON valid.");
-  }
-  
-  // ============================================
-  // STEP 5: ENFORCE POLICY CONSTRAINTS (GUARDRAIL D)
-  // Force null on reward fields for Policy category
-  // ============================================
-  if (classification.category === 'C') {
-    // FORCE null on all reward fields for Policy
-    (parsed as any).bonus_percentage = null;
-    (parsed as any).reward_type = null;
-    (parsed as any).max_bonus = null;
-    (parsed as any).turnover_for_reward = null;
-    (parsed as any).calculation_value = null;
-    (parsed as any).cashback_rate = null;
-    
-    console.log('[Extractor] Policy detected - reward fields FORCED to null');
-  }
-
-  // ============================================
-  // STEP 6: INJECT CLASSIFICATION METADATA
-  // ============================================
-  parsed.program_classification = classification.category;
-  parsed.program_classification_name = classification.category_name;
-  parsed.classification_confidence = classification.confidence;
-  parsed.classification_signals = classification.signals;
-  parsed.classification_reasoning = classification.reasoning;
-  
-  parsed.raw_content = content.substring(0, 1000);
-  parsed.source_url = sourceUrl;
-  parsed.ready_to_commit = false;
-  
-  console.log('[Extractor] === EXTRACTION COMPLETE ===');
-  console.log('[Extractor] Result category:', parsed.program_classification);
+    const parsed = JSON.parse(cleanJson) as ExtractedPromo;
+    parsed.raw_content = content.substring(0, 1000);
+    parsed.source_url = sourceUrl;
+    parsed.ready_to_commit = false;
     
     // Auto-extract client_id if not provided by AI (ISOLATED try/catch)
     // HOTFIX: Don't fail entire extraction if client_id extraction fails
@@ -1499,7 +1402,11 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     // DERIVE ready_to_commit from validation - never hardcode
     parsed.ready_to_commit = validationResult.status === 'ready' && validationResult.warnings.length === 0;
     
-  return parsed;
+    return parsed;
+  } catch (parseError) {
+    console.error("Failed to parse OpenAI response:", resultText);
+    throw new Error("Gagal parsing hasil ekstraksi. Response bukan JSON valid.");
+  }
 }
 
 // CORS proxy fallback list
