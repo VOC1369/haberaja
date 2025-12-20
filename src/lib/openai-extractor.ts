@@ -125,7 +125,27 @@ import {
   normalizeHtmlTables,
   hasRowspanTables,
   needsNormalization,
+  // LLM Classifier exports
+  classifyContent,
+  type ProgramCategory,
+  type ClassificationConfidence,
+  type ClassificationResult,
+  type ClassificationOverride,
+  type QAnswer,
+  type QualityFlag,
+  getCategoryName,
 } from './extractors';
+
+// Re-export classification types for external use
+export type { 
+  ProgramCategory, 
+  ClassificationConfidence, 
+  ClassificationResult, 
+  ClassificationOverride,
+  QAnswer,
+  QualityFlag 
+};
+export { classifyContent, getCategoryName };
 
 // Known brand patterns for auto-detection (legacy - kept for backward compat)
 const KNOWN_BRANDS = [
