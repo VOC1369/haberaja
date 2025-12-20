@@ -48,11 +48,17 @@ import {
   type ConfidenceLevel,
   type RewardArchetype,
   type GameDomain,
-  type TogelEventReward
+  type TogelEventReward,
+  type ProgramCategory,
+  type ClassificationConfidence,
+  type QAnswer,
+  type QualityFlag,
 } from "@/lib/openai-extractor";
 import { promoKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
 import { formatPromoType } from "@/lib/utils";
+import { ClassificationOverride } from "./ClassificationOverride";
+import { ConfidenceGateModal } from "./ConfidenceGateModal";
 
 // Helper: Title Case for mode badges
 const formatPromoMode = (mode: string | null | undefined): string => {

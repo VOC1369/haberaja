@@ -5,6 +5,7 @@
  * - Confidence tracking (explicit/derived/ambiguous/unknown)
  * - Source tracking (meta_tag/copyright/content_mention/etc)
  * - Field-aware propagation rules
+ * - LLM-based classification (Q1-Q4 reasoning)
  */
 
 // Client ID extraction
@@ -52,3 +53,31 @@ export {
   type PropagatableField,
   type VariantSpecificField,
 } from './field-rules';
+
+// LLM-based Category Classifier (v1.0.0+2025-12-21)
+export {
+  classifyContent,
+  calculateCategory,
+  getCategoryName,
+  getCategoryBadgeVariant,
+  getConfidenceBadgeVariant,
+  formatQualityFlag,
+  CLASSIFIER_PROMPT_VERSION,
+  CLASSIFICATION_MODEL,
+  type ProgramCategory,
+  type ClassificationConfidence,
+  type QualityFlag,
+  type QAnswer,
+  type ClassificationResult,
+  type ClassificationOverride,
+} from './category-classifier';
+
+// Category-specific extraction prompts
+export {
+  getExtractionPrompt,
+  getExtractorPromptVersion,
+  EXTRACTOR_PROMPT_VERSIONS,
+  REWARD_EXTRACTION_PROMPT,
+  EVENT_EXTRACTION_PROMPT,
+  POLICY_EXTRACTION_PROMPT,
+} from './extraction-prompts';
