@@ -1499,11 +1499,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     // DERIVE ready_to_commit from validation - never hardcode
     parsed.ready_to_commit = validationResult.status === 'ready' && validationResult.warnings.length === 0;
     
-    return parsed;
-  } catch (parseError) {
-    console.error("Failed to parse OpenAI response:", resultText);
-    throw new Error("Gagal parsing hasil ekstraksi. Response bukan JSON valid.");
-  }
+  return parsed;
 }
 
 // CORS proxy fallback list
