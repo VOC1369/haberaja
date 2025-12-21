@@ -133,29 +133,13 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
   const getCategoryBadge = (classification?: string) => {
     switch (classification) {
       case 'A':
-        return (
-          <Badge className="bg-success/20 text-success border border-success/30">
-            ⚡ Bonus Instan
-          </Badge>
-        );
+        return <Badge className="bg-warning/20 text-warning border border-warning/30">⚡ Bonus Instan</Badge>;
       case 'B':
-        return (
-          <Badge className="bg-warning/20 text-warning border border-warning/30">
-            🏆 Event / Kompetisi
-          </Badge>
-        );
+        return <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">🏆 Event/Kompetisi</Badge>;
       case 'C':
-        return (
-          <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">
-            🧠 Program Sistem
-          </Badge>
-        );
+        return <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">🧠 Program Sistem</Badge>;
       default:
-        return (
-          <Badge variant="secondary" className="bg-muted text-muted-foreground border border-border">
-            Unclassified
-          </Badge>
-        );
+        return <Badge variant="outline" className="border-border text-muted-foreground/50">-</Badge>;
     }
   };
 
