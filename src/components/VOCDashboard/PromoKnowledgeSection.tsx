@@ -515,7 +515,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                                 {sub.game_types.map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).join(", ")}
                               </Badge>
                             )}
-                          </div>
+                        </div>
+                        </TableCell>
+                        <TableCell className="py-3 text-center">
+                          {/* Empty - Category column for alignment */}
                         </TableCell>
                         <TableCell className="py-3 text-xs text-muted-foreground">
                           {sub.game_providers?.join(", ") || "-"}
