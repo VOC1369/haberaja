@@ -238,24 +238,51 @@ export function SubCategoryCard({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Max Bonus</Label>
-              {/* Toggle SELALU tampil & SELALU clickable - inverse logic */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Sama dengan Promo Global</span>
-                <Switch checked={subCategory.max_bonus_same_as_global} onCheckedChange={checked => {
-                onChange({
-                  max_bonus_same_as_global: checked,
-                  max_bonus: checked ? 0 : subCategory.max_bonus
-                });
-                // Inverse logic: jika sub-category ON, global harus OFF
-                if (checked && globalMaxBonusEnabled && onInvertGlobalMaxBonus) {
-                  onInvertGlobalMaxBonus();
-                }
-              }} />
+              <div className="flex items-center gap-3">
+                {/* Toggle Unlimited */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Unlimited</span>
+                  <Switch 
+                    checked={subCategory.max_bonus_unlimited ?? false} 
+                    onCheckedChange={checked => {
+                      onChange({
+                        max_bonus_unlimited: checked,
+                        max_bonus: checked ? 0 : subCategory.max_bonus,
+                        max_bonus_same_as_global: checked ? false : subCategory.max_bonus_same_as_global
+                      });
+                    }} 
+                  />
+                </div>
+                {/* Toggle Sama dengan Global */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Sama dengan Global</span>
+                  <Switch 
+                    checked={subCategory.max_bonus_same_as_global} 
+                    disabled={subCategory.max_bonus_unlimited}
+                    onCheckedChange={checked => {
+                      onChange({
+                        max_bonus_same_as_global: checked,
+                        max_bonus: checked ? 0 : subCategory.max_bonus
+                      });
+                      // Inverse logic: jika sub-category ON, global harus OFF
+                      if (checked && globalMaxBonusEnabled && onInvertGlobalMaxBonus) {
+                        onInvertGlobalMaxBonus();
+                      }
+                    }} 
+                  />
+                </div>
               </div>
             </div>
-            <Input type="text" value={subCategory.max_bonus_same_as_global ? '' : subCategory.max_bonus ? subCategory.max_bonus.toLocaleString('id-ID') : ''} onChange={e => onChange({
-            max_bonus: Number(e.target.value.replace(/\D/g, ''))
-          })} placeholder={subCategory.max_bonus_same_as_global ? "Mengikuti global" : "Contoh: 100.000"} disabled={subCategory.max_bonus_same_as_global} className={subCategory.max_bonus_same_as_global ? "opacity-50" : ""} />
+            <Input 
+              type="text" 
+              value={subCategory.max_bonus_unlimited ? '' : (subCategory.max_bonus_same_as_global ? '' : (subCategory.max_bonus ? subCategory.max_bonus.toLocaleString('id-ID') : ''))} 
+              onChange={e => onChange({
+                max_bonus: Number(e.target.value.replace(/\D/g, ''))
+              })} 
+              placeholder={subCategory.max_bonus_unlimited ? "Unlimited / Tanpa Batas" : (subCategory.max_bonus_same_as_global ? "Mengikuti global" : "Contoh: 100.000")} 
+              disabled={subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global} 
+              className={(subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global) ? "opacity-50" : ""} 
+            />
           </div>
         </div>
         
@@ -724,6 +751,7 @@ export function createInitialSubCategory(index: number): PromoSubCategory {
     jenis_hadiah: '',
     max_bonus_same_as_global: true,
     max_bonus: 0,
+    max_bonus_unlimited: false,
     payout_direction_same_as_global: true,
     payout_direction: 'after',
     admin_fee_same_as_global: true,
