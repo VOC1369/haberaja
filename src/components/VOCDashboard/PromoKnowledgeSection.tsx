@@ -33,7 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown } from "lucide-react";
+import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity } from "lucide-react";
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
 import { PromoItem, forceSeedSamplePromos } from "./PromoFormWizard/types";
@@ -207,7 +207,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     }
   };
 
-  const formatValidPeriod = (from?: string, until?: string) => {
+  const formatValidPeriod = (from?: string, until?: string): React.ReactNode => {
     if (!from && !until) return "-";
     const formatSingleDate = (dateStr: string) => {
       return new Date(dateStr).toLocaleDateString("id-ID", {
@@ -216,9 +216,16 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
         year: "numeric"
       });
     };
-    const fromFormatted = from ? formatSingleDate(from) : "?";
-    const untilFormatted = until ? formatSingleDate(until) : "?";
-    return `${fromFormatted} – ${untilFormatted}`;
+    const fromFormatted = from ? formatSingleDate(from) : null;
+    const untilFormatted = until ? formatSingleDate(until) : null;
+    
+    return (
+      <span className="inline-flex items-center gap-1">
+        {fromFormatted || <Infinity className="h-4 w-4 text-muted-foreground" />}
+        <span>–</span>
+        {untilFormatted || <Infinity className="h-4 w-4 text-muted-foreground" />}
+      </span>
+    );
   };
 
   const formatLastUpdated = (dateString?: string) => {
