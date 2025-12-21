@@ -221,7 +221,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     return `${fromFormatted} – ${untilFormatted}`;
   };
 
-  const formatLastUpdated = (dateString?: string, updatedBy?: string) => {
+  const formatLastUpdated = (dateString?: string) => {
     if (!dateString) return "-";
     
     try {
@@ -233,9 +233,27 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
         month: "short",
         year: "numeric"
       });
-      return updatedBy ? `${date}, by ${updatedBy}` : date;
+      const time = dateObj.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+      });
+      return `${date}, ${time}`;
     } catch {
       return "-";
+    }
+  };
+
+  const getCategoryBadge = (classification?: string) => {
+    switch (classification) {
+      case 'A':
+        return <Badge className="bg-success/20 text-success border border-success/30">Reward</Badge>;
+      case 'B':
+        return <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">Event</Badge>;
+      case 'C':
+        return <Badge variant="outline" className="border-border text-muted-foreground">Policy</Badge>;
+      default:
+        return <Badge variant="outline" className="border-border text-muted-foreground/50">-</Badge>;
     }
   };
 
@@ -385,6 +403,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
             <TableHeader>
               <TableRow className="bg-muted hover:bg-muted">
                 <TableHead className="text-foreground font-semibold">Promo Name</TableHead>
+                <TableHead className="text-foreground font-semibold text-center">Category</TableHead>
                 <TableHead className="text-foreground font-semibold">Valid Period</TableHead>
                 <TableHead className="text-foreground font-semibold">Last Updated</TableHead>
                 <TableHead className="text-foreground font-semibold">Status</TableHead>
@@ -418,11 +437,14 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="py-4 text-center">
+                        {getCategoryBadge(item.program_classification)}
+                      </TableCell>
                       <TableCell className="py-4 text-sm text-muted-foreground">
                         {formatValidPeriod(item.valid_from, item.valid_until)}
                       </TableCell>
                       <TableCell className="py-4 text-sm text-muted-foreground">
-                        {formatLastUpdated(item.updated_at, item.updated_by)}
+                        {formatLastUpdated(item.updated_at)}
                       </TableCell>
                       <TableCell className="py-4">
                         {getStatusBadge(item)}
