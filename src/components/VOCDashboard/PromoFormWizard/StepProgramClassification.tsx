@@ -125,7 +125,7 @@ export function StepProgramClassification({
                       ? "bg-warning/20 text-warning border border-warning/30" 
                       : card.id === "event"
                       ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                      : "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                      : "bg-pink-500/20 text-pink-400 border border-pink-500/30"
                   }
                 >
                   {card.badgeText}

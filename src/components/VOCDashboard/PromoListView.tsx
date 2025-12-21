@@ -137,7 +137,7 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
       case 'B':
         return <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">🏆 Event/Kompetisi</Badge>;
       case 'C':
-        return <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">🧠 Program Sistem</Badge>;
+        return <Badge className="bg-pink-500/20 text-pink-400 border border-pink-500/30">🧠 Program Sistem</Badge>;
       default:
         return <Badge variant="outline" className="border-border text-muted-foreground/50">-</Badge>;
     }
