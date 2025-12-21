@@ -763,7 +763,9 @@ Varian 1: "minimum_base": 800000, "max_bonus": null ← SWAP ERROR!
 Varian 2: "minimum_base": 15000000, "max_bonus": null ← SWAP ERROR!
 
 PETUNJUK KOLOM minimum_base (umum di situs ID):
-- "Min Deposit", "Min. DP", "Minimal Deposit", "Min Depo", "Syarat Deposit", "Minimal DP"
+- DEPOSIT: "Min Deposit", "Min. DP", "Minimal Deposit", "Min Depo", "Syarat Deposit", "Minimal DP"
+- CASHBACK/REBATE: "Minimal Kekalahan", "Min Loss", "Minimal WL", "Win/Loss Minimum", "Syarat Kekalahan"
+- TURNOVER: "Minimal Turnover", "Min TO", "Syarat TO", "Minimal Bet"
 
 URUTAN PRIORITAS:
 1) Jika TABEL menampilkan kolom Min Deposit dengan nilai → extract nilai tersebut
@@ -776,6 +778,57 @@ URUTAN PRIORITAS:
 - JANGAN PERNAH set minimum_base = max_bonus jika tidak ada data!
 - Jika tidak ada data Min Deposit → SET NULL, BUKAN copy dari field lain!
 - Jika minimum_base punya nilai TAPI max_bonus null → KEMUNGKINAN SWAP ERROR!
+
+
+🔹 CASHBACK/REBATE: "Minimal Kekalahan" ≠ "Max Bonus" (SUPER CRITICAL!)
+
+⚠️⚠️⚠️ UNTUK CASHBACK/REBATE PROMO — PERBEDAAN KRITIS:
+
+Ada 2 field yang SERING SALAH MAPPING untuk promo cashback:
+
+1️⃣ minimum_base (Minimum Syarat Kualifikasi)
+   Keyword di source: 
+   - "minimal kekalahan", "min loss", "minimum WL", "minimal kalah"
+   - "minimal turnover", "min TO", "minimal bet"
+   Artinya: Player harus punya kekalahan/turnover MINIMAL segini untuk QUALIFY dapat bonus
+   
+2️⃣ max_bonus (Maksimal Bonus / Cap)
+   Keyword di source: 
+   - "maksimal bonus", "max bonus", "bonus maksimal", "tidak lebih dari"
+   - "maksimum cashback", "max cashback"
+   Artinya: Bonus yang didapat TIDAK BISA lebih dari nilai ini
+
+⚠️ ATURAN KERAS CASHBACK:
+- "Minimal kekalahan Rp500.000" → minimum_base: 500000, BUKAN max_bonus!
+- "Maksimal bonus Rp500.000" → max_bonus: 500000
+- Jika source TIDAK menyebut "maksimal bonus" / "max bonus" → set max_bonus: null (UNLIMITED)
+- Jika source TIDAK menyebut "minimal kekalahan" / "min loss" → set minimum_base: null
+
+❌ CONTOH MAPPING SALAH:
+Source: "Minimal kekalahan Rp500.000"
+Output: { "max_bonus": 500000 }
+→ INI SALAH! "Minimal kekalahan" bukan "max bonus"!
+
+✅ CONTOH MAPPING BENAR:
+Source: "Minimal kekalahan Rp500.000. Tidak ada batas maksimum bonus."
+Output: { 
+  "minimum_base": 500000,
+  "max_bonus": null
+}
+
+✅ CONTOH MAPPING BENAR:
+Source: "Minimal kekalahan Rp500.000. Maksimal bonus Rp1.000.000."
+Output: { 
+  "minimum_base": 500000,
+  "max_bonus": 1000000
+}
+
+✅ CONTOH MAPPING BENAR:
+Source: "Cashback 5% tanpa syarat minimal kekalahan. Maks bonus Rp 2.000.000."
+Output: { 
+  "minimum_base": null,
+  "max_bonus": 2000000
+}
 
 
 🔹 Turnover Rule — PRIORITAS TABEL (PHASE 1 FIX)
