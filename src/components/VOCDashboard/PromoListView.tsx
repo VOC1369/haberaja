@@ -107,6 +107,50 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
     });
   };
 
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const dateStr = date.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    const timeStr = date.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    return `${dateStr}, ${timeStr}`;
+  };
+
+  const getCategoryBadge = (classification?: string) => {
+    switch (classification) {
+      case 'A':
+        return (
+          <Badge className="bg-success/20 text-success border border-success/30">
+            Reward Program
+          </Badge>
+        );
+      case 'B':
+        return (
+          <Badge className="bg-warning/20 text-warning border border-warning/30">
+            Event Program
+          </Badge>
+        );
+      case 'C':
+        return (
+          <Badge variant="outline" className="text-muted-foreground border-border">
+            Policy Program
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="secondary" className="bg-muted text-muted-foreground border border-border">
+            Unclassified
+          </Badge>
+        );
+    }
+  };
+
   const formatValidPeriod = (promo: PromoItem) => {
     if (promo.valid_from && promo.valid_until) {
       return `${formatDate(promo.valid_from)} - ${formatDate(promo.valid_until)}`;
@@ -178,11 +222,12 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
-              <TableHead className="text-foreground font-semibold px-4 w-[25%]">Promo Name</TableHead>
-              <TableHead className="text-foreground font-semibold px-4 w-[25%]">Valid Period</TableHead>
-              <TableHead className="text-foreground font-semibold px-4 w-[20%]">Last Updated</TableHead>
-              <TableHead className="text-foreground font-semibold px-4 w-[15%] text-center">Status</TableHead>
-              <TableHead className="text-foreground font-semibold px-4 w-[15%] text-right">Actions</TableHead>
+              <TableHead className="text-foreground font-semibold px-4 w-[22%]">Promo Name</TableHead>
+              <TableHead className="text-foreground font-semibold px-4 w-[14%] text-center">Category</TableHead>
+              <TableHead className="text-foreground font-semibold px-4 w-[20%]">Valid Period</TableHead>
+              <TableHead className="text-foreground font-semibold px-4 w-[18%]">Last Updated</TableHead>
+              <TableHead className="text-foreground font-semibold px-4 w-[12%] text-center">Status</TableHead>
+              <TableHead className="text-foreground font-semibold px-4 w-[14%] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -223,11 +268,14 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="text-center px-4 py-4">
+                      {getCategoryBadge(promo.program_classification)}
+                    </TableCell>
                     <TableCell className="text-muted-foreground px-4 py-4">
                       {formatValidPeriod(promo)}
                     </TableCell>
                     <TableCell className="text-muted-foreground px-4 py-4">
-                      {formatDate(promo.updated_at)}
+                      {formatDateTime(promo.updated_at)}
                     </TableCell>
                     <TableCell className="text-center px-4 py-4">
                       {promo.is_active ? (
@@ -303,6 +351,9 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                           <div className="w-1 h-4 bg-purple-500/50 rounded-full" />
                           <span className="text-sm text-foreground">{sub.name || `Varian ${idx + 1}`}</span>
                         </div>
+                      </TableCell>
+                      <TableCell className="text-center text-muted-foreground text-sm px-4 py-3">
+                        -
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm px-4 py-3">
                         {sub.game_types?.length > 0 ? sub.game_types.map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).join(', ') : 'Semua Game'}
