@@ -354,8 +354,18 @@ export interface PromoItem extends PromoFormData {
   created_at: string;
   updated_at: string;
   updated_by?: string;
+  
+  // Classification from LLM (A = Reward, B = Event, C = Policy)
+  program_classification?: 'A' | 'B' | 'C';
+  classification_confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
+  classification_override?: {
+    from: string;
+    to: string;
+    reason: string;
+    overridden_by: string;
+    timestamp: string;
+  };
 }
-
 // LocalStorage helpers
 const PROMO_STORAGE_KEY = 'voc_promo_drafts';
 
