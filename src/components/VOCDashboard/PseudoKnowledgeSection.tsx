@@ -114,6 +114,9 @@ export function PseudoKnowledgeSection() {
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   
+  // Confidence Gate state (LLM Classifier)
+  const [showConfidenceGate, setShowConfidenceGate] = useState(false);
+  
   // Edit command state
   const [editInput, setEditInput] = useState('');
   const [editHistory, setEditHistory] = useState<EditHistoryItem[]>([]);
@@ -478,8 +481,23 @@ export function PseudoKnowledgeSection() {
       return;
     }
     
-    // No more blocking - user can always proceed
-    // Missing fields can be filled in PromoFormWizard
+    // ============================================
+    // CONFIDENCE GATE: Block commit if LOW confidence
+    // Human must acknowledge before proceeding
+    // ============================================
+    if (extractedPromo.classification_confidence === 'low') {
+      console.log('[ConfidenceGate] LOW confidence detected, showing gate modal');
+      setShowConfidenceGate(true);
+      return;
+    }
+    
+    // Proceed with commit
+    proceedWithCommit();
+  };
+  
+  // Separated commit logic for reuse after gate confirmation
+  const proceedWithCommit = () => {
+    if (!extractedPromo) return;
     
     try {
       const promoData = mapExtractedToPromoFormData(extractedPromo);
@@ -1029,6 +1047,46 @@ export function PseudoKnowledgeSection() {
           {/* RESULT SECTION */}
           {extractedPromo && (
             <>
+              {/* CLASSIFICATION OVERRIDE (LLM Classifier) */}
+              {extractedPromo.program_classification && (
+                <ClassificationOverride
+                  currentCategory={extractedPromo.program_classification}
+                  categoryName={extractedPromo.program_classification_name || 'Unknown'}
+                  confidence={extractedPromo.classification_confidence || 'medium'}
+                  qualityFlags={extractedPromo.quality_flags || []}
+                  reasoning={
+                    extractedPromo.classification_q1 ? {
+                      q1: extractedPromo.classification_q1,
+                      q2: extractedPromo.classification_q2!,
+                      q3: extractedPromo.classification_q3!,
+                      q4: extractedPromo.classification_q4!,
+                    } : undefined
+                  }
+                  onOverride={(newCategory, reason) => {
+                    // Apply override and update state
+                    const override = {
+                      from: extractedPromo.program_classification!,
+                      to: newCategory,
+                      reason,
+                      overridden_by: 'anonymous',
+                      timestamp: new Date().toISOString(),
+                    };
+                    
+                    console.log('[ClassificationOverride] Override applied:', override);
+                    
+                    const categoryNames = { A: 'Reward Program', B: 'Event Program', C: 'Policy Program' };
+                    setExtractedPromo({
+                      ...extractedPromo,
+                      program_classification: newCategory,
+                      program_classification_name: categoryNames[newCategory],
+                      classification_override: override,
+                    });
+                    
+                    toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
+                  }}
+                />
+              )}
+              
               {renderExtractedData()}
 
               {/* EDIT SECTION */}
@@ -1180,6 +1238,19 @@ export function PseudoKnowledgeSection() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* CONFIDENCE GATE MODAL (LLM Classifier) */}
+      <ConfidenceGateModal
+        isOpen={showConfidenceGate}
+        onClose={() => setShowConfidenceGate(false)}
+        onConfirm={() => {
+          console.log('[ConfidenceGate] User confirmed commit despite LOW confidence');
+          setShowConfidenceGate(false);
+          proceedWithCommit();
+        }}
+        qualityFlags={extractedPromo?.quality_flags || []}
+        categoryName={extractedPromo?.program_classification_name || ''}
+      />
     </div>
   );
 }

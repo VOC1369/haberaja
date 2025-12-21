@@ -388,6 +388,23 @@ export interface ExtractedPromo {
   client_id?: string;              // e.g., "CITRA77", "SLOT25"
   client_id_confidence?: ConfidenceLevel;
   
+  // ============================================
+  // LLM CLASSIFIER METADATA (v1.0.0+2025-12-21)
+  // Category calculated in CODE, not by LLM
+  // ============================================
+  program_classification?: ProgramCategory;
+  program_classification_name?: string;
+  classification_confidence?: ClassificationConfidence;
+  classification_q1?: QAnswer;
+  classification_q2?: QAnswer;
+  classification_q3?: QAnswer;
+  classification_q4?: QAnswer;
+  quality_flags?: QualityFlag[];
+  evidence_count?: number;
+  classification_override?: ClassificationOverride;
+  classifier_prompt_version?: string;
+  classifier_latency_ms?: number;
+  
   // Dates
   valid_from?: string;
   valid_until?: string;
@@ -1265,6 +1282,25 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
   }
 
   // ============================================
+  // STEP 0.5: RUN LLM CLASSIFIER (CONTRACT OF TRUTH)
+  // LLM answers Q1-Q4, category calculated in CODE
+  // ============================================
+  let classificationResult: ClassificationResult | null = null;
+  try {
+    console.log('[Extractor] Starting LLM Classification...');
+    classificationResult = await classifyContent(normalizedContent);
+    console.log('[Extractor] Classification complete:', {
+      category: classificationResult.category,
+      name: classificationResult.category_name,
+      confidence: classificationResult.confidence,
+      quality_flags: classificationResult.quality_flags,
+    });
+  } catch (classifyError) {
+    console.warn('[Extractor] Classification failed, falling back to legacy extraction:', classifyError);
+    // Non-fatal: continue with legacy extraction without classification
+  }
+
+  // ============================================
   // STEP 1: AI Extraction - NOW RECEIVES CLEAN HTML
   // AI will see tables with ALL cells filled (no "-" for rowspan)
   // ============================================
@@ -1418,6 +1454,29 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       has_rowspan_tables: hadRowspan,
       html_was_normalized: hadRowspan,
     };
+    
+    // ============================================
+    // STEP FINAL: MERGE CLASSIFICATION METADATA
+    // ============================================
+    if (classificationResult) {
+      parsed.program_classification = classificationResult.category;
+      parsed.program_classification_name = classificationResult.category_name;
+      parsed.classification_confidence = classificationResult.confidence;
+      parsed.classification_q1 = classificationResult.q1;
+      parsed.classification_q2 = classificationResult.q2;
+      parsed.classification_q3 = classificationResult.q3;
+      parsed.classification_q4 = classificationResult.q4;
+      parsed.quality_flags = classificationResult.quality_flags;
+      parsed.evidence_count = classificationResult.evidence_count;
+      parsed.classifier_prompt_version = classificationResult.classifier_prompt_version;
+      parsed.classifier_latency_ms = classificationResult.latency_ms;
+      
+      console.log('[Extractor] Classification metadata merged:', {
+        category: parsed.program_classification,
+        confidence: parsed.classification_confidence,
+        quality_flags: parsed.quality_flags,
+      });
+    }
     
     // DERIVE ready_to_commit from validation - never hardcode
     parsed.ready_to_commit = validationResult.status === 'ready' && validationResult.warnings.length === 0;
