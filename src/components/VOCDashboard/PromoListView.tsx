@@ -146,7 +146,7 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
         );
       case 'C':
         return (
-          <Badge variant="outline" className="text-muted-foreground border-border">
+          <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">
             🧠 Program Sistem
           </Badge>
         );
