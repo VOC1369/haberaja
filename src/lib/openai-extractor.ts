@@ -1121,7 +1121,21 @@ JIKA PROMO SINGLE (tidak ada tabel multi-varian):
 - promo_mode: "single"
 - has_subcategories: true (tetap, dengan 1 sub)
 - expected_subcategory_count: 1
-- subcategories: [satu object dengan semua field]`;
+- subcategories: [satu object dengan semua field]
+
+🛑 FINAL CHECK SEBELUM SUBMIT (WAJIB):
+1) Hitung kira-kira jumlah DATA ROWS dari semua tabel (bukan header).
+2) Pastikan jumlah item di subcategories MENCERMINKAN jumlah data rows yang kamu extract.
+3) Jika dokumen punya 2 tabel, kamu WAJIB gabungkan hasil keduanya.
+
+Jika jumlah subcategories terlihat kurang dari jumlah rows yang ada di tabel → KAMU BELUM SELESAI. Jangan submit.
+
+Catatan khusus Loyalty Point 2 tabel:
+- Tabel "Paket Penukaran": biasanya 4 rows
+- Tabel "Hadiah Utama": biasanya 7 rows
+- TOTAL WAJIB: 11 subcategories (jika memang ada 11 rows di dokumen)
+
+Return HANYA JSON valid tanpa markdown code block.`;
 
 // ============= IMAGE EXTRACTION WITH VISION (GPT-4o) =============
 
@@ -1298,6 +1312,16 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     throw new Error("Gagal parsing hasil ekstraksi dari image. Response bukan JSON valid.");
   }
 }
+
+function countApproxTableDataRows(html: string): { tableCount: number; trCount: number; estimatedDataRows: number } {
+  const tableCount = (html.match(/<table\b/gi) || []).length;
+  const trCount = (html.match(/<tr\b[^>]*>/gi) || []).length;
+
+  // Heuristic: assume ~1 header row per table
+  const estimatedDataRows = Math.max(0, trCount - tableCount);
+  return { tableCount, trCount, estimatedDataRows };
+}
+
 export async function extractPromoFromContent(content: string, sourceUrl?: string): Promise<ExtractedPromo> {
   if (!content.trim()) {
     throw new Error("Konten tidak boleh kosong");
@@ -1315,6 +1339,14 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     normalizedContent = normalizeHtmlTables(content);
     console.log('[Extractor] Pre-processed HTML: rowspan/colspan tables normalized');
   }
+
+  // ============================================
+  // STEP 0.25: PRE-COUNT TABLE ROWS (ANTI LAZY COMPLETION)
+  // ============================================
+  const rowCount = countApproxTableDataRows(normalizedContent);
+  console.log('[Extractor] Table row estimate:', rowCount);
+
+  const extractionPromptWithCount = `${EXTRACTION_PROMPT}\n\n⚠️ DOKUMEN INI TERDETEKSI MEMILIKI ~${rowCount.estimatedDataRows} DATA ROWS (perkiraan dari HTML).\nWAJIB: subcategories harus mencakup SEMUA rows yang relevan dari SEMUA tabel (jangan berhenti di tengah tabel).`;
 
   // ============================================
   // STEP 0.5: RUN LLM CLASSIFIER (CONTRACT OF TRUTH)
@@ -1348,7 +1380,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: EXTRACTION_PROMPT },
+        { role: "system", content: extractionPromptWithCount },
         { role: "user", content: `Ekstrak informasi promo dari konten berikut:\n\n${normalizedContent}` }
       ],
       temperature: 0.1,
