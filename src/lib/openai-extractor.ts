@@ -633,6 +633,42 @@ Jika data tidak eksplisit:
 
 🧩 RULE EKSTRAKSI KHUSUS (KRITIKAL)
 
+📋 ATURAN MULTIPLE TABLES (SANGAT PENTING):
+Banyak promo memiliki LEBIH DARI SATU TABEL dalam satu halaman.
+Contoh: Loyalty Point sering memiliki:
+- Tabel 1: "Paket Penukaran Reguler" (hadiah kecil)
+- Tabel 2: "Hadiah Utama/Eksklusif" (hadiah besar)
+
+⚠️ INSTRUKSI WAJIB:
+1. SCAN seluruh dokumen untuk menemukan SEMUA tabel yang relevan
+2. EXTRACT semua rows dari SETIAP tabel yang ditemukan
+3. GABUNGKAN semua hasil ke dalam SATU array subcategories
+4. JANGAN berhenti setelah tabel pertama!
+5. JANGAN skip tabel manapun!
+
+CONTOH:
+Jika dokumen memiliki:
+- Tabel 1 dengan 4 rows (CREDIT GAME 5K, 10K, 15K, 20K)
+- Tabel 2 dengan 7 rows (CREDIT GAME 25K, 50K, 100K, 200K, 500K, 1M, 2.5M)
+
+Maka subcategories HARUS berisi 11 items total, bukan hanya 4 atau 7!
+
+❌ JANGAN hanya extract tabel pertama
+❌ JANGAN skip rows dari tabel manapun
+✅ WAJIB gabungkan SEMUA rows dari SEMUA tabel
+
+📊 ATURAN PARSE TABEL:
+Jika source data adalah TABEL dengan format:
+| NO | NAMA/ITEM/CREDIT GAME | VALUE |
+|----|-----------------------|-------|
+| 1  | Item Pertama          | 100   |
+| 2  | Item Kedua            | 200   |
+
+MAKA:
+- sub_name = ambil dari kolom NAMA/ITEM (kolom ke-2), BUKAN dari kolom NO (kolom ke-1)
+- calculation_value = ambil dari kolom VALUE (kolom ke-3)
+- JANGAN PERNAH menggunakan row number "1", "2", "3" sebagai nama varian!
+
 🔹 Max Bonus — WAJIB AMBIL DARI KOLOM TABEL (PHASE 1+ FIX - CRITICAL)
 
 ATURAN UTAMA (WAJIB):
