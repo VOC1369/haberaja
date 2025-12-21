@@ -431,7 +431,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                           )}
                           <span className="text-sm font-medium text-foreground">{item.promo_name || "Untitled Promo"}</span>
                           {hasSubcategories && (
-                            <Badge className="bg-purple-500/20 text-purple-400 border-0 rounded-full px-2 py-0.5 text-xs">
+                            <Badge className="bg-purple-500/20 text-purple-400 border-0 rounded-full h-5 w-5 p-0 flex items-center justify-center text-xs">
                               {item.subcategories!.length}
                             </Badge>
                           )}
