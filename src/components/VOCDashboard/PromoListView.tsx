@@ -135,19 +135,19 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
       case 'A':
         return (
           <Badge className="bg-success/20 text-success border border-success/30">
-            Reward Program
+            ⚡ Bonus Instan
           </Badge>
         );
       case 'B':
         return (
           <Badge className="bg-warning/20 text-warning border border-warning/30">
-            Event Program
+            🏆 Event / Kompetisi
           </Badge>
         );
       case 'C':
         return (
           <Badge variant="outline" className="text-muted-foreground border-border">
-            Policy Program
+            🧠 Program Sistem
           </Badge>
         );
       default:
