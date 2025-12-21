@@ -17,8 +17,7 @@
  * 4. 7 confidence levels: explicit, explicit_from_terms, derived, unknown, ambiguous, missing, not_applicable
  */
 
-// TEMPORARY API KEY - HAPUS SEBELUM PUBLISH
-const OPENAI_API_KEY = "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";
+import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
 
 // ============= CONFIDENCE LEVELS (EXPANDED + NOT_APPLICABLE) =============
 export type ConfidenceLevel = 
@@ -1139,7 +1138,7 @@ export async function extractPromoFromImage(base64Image: string): Promise<Extrac
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      "Authorization": `Bearer ${getOpenAIKey()}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -1307,7 +1306,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
-      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      "Authorization": `Bearer ${getOpenAIKey()}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
