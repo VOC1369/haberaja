@@ -503,8 +503,14 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                       </TableCell>
                     </TableRow>
                     
-                    {/* Subcategory Rows */}
-                    {hasSubcategories && isExpanded && item.subcategories!.map((sub, subIndex) => (
+                    {/* Subcategory Rows - Sorted by calculation_value ascending */}
+                    {hasSubcategories && isExpanded && [...item.subcategories!]
+                      .sort((a, b) => {
+                        const valueA = Number(a.calculation_value) || 0;
+                        const valueB = Number(b.calculation_value) || 0;
+                        return valueA - valueB; // ascending (smallest first)
+                      })
+                      .map((sub, subIndex) => (
                       <TableRow key={`${item.id}-sub-${subIndex}`} className="bg-muted/30 hover:bg-muted/50">
                         <TableCell className="py-3 pl-10">
                           <div className="flex items-center gap-2">

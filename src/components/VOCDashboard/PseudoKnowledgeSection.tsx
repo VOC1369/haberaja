@@ -828,7 +828,13 @@ export function PseudoKnowledgeSection() {
                 Sub Kategori ({extractedPromo.subcategories.length} Varian)
               </h4>
               <div className="space-y-4">
-                {extractedPromo.subcategories.map((sub, idx) => {
+                {[...extractedPromo.subcategories]
+                  .sort((a, b) => {
+                    const valueA = Number(a.calculation_value) || 0;
+                    const valueB = Number(b.calculation_value) || 0;
+                    return valueA - valueB; // ascending (smallest first)
+                  })
+                  .map((sub, idx) => {
                   const archetype = detectRewardArchetype(extractedPromo);
                   return renderSubCategoryCard(sub, idx, archetype);
                 })}
