@@ -1807,6 +1807,11 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     ai_guidelines: '',
     default_behavior: '',
     completion_steps: '',
+
+    // Classification metadata (from LLM classifier)
+    program_classification: extracted.program_classification,
+    classification_confidence: extracted.classification_confidence,
+    classification_override: extracted.classification_override,
   };
 
   return promoData;
