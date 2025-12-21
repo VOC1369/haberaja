@@ -813,22 +813,37 @@ Output: { "max_bonus": 500000 }
 Source: "Minimal kekalahan Rp500.000. Tidak ada batas maksimum bonus."
 Output: { 
   "minimum_base": 500000,
-  "max_bonus": null
+  "max_bonus": null,
+  "max_bonus_explicit": false
 }
 
 ✅ CONTOH MAPPING BENAR:
 Source: "Minimal kekalahan Rp500.000. Maksimal bonus Rp1.000.000."
 Output: { 
   "minimum_base": 500000,
-  "max_bonus": 1000000
+  "max_bonus": 1000000,
+  "max_bonus_explicit": true
 }
 
 ✅ CONTOH MAPPING BENAR:
 Source: "Cashback 5% tanpa syarat minimal kekalahan. Maks bonus Rp 2.000.000."
 Output: { 
   "minimum_base": null,
-  "max_bonus": 2000000
+  "max_bonus": 2000000,
+  "max_bonus_explicit": true
 }
+
+🔹 max_bonus_explicit FLAG (CRITICAL!)
+Output WAJIB include field "max_bonus_explicit":
+- "max_bonus_explicit": true  → JIKA source EKSPLISIT menyebut "maksimal bonus" / "max bonus"
+- "max_bonus_explicit": false → JIKA tidak ada penyebutan maksimal bonus (unlimited)
+- INI PENTING untuk Summary Page agar tidak menampilkan "max bonus" palsu!
+
+🔹 calculation_base untuk CASHBACK (CRITICAL!)
+Untuk promo CASHBACK berbasis kekalahan (loss):
+- calculation_base: "winloss" atau "win_loss" (BUKAN "turnover"!)
+- Keywords trigger: "cashback", "kekalahan", "loss", "kalah", "win/loss"
+- Jika source menyebut "cashback X% dari kekalahan" → calculation_base = "winloss"
 
 
 🔹 Turnover Rule — PRIORITAS TABEL (PHASE 1 FIX)
@@ -1131,6 +1146,7 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
       "calculation_value": 100,
       "minimum_base": 50000,
       "max_bonus": 1000000,
+      "max_bonus_explicit": true,
       "turnover_rule": 8,
       "payout_direction": "depan",
       "game_types": ["slot"],
@@ -1520,30 +1536,58 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       return sub;
     }) || [];
     
-    // Fix 2: SWAP Detection - minimum_base has value, max_bonus is null, and minimum_base >= 100rb
-    // This pattern indicates max_bonus value was wrongly placed in minimum_base
+    // ============================================
+    // FIX 2: SMART MISMAP DETECTION (Epistemic Authority Contract)
+    // Detect "minimal kekalahan" mapped to max_bonus instead of minimum_base
+    // ============================================
+    const rawText = (content || '').toLowerCase();
+    const hasMinLossKeyword = /minimal\s*(kekalahan|loss|kalah)|min\s*(loss|kalah|wl)/i.test(rawText);
+    const hasMaxBonusKeyword = /maks(imal|imum)?\s*bonus|max\s*bonus|bonus\s*maks/i.test(rawText);
+    const isCashbackPromo = /cashback|rebate/i.test(parsed.promo_name || '') || /cashback|rebate/i.test(parsed.promo_type || '');
+    
     parsed.subcategories = parsed.subcategories?.map((sub: any) => {
-      const hasSuspiciousSwap = 
-        sub.minimum_base !== null && 
-        sub.minimum_base > 0 &&
-        sub.max_bonus === null &&
-        sub.minimum_base >= 100000; // Max bonus biasanya >= 100rb
+      // Pattern: Source has "minimal kekalahan" but NOT "maksimal bonus"
+      // AND max_bonus is filled but minimum_base is empty/null
+      // → This is a MISMAP! "Minimal kekalahan" was wrongly assigned to max_bonus
+      const isMismap = 
+        hasMinLossKeyword && 
+        !hasMaxBonusKeyword && 
+        sub.max_bonus !== null && 
+        sub.max_bonus > 0 &&
+        (sub.minimum_base === null || sub.minimum_base === undefined || sub.minimum_base === 0);
       
-      if (hasSuspiciousSwap) {
-        console.warn(`⚠️ SWAP DETECTED "${sub.sub_name}": minimum_base=${sub.minimum_base}, max_bonus=null. Auto-swapping...`);
+      if (isMismap) {
+        console.warn(`⚠️ MISMAP DETECTED "${sub.sub_name}": "minimal kekalahan" wrongly mapped to max_bonus=${sub.max_bonus}. Swapping to minimum_base...`);
         return {
           ...sub,
-          max_bonus: sub.minimum_base,           // Move value to max_bonus
-          minimum_base: null,                     // Reset minimum_base to null
+          minimum_base: sub.max_bonus,          // Move to correct field
+          max_bonus: null,                       // Clear incorrect field
+          max_bonus_explicit: false,             // Mark as NOT explicit (no cap)
           confidence: {
             ...sub.confidence,
-            max_bonus: sub.confidence?.minimum_base || 'derived', 
-            minimum_base: 'unknown'               // No original data
+            minimum_base: sub.confidence?.max_bonus || 'derived',
+            max_bonus: 'unknown'                 // No max bonus declared
           }
         };
       }
       return sub;
     }) || [];
+    
+    // ============================================
+    // FIX 3: Force calculation_base = 'winloss' for cashback promos
+    // ============================================
+    if (isCashbackPromo && hasMinLossKeyword) {
+      console.log('[Extractor] Cashback + "kekalahan" detected → forcing calculation_base = "winloss"');
+      parsed.subcategories = parsed.subcategories?.map((sub: any) => {
+        if (!sub.calculation_base || sub.calculation_base === 'turnover' || sub.calculation_base === 'deposit') {
+          return {
+            ...sub,
+            calculation_base: 'winloss'
+          };
+        }
+        return sub;
+      }) || [];
+    }
     
     // Ensure each subcategory has blacklist and confidence
     parsed.subcategories = parsed.subcategories.map(sub => ({
