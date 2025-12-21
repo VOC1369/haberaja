@@ -408,6 +408,13 @@ export interface ExtractedPromo {
   valid_from?: string;
   valid_until?: string;
   
+  // Claim & Distribution (NEW - extracted fields)
+  claim_frequency?: string;   // 'mingguan', 'harian', 'bulanan', 'sekali'
+  calculation_period_start?: string;  // 'senin', 'selasa', etc.
+  calculation_period_end?: string;    // 'senin', 'selasa', etc.
+  distribution_day?: string;  // 'senin', 'selasa', etc.
+  reward_distribution?: string; // 'Langsung', 'hari_tertentu'
+  
   // Payment Method Context (NEW - for Deposit Pulsa, E-Wallet, Crypto, etc.)
   deposit_method?: 'bank' | 'pulsa' | 'ewallet' | 'crypto' | 'qris' | 'all';
   deposit_method_providers?: string[];  // e.g., ["TELKOMSEL", "XL"] or ["DANA", "OVO"]
@@ -846,6 +853,42 @@ Untuk promo CASHBACK berbasis kekalahan (loss):
 - Jika source menyebut "cashback X% dari kekalahan" → calculation_base = "winloss"
 
 
+🔹 claim_frequency EXTRACTION (CASHBACK/REBATE - CRITICAL!)
+
+Keywords untuk detect claim_frequency:
+- "mingguan" / "per minggu" / "weekly" → 'mingguan'
+- "harian" / "per hari" / "daily" → 'harian'  
+- "bulanan" / "per bulan" / "monthly" → 'bulanan'
+- "sekali" / "one time" → 'sekali'
+
+⚠️ ATURAN KHUSUS:
+- Untuk CASHBACK & REBATE yang menyebut "periode" atau "dihitung dari" → hampir pasti 'mingguan' atau 'harian'
+- JANGAN default ke 'sekali' untuk cashback!
+- Jika promo tipe cashback/rebate/rollingan DAN tidak disebut frekuensi → default 'mingguan'
+
+
+🔹 Periode Hitungan & Hari Pembagian (CASHBACK/REBATE - CRITICAL!)
+
+Untuk promo periodic (mingguan, harian), extract:
+
+1️⃣ calculation_period_start & calculation_period_end
+   Keyword: "periode hitungan", "dihitung dari hari", "berlaku hari X s/d Y"
+   Contoh: "Periode hitungan berlaku hari Senin s/d Minggu"
+   → calculation_period_start: "senin"
+   → calculation_period_end: "minggu"
+
+2️⃣ distribution_day
+   Keyword: "dibagikan", "dikirim", "otomatis setiap hari", "bonus akan dikirim setiap"
+   Contoh: "Bonus akan dibagikan secara otomatis setiap hari SELASA"
+   → distribution_day: "selasa"
+   → reward_distribution: "hari_tertentu"
+
+⚠️ ATURAN:
+- Jika source menyebut hari spesifik → extract sebagai lowercase (senin, selasa, dst)
+- Jika source tidak menyebut hari → set sebagai null (JANGAN hardcode "senin-minggu"!)
+- JANGAN infer "senin-minggu" jika tidak eksplisit disebutkan!
+
+
 🔹 Turnover Rule — PRIORITAS TABEL (PHASE 1 FIX)
 URUTAN PRIORITAS:
 1. Jika TABEL menampilkan nilai turnover (e.g., "8x", "TO 10x", "20 kali"):
@@ -1133,6 +1176,11 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
   "promo_mode": "single|multi",
   "valid_from": "YYYY-MM-DD atau null",
   "valid_until": "YYYY-MM-DD atau null",
+  "claim_frequency": "mingguan|harian|bulanan|sekali",
+  "calculation_period_start": "senin|selasa|...|minggu|null",
+  "calculation_period_end": "senin|selasa|...|minggu|null",
+  "distribution_day": "senin|selasa|...|minggu|null",
+  "reward_distribution": "Langsung|hari_tertentu",
   "deposit_method": "bank|pulsa|ewallet|crypto|qris|all atau null",
   "deposit_method_providers": ["TELKOMSEL", "XL"] atau null,
   "deposit_rate": 100 atau null,
@@ -1841,8 +1889,12 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     dinamis_max_claim: sub.max_bonus ?? 0,
     // null max_bonus = unlimited
     dinamis_max_claim_unlimited: sub.max_bonus === null,
-    dinamis_min_claim: sub.minimum_base || 0,
-    dinamis_min_claim_enabled: sub.minimum_base > 0,
+    // ⚠️ FIX: JANGAN copy minimum_base ke dinamis_min_claim!
+    // dinamis_min_claim = minimal bonus untuk DICAIRKAN (bukan syarat kualifikasi)
+    // minimum_base = syarat minimal untuk IKUT promo
+    // Ini adalah 2 field BERBEDA!
+    dinamis_min_claim: 0,  // Default 0, hanya set jika source eksplisit menyebut "minimal bonus yg bisa dicairkan"
+    dinamis_min_claim_enabled: false,
   }));
 
   // Check if any subcategory has unlimited max_bonus
@@ -1869,7 +1921,11 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     turnover_rule: '0x',
     turnover_rule_enabled: false,
     turnover_rule_custom: '',
-    claim_frequency: 'sekali',
+    // ⚠️ FIX: claim_frequency dari extracted, atau infer dari promo_type
+    claim_frequency: extracted.claim_frequency || 
+      (['cashback', 'rebate', 'rollingan', 'rollingan cashback'].includes(extracted.promo_type?.toLowerCase() || '') 
+        ? 'mingguan' 
+        : 'sekali'),
     claim_date_from: '',
     claim_date_until: '',
 
@@ -1891,10 +1947,14 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       tiers: [],
     },
 
-    // Distribution
-    reward_distribution: 'Langsung',
-    distribution_day: '',
+    // Distribution - from extracted or defaults
+    reward_distribution: extracted.distribution_day ? 'hari_tertentu' : (extracted.reward_distribution || 'Langsung'),
+    distribution_day: extracted.distribution_day || '',
     distribution_time: '',
+    
+    // Periode Hitungan (untuk weekly/daily promo) - from extracted
+    calculation_period_start: extracted.calculation_period_start || '',
+    calculation_period_end: extracted.calculation_period_end || '',
     distribution_date_from: '',
     distribution_date_until: '',
     distribution_time_enabled: false,
@@ -1915,8 +1975,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     dinamis_reward_amount: 0,
     dinamis_max_claim: subcategories[0]?.max_bonus || 0,
     dinamis_max_claim_unlimited: hasUnlimitedMaxBonus,
-    dinamis_min_claim: subcategories[0]?.minimum_base || 0,
-    dinamis_min_claim_enabled: (subcategories[0]?.minimum_base || 0) > 0,
+    // ⚠️ FIX: JANGAN copy minimum_base ke dinamis_min_claim!
+    dinamis_min_claim: 0,  // Default 0, hanya set jika source eksplisit menyebut min claim
+    dinamis_min_claim_enabled: false,
     conversion_formula: '',
 
     // Step 2 - Batasan & Akses

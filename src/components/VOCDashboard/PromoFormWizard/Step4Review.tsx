@@ -71,6 +71,9 @@ export const getExplicitMaxBonus = (sub: any): number => {
   return Infinity; // Default: unlimited if not explicit
 };
 
+// Helper: capitalize first letter
+const capitalizeFirst = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
 // Helper: generate GLOBAL terms (applies to all subcategories)
 export const generateGlobalTerms = (data: PromoFormData): string[] => {
   const terms: string[] = [];
@@ -78,22 +81,43 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
   // Claim frequency
   if (data.claim_frequency === 'mingguan') {
     terms.push(`Bonus diberikan berdasarkan perhitungan mingguan.`);
-    terms.push(`Periode dihitung dari hari Senin (00:00 GMT+7) hingga hari Minggu (23:59 GMT+7).`);
+    
+    // Dynamic period - ONLY show if explicitly extracted (jangan hardcode!)
+    if (data.calculation_period_start && data.calculation_period_end) {
+      const startDay = capitalizeFirst(data.calculation_period_start);
+      const endDay = capitalizeFirst(data.calculation_period_end);
+      terms.push(`Periode hitungan berlaku hari ${startDay} s/d ${endDay}.`);
+    }
   } else if (data.claim_frequency === 'harian') {
     terms.push(`Bonus diberikan berdasarkan perhitungan harian.`);
+    
+    // Dynamic period for daily (if extracted)
+    if (data.calculation_period_start && data.calculation_period_end) {
+      const startDay = capitalizeFirst(data.calculation_period_start);
+      const endDay = capitalizeFirst(data.calculation_period_end);
+      terms.push(`Periode hitungan berlaku hari ${startDay} s/d ${endDay}.`);
+    }
   } else if (data.claim_frequency) {
     terms.push(`Frekuensi klaim: ${data.claim_frequency}.`);
   }
   
-  // Distribution time (untuk Hari Tertentu)
-  if (data.reward_distribution === 'hari_tertentu' && data.distribution_day) {
-    const dayLabel = data.distribution_day === 'setiap_hari' ? 'setiap hari' : `setiap hari ${data.distribution_day}`;
-    
-    if (data.distribution_time_from && data.distribution_time_until) {
-      terms.push(`Bonus akan dibagikan ${dayLabel}, mulai pukul ${data.distribution_time_from} - ${data.distribution_time_until} WIB.`);
-    } else if (data.distribution_time_from) {
-      terms.push(`Bonus akan dibagikan ${dayLabel}, pukul ${data.distribution_time_from} WIB.`);
-    }
+  // Dynamic distribution day - ONLY show if extracted
+  if (data.distribution_day) {
+    const dayLabel = data.distribution_day === 'setiap_hari' 
+      ? 'setiap hari' 
+      : `setiap hari ${capitalizeFirst(data.distribution_day)}`;
+    terms.push(`Bonus akan dibagikan secara otomatis ${dayLabel}.`);
+  }
+  
+  // Distribution time (untuk Hari Tertentu - legacy support)
+  if (data.reward_distribution === 'hari_tertentu' && data.distribution_day && data.distribution_time_from && data.distribution_time_until) {
+    // Only add time detail if not already covered above
+    terms.push(`Waktu pembagian: ${data.distribution_time_from} - ${data.distribution_time_until} WIB.`);
+  }
+  
+  // Platform
+  if (data.require_apk) {
+    terms.push(`Wajib download APK terlebih dahulu untuk claim reward ini.`);
   }
   
   // Platform
