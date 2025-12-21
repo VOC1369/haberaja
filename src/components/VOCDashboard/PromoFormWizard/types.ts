@@ -176,6 +176,10 @@ export interface PromoFormData {
   reward_distribution: string;
   distribution_day: string;
   distribution_time: string;
+  
+  // Periode Hitungan (untuk weekly/daily promo)
+  calculation_period_start: string;  // 'senin', 'selasa', etc. atau '' (not extracted)
+  calculation_period_end: string;    // 'senin', 'selasa', etc. atau '' (not extracted)
   distribution_date_from: string;
   distribution_date_until: string;
   distribution_time_enabled: boolean;
@@ -795,6 +799,8 @@ export const initialPromoData: PromoFormData = {
   reward_distribution: '',
   distribution_day: '',
   distribution_time: '',
+  calculation_period_start: '',
+  calculation_period_end: '',
   distribution_date_from: '',
   distribution_date_until: '',
   distribution_time_enabled: false,
@@ -925,6 +931,8 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   reward_distribution: 'langsung',
   distribution_day: '',
   distribution_time: '',
+  calculation_period_start: '',
+  calculation_period_end: '',
   distribution_date_from: '',
   distribution_date_until: '',
   distribution_time_enabled: false,
