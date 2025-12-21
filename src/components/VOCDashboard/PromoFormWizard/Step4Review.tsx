@@ -452,7 +452,7 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
           label="Konfigurasi Reward"
           percentage={stepCompletion.step3.percentage}
           complete={stepCompletion.step3.complete}
-          onClick={() => onGoToStep?.(3)}
+          onClick={() => onGoToStep?.(4)}
         />
       </div>
     </div>
@@ -672,11 +672,11 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
             )}
           </CollapsibleSection>
 
-          {/* Step 3 Summary - Konfigurasi Reward */}
+          {/* Step 4 Summary - Konfigurasi Reward */}
           <CollapsibleSection 
             title="Konfigurasi Reward" 
             complete={!!isStep2Complete}
-            stepNumber={3}
+            stepNumber={4}
             onEdit={onGoToStep}
           >
             <ValueBox label="Mode" value={data.reward_mode === 'formula' ? 'Dinamis' : data.reward_mode} isBadge badgeVariant="outline" />
