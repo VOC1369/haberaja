@@ -271,7 +271,7 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                         <span>{promo.promo_name || <span className="text-muted-foreground italic">Untitled Promo</span>}</span>
                         {hasSubcategories && (
                           <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30 text-xs">
-                            {promo.subcategories.length} Varian
+                            {promo.subcategories.length}
                           </Badge>
                         )}
                       </div>
