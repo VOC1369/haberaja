@@ -229,20 +229,37 @@ export const generateSubcategoryTerms = (sub: any, data: PromoFormData): string[
 };
 
 // Helper: generate terms for SINGLE promo mode (non-combo)
+// 🔒 EPISTEMIC AUTHORITY: Resolve "specific_game" placeholder using game_types[]
 export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
   const terms: string[] = [];
   
   // Game restriction - humanize label (single promo mode)
+  // FIX: Resolve "specific_game" placeholder using game_types[] or subcategories
   if (data.game_restriction && data.game_restriction !== 'semua') {
-    const gameLabel = GAME_RESTRICTIONS.find(g => g.value === data.game_restriction)?.label || data.game_restriction;
+    let gameLabel = GAME_RESTRICTIONS.find(g => g.value === data.game_restriction)?.label;
+    
+    // If game_restriction is "specific_game" or label not found, fallback to game_types
+    if (!gameLabel || data.game_restriction === 'specific_game') {
+      const types = data.game_types?.length > 0 
+        ? data.game_types 
+        : (data.subcategories?.[0]?.game_types || []);
+      
+      if (types.length > 0) {
+        gameLabel = types
+          .map((t: string) => GAME_RESTRICTIONS.find(g => g.value === t)?.label || t.toUpperCase())
+          .join(', ');
+      } else {
+        gameLabel = 'permainan tertentu';
+      }
+    }
     terms.push(`Bonus ini hanya berlaku untuk player yang bertaruh di permainan ${gameLabel}.`);
   } else {
     terms.push(`Bonus ini berlaku untuk semua jenis permainan.`);
   }
   
-  // Minimum requirement
+  // Minimum requirement - use dynamic label based on calculation_base
   if (data.minimum_base_enabled && data.minimum_base && data.minimum_base > 0) {
-    const baseLabel = CALCULATION_BASES.find(b => b.value === data.calculation_base)?.label || data.calculation_base || 'syarat';
+    const baseLabel = getBaseColumnLabel(data.calculation_base);
     terms.push(`Minimal ${baseLabel} untuk mendapatkan bonus ini adalah Rp ${formatNumber(data.minimum_base)}.`);
   }
   
@@ -251,15 +268,16 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
     terms.push(`Minimal bonus yang bisa dicairkan adalah Rp ${formatNumber(data.dinamis_min_claim)}.`);
   }
   
-  // Max claim
+  // Max claim - 🔒 EPISTEMIC AUTHORITY: Only show if explicitly set
   if (data.dinamis_max_claim_unlimited) {
     terms.push(`Tidak ada batas maksimum untuk pembagian bonus ini.`);
   } else if (data.dinamis_max_claim && data.dinamis_max_claim > 0) {
     terms.push(`Maksimum bonus yang bisa didapat adalah Rp ${formatNumber(data.dinamis_max_claim)}.`);
   }
+  // ⚠️ If no explicit max_claim, DON'T add any "maksimum bonus" text!
   
   // Turnover rule (only for deposit-based promos)
-  if (data.turnover_rule && !['turnover', 'win_loss', 'bet_amount'].includes(data.calculation_base?.toLowerCase() || '')) {
+  if (data.turnover_rule && !['turnover', 'win_loss', 'winloss', 'bet_amount'].includes(data.calculation_base?.toLowerCase() || '')) {
     terms.push(`Syarat turnover: ${data.turnover_rule}.`);
   }
   
