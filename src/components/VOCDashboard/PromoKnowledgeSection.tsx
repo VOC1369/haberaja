@@ -251,7 +251,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
       case 'B':
         return <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">🏆 Event / Kompetisi</Badge>;
       case 'C':
-        return <Badge variant="outline" className="border-border text-muted-foreground">🧠 Program Sistem</Badge>;
+        return <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">🧠 Program Sistem</Badge>;
       default:
         return <Badge variant="outline" className="border-border text-muted-foreground/50">-</Badge>;
     }
