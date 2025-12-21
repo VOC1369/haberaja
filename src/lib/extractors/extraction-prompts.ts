@@ -170,6 +170,49 @@ Kamu adalah FIELD EXTRACTOR untuk Policy Program iGaming.
 
 Ini adalah ATURAN/KEBIJAKAN/SISTEM, BUKAN bonus/reward langsung.
 
+⚠️ REMINDER PENTING: Dokumen ini MUNGKIN memiliki MULTIPLE TABLES. 
+Kamu WAJIB extract SEMUA rows dari SEMUA tables yang relevan.
+Jangan berhenti setelah tabel pertama!
+Total subcategories harus = jumlah SEMUA rows dari SEMUA tables yang relevan.
+
+📋 ATURAN MULTIPLE TABLES (SANGAT PENTING):
+Banyak promo memiliki LEBIH DARI SATU TABEL dalam satu halaman.
+Contoh: Loyalty Point sering memiliki:
+- Tabel 1: "Paket Penukaran Reguler" (hadiah kecil)
+- Tabel 2: "Hadiah Utama/Eksklusif" (hadiah besar)
+
+INSTRUKSI WAJIB:
+1. SCAN seluruh dokumen untuk menemukan SEMUA tabel yang relevan
+2. EXTRACT semua rows dari SETIAP tabel yang ditemukan
+3. GABUNGKAN semua hasil ke dalam SATU array subcategories
+4. JANGAN berhenti setelah tabel pertama!
+5. JANGAN skip tabel manapun!
+
+CONTOH BENAR:
+Jika dokumen memiliki:
+- Tabel 1 dengan 4 rows (CREDIT GAME 5K, 10K, 15K, 20K)
+- Tabel 2 dengan 7 rows (CREDIT GAME 25K, 50K, 100K, 200K, 500K, 1M, 2.5M)
+
+Maka subcategories HARUS berisi 11 items:
+[
+  { "sub_name": "CREDIT GAME 5.000", "calculation_value": 250 },
+  { "sub_name": "CREDIT GAME 10.000", "calculation_value": 1000 },
+  { "sub_name": "CREDIT GAME 15.000", "calculation_value": 1500 },
+  { "sub_name": "CREDIT GAME 20.000", "calculation_value": 2000 },
+  { "sub_name": "CREDIT GAME 25.000", "calculation_value": 25000 },
+  { "sub_name": "CREDIT GAME 50.000", "calculation_value": 45000 },
+  { "sub_name": "CREDIT GAME 100.000", "calculation_value": 80000 },
+  { "sub_name": "CREDIT GAME 200.000", "calculation_value": 150000 },
+  { "sub_name": "CREDIT GAME 500.000", "calculation_value": 450000 },
+  { "sub_name": "CREDIT GAME 1.000.000", "calculation_value": 750000 },
+  { "sub_name": "CREDIT GAME 2.500.000", "calculation_value": 1800000 }
+]
+
+CONTOH SALAH (JANGAN LAKUKAN INI):
+- Hanya extract 4 items dari tabel pertama ❌
+- Hanya extract 7 items dari tabel kedua ❌
+- Berhenti di tengah-tengah ❌
+
 📊 ATURAN PARSE TABEL (WAJIB):
 Jika source data adalah TABEL dengan format:
 | NO | NAMA/ITEM/CREDIT GAME | VALUE |
