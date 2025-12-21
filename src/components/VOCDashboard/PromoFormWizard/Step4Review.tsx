@@ -18,6 +18,59 @@ export const formatNumber = (num: number): string => {
   return num.toLocaleString('id-ID');
 };
 
+// ============= EPISTEMIC AUTHORITY HELPERS =============
+// Summary = Renderer, NOT Reasoner. Never infer facts that don't exist.
+
+/**
+ * Get dynamic column label based on calculation_base
+ * "Win/Loss" for loss-based, "Turnover" for turnover-based, etc.
+ */
+export const getBaseColumnLabel = (calculationBase: string | undefined): string => {
+  const base = calculationBase?.toLowerCase() || '';
+  switch (base) {
+    case 'winloss':
+    case 'win_loss':
+    case 'loss':
+      return 'Win/Loss';
+    case 'turnover':
+    case 'to':
+      return 'Turnover';
+    case 'deposit':
+      return 'Deposit';
+    case 'bet_amount':
+      return 'Nilai Taruhan';
+    default:
+      return 'Nilai';
+  }
+};
+
+/**
+ * Check if max_bonus is EXPLICITLY set (not confused with minimum_base)
+ * Returns true only if dinamis_max_claim is set OR max_bonus_explicit flag exists
+ */
+export const hasExplicitMaxBonus = (sub: any): boolean => {
+  // If dinamis_max_claim is set (from form), it's explicit
+  if (sub.dinamis_max_claim && sub.dinamis_max_claim > 0) return true;
+  // If unlimited flag is set, it's explicit (means "no cap")
+  if (sub.dinamis_max_claim_unlimited === true) return false; // No cap!
+  // If max_bonus_explicit flag exists from extraction, trust it
+  if (sub.max_bonus_explicit === true) return true;
+  // Legacy: if max_bonus is set but we don't have explicit flag, 
+  // be conservative - don't assume it's correct (could be extraction error)
+  return false;
+};
+
+/**
+ * Get the actual max bonus value to use for capping
+ * Returns Infinity if no explicit max is set
+ */
+export const getExplicitMaxBonus = (sub: any): number => {
+  if (sub.dinamis_max_claim_unlimited === true) return Infinity;
+  if (sub.dinamis_max_claim && sub.dinamis_max_claim > 0) return sub.dinamis_max_claim;
+  if (sub.max_bonus_explicit === true && sub.max_bonus && sub.max_bonus > 0) return sub.max_bonus;
+  return Infinity; // Default: unlimited if not explicit
+};
+
 // Helper: generate GLOBAL terms (applies to all subcategories)
 export const generateGlobalTerms = (data: PromoFormData): string[] => {
   const terms: string[] = [];
@@ -88,6 +141,7 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
 };
 
 // Helper: generate terms for a specific SUBCATEGORY
+// 🔒 EPISTEMIC AUTHORITY CONTRACT: Only render EXPLICIT facts, never infer!
 export const generateSubcategoryTerms = (sub: any, data: PromoFormData): string[] => {
   const terms: string[] = [];
   
@@ -107,26 +161,30 @@ export const generateSubcategoryTerms = (sub: any, data: PromoFormData): string[
   if (gameName) gameDesc += ` - Game: ${gameName}`;
   terms.push(`${gameDesc}.`);
   
-  // Bonus percentage
+  // Bonus percentage - use dynamic label
   if (sub.calculation_value) {
-    const baseLabel = CALCULATION_BASES.find(b => b.value === sub.calculation_base)?.label || sub.calculation_base || 'Turnover';
+    const baseLabel = getBaseColumnLabel(sub.calculation_base);
     terms.push(`Bonus ${sub.calculation_value}% dari ${baseLabel}.`);
   }
   
-  // Minimum requirement
+  // Minimum requirement (e.g., "Minimal kekalahan Rp 500.000")
   if (sub.minimum_base && sub.minimum_base > 0) {
-    const baseLabel = CALCULATION_BASES.find(b => b.value === sub.calculation_base)?.label || sub.calculation_base || 'syarat';
+    const baseLabel = getBaseColumnLabel(sub.calculation_base);
     terms.push(`Minimal ${baseLabel} untuk mendapatkan bonus ini adalah Rp ${formatNumber(sub.minimum_base)}.`);
   }
   
-  // Max claim
-  if (sub.dinamis_max_claim_unlimited) {
+  // 🔒 EPISTEMIC AUTHORITY: Max claim - ONLY show if EXPLICITLY set!
+  // DO NOT show max_bonus if it might be confused with minimum_base (extraction error)
+  if (sub.dinamis_max_claim_unlimited === true) {
     terms.push(`Tidak ada batas maksimum untuk pembagian bonus ini.`);
   } else if (sub.dinamis_max_claim && sub.dinamis_max_claim > 0) {
+    // dinamis_max_claim is set from form = explicit
     terms.push(`Maksimum bonus yang bisa didapat adalah Rp ${formatNumber(sub.dinamis_max_claim)}.`);
-  } else if (sub.max_bonus && sub.max_bonus > 0) {
+  } else if (hasExplicitMaxBonus(sub)) {
+    // Only show max_bonus if explicitly marked
     terms.push(`Maksimum bonus yang bisa didapat adalah Rp ${formatNumber(sub.max_bonus)}.`);
   }
+  // ⚠️ If no explicit max_bonus, DON'T add any "maksimum bonus" text!
   
   // Blacklist info
   if (sub.game_blacklist_enabled) {
@@ -1019,7 +1077,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         </CollapsibleTrigger>
                         
                         <CollapsibleContent className="mt-2 border border-border rounded-xl overflow-hidden bg-card">
-                          {/* Ilustrasi Perhitungan - if percentage mode */}
+                          {/* 🔒 EPISTEMIC AUTHORITY: Ilustrasi Perhitungan - ONLY cap if EXPLICIT max_bonus */}
                           {sub.calculation_method === 'percentage' && sub.calculation_value ? (
                             <div className="p-4 border-b border-border">
                               <p className="font-medium text-foreground mb-3 flex items-center gap-2">
@@ -1029,7 +1087,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                 <thead className="bg-muted/30">
                                   <tr>
                                     <th className="text-left py-1.5 px-3 font-medium text-foreground">
-                                      {(sub.calculation_base || 'Turnover').charAt(0).toUpperCase() + (sub.calculation_base || 'Turnover').slice(1)}
+                                      {getBaseColumnLabel(sub.calculation_base)}
                                     </th>
                                     <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">Kalkulasi</th>
                                     <th className="text-left py-1.5 px-3 font-medium text-foreground">Perkiraan Bonus</th>
@@ -1038,7 +1096,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                 <tbody>
                                   {[1000000, 2000000, 5000000, 10000000, 20000000].map((amount, i) => {
                                     const rawBonus = amount * (sub.calculation_value / 100);
-                                    const maxClaim = sub.dinamis_max_claim_unlimited ? Infinity : (sub.dinamis_max_claim || Infinity);
+                                    // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
+                                    const maxClaim = getExplicitMaxBonus(sub);
                                     const bonus = Math.min(rawBonus, maxClaim);
                                     const isCapped = bonus < rawBonus;
                                     return (
@@ -1059,6 +1118,12 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                   })}
                                 </tbody>
                               </table>
+                              {/* 🔒 EPISTEMIC: Show "no max" disclaimer if max_bonus is NOT explicit */}
+                              {!hasExplicitMaxBonus(sub) && !sub.dinamis_max_claim_unlimited && (
+                                <p className="text-xs text-muted-foreground mt-2 italic">
+                                  ⚠️ Tidak ada batas maksimum yang dinyatakan pada promo ini.
+                                </p>
+                              )}
                             </div>
                           ) : null}
                           
@@ -1102,7 +1167,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     </div>
                   </div>
                 ) : data.reward_mode === 'formula' && data.calculation_method === 'percentage' && data.calculation_value ? (
-                  /* Single promo mode with ilustrasi */
+                  /* 🔒 EPISTEMIC AUTHORITY: Single promo mode with ilustrasi - ONLY cap if EXPLICIT */
                   <div className="space-y-4">
                     <p className="font-semibold text-foreground">Ilustrasi Perhitungan</p>
                     
@@ -1111,7 +1176,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         <thead className="bg-muted/30">
                           <tr>
                             <th className="text-left py-1.5 px-3 font-medium text-foreground">
-                              {(data.calculation_base || 'Turnover').charAt(0).toUpperCase() + (data.calculation_base || 'Turnover').slice(1)}
+                              {getBaseColumnLabel(data.calculation_base)}
                             </th>
                             <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">Kalkulasi</th>
                             <th className="text-left py-1.5 px-3 font-medium text-foreground">Perkiraan Bonus</th>
@@ -1120,7 +1185,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         <tbody>
                           {[1000000, 2000000, 5000000, 10000000, 20000000].map((amount, index) => {
                             const rawBonus = amount * (data.calculation_value / 100);
-                            const maxClaim = data.dinamis_max_claim_unlimited ? Infinity : (data.dinamis_max_claim || Infinity);
+                            // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
+                            const maxClaim = getExplicitMaxBonus(data);
                             const bonus = Math.min(rawBonus, maxClaim);
                             const isCapped = bonus < rawBonus;
                             return (
@@ -1147,6 +1213,12 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       <AlertCircle className="h-4 w-4 shrink-0" />
                       Nilai ini hanya ilustrasi. Nominal akhir diverifikasi oleh Human Agent & sistem.
                     </p>
+                    {/* 🔒 EPISTEMIC: Show "no max" disclaimer if max_bonus is NOT explicit */}
+                    {!hasExplicitMaxBonus(data) && !data.dinamis_max_claim_unlimited && (
+                      <p className="text-xs text-muted-foreground italic">
+                        ⚠️ Tidak ada batas maksimum yang dinyatakan pada promo ini.
+                      </p>
+                    )}
                     
                     {/* S&K */}
                     <div className="pt-4 border-t border-border">
