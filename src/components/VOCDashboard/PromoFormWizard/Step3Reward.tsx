@@ -1490,12 +1490,26 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               
               {/* Max Bonus */}
               <div className="space-y-2">
-                <Label>Max Bonus</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Max Bonus</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Unlimited</span>
+                    <Switch
+                      checked={data.dinamis_max_claim_unlimited ?? false}
+                      onCheckedChange={(checked) => onChange({ 
+                        dinamis_max_claim_unlimited: checked,
+                        dinamis_max_claim: checked ? 0 : data.dinamis_max_claim
+                      })}
+                    />
+                  </div>
+                </div>
                 <Input
                   type="text"
-                  value={data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : ''}
+                  value={data.dinamis_max_claim_unlimited ? '' : (data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : '')}
                   onChange={(e) => onChange({ dinamis_max_claim: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder="Contoh: 100.000"
+                  placeholder={data.dinamis_max_claim_unlimited ? "Unlimited / Tanpa Batas" : "Contoh: 100.000"}
+                  disabled={data.dinamis_max_claim_unlimited}
+                  className={data.dinamis_max_claim_unlimited ? "opacity-50" : ""}
                 />
               </div>
             </div>
