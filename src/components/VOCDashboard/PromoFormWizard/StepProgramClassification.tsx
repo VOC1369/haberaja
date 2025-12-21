@@ -13,7 +13,7 @@ interface StepProgramClassificationProps {
 interface ProgramCard {
   id: ProgramType;
   badgeText: string;
-  badgeVariant: "success" | "warning" | "outline";
+  badgeVariant: "success" | "warning" | "outline" | "secondary";
   title: string;
   subtitle: string;
   description: string;
@@ -25,8 +25,8 @@ interface ProgramCard {
 const PROGRAM_CARDS: ProgramCard[] = [
   {
     id: "reward",
-    badgeText: "Bonus & Reward",
-    badgeVariant: "success",
+    badgeText: "⚡ Bonus Instan",
+    badgeVariant: "warning",
     title: "Reward Programs",
     subtitle: "(Deterministic)",
     description: "Program dengan perhitungan jelas dan bisa dihitung secara pasti.",
@@ -41,13 +41,13 @@ const PROGRAM_CARDS: ProgramCard[] = [
       "Bisa dihitung",
       "Bisa dijelaskan AI secara pasti",
     ],
-    ctaText: "Gunakan Reward Program",
+    ctaText: "Gunakan Bonus Instan",
   },
   {
     id: "event",
-    badgeText: "Event & Hadiah",
-    badgeVariant: "warning",
-    title: "Event Reward Programs",
+    badgeText: "🏆 Event/Kompetisi",
+    badgeVariant: "secondary",
+    title: "Event Programs",
     subtitle: "(Non-Deterministic)",
     description: "Program berbasis event atau keberuntungan, hadiah tidak bisa dipastikan.",
     examples: [
@@ -65,9 +65,9 @@ const PROGRAM_CARDS: ProgramCard[] = [
   },
   {
     id: "policy",
-    badgeText: "Aturan & Kebijakan",
+    badgeText: "🧠 Program Sistem",
     badgeVariant: "outline",
-    title: "Non-Reward Programs",
+    title: "Policy Programs",
     subtitle: "(Policy / Rules)",
     description: "Bukan bonus. Mengatur cara bermain, deposit, atau perhitungan game.",
     examples: [
@@ -118,7 +118,16 @@ export function StepProgramClassification({
             >
               {/* Badge */}
               <div className="mb-4">
-                <Badge variant={card.badgeVariant} size="sm">
+                <Badge 
+                  size="sm"
+                  className={
+                    card.id === "reward" 
+                      ? "bg-warning/20 text-warning border border-warning/30" 
+                      : card.id === "event"
+                      ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                      : "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                  }
+                >
                   {card.badgeText}
                 </Badge>
               </div>

@@ -254,9 +254,9 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const getCategoryBadge = (classification?: string) => {
     switch (classification) {
       case 'A':
-        return <Badge className="bg-success/20 text-success border border-success/30">⚡ Bonus Instan</Badge>;
+        return <Badge className="bg-warning/20 text-warning border border-warning/30">⚡ Bonus Instan</Badge>;
       case 'B':
-        return <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">🏆 Event / Kompetisi</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">🏆 Event/Kompetisi</Badge>;
       case 'C':
         return <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30">🧠 Program Sistem</Badge>;
       default:
