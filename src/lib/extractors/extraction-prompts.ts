@@ -29,6 +29,18 @@ Kamu adalah FIELD EXTRACTOR untuk Reward Program iGaming.
 
 Ini adalah BONUS/REWARD yang user LANGSUNG dapat dari aksi (instant reward).
 
+📊 ATURAN PARSE TABEL (WAJIB):
+Jika source data adalah TABEL dengan format:
+| NO | NAMA/ITEM/CREDIT GAME | VALUE |
+|----|-----------------------|-------|
+| 1  | Item Pertama          | 100   |
+| 2  | Item Kedua            | 200   |
+
+MAKA:
+- sub_name = ambil dari kolom NAMA/ITEM (kolom ke-2), BUKAN dari kolom NO (kolom ke-1)
+- calculation_value = ambil dari kolom VALUE (kolom ke-3)
+- JANGAN PERNAH menggunakan row number "1", "2", "3" sebagai nama varian!
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama promo",
@@ -93,6 +105,16 @@ Kamu adalah FIELD EXTRACTOR untuk Event Program iGaming.
 
 Ini adalah EVENT/KOMPETISI berbatas waktu dengan winner/ranking/undian.
 
+📊 ATURAN PARSE TABEL (WAJIB):
+Jika source data adalah TABEL dengan format:
+| NO | NAMA/ITEM | VALUE |
+|----|-----------| ------|
+| 1  | Item A    | 100   |
+
+MAKA:
+- sub_name / rank = ambil dari kolom NAMA (kolom ke-2), BUKAN dari kolom NO
+- JANGAN PERNAH menggunakan row number sebagai nama!
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama event",
@@ -147,6 +169,32 @@ Kamu adalah FIELD EXTRACTOR untuk Policy Program iGaming.
 - program_classification_name: "Policy Program"
 
 Ini adalah ATURAN/KEBIJAKAN/SISTEM, BUKAN bonus/reward langsung.
+
+📊 ATURAN PARSE TABEL (WAJIB):
+Jika source data adalah TABEL dengan format:
+| NO | NAMA/ITEM/CREDIT GAME | VALUE |
+|----|-----------------------|-------|
+| 1  | Item Pertama          | 100   |
+| 2  | Item Kedua            | 200   |
+
+MAKA:
+- sub_name = ambil dari kolom NAMA/ITEM (kolom ke-2), BUKAN dari kolom NO (kolom ke-1)
+- calculation_value = ambil dari kolom VALUE (kolom ke-3)
+- JANGAN PERNAH menggunakan row number "1", "2", "3" sebagai nama varian!
+
+📌 CONTOH KHUSUS untuk Loyalty Point exchange:
+Dari tabel:
+| NO | CREDIT GAME        | LOYALTY POINT |
+|----|--------------------|---------------|
+| 1  | CREDIT GAME 5.000  | 250 LP        |
+| 2  | CREDIT GAME 10.000 | 1.000 LP      |
+
+Extract ke subcategories:
+[
+  { "sub_name": "CREDIT GAME 5.000", "calculation_value": 250 },
+  { "sub_name": "CREDIT GAME 10.000", "calculation_value": 1000 }
+]
+⚠️ sub_name = nama item (CREDIT GAME 5.000), BUKAN nomor baris "1"!
 
 📋 EXTRACT FIELDS:
 {

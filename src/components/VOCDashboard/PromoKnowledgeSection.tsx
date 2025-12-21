@@ -529,7 +529,8 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                         <TableCell className="py-3">
                           {sub.calculation_value && (
                             <span className="text-xs text-muted-foreground">
-                              {sub.calculation_value}%
+                              {sub.calculation_value}
+                              {item.promo_type?.toLowerCase().includes('loyalty') ? ' LP' : '%'}
                             </span>
                           )}
                         </TableCell>
