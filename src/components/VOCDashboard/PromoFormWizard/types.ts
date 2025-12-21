@@ -328,6 +328,7 @@ export interface PromoSubCategory {
   jenis_hadiah: string;
   max_bonus_same_as_global: boolean;
   max_bonus: number;
+  max_bonus_unlimited: boolean;
   payout_direction_same_as_global: boolean;
   payout_direction: 'before' | 'after';
   
@@ -1013,6 +1014,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       jenis_hadiah: '',
       max_bonus_same_as_global: false,
       max_bonus: 2000000,
+      max_bonus_unlimited: false,
       payout_direction_same_as_global: true,
       payout_direction: 'before',
       admin_fee_same_as_global: true,
@@ -1048,6 +1050,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       jenis_hadiah: '',
       max_bonus_same_as_global: false,
       max_bonus: 1000000,
+      max_bonus_unlimited: false,
       payout_direction_same_as_global: true,
       payout_direction: 'before',
       admin_fee_same_as_global: true,
@@ -1083,6 +1086,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       jenis_hadiah: '',
       max_bonus_same_as_global: false,
       max_bonus: 1000000,
+      max_bonus_unlimited: false,
       payout_direction_same_as_global: true,
       payout_direction: 'before',
       admin_fee_same_as_global: true,

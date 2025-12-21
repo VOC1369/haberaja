@@ -1712,6 +1712,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     max_bonus_same_as_global: false, // Each sub has its own max
     // Handle null max_bonus = unlimited
     max_bonus: sub.max_bonus ?? 0,
+    max_bonus_unlimited: sub.max_bonus === null,
     // Only use global if payout_direction is not specified
     payout_direction_same_as_global: !sub.payout_direction,
     payout_direction: sub.payout_direction === 'depan' ? 'before' : 'after',
