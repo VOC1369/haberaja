@@ -33,7 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileText, Plus, Pencil, Trash2, Eye, MoreHorizontal, Copy, ChevronRight, ChevronDown } from "lucide-react";
+import { FileText, Plus, Pencil, Trash2, Eye, MoreHorizontal, Copy, ChevronRight, ChevronDown, Infinity } from "lucide-react";
 import { toast } from "sonner";
 import { PromoItem, getPromoDrafts, deletePromoDraft, savePromoDraft } from "./PromoFormWizard/types";
 
@@ -159,12 +159,16 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
     }
   };
 
-  const formatValidPeriod = (promo: PromoItem) => {
+  const formatValidPeriod = (promo: PromoItem): React.ReactNode => {
     if (promo.valid_from && promo.valid_until) {
       return `${formatDate(promo.valid_from)} - ${formatDate(promo.valid_until)}`;
     }
     if (promo.valid_from) {
-      return `Mulai ${formatDate(promo.valid_from)}`;
+      return (
+        <span className="inline-flex items-center gap-1">
+          {formatDate(promo.valid_from)} – <Infinity className="h-4 w-4 text-muted-foreground" />
+        </span>
+      );
     }
     return "-";
   };
