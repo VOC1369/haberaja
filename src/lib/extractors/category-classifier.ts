@@ -14,6 +14,8 @@
  * - Human = Gatekeeper (mengunci kebenaran)
  */
 
+import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
+
 // ============================================
 // TYPES
 // ============================================
@@ -261,11 +263,8 @@ function assessQuality(
 // ============================================
 
 export async function classifyContent(content: string): Promise<ClassificationResult> {
-  const apiKey = localStorage.getItem('openai_api_key');
-  
-  if (!apiKey) {
-    throw new Error('OpenAI API key not configured');
-  }
+  // Use centralized DEV MODE API key
+  const apiKey = getOpenAIKey();
 
   console.log('[Classifier] Starting LLM-based classification...');
   console.log('[Classifier] Prompt version:', CLASSIFIER_PROMPT_VERSION);
