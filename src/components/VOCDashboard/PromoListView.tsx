@@ -108,18 +108,26 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
   };
 
   const formatDateTime = (dateString: string) => {
+    // Parse ISO date string
     const date = new Date(dateString);
-    const dateStr = date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
-    const timeStr = date.toLocaleTimeString('id-ID', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-    return `${dateStr}, ${timeStr}`;
+    
+    // Check if date is valid ISO format
+    if (!isNaN(date.getTime())) {
+      const dateStr = date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+      const timeStr = date.toLocaleTimeString('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+      return `${dateStr}, ${timeStr}`;
+    }
+    
+    // Fallback: return date portion only if can't parse
+    return dateString.split(',')[0] || dateString;
   };
 
   const getCategoryBadge = (classification?: string) => {
