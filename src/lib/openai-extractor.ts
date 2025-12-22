@@ -1675,10 +1675,27 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     }) || [];
     
     // ============================================
+    // HELPER: Strip HTML tags for pattern matching
+    // rawText harus plain text agar regex bisa match
+    // ============================================
+    const stripHtmlTags = (html: string): string => {
+      return html
+        .replace(/<[^>]*>/g, ' ')      // Replace HTML tags with space
+        .replace(/&nbsp;/gi, ' ')       // Replace &nbsp; entities
+        .replace(/&amp;/gi, '&')        // Replace &amp; entities
+        .replace(/&lt;/gi, '<')         // Replace &lt; entities
+        .replace(/&gt;/gi, '>')         // Replace &gt; entities
+        .replace(/&quot;/gi, '"')       // Replace &quot; entities
+        .replace(/\s+/g, ' ')           // Collapse multiple spaces
+        .trim();
+    };
+
+    const rawText = stripHtmlTags(content || '').toLowerCase();
+    
+    // ============================================
     // FIX 2: SMART MISMAP DETECTION (Epistemic Authority Contract)
     // Detect "minimal kekalahan" mapped to max_bonus instead of minimum_base
     // ============================================
-    const rawText = (content || '').toLowerCase();
     const hasMinLossKeyword = /minimal\s*(kekalahan|loss|kalah)|min\s*(loss|kalah|wl)/i.test(rawText);
     const hasMaxBonusKeyword = /maks(imal|imum)?\s*bonus|max\s*bonus|bonus\s*maks/i.test(rawText);
     const isCashbackPromo = /cashback|rebate/i.test(parsed.promo_name || '') || /cashback|rebate/i.test(parsed.promo_type || '');
