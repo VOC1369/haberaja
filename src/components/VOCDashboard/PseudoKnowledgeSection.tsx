@@ -627,13 +627,16 @@ export function PseudoKnowledgeSection() {
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Jenis Game</span>
             <span className="text-foreground font-medium">
-              {sub.game_types?.map(formatGameType).join(", ") || "-"}
+              {sub.game_types?.length ? sub.game_types.map(formatGameTypeLabel).join(", ") : "-"}
             </span>
           </div>
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Provider</span>
             <span className="text-foreground font-medium">
-              {sub.game_providers?.length > 0 ? sub.game_providers.join(", ") : "-"}
+              {formatProvidersDisplay({
+                eligible_providers: sub.eligible_providers,
+                game_providers: sub.game_providers,
+              })}
             </span>
           </div>
           <div className="bg-muted rounded-lg p-3">
