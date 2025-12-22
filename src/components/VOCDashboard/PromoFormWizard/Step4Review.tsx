@@ -229,15 +229,37 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
   return terms;
 };
 
+// Helper: get game category label - PRESERVE Indonesian names, don't translate!
+// "SABUNG AYAM" → "Sabung Ayam" (NOT "COCKFIGHT"!)
+const getGameCategoryLabel = (gameTypes: string[]): string => {
+  if (!gameTypes?.length) return 'Semua permainan';
+  
+  return gameTypes.map((t: string) => {
+    // Check mapping first (normalized value → label)
+    const mapped = GAME_RESTRICTIONS.find(g => g.value === t.toLowerCase());
+    if (mapped) return mapped.label;
+    
+    // If no mapping, use ORIGINAL value in uppercase (preserve Indonesian terms)
+    // This ensures "SABUNG AYAM" stays as "SABUNG AYAM", not translated to "COCKFIGHT"
+    return t.toUpperCase();
+  }).join(', ');
+};
+
 // Helper: generate terms for a specific SUBCATEGORY
 // 🔒 EPISTEMIC AUTHORITY CONTRACT: Only render EXPLICIT facts, never infer!
 export const generateSubcategoryTerms = (sub: any, data: PromoFormData): string[] => {
   const terms: string[] = [];
   
-  // Game restriction
-  const gameType = sub.game_types?.length > 0 
-    ? sub.game_types.map((t: string) => GAME_RESTRICTIONS.find(g => g.value === t)?.label || t).join(', ')
-    : 'Semua permainan';
+  // Game restriction - use helper to preserve Indonesian names
+  const gameCategory = getGameCategoryLabel(sub.game_types);
+  
+  // Eligible providers (extracted from "KATEGORI (PROVIDER1 & PROVIDER2)" pattern)
+  // e.g., "SABUNG AYAM (SV388 & WS168)" → eligible_providers: ["SV388", "WS168"]
+  const eligibleProviders = sub.eligible_providers?.length > 0 
+    ? ` (${sub.eligible_providers.join(' & ')})` 
+    : '';
+  
+  // Game providers (whitelist - from form selection)
   const provider = sub.game_providers?.length > 0 
     ? sub.game_providers.map((p: string) => GAME_PROVIDERS.find(g => g.value === p)?.label || p).join(', ')
     : null;
@@ -245,8 +267,9 @@ export const generateSubcategoryTerms = (sub: any, data: PromoFormData): string[
     ? sub.game_names.map((n: string) => GAME_NAMES.find(g => g.value === n)?.label || n).join(', ')
     : null;
   
-  let gameDesc = `Bonus berlaku untuk ${gameType}`;
-  if (provider) gameDesc += ` (Provider: ${provider})`;
+  // Build game description with eligible_providers FIRST (from extraction), then provider whitelist
+  let gameDesc = `Bonus berlaku untuk ${gameCategory}${eligibleProviders}`;
+  if (provider) gameDesc += ` - Provider: ${provider}`;
   if (gameName) gameDesc += ` - Game: ${gameName}`;
   terms.push(`${gameDesc}.`);
   
@@ -324,6 +347,7 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
   
   // Game restriction - humanize label (single promo mode)
   // FIX: Resolve "specific_game" placeholder using game_types[] or subcategories
+  // FIX: Include eligible_providers (extracted from "KATEGORI (PROVIDER1 & PROVIDER2)" pattern)
   if (data.game_restriction && data.game_restriction !== 'semua') {
     let gameLabel = GAME_RESTRICTIONS.find(g => g.value === data.game_restriction)?.label;
     
@@ -334,14 +358,22 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
         : (data.subcategories?.[0]?.game_types || []);
       
       if (types.length > 0) {
-        gameLabel = types
-          .map((t: string) => GAME_RESTRICTIONS.find(g => g.value === t)?.label || t.toUpperCase())
-          .join(', ');
+        // Use getGameCategoryLabel to preserve Indonesian names
+        gameLabel = getGameCategoryLabel(types);
       } else {
         gameLabel = 'permainan tertentu';
       }
     }
-    terms.push(`Bonus ini hanya berlaku untuk player yang bertaruh di permainan ${gameLabel}.`);
+    
+    // Add eligible providers if extracted (e.g., "SABUNG AYAM (SV388 & WS168)")
+    const eligibleProviders = data.eligible_providers?.length > 0 
+      ? data.eligible_providers
+      : (data.subcategories?.[0]?.eligible_providers || []);
+    const providerSuffix = eligibleProviders.length > 0 
+      ? ` (${eligibleProviders.join(' & ')})` 
+      : '';
+    
+    terms.push(`Bonus ini hanya berlaku untuk player yang bertaruh di permainan ${gameLabel}${providerSuffix}.`);
   } else {
     terms.push(`Bonus ini berlaku untuk semua jenis permainan.`);
   }

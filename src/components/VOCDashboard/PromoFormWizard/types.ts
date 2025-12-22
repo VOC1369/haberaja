@@ -220,6 +220,10 @@ export interface PromoFormData {
   game_providers: string[];
   game_names: string[];
   
+  // Eligible Providers (extracted from "KATEGORI (PROVIDER1 & PROVIDER2)" pattern)
+  // e.g., "SABUNG AYAM (SV388 & WS168)" → eligible_providers: ["SV388", "WS168"]
+  eligible_providers?: string[];
+  
   // Step 3 - Game Blacklist (Dinamis mode) - Multi-select arrays
   game_blacklist_enabled: boolean;
   game_types_blacklist: string[];
@@ -345,6 +349,9 @@ export interface PromoSubCategory {
   game_types: string[];
   game_providers: string[];
   game_names: string[];
+  
+  // Eligible Providers (extracted from "KATEGORI (PROVIDER1 & PROVIDER2)" pattern)
+  eligible_providers?: string[];
   
   // Game Blacklist - Multi-select arrays
   game_blacklist_enabled: boolean;
@@ -657,8 +664,12 @@ export const GAME_RESTRICTIONS = [
   { value: 'casino', label: 'Casino' },
   { value: 'poker', label: 'Poker' },
   { value: 'sports', label: 'Sports' },
+  { value: 'sportsbook', label: 'Sportsbook' },
   { value: 'e_sports', label: 'E-Sports' },
   { value: 'togel', label: 'Togel / Lottery (2D / 3D / 4D)' },
+  { value: 'sabung_ayam', label: 'Sabung Ayam' },
+  { value: 'tembak_ikan', label: 'Tembak Ikan' },
+  { value: 'arcade', label: 'Arcade' },
 ];
 
 // Game Provider Options
