@@ -2143,9 +2143,13 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     dinamis_reward_amount: 0,
     dinamis_max_claim: subcategories[0]?.max_bonus || 0,
     dinamis_max_claim_unlimited: hasUnlimitedMaxBonus,
-    // ⚠️ FIX: JANGAN copy minimum_base ke dinamis_min_claim!
-    dinamis_min_claim: 0,  // Default 0, hanya set jika source eksplisit menyebut min claim
-    dinamis_min_claim_enabled: false,
+    // ✅ ONTOLOGY FIX: Read payout threshold from subcategory BEFORE it gets emptied
+    // Truth must flow from extraction → mapping → UI
+    // dinamis_min_claim = payout threshold ("minimal bonus yang bisa dicairkan")
+    // DO NOT confuse with minimum_base = eligibility threshold ("minimal kekalahan")
+    // Use nullish coalescing (??) not logical OR (||) to preserve explicit 0 values
+    dinamis_min_claim: subcategories[0]?.dinamis_min_claim ?? 0,
+    dinamis_min_claim_enabled: (subcategories[0]?.dinamis_min_claim ?? 0) > 0,
     conversion_formula: '',
 
     // Step 2 - Batasan & Akses
