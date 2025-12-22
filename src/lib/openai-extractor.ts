@@ -1727,6 +1727,83 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       }) || [];
     }
     
+    // ============================================
+    // FIX 4A: PAYOUT THRESHOLD MISMAP DETECTION (SUBCATEGORY MODE)
+    // Detect "minimal bonus yang bisa dicairkan" wrongly mapped to minimum_base
+    // Should be: min_claim (payout threshold)
+    // ============================================
+    const payoutPatterns = [
+      /minimal\s+bonus\s+(yang\s+)?bisa\s+dicairkan/i,
+      /min(imal)?\s+claim/i,
+      /min(imal)?\s+klaim/i,
+      /bonus\s*<\s*Rp?\s*[\d.,]+\s+tidak\s+(dapat|bisa)\s+dicairkan/i,
+      /minimal\s+pencairan/i,
+      /minimal\s+bonus\s+cair/i,
+      /bonus\s+(minimal|minimum)\s+yang\s+(dapat|bisa)\s+di(cairkan|klaim)/i,
+    ];
+
+    const eligibilityPatterns = [
+      /minimal\s+(kekalahan|loss|turnover|deposit|to)\s+(untuk\s+)?(ikut|join|dapat|kualifikasi)/i,
+      /minimal\s+(win.?loss|wl)\s+(untuk\s+)?(ikut|join|dapat|kualifikasi)/i,
+      /syarat\s+minimal\s+(kekalahan|turnover|deposit)/i,
+      /min(imum)?\s+(kekalahan|loss|deposit)\s+Rp/i,
+    ];
+
+    const hasPayoutPattern = payoutPatterns.some(p => p.test(rawText));
+    const hasEligibilityPattern = eligibilityPatterns.some(p => p.test(rawText));
+
+    // FIX 4A: Subcategory mode mismap detection
+    parsed.subcategories = parsed.subcategories?.map((sub: any) => {
+      const isPotentialMismap = 
+        hasPayoutPattern && 
+        !hasEligibilityPattern && 
+        (sub.minimum_base !== null && sub.minimum_base > 0) &&
+        (sub.min_claim === null || sub.min_claim === undefined || sub.min_claim === 0);
+      
+      if (isPotentialMismap) {
+        console.warn(`⚠️ PAYOUT MISMAP (SUBCAT) "${sub.sub_name}": Moving minimum_base=${sub.minimum_base} to min_claim`);
+        return {
+          ...sub,
+          min_claim: sub.minimum_base,
+          minimum_base: null,
+          confidence: {
+            ...sub.confidence,
+            min_claim: sub.confidence?.minimum_base || 'explicit',
+            minimum_base: 'unknown'
+          }
+        };
+      }
+      return sub;
+    }) || [];
+
+    // ============================================
+    // FIX 4B: PAYOUT THRESHOLD MISMAP DETECTION (SINGLE PROMO MODE)
+    // For single-variant promos, check subcategories[0] (the only variant)
+    // This supplements FIX 4A which already handles all subcategories
+    // ============================================
+    if (!parsed.has_subcategories && parsed.subcategories?.length === 1) {
+      const singleSub = parsed.subcategories[0];
+      const isPotentialMismap = 
+        hasPayoutPattern && 
+        !hasEligibilityPattern && 
+        (singleSub.minimum_base !== null && singleSub.minimum_base > 0) &&
+        (singleSub.min_claim === null || singleSub.min_claim === undefined || singleSub.min_claim === 0);
+      
+      if (isPotentialMismap) {
+        console.warn(`⚠️ PAYOUT MISMAP (SINGLE MODE): Moving minimum_base=${singleSub.minimum_base} to min_claim`);
+        parsed.subcategories[0] = {
+          ...singleSub,
+          min_claim: singleSub.minimum_base,
+          minimum_base: 0,  // Use 0 instead of null for type safety
+          confidence: {
+            ...singleSub.confidence,
+            min_claim: singleSub.confidence?.minimum_base || 'explicit',
+            minimum_base: 'unknown'
+          }
+        };
+      }
+    }
+    
     // Ensure each subcategory has blacklist and confidence
     parsed.subcategories = parsed.subcategories.map(sub => ({
       ...sub,
