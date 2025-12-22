@@ -297,10 +297,20 @@ export const generateSubcategoryTerms = (sub: any, data: PromoFormData): string[
     terms.push(`Bonus ${sub.calculation_value}% dari ${baseLabel}.`);
   }
   
-  // Minimum requirement (e.g., "Minimal kekalahan Rp 500.000")
+  // 🔒 ONTOLOGY FIX: Eligibility threshold (minimum_base) vs Payout threshold (dinamis_min_claim)
+  // minimum_base = EXPLICIT threshold to QUALIFY for promo
+  // dinamis_min_claim = minimum BONUS amount to be CLAIMED
+  // These are COMPLETELY DIFFERENT concepts!
+  
+  // Eligibility threshold - ONLY show if EXPLICITLY declared
   if (sub.minimum_base && sub.minimum_base > 0) {
     const baseLabel = getBaseColumnLabel(sub.calculation_base);
     terms.push(`Minimal ${baseLabel} untuk mendapatkan bonus ini adalah Rp ${formatNumber(sub.minimum_base)}.`);
+  }
+  
+  // Payout threshold - SEPARATE from eligibility!
+  if (sub.dinamis_min_claim && sub.dinamis_min_claim > 0) {
+    terms.push(`Minimal bonus yang dapat dicairkan adalah Rp ${formatNumber(sub.dinamis_min_claim)}.`);
   }
   
   // 🔒 EPISTEMIC AUTHORITY: Max claim - ONLY show if EXPLICITLY set!
@@ -1258,12 +1268,15 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {[1000000, 2000000, 5000000, 10000000, 20000000].map((amount, i) => {
+                                {[1000000, 2000000, 5000000, 10000000, 20000000].map((amount, i) => {
                                     const rawBonus = amount * (sub.calculation_value / 100);
                                     // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
                                     const maxClaim = getExplicitMaxBonus(sub);
                                     const bonus = Math.min(rawBonus, maxClaim);
                                     const isCapped = bonus < rawBonus;
+                                    // 🔒 ONTOLOGY: Check if bonus is below payout threshold
+                                    const minClaim = sub.dinamis_min_claim || 0;
+                                    const isBelowMinClaim = minClaim > 0 && bonus < minClaim;
                                     return (
                                       <tr key={i} className="border-t border-border">
                                         <td className="py-1.5 px-3">
@@ -1275,13 +1288,24 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                           {formatNumber(amount)} × {sub.calculation_value}%
                                         </td>
                                         <td className="py-1.5 px-3 font-medium text-foreground">
-                                          Rp {formatNumber(bonus)}{isCapped && ' (max)'}
+                                          <span className={isBelowMinClaim ? "text-muted-foreground line-through" : ""}>
+                                            Rp {formatNumber(bonus)}{isCapped && ' (max)'}
+                                          </span>
+                                          {isBelowMinClaim && (
+                                            <span className="text-amber-500 text-xs ml-2">*</span>
+                                          )}
                                         </td>
                                       </tr>
                                     );
                                   })}
                                 </tbody>
                               </table>
+                              {/* 🔒 ONTOLOGY: Payout threshold disclaimer */}
+                              {(sub.dinamis_min_claim && sub.dinamis_min_claim > 0) && (
+                                <p className="text-xs text-amber-500 mt-2 flex items-center gap-1">
+                                  <span>*</span> Nominal dengan tanda coret belum memenuhi syarat pencairan (min. Rp {formatNumber(sub.dinamis_min_claim)}).
+                                </p>
+                              )}
                               {/* 🔒 EPISTEMIC: Show "no max" disclaimer if max_bonus is NOT explicit */}
                               {!hasExplicitMaxBonus(sub) && !sub.dinamis_max_claim_unlimited && (
                                 <p className="text-xs text-muted-foreground mt-2 italic">
@@ -1347,12 +1371,15 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           </tr>
                         </thead>
                         <tbody>
-                          {[1000000, 2000000, 5000000, 10000000, 20000000].map((amount, index) => {
+                        {[1000000, 2000000, 5000000, 10000000, 20000000].map((amount, index) => {
                             const rawBonus = amount * (data.calculation_value / 100);
                             // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
                             const maxClaim = getExplicitMaxBonus(data);
                             const bonus = Math.min(rawBonus, maxClaim);
                             const isCapped = bonus < rawBonus;
+                            // 🔒 ONTOLOGY: Check if bonus is below payout threshold
+                            const minClaim = data.dinamis_min_claim || 0;
+                            const isBelowMinClaim = minClaim > 0 && bonus < minClaim;
                             return (
                               <tr key={index} className="border-t border-border">
                                 <td className="py-1.5 px-3">
@@ -1364,7 +1391,12 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                   {formatNumber(amount)} × {data.calculation_value}%
                                 </td>
                                 <td className="py-1.5 px-3 font-medium text-foreground">
-                                  Rp {formatNumber(bonus)}{isCapped && ' (max)'}
+                                  <span className={isBelowMinClaim ? "text-muted-foreground line-through" : ""}>
+                                    Rp {formatNumber(bonus)}{isCapped && ' (max)'}
+                                  </span>
+                                  {isBelowMinClaim && (
+                                    <span className="text-amber-500 text-xs ml-2">*</span>
+                                  )}
                                 </td>
                               </tr>
                             );
@@ -1377,6 +1409,12 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       <AlertCircle className="h-4 w-4 shrink-0" />
                       Nilai ini hanya ilustrasi. Nominal akhir diverifikasi oleh Human Agent & sistem.
                     </p>
+                    {/* 🔒 ONTOLOGY: Payout threshold disclaimer */}
+                    {(data.dinamis_min_claim && data.dinamis_min_claim > 0) && (
+                      <p className="text-xs text-amber-500 flex items-center gap-1">
+                        <span>*</span> Nominal dengan tanda coret belum memenuhi syarat pencairan (min. Rp {formatNumber(data.dinamis_min_claim)}).
+                      </p>
+                    )}
                     {/* 🔒 EPISTEMIC: Show "no max" disclaimer if max_bonus is NOT explicit */}
                     {!hasExplicitMaxBonus(data) && !data.dinamis_max_claim_unlimited && (
                       <p className="text-xs text-muted-foreground italic">
