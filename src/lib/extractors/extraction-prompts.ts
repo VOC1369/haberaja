@@ -41,6 +41,38 @@ MAKA:
 - calculation_value = ambil dari kolom VALUE (kolom ke-3)
 - JANGAN PERNAH menggunakan row number "1", "2", "3" sebagai nama varian!
 
+🔹 GAME CATEGORY & PROVIDER NAMES (CRITICAL!):
+
+⚠️ ATURAN NAMA KATEGORI — JANGAN TRANSLATE:
+- "SABUNG AYAM" → game_types: ["sabung_ayam"] (BUKAN "cockfight"!)
+- "SPORTSBOOK" → game_types: ["sportsbook"] (BUKAN "sports betting"!)
+- "TEMBAK IKAN" → game_types: ["tembak_ikan"] (BUKAN "fish shooting"!)
+- "TOGEL" → game_types: ["togel"] (BUKAN "lottery"!)
+- "ARCADE" → game_types: ["arcade"]
+
+⚠️ EXTRACT PROVIDER NAMES dari kurung:
+Jika source menyebut kategori dengan provider dalam kurung, EXTRACT KEDUANYA:
+
+Contoh 1: "Total LOSE dari produk SABUNG AYAM (SV388 & WS168)"
+Output:
+- game_types: ["sabung_ayam"]
+- eligible_providers: ["SV388", "WS168"]
+
+Contoh 2: "permainan SLOT (Pragmatic Play, PG Soft, Habanero)"
+Output:
+- game_types: ["slots"]
+- eligible_providers: ["Pragmatic Play", "PG Soft", "Habanero"]
+
+Contoh 3: "SPORTSBOOK" (tanpa provider spesifik)
+Output:
+- game_types: ["sportsbook"]
+- eligible_providers: []
+
+RULES:
+- Provider names = proper nouns, keep ORIGINAL casing
+- Jika tidak ada provider spesifik → eligible_providers: []
+- Extract SEMUA provider dalam kurung atau list
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama promo",
@@ -57,7 +89,8 @@ MAKA:
   "turnover_rule": "format: NxBO atau NxDP" | null,
   "payout_direction": "balance" | "withdrawable" | null,
   
-  "game_types": ["slot", "casino", "sports", ...] | null,
+  "game_types": ["sabung_ayam", "slots", "casino", "sportsbook", ...] | null,
+  "eligible_providers": ["SV388", "WS168", "Pragmatic Play", ...] | [],
   "game_providers": ["pragmatic", "pgsoft", ...] | null,
   "blacklist": ["togel", ...] | null,
   
@@ -77,6 +110,7 @@ MAKA:
       "turnover_rule": number | null,
       "payout_direction": "depan" | "belakang",
       "game_types": string[],
+      "eligible_providers": string[],
       "game_providers": string[],
       "blacklist": { "enabled": boolean, "games": string[], "providers": string[], "rules": string[] }
     }
@@ -115,6 +149,19 @@ MAKA:
 - sub_name / rank = ambil dari kolom NAMA (kolom ke-2), BUKAN dari kolom NO
 - JANGAN PERNAH menggunakan row number sebagai nama!
 
+🔹 GAME CATEGORY & PROVIDER NAMES (CRITICAL!):
+
+⚠️ ATURAN NAMA KATEGORI — JANGAN TRANSLATE:
+- "SABUNG AYAM" → game_types: ["sabung_ayam"] (BUKAN "cockfight"!)
+- "SPORTSBOOK" → game_types: ["sportsbook"] (BUKAN "sports betting"!)
+- "TEMBAK IKAN" → game_types: ["tembak_ikan"] (BUKAN "fish shooting"!)
+- "TOGEL" → game_types: ["togel"] (BUKAN "lottery"!)
+- "ARCADE" → game_types: ["arcade"]
+
+⚠️ EXTRACT PROVIDER NAMES dari kurung:
+Contoh: "SABUNG AYAM (SV388 & WS168)" → game_types: ["sabung_ayam"], eligible_providers: ["SV388", "WS168"]
+Jika tidak ada provider spesifik → eligible_providers: []
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama event",
@@ -138,7 +185,8 @@ MAKA:
   "winner_count": number | null,
   "winner_selection": "highest_score" | "random_draw" | "first_come" | null,
   
-  "game_types": ["slot", "casino", ...] | null,
+  "game_types": ["sabung_ayam", "slots", "casino", ...] | null,
+  "eligible_providers": ["SV388", "WS168", ...] | [],
   "game_providers": string[] | null,
   "blacklist": ["togel", ...] | null,
   
@@ -239,6 +287,18 @@ Extract ke subcategories:
 ]
 ⚠️ sub_name = nama item (CREDIT GAME 5.000), BUKAN nomor baris "1"!
 
+🔹 GAME CATEGORY & PROVIDER NAMES (CRITICAL!):
+
+⚠️ ATURAN NAMA KATEGORI — JANGAN TRANSLATE:
+- "SABUNG AYAM" → game_types: ["sabung_ayam"] (BUKAN "cockfight"!)
+- "SPORTSBOOK" → game_types: ["sportsbook"] (BUKAN "sports betting"!)
+- "TEMBAK IKAN" → game_types: ["tembak_ikan"] (BUKAN "fish shooting"!)
+- "TOGEL" → game_types: ["togel"] (BUKAN "lottery"!)
+
+⚠️ EXTRACT PROVIDER NAMES dari kurung:
+Contoh: "SABUNG AYAM (SV388 & WS168)" → game_types: ["sabung_ayam"], eligible_providers: ["SV388", "WS168"]
+Jika tidak ada provider spesifik → eligible_providers: []
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama kebijakan/sistem",
@@ -269,7 +329,8 @@ Extract ke subcategories:
     ] | null
   } | null,
   
-  "game_types": ["slot", "casino", ...] | null,
+  "game_types": ["sabung_ayam", "slots", "casino", ...] | null,
+  "eligible_providers": ["SV388", "WS168", ...] | [],
   "game_providers": string[] | null,
   "blacklist": ["togel", ...] | null,
   
