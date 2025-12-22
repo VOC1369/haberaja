@@ -78,8 +78,55 @@ const capitalizeFirst = (s: string): string => s.charAt(0).toUpperCase() + s.sli
 export const generateGlobalTerms = (data: PromoFormData): string[] => {
   const terms: string[] = [];
   
-  // Claim frequency
-  if (data.claim_frequency === 'mingguan') {
+  // ============= CLAIM FREQUENCY INFERENCE FROM PERIOD =============
+  // FIX: Jika periode Senin-Minggu = MINGGUAN, bukan HARIAN
+  // Period overrides claim_frequency untuk mencegah mismatch
+  const inferFrequencyFromPeriod = (
+    periodStart: string | undefined,
+    periodEnd: string | undefined,
+    explicitFrequency: string | undefined
+  ): string | undefined => {
+    if (periodStart && periodEnd) {
+      const start = periodStart.toLowerCase();
+      const end = periodEnd.toLowerCase();
+      
+      // Senin s/d Minggu = MINGGUAN (full week)
+      if (start === 'senin' && end === 'minggu') {
+        return 'mingguan';
+      }
+      
+      // Senin s/d Jumat = MINGGUAN (weekday only)
+      if (start === 'senin' && end === 'jumat') {
+        return 'mingguan';
+      }
+      
+      // Sabtu s/d Minggu = MINGGUAN (weekend only)
+      if (start === 'sabtu' && end === 'minggu') {
+        return 'mingguan';
+      }
+      
+      // Same day start-end = HARIAN
+      if (start === end) {
+        return 'harian';
+      }
+      
+      // Multiple days = MINGGUAN by default
+      return 'mingguan';
+    }
+    
+    // No period info, use explicit frequency
+    return explicitFrequency;
+  };
+  
+  // Get the CORRECT frequency (period-based inference takes priority)
+  const effectiveFrequency = inferFrequencyFromPeriod(
+    data.calculation_period_start,
+    data.calculation_period_end,
+    data.claim_frequency
+  );
+  
+  // Claim frequency - use inferred value
+  if (effectiveFrequency === 'mingguan') {
     terms.push(`Bonus diberikan berdasarkan perhitungan mingguan.`);
     
     // Dynamic period - ONLY show if explicitly extracted (jangan hardcode!)
@@ -88,7 +135,7 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
       const endDay = capitalizeFirst(data.calculation_period_end);
       terms.push(`Periode hitungan berlaku hari ${startDay} s/d ${endDay}.`);
     }
-  } else if (data.claim_frequency === 'harian') {
+  } else if (effectiveFrequency === 'harian') {
     terms.push(`Bonus diberikan berdasarkan perhitungan harian.`);
     
     // Dynamic period for daily (if extracted)
@@ -97,8 +144,8 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
       const endDay = capitalizeFirst(data.calculation_period_end);
       terms.push(`Periode hitungan berlaku hari ${startDay} s/d ${endDay}.`);
     }
-  } else if (data.claim_frequency) {
-    terms.push(`Frekuensi klaim: ${data.claim_frequency}.`);
+  } else if (effectiveFrequency) {
+    terms.push(`Frekuensi klaim: ${effectiveFrequency}.`);
   }
   
   // Dynamic distribution day - ONLY show if extracted
