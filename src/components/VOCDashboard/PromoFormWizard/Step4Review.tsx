@@ -229,18 +229,36 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
   return terms;
 };
 
+// Synonym mapping untuk legacy data yang ter-extract dengan English terms
+const GAME_CATEGORY_SYNONYMS: Record<string, string> = {
+  'cockfight': 'Sabung Ayam',
+  'sabung ayam': 'Sabung Ayam',
+  'sports_betting': 'Sportsbook',
+  'sports betting': 'Sportsbook',
+  'fish_shooting': 'Tembak Ikan',
+  'fish shooting': 'Tembak Ikan',
+  'tembak_ikan': 'Tembak Ikan',
+  'lottery': 'Togel',
+  'arcade_games': 'Arcade',
+};
+
 // Helper: get game category label - PRESERVE Indonesian names, don't translate!
 // "SABUNG AYAM" → "Sabung Ayam" (NOT "COCKFIGHT"!)
 const getGameCategoryLabel = (gameTypes: string[]): string => {
   if (!gameTypes?.length) return 'Semua permainan';
   
   return gameTypes.map((t: string) => {
-    // Check mapping first (normalized value → label)
-    const mapped = GAME_RESTRICTIONS.find(g => g.value === t.toLowerCase());
+    const normalized = t.toLowerCase().trim();
+    
+    // 1. Check GAME_RESTRICTIONS mapping first (normalized value → label)
+    const mapped = GAME_RESTRICTIONS.find(g => g.value === normalized);
     if (mapped) return mapped.label;
     
-    // If no mapping, use ORIGINAL value in uppercase (preserve Indonesian terms)
-    // This ensures "SABUNG AYAM" stays as "SABUNG AYAM", not translated to "COCKFIGHT"
+    // 2. Check synonym mapping for legacy English terms
+    const synonym = GAME_CATEGORY_SYNONYMS[normalized];
+    if (synonym) return synonym;
+    
+    // 3. If no mapping, use ORIGINAL value in uppercase (preserve Indonesian terms)
     return t.toUpperCase();
   }).join(', ');
 };

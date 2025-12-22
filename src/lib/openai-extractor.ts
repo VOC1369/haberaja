@@ -911,6 +911,40 @@ URUTAN PRIORITAS:
 ❌ JANGAN mark "derived" jika nilai tertulis di tabel
 ✅ Tabel dengan nilai = EXPLICIT
 
+🔹 Game Category Naming (CRITICAL - JANGAN OUTPUT ENGLISH TERMS!)
+
+Output game category dalam format Indonesia/platform standard:
+- "sabung_ayam" (BUKAN "cockfight"!)
+- "tembak_ikan" (BUKAN "fish_shooting" atau "fish shooting"!)
+- "togel" (BUKAN "lottery"!)
+- "sportsbook", "slot", "casino", "arcade" (keep as-is)
+
+⚠️ JANGAN PERNAH output English terms untuk game Indonesia!
+Pattern:
+- Source menyebut "SABUNG AYAM" → game_types: ["sabung_ayam"]
+- Source menyebut "Tembak Ikan" → game_types: ["tembak_ikan"]
+- Source menyebut "Togel" → game_types: ["togel"]
+
+🔹 eligible_providers (CRITICAL - BATASAN ELIGIBILITY!)
+
+Extract provider/platform names dari source text.
+
+Pattern extraction:
+- Source: "produk SABUNG AYAM (SV388 & WS168)"
+  → game_types: ["sabung_ayam"]
+  → eligible_providers: ["SV388", "WS168"]
+
+- Source: "SLOT dari Pragmatic Play dan PG Soft"
+  → game_types: ["slot"]
+  → eligible_providers: ["Pragmatic Play", "PG Soft"]
+
+- Source: "semua permainan SPORTSBOOK" (no specific provider mentioned)
+  → game_types: ["sportsbook"]
+  → eligible_providers: []
+
+⚠️ Provider names adalah BATASAN ELIGIBILITY - jangan skip!
+⚠️ Preserve original casing untuk provider names (SV388, bukan sv388)
+
 🔹 Game Provider
 Jika S&K menyebut:
 - "Semua provider slot"
@@ -1202,6 +1236,7 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
       "turnover_rule": 8,
       "payout_direction": "depan",
       "game_types": ["slot"],
+      "eligible_providers": ["Pragmatic Play", "PG Soft"],
       "game_providers": ["ALL"],
       "game_names": [],
       "blacklist": {
