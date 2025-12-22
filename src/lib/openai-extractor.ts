@@ -342,7 +342,8 @@ export interface ExtractedPromoSubCategory {
   payout_direction: 'depan' | 'belakang';
   
   // Game Scope
-  game_types: string[];            // e.g., ["slot"] or ["ALL"]
+  game_types: string[];            // e.g., ["sabung_ayam"] or ["ALL"]
+  eligible_providers: string[];    // e.g., ["SV388", "WS168"] - providers yang eligible
   game_providers: string[];        // e.g., ["ALL"] or ["Pragmatic Play", "PG Soft"]
   game_names: string[];
   
@@ -428,6 +429,9 @@ export interface ExtractedPromo {
   // Level Up / Event Unlock Conditions (progress gates, NOT financial requirements)
   // These are NOT min_deposit! They are tier progression conditions
   unlock_conditions?: UnlockCondition[];
+  
+  // Eligible providers (extracted from "KATEGORI (PROVIDER1 & PROVIDER2)" pattern)
+  eligible_providers?: string[];  // e.g., ["SV388", "WS168"]
   
   // Global blacklist — HANYA jika eksplisit "berlaku untuk semua"
   global_blacklist: {
@@ -1869,6 +1873,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     
     // Game whitelist (handle "ALL")
     game_types: sub.game_types?.includes('ALL') ? ['Semua'] : (sub.game_types || []),
+    eligible_providers: sub.eligible_providers || [],  // ← NEW: provider names yang eligible
     game_providers: mapGameProviders(sub.game_providers),
     game_names: sub.game_names || [],
     
@@ -1984,6 +1989,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     platform_access: 'all',
     game_restriction: 'specific_game',
     game_types: subcategories[0]?.game_types || [],
+    eligible_providers: extracted.eligible_providers || subcategories[0]?.eligible_providers || [],  // ← NEW
     game_providers: subcategories[0]?.game_providers || [],
     game_names: subcategories[0]?.game_names || [],
     
