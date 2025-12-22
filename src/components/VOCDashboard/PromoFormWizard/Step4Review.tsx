@@ -1106,7 +1106,14 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </div>
                       <div>
                         <p className="text-muted-foreground text-xs">Provider</p>
-                        <p className="text-foreground">{sub.game_providers?.length > 0 ? sub.game_providers.map(p => GAME_PROVIDERS.find(g => g.value === p)?.label || p).join(', ') : '-'}</p>
+                        <p className="text-foreground">
+                          {/* Prioritize eligible_providers (extracted from "SABUNG AYAM (SV388 & WS168)") over game_providers */}
+                          {sub.eligible_providers?.length > 0 
+                            ? sub.eligible_providers.join(', ')
+                            : sub.game_providers?.length > 0 && !sub.game_providers.includes('ALL')
+                              ? sub.game_providers.map(p => GAME_PROVIDERS.find(g => g.value === p)?.label || p).join(', ') 
+                              : '-'}
+                        </p>
                       </div>
                       <div>
                         <p className="text-muted-foreground text-xs">Nama Game</p>
