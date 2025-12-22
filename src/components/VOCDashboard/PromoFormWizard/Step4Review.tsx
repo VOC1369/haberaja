@@ -302,15 +302,21 @@ export const generateSubcategoryTerms = (sub: any, data: PromoFormData): string[
   // dinamis_min_claim = minimum BONUS amount to be CLAIMED
   // These are COMPLETELY DIFFERENT concepts!
   
-  // Eligibility threshold - ONLY show if EXPLICITLY declared
-  if (sub.minimum_base && sub.minimum_base > 0) {
-    const baseLabel = getBaseColumnLabel(sub.calculation_base);
-    terms.push(`Minimal ${baseLabel} untuk mendapatkan bonus ini adalah Rp ${formatNumber(sub.minimum_base)}.`);
+  // 🔒 ANTI-DUPLICATE: Jika minimum_base === dinamis_min_claim, ini LEGACY DATA salah mapping
+  // Prioritas: dinamis_min_claim (payout) → IGNORE minimum_base yang sama
+  const minClaimValue = sub.dinamis_min_claim || 0;
+  const minBaseValue = sub.minimum_base || 0;
+  const isDuplicateValue = minBaseValue > 0 && minClaimValue > 0 && minBaseValue === minClaimValue;
+  
+  // Payout threshold - RENDER FIRST (prioritas)
+  if (minClaimValue > 0) {
+    terms.push(`Minimal bonus yang dapat dicairkan adalah Rp ${formatNumber(minClaimValue)}.`);
   }
   
-  // Payout threshold - SEPARATE from eligibility!
-  if (sub.dinamis_min_claim && sub.dinamis_min_claim > 0) {
-    terms.push(`Minimal bonus yang dapat dicairkan adalah Rp ${formatNumber(sub.dinamis_min_claim)}.`);
+  // Eligibility threshold - ONLY show if EXPLICITLY declared AND NOT duplicate of payout
+  if (minBaseValue > 0 && !isDuplicateValue) {
+    const baseLabel = getBaseColumnLabel(sub.calculation_base);
+    terms.push(`Minimal ${baseLabel} untuk mendapatkan bonus ini adalah Rp ${formatNumber(minBaseValue)}.`);
   }
   
   // 🔒 EPISTEMIC AUTHORITY: Max claim - ONLY show if EXPLICITLY set!
@@ -406,15 +412,21 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
     terms.push(`Bonus ini berlaku untuk semua jenis permainan.`);
   }
   
-  // Minimum requirement - use dynamic label based on calculation_base
-  if (data.minimum_base_enabled && data.minimum_base && data.minimum_base > 0) {
-    const baseLabel = getBaseColumnLabel(data.calculation_base);
-    terms.push(`Minimal ${baseLabel} untuk mendapatkan bonus ini adalah Rp ${formatNumber(data.minimum_base)}.`);
+  // 🔒 ONTOLOGY FIX: Eligibility threshold (minimum_base) vs Payout threshold (dinamis_min_claim)
+  // ANTI-DUPLICATE: Jika minimum_base === dinamis_min_claim, ini LEGACY DATA salah mapping
+  const singleMinClaim = data.dinamis_min_claim || 0;
+  const singleMinBase = data.minimum_base || 0;
+  const singleIsDuplicate = singleMinBase > 0 && singleMinClaim > 0 && singleMinBase === singleMinClaim;
+  
+  // Payout threshold - RENDER FIRST (prioritas)
+  if (singleMinClaim > 0) {
+    terms.push(`Minimal bonus yang bisa dicairkan adalah Rp ${formatNumber(singleMinClaim)}.`);
   }
   
-  // Minimum claim
-  if (data.dinamis_min_claim && data.dinamis_min_claim > 0) {
-    terms.push(`Minimal bonus yang bisa dicairkan adalah Rp ${formatNumber(data.dinamis_min_claim)}.`);
+  // Eligibility threshold - ONLY show if EXPLICITLY declared AND NOT duplicate of payout
+  if (data.minimum_base_enabled && singleMinBase > 0 && !singleIsDuplicate) {
+    const baseLabel = getBaseColumnLabel(data.calculation_base);
+    terms.push(`Minimal ${baseLabel} untuk mendapatkan bonus ini adalah Rp ${formatNumber(singleMinBase)}.`);
   }
   
   // Max claim - 🔒 EPISTEMIC AUTHORITY: Only show if explicitly set
