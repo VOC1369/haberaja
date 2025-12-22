@@ -336,8 +336,10 @@ export interface ExtractedPromoSubCategory {
   calculation_base: 'deposit' | 'turnover' | 'win_loss' | 'bet_amount';
   calculation_method: 'percentage' | 'fixed';
   calculation_value: number;       // e.g., 100 (untuk 100%)
-  minimum_base: number;            // e.g., 50000
+  minimum_base: number;            // e.g., 50000 - eligibility threshold
   max_bonus: number | null;        // null = unlimited (explicit_from_terms)
+  min_claim?: number | null;       // NEW: payout threshold (min bonus untuk dicairkan)
+  payout_threshold?: number | null; // Alias for min_claim
   turnover_rule: number;           // e.g., 20 (untuk 20x)
   payout_direction: 'depan' | 'belakang';
   
@@ -368,6 +370,7 @@ export interface ExtractedPromoSubCategory {
     calculation_value: ConfidenceLevel;
     minimum_base: ConfidenceLevel;
     max_bonus: ConfidenceLevel;
+    min_claim?: ConfidenceLevel;  // NEW: confidence for payout threshold
     turnover_rule: ConfidenceLevel;
     payout_direction: ConfidenceLevel;
     game_types: ConfidenceLevel;
@@ -850,6 +853,52 @@ Output WAJIB include field "max_bonus_explicit":
 - "max_bonus_explicit": false → JIKA tidak ada penyebutan maksimal bonus (unlimited)
 - INI PENTING untuk Summary Page agar tidak menampilkan "max bonus" palsu!
 
+🔴 THRESHOLD ONTOLOGY (CRITICAL - JANGAN BINGUNG!)
+
+Ada 3 jenis threshold yang BERBEDA TOTAL:
+
+1️⃣ eligibility_threshold (minimum_base):
+   - Syarat IKUT promo / QUALIFY
+   - Keywords: "minimal turnover", "minimal kekalahan", "minimal deposit untuk ikut"
+   - "Minimal win/loss Rp500.000 untuk ikut promo"
+   - "Hanya berlaku untuk player dengan kekalahan min Rp1.000.000"
+   
+2️⃣ calculation_base:
+   - DASAR perhitungan bonus
+   - "Bonus 0.5% dari win-loss" → calculation_base: "winloss"
+   - BUKAN threshold, ini BASE!
+   
+3️⃣ payout_threshold (min_claim):
+   - Syarat CAIRKAN bonus yang sudah dihitung
+   - Keywords: "minimal bonus yang bisa dicairkan", "min claim", "bonus tidak bisa diklaim jika kurang dari"
+   - "Minimal bonus yang bisa dicairkan Rp1.000"
+   - "Bonus < Rp1.000 tidak dapat diklaim"
+   
+⚠️⚠️⚠️ ATURAN ONTOLOGY KERAS:
+- JANGAN map "min bonus cair" ke minimum_base!
+- JANGAN map "syarat ikut promo" ke min_claim!
+- minimum_base = eligibility (syarat IKUT)
+- min_claim = payout threshold (syarat CAIR)
+
+❌ CONTOH MAPPING SALAH:
+Source: "Bonus 0.5% dari win-loss. Minimal bonus yang bisa dicairkan Rp1.000"
+Output: { "minimum_base": 1000 }
+→ INI SALAH! "Minimal bonus cair" bukan "syarat ikut promo"!
+
+✅ CONTOH MAPPING BENAR:
+Source: "Bonus 0.5% dari win-loss. Minimal bonus yang bisa dicairkan Rp1.000"
+Output: { 
+  "minimum_base": null,
+  "min_claim": 1000
+}
+
+✅ CONTOH MAPPING BENAR (keduanya ada):
+Source: "Minimal kekalahan Rp500.000 untuk ikut promo. Minimal bonus yang bisa dicairkan Rp1.000"
+Output: { 
+  "minimum_base": 500000,
+  "min_claim": 1000
+}
+
 🔹 calculation_base untuk CASHBACK (CRITICAL!)
 Untuk promo CASHBACK berbasis kekalahan (loss):
 - calculation_base: "winloss" atau "win_loss" (BUKAN "turnover"!)
@@ -1233,6 +1282,7 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
       "minimum_base": 50000,
       "max_bonus": 1000000,
       "max_bonus_explicit": true,
+      "min_claim": 1000,
       "turnover_rule": 8,
       "payout_direction": "depan",
       "game_types": ["slot"],
@@ -1249,6 +1299,7 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
         "calculation_value": "explicit",
         "minimum_base": "explicit",
         "max_bonus": "explicit",
+        "min_claim": "explicit",
         "turnover_rule": "explicit",
         "payout_direction": "explicit",
         "game_types": "derived",
@@ -1929,12 +1980,12 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     dinamis_max_claim: sub.max_bonus ?? 0,
     // null max_bonus = unlimited
     dinamis_max_claim_unlimited: sub.max_bonus === null,
-    // ⚠️ FIX: JANGAN copy minimum_base ke dinamis_min_claim!
+    // 🔒 ONTOLOGY FIX: Map min_claim (payout threshold) ke dinamis_min_claim
     // dinamis_min_claim = minimal bonus untuk DICAIRKAN (bukan syarat kualifikasi)
-    // minimum_base = syarat minimal untuk IKUT promo
+    // minimum_base = syarat minimal untuk IKUT promo (eligibility)
     // Ini adalah 2 field BERBEDA!
-    dinamis_min_claim: 0,  // Default 0, hanya set jika source eksplisit menyebut "minimal bonus yg bisa dicairkan"
-    dinamis_min_claim_enabled: false,
+    dinamis_min_claim: sub.min_claim || sub.payout_threshold || 0,
+    dinamis_min_claim_enabled: !!(sub.min_claim || sub.payout_threshold),
   }));
 
   // Check if any subcategory has unlimited max_bonus

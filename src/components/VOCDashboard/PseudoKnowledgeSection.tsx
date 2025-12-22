@@ -15,6 +15,7 @@ import {
   AlertTriangle, Copy, XCircle, AlertCircle, ChevronDown,
   X, RotateCcw, Terminal, HelpCircle, Paperclip, Lightbulb, Ban, Info
 } from "lucide-react";
+import { formatGameTypeLabel, formatProvidersDisplay } from "@/lib/promo-display";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
