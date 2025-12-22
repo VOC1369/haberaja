@@ -115,12 +115,7 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
     terms.push(`Waktu pembagian: ${data.distribution_time_from} - ${data.distribution_time_until} WIB.`);
   }
   
-  // Platform
-  if (data.require_apk) {
-    terms.push(`Wajib download APK terlebih dahulu untuk claim reward ini.`);
-  }
-  
-  // Platform
+  // Platform requirement - APK download
   if (data.require_apk) {
     terms.push(`Wajib download APK terlebih dahulu untuk claim reward ini.`);
   }
