@@ -125,10 +125,20 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
     terms.push(`Wajib download APK terlebih dahulu untuk claim reward ini.`);
   }
   
-  // Period
-  if (data.valid_from || data.valid_until) {
-    const from = data.valid_from ? `dari ${data.valid_from}` : '';
-    const until = data.valid_until ? `hingga ${data.valid_until}` : '';
+  // Period - ONLY show if dates are NOT system-generated (today's date)
+  const isSystemGeneratedDate = (dateStr: string | undefined): boolean => {
+    if (!dateStr) return false;
+    const today = new Date().toISOString().split('T')[0];
+    const inputDate = dateStr.split('T')[0];
+    return inputDate === today;
+  };
+  
+  const hasRealFrom = data.valid_from && !isSystemGeneratedDate(data.valid_from);
+  const hasRealUntil = data.valid_until && !isSystemGeneratedDate(data.valid_until);
+  
+  if (hasRealFrom || hasRealUntil) {
+    const from = hasRealFrom ? `dari ${data.valid_from}` : '';
+    const until = hasRealUntil ? `hingga ${data.valid_until}` : '';
     terms.push(`Periode promo berlaku ${from} ${until}.`.replace('  ', ' ').trim());
   }
   
@@ -138,10 +148,23 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
     terms.push(`Promo hanya berlaku untuk wilayah: ${geoLabel}.`);
   }
   
-  // Platform access
-  if (data.platform_access && data.platform_access !== 'semua') {
-    const platformLabel = PLATFORM_ACCESS.find(p => p.value === data.platform_access)?.label || data.platform_access;
-    terms.push(`Promo dapat diakses melalui: ${platformLabel}.`);
+  // Platform access - map to proper human-readable sentence
+  const getPlatformAccessTerm = (value: string | undefined): string | null => {
+    if (!value) return null;
+    const normalized = value.toLowerCase().trim();
+    // Skip universal access - don't add redundant line
+    if (normalized === 'all' || normalized === 'semua') return null;
+    const labelMap: Record<string, string> = {
+      'apk': 'Promo hanya tersedia melalui APK.',
+      'web': 'Promo hanya tersedia melalui website.',
+      'mobile': 'Promo hanya tersedia melalui mobile.',
+    };
+    return labelMap[normalized] || null;
+  };
+  
+  const platformTerm = getPlatformAccessTerm(data.platform_access);
+  if (platformTerm) {
+    terms.push(platformTerm);
   }
   
   // Contact channel
