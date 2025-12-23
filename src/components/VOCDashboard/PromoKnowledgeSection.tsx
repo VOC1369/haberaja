@@ -44,7 +44,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2 } from "lucide-react";
+import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2, Zap, Trophy, Cog } from "lucide-react";
 import { classifyContent, type ProgramCategory } from "@/lib/extractors/category-classifier";
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
@@ -374,9 +374,9 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     
     const getBadgeContent = () => {
       switch (classification) {
-        case 'A': return { icon: '⚡', text: 'Bonus Instan', className: 'bg-warning/20 text-warning border border-warning/30' };
-        case 'B': return { icon: '🏆', text: 'Event/Kompetisi', className: 'bg-blue-500/20 text-blue-400 border border-blue-500/30' };
-        case 'C': return { icon: '🧠', text: 'Program Sistem', className: 'bg-pink-500/20 text-pink-400 border border-pink-500/30' };
+        case 'A': return { icon: Zap, text: 'Bonus Instan', className: 'bg-warning/20 text-warning border border-warning/30' };
+        case 'B': return { icon: Trophy, text: 'Event/Kompetisi', className: 'bg-blue-500/20 text-blue-400 border border-blue-500/30' };
+        case 'C': return { icon: Cog, text: 'Program Sistem', className: 'bg-pink-500/20 text-pink-400 border border-pink-500/30' };
         default: return null;
       }
     };
@@ -428,7 +428,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           <Badge 
             className={`${badge.className} cursor-pointer hover:opacity-80 transition-opacity`}
           >
-            {badge.icon} {badge.text}
+            <badge.icon className="h-3 w-3 mr-1" /> {badge.text}
             {hasOverride && <Edit2 className="h-3 w-3 ml-1 opacity-60" />}
           </Badge>
         </DialogTrigger>
@@ -448,9 +448,9 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="A">⚡ A - Bonus Instan (Welcome, Cashback, dll)</SelectItem>
-                  <SelectItem value="B">🏆 B - Event/Kompetisi (Tournament, Race, dll)</SelectItem>
-                  <SelectItem value="C">🧠 C - Program Sistem (Loyalty, Rollingan, dll)</SelectItem>
+                  <SelectItem value="A">A - Bonus Instan (Welcome, Cashback, dll)</SelectItem>
+                  <SelectItem value="B">B - Event/Kompetisi (Tournament, Race, dll)</SelectItem>
+                  <SelectItem value="C">C - Program Sistem (Loyalty, Rollingan, dll)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
