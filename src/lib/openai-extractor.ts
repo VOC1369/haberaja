@@ -1746,6 +1746,32 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     }
     
     // ============================================
+    // FIX 3B: Force calculation_base = 'turnover' for ROLLINGAN promos
+    // ROLLINGAN is ALWAYS turnover-based (total betting volume, NOT win/loss)
+    // This overrides LLM confusion between "Win/Loss" and "Turnover"
+    // ============================================
+    const isRollinganPromo = /rollingan|roll(ing)?an/i.test(parsed.promo_name || '') || 
+                             /rollingan/i.test(parsed.promo_type || '');
+
+    if (isRollinganPromo) {
+      console.log('[Extractor] ROLLINGAN detected → forcing calculation_base = "turnover"');
+      parsed.subcategories = parsed.subcategories?.map((sub: any) => {
+        if (sub.calculation_base !== 'turnover') {
+          console.log(`[Extractor] Fixing ${sub.sub_name}: ${sub.calculation_base} → turnover`);
+          return {
+            ...sub,
+            calculation_base: 'turnover',
+            confidence: {
+              ...sub.confidence,
+              calculation_base: 'derived'  // Mark as auto-fixed
+            }
+          };
+        }
+        return sub;
+      }) || [];
+    }
+    
+    // ============================================
     // FIX 4A: PAYOUT THRESHOLD MISMAP DETECTION (SUBCATEGORY MODE)
     // Detect "minimal bonus yang bisa dicairkan" wrongly mapped to minimum_base
     // Should be: min_claim (payout threshold)
