@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -843,7 +844,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                 // Parse custom_terms: split by newline, remove empty lines, remove number prefix
                 // Normalize: split by semicolon or newline, trim, remove empty/header lines
                 const termsList = viewTermsItem.custom_terms
-                  .split(/\n+/)
+                  .split(/[\n;]+/)  // Split by newline OR semicolon for draft promos
                   .map(line => line.trim())
                   .filter(line => line !== '')
                   .map(line => line.replace(/^\d+\.\s*/, '').replace(/^Syarat & Ketentuan:\s*/i, '').trim())
@@ -883,16 +884,18 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                       </div>
                     )}
                     
-                    {/* S&K dengan proper ordered list */}
+                    {/* S&K dengan proper ordered list - scrollable for long lists */}
                     <div className="space-y-2">
                       <p className="font-semibold text-foreground text-sm">Syarat & Ketentuan:</p>
-                      <ol className="list-decimal list-outside pl-6 space-y-1 text-sm text-muted-foreground">
-                        {termsList.map((term, i) => (
-                          <li key={i} className="pl-2 leading-relaxed">
-                            {term}
-                          </li>
-                        ))}
-                      </ol>
+                      <ScrollArea className="max-h-[350px] pr-4">
+                        <ol className="list-decimal list-outside pl-6 space-y-1 text-sm text-muted-foreground">
+                          {termsList.map((term, i) => (
+                            <li key={i} className="pl-2 leading-relaxed">
+                              {term}
+                            </li>
+                          ))}
+                        </ol>
+                      </ScrollArea>
                     </div>
                   </div>
                 );
