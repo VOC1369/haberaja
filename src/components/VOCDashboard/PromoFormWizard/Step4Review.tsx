@@ -74,6 +74,70 @@ export const getExplicitMaxBonus = (sub: any): number => {
 // Helper: capitalize first letter
 const capitalizeFirst = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
+/**
+ * Get calculation period display string (multi-source)
+ * Priority: 
+ *   1. claim_frequency (Indonesian) 
+ *   2. formula_metadata.period (English)
+ *   3. Infer from promo_name (contains "MINGGUAN", "HARIAN", etc.)
+ *   4. Fallback: 'berkala'
+ */
+const getPeriodDisplayFromData = (data: PromoFormData): string => {
+  // 1. Check claim_frequency first (Indonesian)
+  const freq = data.claim_frequency?.toLowerCase();
+  if (freq === 'harian' || freq === 'daily') return 'harian';
+  if (freq === 'mingguan' || freq === 'weekly') return 'mingguan';
+  if (freq === 'bulanan' || freq === 'monthly') return 'bulanan';
+  
+  // 2. Fallback to formula_metadata.period (English)
+  const period = data.formula_metadata?.period?.toLowerCase();
+  if (period === 'daily') return 'harian';
+  if (period === 'weekly') return 'mingguan';
+  if (period === 'monthly') return 'bulanan';
+  
+  // 3. Infer from promo_name
+  const promoName = (data.promo_name || '').toLowerCase();
+  if (promoName.includes('mingguan') || promoName.includes('weekly')) return 'mingguan';
+  if (promoName.includes('harian') || promoName.includes('daily')) return 'harian';
+  if (promoName.includes('bulanan') || promoName.includes('monthly')) return 'bulanan';
+  
+  // 4. Final fallback
+  return 'berkala';
+};
+
+/**
+ * Get game type display string for S&K
+ * Priority: game_types array → infer from promo_name/promo_type → fallback
+ * 
+ * IMPORTANT: Fallback must NOT contain "permainan" because template already has it!
+ */
+const getGameTypeDisplayForTerms = (data: PromoFormData): string => {
+  // 1. If game_types has values, use getGameCategoryLabel
+  const types = data.game_types?.length > 0 
+    ? data.game_types 
+    : (data.subcategories?.[0]?.game_types || []);
+  
+  if (types.length > 0) {
+    return getGameCategoryLabel(types);
+  }
+  
+  // 2. Infer from promo_name or promo_type
+  const searchText = `${data.promo_name || ''} ${data.promo_type || ''}`.toLowerCase();
+  
+  if (searchText.includes('sportsbook') || searchText.includes('sport')) return 'Sportsbook';
+  if (searchText.includes('slot')) return 'Slot';
+  if (searchText.includes('casino') || searchText.includes('live casino')) return 'Casino';
+  if (searchText.includes('togel') || searchText.includes('lottery')) return 'Togel';
+  if (searchText.includes('poker')) return 'Poker';
+  if (searchText.includes('arcade')) return 'Arcade';
+  if (searchText.includes('sabung ayam') || searchText.includes('cockfight')) return 'Sabung Ayam';
+  if (searchText.includes('tembak ikan') || searchText.includes('fishing')) return 'Tembak Ikan';
+  
+  // 3. Fallback - just "tertentu" (NOT "permainan tertentu"!)
+  // Because the template already says "di permainan {gameLabel}"
+  return 'tertentu';
+};
+
 // Helper: generate GLOBAL terms (applies to all subcategories)
 export const generateGlobalTerms = (data: PromoFormData): string[] => {
   const terms: string[] = [];
@@ -84,8 +148,8 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
   const inferFrequencyFromPeriod = (
     periodStart: string | undefined,
     periodEnd: string | undefined,
-    explicitFrequency: string | undefined
-  ): string | undefined => {
+    fullData: PromoFormData
+  ): string => {
     if (periodStart && periodEnd) {
       const start = periodStart.toLowerCase();
       const end = periodEnd.toLowerCase();
@@ -114,15 +178,15 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
       return 'mingguan';
     }
     
-    // No period info, use explicit frequency
-    return explicitFrequency;
+    // No period info → use multi-source helper
+    return getPeriodDisplayFromData(fullData);
   };
   
   // Get the CORRECT frequency (period-based inference takes priority)
   const effectiveFrequency = inferFrequencyFromPeriod(
     data.calculation_period_start,
     data.calculation_period_end,
-    data.claim_frequency
+    data
   );
   
   // Claim frequency - use inferred value
@@ -385,18 +449,10 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
   if (data.game_restriction && data.game_restriction !== 'semua') {
     let gameLabel = GAME_RESTRICTIONS.find(g => g.value === data.game_restriction)?.label;
     
-    // If game_restriction is "specific_game" or label not found, fallback to game_types
+    // If game_restriction is "specific_game" or label not found, use inference helper
     if (!gameLabel || data.game_restriction === 'specific_game') {
-      const types = data.game_types?.length > 0 
-        ? data.game_types 
-        : (data.subcategories?.[0]?.game_types || []);
-      
-      if (types.length > 0) {
-        // Use getGameCategoryLabel to preserve Indonesian names
-        gameLabel = getGameCategoryLabel(types);
-      } else {
-        gameLabel = 'permainan tertentu';
-      }
+      // FIX: Use getGameTypeDisplayForTerms() for inference + correct fallback
+      gameLabel = getGameTypeDisplayForTerms(data);
     }
     
     // Add eligible providers if extracted (e.g., "SABUNG AYAM (SV388 & WS168)")
