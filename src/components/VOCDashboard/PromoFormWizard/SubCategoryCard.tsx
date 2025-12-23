@@ -230,8 +230,20 @@ export function SubCategoryCard({
               </div>
             </div>
             <SelectWithAddNew value={subCategory.jenis_hadiah_same_as_global ? '' : subCategory.jenis_hadiah} onValueChange={value => onChange({
-            jenis_hadiah: value
+            jenis_hadiah: value,
+            physical_reward_name: value !== 'hadiah_fisik' ? '' : subCategory.physical_reward_name
           })} options={dinamisRewardTypeOptions} onAddOption={option => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])} onDeleteOption={value => setDinamisRewardTypeOptions(dinamisRewardTypeOptions.filter(d => d.value !== value))} placeholder={subCategory.jenis_hadiah_same_as_global ? "Mengikuti global" : "Pilih jenis"} disabled={subCategory.jenis_hadiah_same_as_global} className={subCategory.jenis_hadiah_same_as_global ? "opacity-50" : ""} />
+            {/* Jika Hadiah Fisik dipilih, tampilkan input nama hadiah */}
+            {subCategory.jenis_hadiah === 'hadiah_fisik' && !subCategory.jenis_hadiah_same_as_global && (
+              <div className="space-y-2 mt-3">
+                <Label className="text-sm">Nama Hadiah Fisik</Label>
+                <Input
+                  value={subCategory.physical_reward_name || ''}
+                  onChange={(e) => onChange({ physical_reward_name: e.target.value })}
+                  placeholder="Contoh: iPhone 16 Pro Max 256GB"
+                />
+              </div>
+            )}
           </div>
           
           {/* Max Bonus */}

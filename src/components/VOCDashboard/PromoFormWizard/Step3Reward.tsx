@@ -72,6 +72,7 @@ const DEFAULT_HADIAH_TYPES: SelectOption[] = [
   { value: 'freechip', label: 'Freechip' },
   { value: 'lp', label: 'Loyalty Points (LP)' },
   { value: 'exp', label: 'Experience Points (EXP)' },
+  { value: 'hadiah_fisik', label: 'Hadiah Fisik' },
 ];
 
 const DEFAULT_LP_VALUE_TYPES: SelectOption[] = [
@@ -2109,7 +2110,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     </div>
                     <SelectWithAddNew
                       value={data.global_jenis_hadiah || ''}
-                      onValueChange={(value) => onChange({ global_jenis_hadiah: value })}
+                      onValueChange={(value) => onChange({ global_jenis_hadiah: value, physical_reward_name: value !== 'hadiah_fisik' ? '' : data.physical_reward_name })}
                       options={dinamisRewardTypeOptions}
                       onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
                       onDeleteOption={handleDeleteDinamisRewardType}
@@ -2117,6 +2118,20 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       disabled={!data.global_jenis_hadiah_enabled}
                       className={!data.global_jenis_hadiah_enabled ? "opacity-50" : ""}
                     />
+                    {/* Jika Hadiah Fisik dipilih, tampilkan input nama hadiah */}
+                    {data.global_jenis_hadiah === 'hadiah_fisik' && data.global_jenis_hadiah_enabled && (
+                      <div className="space-y-2 mt-3">
+                        <Label className="text-sm">Nama Hadiah Fisik</Label>
+                        <Input
+                          value={data.physical_reward_name || ''}
+                          onChange={(e) => onChange({ physical_reward_name: e.target.value })}
+                          placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Masukkan nama hadiah fisik yang akan diberikan kepada player
+                        </p>
+                      </div>
+                    )}
                     <p className="text-xs text-muted-foreground">
                       {data.global_jenis_hadiah_enabled 
                         ? "Semua sub kategori mengikuti."

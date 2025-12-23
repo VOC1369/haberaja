@@ -249,6 +249,9 @@ export interface PromoFormData {
   admin_fee_enabled: boolean;
   admin_fee_percentage: number | null;
 
+  // Physical Reward (untuk Hadiah Fisik)
+  physical_reward_name?: string;  // Nama hadiah fisik manual (contoh: "MITSUBISHI PAJERO SPORT DAKAR 2025")
+
   // Contact Channel
   contact_channel_enabled: boolean;
   contact_channel: string;
@@ -367,6 +370,9 @@ export interface PromoSubCategory {
   dinamis_max_claim_unlimited: boolean;
   dinamis_min_claim: number;
   dinamis_min_claim_enabled: boolean;
+  
+  // Physical Reward (untuk Hadiah Fisik)
+  physical_reward_name?: string;  // Nama hadiah fisik manual
 }
 
 // Promo Item with metadata for storage
@@ -617,6 +623,7 @@ export const REWARD_TYPES = [
   { value: 'percentage', label: 'Percentage' },
   { value: 'cashback', label: 'Cashback' },
   { value: 'custom', label: 'Custom' },
+  { value: 'hadiah_fisik', label: 'Hadiah Fisik' },
 ];
 export const TURNOVER_RULES = [
   { value: '0x', label: '0x — Tanpa Syarat Main' },
@@ -762,6 +769,7 @@ export const DINAMIS_REWARD_TYPES = [
   { value: 'cashback', label: 'Cashback' },
   { value: 'credit_game', label: 'Credit Game' },
   { value: 'lp', label: 'Loyalty Points' },
+  { value: 'hadiah_fisik', label: 'Hadiah Fisik' },
 ];
 
 
@@ -866,6 +874,9 @@ export const initialPromoData: PromoFormData = {
   // Admin Fee (untuk Referral Bonus)
   admin_fee_enabled: false,
   admin_fee_percentage: null,
+  
+  // Physical Reward
+  physical_reward_name: '',
   
   contact_channel_enabled: false,
   contact_channel: '',
