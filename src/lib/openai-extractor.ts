@@ -372,7 +372,7 @@ export interface ExtractedPromoSubCategory {
   
   // Core Calculation (WAJIB)
   calculation_base: 'deposit' | 'turnover' | 'win_loss' | 'bet_amount';
-  calculation_method: 'percentage' | 'fixed';
+  calculation_method: 'percentage' | 'fixed' | 'threshold';
   calculation_value: number;       // e.g., 100 (untuk 100%)
   minimum_base: number;            // e.g., 50000 - eligibility threshold
   max_bonus: number | null;        // null = unlimited (explicit_from_terms)
@@ -1292,6 +1292,78 @@ Output:
   "deposit_rate": 90
 }
 
+🎁 JENIS HADIAH DETECTION (CRITICAL untuk Event/Leaderboard!)
+
+ATURAN UTAMA:
+Untuk promo EVENT/TURNOVER/LEADERBOARD dengan tabel hadiah per tier,
+kamu WAJIB mendeteksi jenis hadiah dari deskripsi kolom HADIAH.
+
+PATTERN DETECTION:
+
+1️⃣ HADIAH FISIK (reward_type: "hadiah_fisik"):
+   Keyword: nama produk, merek kendaraan, elektronik, perhiasan
+   Contoh:
+   - "MITSUBISHI PAJERO SPORT DAKAR 2025" → hadiah_fisik
+   - "EMAS ANTAM 150 Gram" → hadiah_fisik  
+   - "IPHONE 17 PRO MAX" → hadiah_fisik
+   - "Honda Vario 150 2025" → hadiah_fisik
+   - "TOYOTA VELOZ", "YAMAHA XMAX", "PCX 160" → hadiah_fisik
+   
+   OUTPUT:
+   "reward_type": "hadiah_fisik",
+   "physical_reward_name": "[NAMA PRODUK PERSIS DARI SOURCE]"
+
+2️⃣ UANG TUNAI (reward_type: "uang_tunai"):
+   Keyword: "Uang Tunai", "Hadiah Uang Tunai sebesar Rp", "Cash", "Hadiah Uang"
+   Contoh:
+   - "Hadiah Uang Tunai sebesar Rp. 15.000.000,-" → uang_tunai
+   - "Uang Tunai Rp 7.000.000" → uang_tunai
+   - "Cash Prize 10 Juta" → uang_tunai
+   
+   OUTPUT:
+   "reward_type": "uang_tunai",
+   "cash_reward_amount": 15000000  // Angka tanpa titik
+
+3️⃣ CREDIT GAME (default):
+   Jika tidak cocok pattern 1 atau 2
+   Contoh: "Bonus 2.500.000", "Freechip 500K", "Kredit 1jt"
+   
+   OUTPUT:
+   "reward_type": "credit_game"
+
+⚠️ PENTING untuk EVENT TURNOVER:
+- calculation_method = "threshold" (BUKAN "percentage"!)
+- calculation_value = angka threshold (750000000000 untuk "750 Miliar")
+- max_bonus = nominal hadiah
+- reward_type dan physical_reward_name TETAP WAJIB di-extract terpisah!
+
+CONTOH Event Turnover:
+| Target Turnover | Hadiah |
+| 750 Miliar | MITSUBISHI PAJERO SPORT |
+| 5 Miliar | Uang Tunai Rp 15.000.000 |
+
+Parsing:
+[
+  {
+    "sub_name": "Pencapaian TurnOver 750 Miliar",
+    "calculation_base": "turnover",
+    "calculation_method": "threshold",
+    "calculation_value": 750000000000,
+    "max_bonus": null,
+    "reward_type": "hadiah_fisik",
+    "physical_reward_name": "MITSUBISHI PAJERO SPORT"
+  },
+  {
+    "sub_name": "Pencapaian TurnOver 5 Miliar", 
+    "calculation_base": "turnover",
+    "calculation_method": "threshold",
+    "calculation_value": 5000000000,
+    "max_bonus": 15000000,
+    "reward_type": "uang_tunai",
+    "cash_reward_amount": 15000000
+  }
+]
+
 🧾 OUTPUT FORMAT (STRICT JSON)
 Output HARUS:
 - Valid JSON
@@ -1323,7 +1395,7 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
     {
       "sub_name": "SLOT 100%",
       "calculation_base": "deposit",
-      "calculation_method": "percentage",
+      "calculation_method": "percentage|fixed|threshold",
       "calculation_value": 100,
       "minimum_base": 50000,
       "max_bonus": 1000000,
@@ -1341,6 +1413,9 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
         "games": ["Super Mega Win", "Old Slot 3 Line"],
         "rules": ["Game dengan RTP > 97% tidak berlaku"]
       },
+      "reward_type": "hadiah_fisik|uang_tunai|credit_game",
+      "physical_reward_name": "MITSUBISHI PAJERO SPORT 2025|null",
+      "cash_reward_amount": 15000000,
       "confidence": {
         "calculation_value": "explicit",
         "minimum_base": "explicit",
@@ -1349,7 +1424,8 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
         "turnover_rule": "explicit",
         "payout_direction": "explicit",
         "game_types": "derived",
-        "game_providers": "explicit_from_terms"
+        "game_providers": "explicit_from_terms",
+        "reward_type": "explicit|derived"
       }
     }
   ],
