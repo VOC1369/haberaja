@@ -1345,11 +1345,9 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                 </thead>
                                 <tbody>
                                 {(() => {
-                                    // 🔧 FIX: Use minimum_base as start value (default 1M), limit to 3 rows
-                                    const startValue = sub.minimum_base && sub.minimum_base > 0 ? sub.minimum_base : 1000000;
-                                    const multipliers = [1, 2, 5]; // 3 rows: startValue × 1, 2, 5
-                                    return multipliers.map((mult, i) => {
-                                      const amount = startValue * mult;
+                                    // 🔧 FIX: Fixed illustration values (minimum_base = min REWARD threshold, bukan base amount!)
+                                    const illustrationAmounts = [1_000_000, 2_000_000, 5_000_000];
+                                    return illustrationAmounts.map((amount, i) => {
                                       const rawBonus = amount * (sub.calculation_value / 100);
                                       // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
                                       const maxClaim = getExplicitMaxBonus(sub);
@@ -1454,11 +1452,9 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         </thead>
                         <tbody>
                         {(() => {
-                            // 🔧 FIX: Use minimum_base as start value (default 1M), limit to 3 rows
-                            const startValue = data.minimum_base && data.minimum_base > 0 ? data.minimum_base : 1000000;
-                            const multipliers = [1, 2, 5]; // 3 rows: startValue × 1, 2, 5
-                            return multipliers.map((mult, index) => {
-                              const amount = startValue * mult;
+                            // 🔧 FIX: Fixed illustration values (minimum_base = min REWARD threshold, bukan base amount!)
+                            const illustrationAmounts = [1_000_000, 2_000_000, 5_000_000];
+                            return illustrationAmounts.map((amount, index) => {
                               const rawBonus = amount * (data.calculation_value / 100);
                               // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
                               const maxClaim = getExplicitMaxBonus(data);
