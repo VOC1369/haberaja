@@ -191,12 +191,35 @@ export function applyKeywordOverrides(
     return { category: 'A', wasOverridden: false };
   }
   
+  // NEW MEMBER / WELCOME → A (one-time welcome bonus)
+  if (/new\s*member|member\s*baru|welcome|selamat\s*datang/i.test(nameLower)) {
+    if (llmCategory !== 'A') {
+      console.log('[Classifier] Keyword override: NEW MEMBER in promo_name, forcing A (was', llmCategory, ')');
+      return { category: 'A', wasOverridden: true, overrideReason: 'NEW MEMBER → Bonus Instan' };
+    }
+    return { category: 'A', wasOverridden: false };
+  }
+  
+  // BIRTHDAY / ULANG TAHUN → A (one-time birthday reward)
+  if (/birthday|ulang\s*tahun|ultah/i.test(nameLower)) {
+    if (llmCategory !== 'A') {
+      console.log('[Classifier] Keyword override: BIRTHDAY in promo_name, forcing A (was', llmCategory, ')');
+      return { category: 'A', wasOverridden: true, overrideReason: 'BIRTHDAY → Bonus Instan' };
+    }
+    return { category: 'A', wasOverridden: false };
+  }
+  
   // If promo_name contains ROLLINGAN → C (ongoing turnover system)
   if (/rollingan|roll(ing)?an/i.test(nameLower)) {
     if (llmCategory !== 'C') {
       console.log('[Classifier] Keyword override: ROLLINGAN in promo_name, forcing C (was', llmCategory, ')');
       return { category: 'C', wasOverridden: true, overrideReason: 'ROLLINGAN in promo_name → Policy Program' };
     }
+    return { category: 'C', wasOverridden: false };
+  }
+  
+  // DEPOSIT PULSA / INFO → C (informational policy)
+  if (/tersedia\s*deposit|deposit\s*pulsa|info\s*deposit/i.test(nameLower)) {
     return { category: 'C', wasOverridden: false };
   }
   

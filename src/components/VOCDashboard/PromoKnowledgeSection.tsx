@@ -328,23 +328,28 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   // CATEGORY BADGE WITH OVERRIDE
   // ============================================
   
-  const CategoryBadgeWithOverride = ({ promo }: { promo: PromoItem }) => {
+  const CategoryBadgeWithOverride = ({ promo, parentPromo }: { promo: PromoItem; parentPromo?: PromoItem }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<ProgramCategory>(promo.program_classification || 'A');
     const [overrideReason, setOverrideReason] = useState('');
     
     const isClassifying = classifyingIds.has(promo.id);
-    const classification = promo.program_classification;
     
-    // Trigger auto-classification if not classified
+    // For sub-promos, inherit classification from parent
+    const isSubPromo = !!(promo as any).parent_id;
+    const classification = isSubPromo && parentPromo?.program_classification 
+      ? parentPromo.program_classification 
+      : promo.program_classification;
+    
+    // Only trigger auto-classification for main promos (not sub-promos)
     useEffect(() => {
-      if (!classification && !isClassifying) {
+      if (!isSubPromo && !classification && !isClassifying) {
         autoClassifyPromo(promo);
       }
-    }, [classification, isClassifying, promo]);
+    }, [classification, isClassifying, promo, isSubPromo]);
     
-    // Loading state
-    if (isClassifying) {
+    // Loading state (only for main promos)
+    if (!isSubPromo && isClassifying) {
       return (
         <Badge variant="outline" className="border-border text-muted-foreground animate-pulse">
           <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -355,6 +360,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     
     // Not classified yet (fallback during loading)
     if (!classification) {
+      if (isSubPromo) {
+        // Sub-promo without parent classification - show dash
+        return <span className="text-muted-foreground">-</span>;
+      }
       return (
         <Badge variant="outline" className="border-border text-muted-foreground animate-pulse">
           <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -481,8 +490,8 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     );
   };
 
-  const getCategoryBadge = (promo: PromoItem) => {
-    return <CategoryBadgeWithOverride promo={promo} />;
+  const getCategoryBadge = (promo: PromoItem, parentPromo?: PromoItem) => {
+    return <CategoryBadgeWithOverride promo={promo} parentPromo={parentPromo} />;
   };
 
   // Upload View
@@ -752,7 +761,18 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                         </div>
                         </TableCell>
                         <TableCell className="py-3 text-center">
-                          {/* Empty - Category column for alignment */}
+                          {/* Sub-promo inherits parent classification with reduced opacity */}
+                          {item.program_classification && (
+                            <Badge 
+                              className={`opacity-60 text-xs ${
+                                item.program_classification === 'A' ? 'bg-warning/20 text-warning border border-warning/30' :
+                                item.program_classification === 'B' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                                'bg-pink-500/20 text-pink-400 border border-pink-500/30'
+                              }`}
+                            >
+                              {item.program_classification === 'A' ? '⚡' : item.program_classification === 'B' ? '🏆' : '🧠'}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="py-3 text-xs text-muted-foreground">
                           -
