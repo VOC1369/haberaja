@@ -536,7 +536,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                         <TableCell className="py-3 text-xs text-muted-foreground">
                           -
                         </TableCell>
-                        <TableCell className="py-3 text-xs text-muted-foreground">
+                        <TableCell className="py-3 text-xs text-muted-foreground capitalize">
                           {sub.calculation_method || "-"}
                         </TableCell>
                         <TableCell className="py-3">
