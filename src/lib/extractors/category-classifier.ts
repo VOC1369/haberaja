@@ -163,7 +163,11 @@ export function getCategoryName(category: ProgramCategory): string {
  * ROLLINGAN = Policy Program (C) - turnover-based, recurring system
  * CASHBACK = Reward Program (A) - loss-based, instant claim
  * 
- * This overrides LLM inconsistency for known promo types
+ * PRIORITY ORDER:
+ * 1. promo_name (most reliable - user-facing title)
+ * 2. promo_type (only if promo_name has no clear keywords)
+ * 
+ * CASHBACK checked before ROLLINGAN to handle "Rollingan Cashback" promo_type correctly
  */
 export function applyKeywordOverrides(
   llmCategory: ProgramCategory,
@@ -172,24 +176,61 @@ export function applyKeywordOverrides(
 ): { category: ProgramCategory; wasOverridden: boolean; overrideReason?: string } {
   const nameLower = promoName.toLowerCase();
   const typeLower = (promoType || '').toLowerCase();
-  const combined = `${nameLower} ${typeLower}`;
   
-  // 🔒 ROLLINGAN = ALWAYS Policy Program (C) - ongoing turnover system
-  if (/rollingan|roll(ing)?an/i.test(combined)) {
+  // ============================================
+  // STEP 1: Check PROMO_NAME first (highest priority)
+  // The promo name is the most reliable indicator
+  // ============================================
+  
+  // If promo_name contains CASHBACK → A (instant loss-based reward)
+  if (/cashback|cash\s*back|rebate/i.test(nameLower)) {
+    if (llmCategory !== 'A') {
+      console.log('[Classifier] Keyword override: CASHBACK in promo_name, forcing A (was', llmCategory, ')');
+      return { category: 'A', wasOverridden: true, overrideReason: 'CASHBACK in promo_name → Reward Program' };
+    }
+    return { category: 'A', wasOverridden: false };
+  }
+  
+  // If promo_name contains ROLLINGAN → C (ongoing turnover system)
+  if (/rollingan|roll(ing)?an/i.test(nameLower)) {
     if (llmCategory !== 'C') {
-      console.log('[Classifier] Keyword override: ROLLINGAN detected, forcing C (was', llmCategory, ')');
-      return { category: 'C', wasOverridden: true, overrideReason: 'ROLLINGAN keyword detected → Policy Program' };
+      console.log('[Classifier] Keyword override: ROLLINGAN in promo_name, forcing C (was', llmCategory, ')');
+      return { category: 'C', wasOverridden: true, overrideReason: 'ROLLINGAN in promo_name → Policy Program' };
     }
     return { category: 'C', wasOverridden: false };
   }
   
-  // 🔒 CASHBACK/REBATE = ALWAYS Reward Program (A) - instant loss-based reward
-  if (/cashback|cash\s*back|rebate/i.test(combined)) {
+  // ============================================
+  // STEP 2: Fallback to promo_type (if name didn't match)
+  // Only check promo_type if promo_name didn't have clear keywords
+  // Skip if promo_type contains BOTH keywords (e.g., "Rollingan Cashback")
+  // ============================================
+  
+  const hasCashbackInType = /cashback|cash\s*back|rebate/i.test(typeLower);
+  const hasRollinganInType = /rollingan|roll(ing)?an/i.test(typeLower);
+  
+  // If promo_type has BOTH keywords, don't override (rely on LLM)
+  if (hasCashbackInType && hasRollinganInType) {
+    console.log('[Classifier] promo_type has both CASHBACK and ROLLINGAN, no override');
+    return { category: llmCategory, wasOverridden: false };
+  }
+  
+  // promo_type pure CASHBACK
+  if (hasCashbackInType) {
     if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: CASHBACK detected, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'CASHBACK keyword detected → Reward Program' };
+      console.log('[Classifier] Keyword override: CASHBACK in promo_type, forcing A (was', llmCategory, ')');
+      return { category: 'A', wasOverridden: true, overrideReason: 'CASHBACK in promo_type → Reward Program' };
     }
     return { category: 'A', wasOverridden: false };
+  }
+  
+  // promo_type pure ROLLINGAN
+  if (hasRollinganInType) {
+    if (llmCategory !== 'C') {
+      console.log('[Classifier] Keyword override: ROLLINGAN in promo_type, forcing C (was', llmCategory, ')');
+      return { category: 'C', wasOverridden: true, overrideReason: 'ROLLINGAN in promo_type → Policy Program' };
+    }
+    return { category: 'C', wasOverridden: false };
   }
   
   // No override needed
