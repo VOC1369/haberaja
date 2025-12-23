@@ -133,6 +133,7 @@ import {
   type QAnswer,
   type QualityFlag,
   getCategoryName,
+  applyKeywordOverrides,
 } from './extractors';
 
 // Re-export classification types for external use
@@ -1855,8 +1856,15 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     // STEP FINAL: MERGE CLASSIFICATION METADATA
     // ============================================
     if (classificationResult) {
-      parsed.program_classification = classificationResult.category;
-      parsed.program_classification_name = classificationResult.category_name;
+      // Apply keyword override to ensure consistency for known promo types
+      const { category: finalCategory, wasOverridden, overrideReason } = applyKeywordOverrides(
+        classificationResult.category,
+        parsed.promo_name || '',
+        parsed.promo_type
+      );
+      
+      parsed.program_classification = finalCategory;
+      parsed.program_classification_name = getCategoryName(finalCategory);
       parsed.classification_confidence = classificationResult.confidence;
       parsed.classification_q1 = classificationResult.q1;
       parsed.classification_q2 = classificationResult.q2;
@@ -1867,8 +1875,17 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       parsed.classifier_prompt_version = classificationResult.classifier_prompt_version;
       parsed.classifier_latency_ms = classificationResult.latency_ms;
       
+      // Track if override was applied
+      if (wasOverridden) {
+        (parsed._extraction_meta as Record<string, unknown>).classification_overridden = true;
+        (parsed._extraction_meta as Record<string, unknown>).classification_override_reason = overrideReason;
+        (parsed._extraction_meta as Record<string, unknown>).original_llm_category = classificationResult.category;
+      }
+      
       console.log('[Extractor] Classification metadata merged:', {
         category: parsed.program_classification,
+        wasOverridden,
+        overrideReason: overrideReason || 'none',
         confidence: parsed.classification_confidence,
         quality_flags: parsed.quality_flags,
       });
