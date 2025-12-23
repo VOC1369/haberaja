@@ -295,6 +295,7 @@ export interface TierReward {
   reward: number | string;
   reward_type: 'fixed' | 'percentage';
   type: string;
+  physical_reward_name?: string;
 }
 
 export interface FastExpMission {
