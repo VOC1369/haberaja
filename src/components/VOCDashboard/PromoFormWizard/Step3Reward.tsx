@@ -338,12 +338,29 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 <Label>Jenis Hadiah</Label>
                 <SelectWithAddNew
                   value={data.dinamis_reward_type}
-                  onValueChange={(value) => onChange({ dinamis_reward_type: value })}
+                  onValueChange={(value) => onChange({ 
+                    dinamis_reward_type: value,
+                    physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : ''
+                  })}
                   options={dinamisRewardTypeOptions}
                   onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
                   onDeleteOption={handleDeleteDinamisRewardType}
                   placeholder="Pilih jenis"
                 />
+                {/* Conditional field untuk Hadiah Fisik */}
+                {data.dinamis_reward_type === 'hadiah_fisik' && (
+                  <div className="space-y-2 mt-2">
+                    <Label>Nama Hadiah Fisik</Label>
+                    <Input
+                      value={data.physical_reward_name || ''}
+                      onChange={(e) => onChange({ physical_reward_name: e.target.value })}
+                      placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Masukkan nama hadiah fisik yang akan diberikan kepada player
+                    </p>
+                  </div>
+                )}
               </div>
               
               {/* Max Bonus */}
@@ -1481,12 +1498,29 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 <Label>Jenis Hadiah</Label>
                 <SelectWithAddNew
                   value={data.dinamis_reward_type}
-                  onValueChange={(value) => onChange({ dinamis_reward_type: value })}
+                  onValueChange={(value) => onChange({ 
+                    dinamis_reward_type: value,
+                    physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : ''
+                  })}
                   options={dinamisRewardTypeOptions}
                   onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
                   onDeleteOption={handleDeleteDinamisRewardType}
                   placeholder="Pilih jenis"
                 />
+                {/* Conditional field untuk Hadiah Fisik */}
+                {data.dinamis_reward_type === 'hadiah_fisik' && (
+                  <div className="space-y-2 mt-2">
+                    <Label>Nama Hadiah Fisik</Label>
+                    <Input
+                      value={data.physical_reward_name || ''}
+                      onChange={(e) => onChange({ physical_reward_name: e.target.value })}
+                      placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Masukkan nama hadiah fisik yang akan diberikan kepada player
+                    </p>
+                  </div>
+                )}
               </div>
               
               {/* Max Bonus */}
