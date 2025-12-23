@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +23,11 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -33,7 +36,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2 } from "lucide-react";
+import { classifyContent, type ProgramCategory } from "@/lib/extractors/category-classifier";
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
 import { PromoItem, forceSeedSamplePromos } from "./PromoFormWizard/types";
@@ -55,6 +67,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewTermsItem, setViewTermsItem] = useState<PromoItem | null>(null);
   const [expandedPromos, setExpandedPromos] = useState<Set<string>>(new Set());
+  
+  // Auto-classification states
+  const [classifyingIds, setClassifyingIds] = useState<Set<string>>(new Set());
+  const classifyQueueRef = useRef<Set<string>>(new Set()); // To prevent duplicate calls
 
   const toggleExpanded = (promoId: string) => {
     setExpandedPromos(prev => {
@@ -251,17 +267,222 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     }
   };
 
-  const getCategoryBadge = (classification?: string) => {
-    switch (classification) {
-      case 'A':
-        return <Badge className="bg-warning/20 text-warning border border-warning/30">⚡ Bonus Instan</Badge>;
-      case 'B':
-        return <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">🏆 Event/Kompetisi</Badge>;
-      case 'C':
-        return <Badge className="bg-pink-500/20 text-pink-400 border border-pink-500/30">🧠 Program Sistem</Badge>;
-      default:
-        return <Badge variant="outline" className="border-border text-muted-foreground/50">-</Badge>;
+  // ============================================
+  // AUTO-CLASSIFICATION LOGIC
+  // ============================================
+  
+  const autoClassifyPromo = async (promo: PromoItem) => {
+    // Prevent duplicate calls
+    if (classifyingIds.has(promo.id) || classifyQueueRef.current.has(promo.id)) {
+      return;
     }
+    
+    classifyQueueRef.current.add(promo.id);
+    setClassifyingIds(prev => new Set(prev).add(promo.id));
+    
+    try {
+      // Build content from promo data for classification
+      const content = [
+        promo.promo_name,
+        promo.promo_type,
+        promo.custom_terms || '',
+        promo.special_requirements?.join(' ') || '',
+      ].filter(Boolean).join('\n');
+      
+      console.log('[AutoClassify] Classifying promo:', promo.id, promo.promo_name);
+      
+      const result = await classifyContent(content);
+      
+      // Update promo in localStorage
+      const stored = localStorage.getItem(PROMO_STORAGE_KEY);
+      if (stored) {
+        const allPromos = JSON.parse(stored) as PromoItem[];
+        const index = allPromos.findIndex(p => p.id === promo.id);
+        if (index !== -1) {
+          allPromos[index] = {
+            ...allPromos[index],
+            program_classification: result.category,
+            classification_confidence: result.confidence,
+          };
+          localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(allPromos));
+          console.log('[AutoClassify] Saved classification:', result.category, 'for', promo.promo_name);
+          
+          // Reload promos to reflect change
+          loadPromos();
+        }
+      }
+    } catch (error) {
+      console.error('[AutoClassify] Failed to classify promo:', promo.id, error);
+      toast.error(`Gagal mengklasifikasi ${promo.promo_name}`);
+    } finally {
+      setClassifyingIds(prev => {
+        const next = new Set(prev);
+        next.delete(promo.id);
+        return next;
+      });
+      classifyQueueRef.current.delete(promo.id);
+    }
+  };
+
+  // ============================================
+  // CATEGORY BADGE WITH OVERRIDE
+  // ============================================
+  
+  const CategoryBadgeWithOverride = ({ promo }: { promo: PromoItem }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState<ProgramCategory>(promo.program_classification || 'A');
+    const [overrideReason, setOverrideReason] = useState('');
+    
+    const isClassifying = classifyingIds.has(promo.id);
+    const classification = promo.program_classification;
+    
+    // Trigger auto-classification if not classified
+    useEffect(() => {
+      if (!classification && !isClassifying) {
+        autoClassifyPromo(promo);
+      }
+    }, [classification, isClassifying, promo]);
+    
+    // Loading state
+    if (isClassifying) {
+      return (
+        <Badge variant="outline" className="border-border text-muted-foreground animate-pulse">
+          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          Menganalisis...
+        </Badge>
+      );
+    }
+    
+    // Not classified yet (fallback during loading)
+    if (!classification) {
+      return (
+        <Badge variant="outline" className="border-border text-muted-foreground animate-pulse">
+          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+          Menganalisis...
+        </Badge>
+      );
+    }
+    
+    const getBadgeContent = () => {
+      switch (classification) {
+        case 'A': return { icon: '⚡', text: 'Bonus Instan', className: 'bg-warning/20 text-warning border border-warning/30' };
+        case 'B': return { icon: '🏆', text: 'Event/Kompetisi', className: 'bg-blue-500/20 text-blue-400 border border-blue-500/30' };
+        case 'C': return { icon: '🧠', text: 'Program Sistem', className: 'bg-pink-500/20 text-pink-400 border border-pink-500/30' };
+        default: return null;
+      }
+    };
+    
+    const badge = getBadgeContent();
+    if (!badge) return <span className="text-muted-foreground">-</span>;
+    
+    const handleOverride = () => {
+      if (selectedCategory === classification) {
+        toast.error('Kategori tidak berubah');
+        return;
+      }
+      if (!overrideReason.trim()) {
+        toast.error('Alasan override wajib diisi');
+        return;
+      }
+      
+      // Update in localStorage
+      const stored = localStorage.getItem(PROMO_STORAGE_KEY);
+      if (stored) {
+        const allPromos = JSON.parse(stored) as PromoItem[];
+        const index = allPromos.findIndex(p => p.id === promo.id);
+        if (index !== -1) {
+          allPromos[index] = {
+            ...allPromos[index],
+            program_classification: selectedCategory,
+            classification_override: {
+              from: classification,
+              to: selectedCategory,
+              reason: overrideReason.trim(),
+              overridden_by: 'Admin',
+              timestamp: new Date().toISOString(),
+            },
+          };
+          localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(allPromos));
+          loadPromos();
+          toast.success('Kategori berhasil diubah');
+          setIsOpen(false);
+          setOverrideReason('');
+        }
+      }
+    };
+    
+    const hasOverride = !!promo.classification_override;
+    
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Badge 
+            className={`${badge.className} cursor-pointer hover:opacity-80 transition-opacity`}
+          >
+            {badge.icon} {badge.text}
+            {hasOverride && <Edit2 className="h-3 w-3 ml-1 opacity-60" />}
+          </Badge>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ubah Kategori Promo</DialogTitle>
+            <DialogDescription>
+              AI mendeteksi: <strong>{badge.text}</strong>. Ubah jika salah.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Kategori Baru</label>
+              <Select value={selectedCategory} onValueChange={(v) => setSelectedCategory(v as ProgramCategory)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">⚡ A - Bonus Instan (Welcome, Cashback, dll)</SelectItem>
+                  <SelectItem value="B">🏆 B - Event/Kompetisi (Tournament, Race, dll)</SelectItem>
+                  <SelectItem value="C">🧠 C - Program Sistem (Loyalty, Rollingan, dll)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Alasan Override</label>
+              <Textarea 
+                placeholder="Jelaskan kenapa kategori ini salah..."
+                value={overrideReason}
+                onChange={(e) => setOverrideReason(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+            
+            {hasOverride && (
+              <div className="text-xs text-muted-foreground bg-muted rounded-lg p-3">
+                <p><strong>Override sebelumnya:</strong></p>
+                <p>• Dari {promo.classification_override?.from} → {promo.classification_override?.to}</p>
+                <p>• Alasan: {promo.classification_override?.reason}</p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)}>
+              Batal
+            </Button>
+            <Button 
+              onClick={handleOverride}
+              disabled={selectedCategory === classification || !overrideReason.trim()}
+            >
+              Simpan Perubahan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  const getCategoryBadge = (promo: PromoItem) => {
+    return <CategoryBadgeWithOverride promo={promo} />;
   };
 
   // Upload View
@@ -445,7 +666,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                         </div>
                       </TableCell>
                       <TableCell className="py-4 text-center">
-                        {getCategoryBadge(item.program_classification)}
+                        {getCategoryBadge(item)}
                       </TableCell>
                       <TableCell className="py-4 text-sm text-muted-foreground">
                         {formatValidPeriod(item.valid_from, item.valid_until)}
