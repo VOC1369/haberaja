@@ -581,12 +581,18 @@ export function PseudoKnowledgeSection() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div className="bg-muted rounded-lg p-3">
-            <span className="text-muted-foreground text-xs block mb-1">Nilai Bonus</span>
+            <span className="text-muted-foreground text-xs block mb-1">
+              {sub.calculation_method === 'threshold' ? 'Target' : 'Nilai Bonus'}
+            </span>
             {getFieldStatus('calculation_value', archetype) === 'not_applicable' ? (
               <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
             ) : (
               <span className="text-button-hover font-semibold">
-                {sub.calculation_value != null ? `${sub.calculation_value}${sub.calculation_method === 'percentage' ? '%' : ''}` : '-'}
+                {sub.calculation_value != null 
+                  ? (sub.calculation_method === 'threshold'
+                      ? `Rp ${sub.calculation_value.toLocaleString('id-ID')}`
+                      : `${sub.calculation_value}${sub.calculation_method === 'percentage' ? '%' : ''}`)
+                  : '-'}
               </span>
             )}
           </div>
@@ -607,6 +613,23 @@ export function PseudoKnowledgeSection() {
             </span>
           </div>
           <div className="bg-muted rounded-lg p-3">
+            <span className="text-muted-foreground text-xs block mb-1">Jenis Hadiah</span>
+            <span className={`font-medium ${
+              sub.reward_type === 'hadiah_fisik' ? 'text-amber-400' :
+              sub.reward_type === 'uang_tunai' ? 'text-green-400' :
+              'text-foreground'
+            }`}>
+              {sub.reward_type === 'hadiah_fisik' 
+                ? (sub.physical_reward_name || 'Hadiah Fisik')
+                : sub.reward_type === 'uang_tunai'
+                  ? (sub.cash_reward_amount ? `Rp ${sub.cash_reward_amount.toLocaleString('id-ID')}` : 'Uang Tunai')
+                  : 'Credit Game'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Turnover</span>
             {getFieldStatus('turnover_rule', archetype) === 'not_applicable' ? (
               <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
@@ -616,9 +639,6 @@ export function PseudoKnowledgeSection() {
               </span>
             )}
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Payout</span>
             <span className={`font-semibold ${sub.payout_direction === 'depan' ? 'text-success' : 'text-warning'}`}>
@@ -629,15 +649,6 @@ export function PseudoKnowledgeSection() {
             <span className="text-muted-foreground text-xs block mb-1">Jenis Game</span>
             <span className="text-foreground font-medium">
               {sub.game_types?.length ? sub.game_types.map(formatGameTypeLabel).join(", ") : "-"}
-            </span>
-          </div>
-          <div className="bg-muted rounded-lg p-3">
-            <span className="text-muted-foreground text-xs block mb-1">Provider</span>
-            <span className="text-foreground font-medium">
-              {formatProvidersDisplay({
-                eligible_providers: sub.eligible_providers,
-                game_providers: sub.game_providers,
-              })}
             </span>
           </div>
           <div className="bg-muted rounded-lg p-3">
