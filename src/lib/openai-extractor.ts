@@ -49,6 +49,43 @@ export interface TogelEventReward {
   reward_amount: number;   // 20000, 200000
 }
 
+// Enhanced Prize structure with reward type detection
+export interface ExtractedPrize {
+  rank: string;
+  prize: string;
+  value: number | null;
+  reward_type?: 'hadiah_fisik' | 'uang_tunai' | 'credit_game' | 'voucher' | 'other';
+  physical_reward_name?: string;
+  cash_reward_amount?: number;
+}
+
+// Detect reward type from prize description with fallback pattern matching
+export function detectRewardType(prize: string | undefined, physicalName?: string, cashAmount?: number): 'hadiah_fisik' | 'uang_tunai' | 'credit_game' {
+  // PRIORITY 1: Explicit physical name or cash amount
+  if (physicalName && physicalName.trim().length > 0) {
+    return 'hadiah_fisik';
+  }
+  if (cashAmount && cashAmount > 0) {
+    return 'uang_tunai';
+  }
+  
+  // PRIORITY 2: Fallback - detect from prize description string
+  const prizeText = (prize || '').toLowerCase();
+  
+  // Physical prize patterns (brand names, products)
+  if (/pajero|veloz|xmax|pcx|honda|yamaha|suzuki|toyota|mitsubishi|emas antam|iphone|macbook|laptop|samsung|oppo|vivo|realme|xiaomi|motor|mobil|sepeda|tv|kulkas|ac|mesin cuci/i.test(prizeText)) {
+    return 'hadiah_fisik';
+  }
+  
+  // Cash patterns
+  if (/uang tunai|cash|hadiah uang|tunai sebesar|uang sebesar/i.test(prizeText)) {
+    return 'uang_tunai';
+  }
+  
+  // Default: credit game
+  return 'credit_game';
+}
+
 // Level Up / Event Unlock Condition (progress gate, NOT financial requirement)
 export interface UnlockCondition {
   from_tier?: string;        // "Bronze", "Level 1"
@@ -344,6 +381,11 @@ export interface ExtractedPromoSubCategory {
   turnover_rule: number;           // e.g., 20 (untuk 20x)
   payout_direction: 'depan' | 'belakang';
   
+  // NEW: Jenis Hadiah Detection (v1.1)
+  reward_type?: 'hadiah_fisik' | 'uang_tunai' | 'credit_game' | 'voucher' | 'other';
+  physical_reward_name?: string;   // e.g., "MITSUBISHI PAJERO SPORT 2025"
+  cash_reward_amount?: number;     // e.g., 15000000 (untuk Rp 15.000.000)
+  
   // Game Scope
   game_types: string[];            // e.g., ["sabung_ayam"] or ["ALL"]
   eligible_providers: string[];    // e.g., ["SV388", "WS168"] - providers yang eligible
@@ -429,6 +471,9 @@ export interface ExtractedPromo {
   game_domain?: GameDomain;             // Auto-detected from content
   applicable_markets?: string[];        // For togel: ["Singapore", "Hongkong", ...]
   event_rewards?: TogelEventReward[];   // For event_table archetype (togel prizes)
+  
+  // Enhanced Prize structure for Category B (Event)
+  prizes?: ExtractedPrize[];            // For leaderboard/tournament with mixed reward types
   
   // Level Up / Event Unlock Conditions (progress gates, NOT financial requirements)
   // These are NOT min_deposit! They are tier progression conditions
@@ -2063,67 +2108,89 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     return providers || [];
   };
 
-  // Map subcategories
-  const subcategories: PromoSubCategory[] = extracted.subcategories.map((sub, idx) => ({
-    id: `sub_${Date.now()}_${idx}`,
-    name: sub.sub_name || `Varian ${idx + 1}`,
+  // Map subcategories with reward type detection
+  const subcategories: PromoSubCategory[] = extracted.subcategories.map((sub, idx) => {
+    // Detect reward type with fallback pattern matching
+    const detectedRewardType = sub.reward_type || detectRewardType(
+      sub.sub_name,
+      sub.physical_reward_name,
+      sub.cash_reward_amount
+    );
     
-    // Dasar Perhitungan
-    calculation_base: sub.calculation_base || 'deposit',
-    calculation_method: sub.calculation_method || 'percentage',
-    calculation_value: sub.calculation_value || 0,
-    minimum_base: sub.minimum_base || 0,
-    minimum_base_enabled: sub.minimum_base > 0,
-    turnover_rule: sub.turnover_rule ? `${sub.turnover_rule}x` : '0x',
-    turnover_rule_enabled: sub.turnover_rule > 0,
-    turnover_rule_custom: '',
+    // Map reward type to UI dropdown value
+    const mapRewardTypeToUI = (type: string): string => {
+      switch (type) {
+        case 'hadiah_fisik': return 'hadiah_fisik';
+        case 'uang_tunai': return 'uang_tunai';
+        case 'credit_game': return 'Freechip';
+        case 'voucher': return 'voucher';
+        default: return 'Freechip';
+      }
+    };
     
-    // Jenis Hadiah & Max Bonus
-    jenis_hadiah_same_as_global: true,
-    jenis_hadiah: 'Freechip',
-    max_bonus_same_as_global: false, // Each sub has its own max
-    // Handle null max_bonus = unlimited
-    max_bonus: sub.max_bonus ?? 0,
-    max_bonus_unlimited: sub.max_bonus === null,
-    // Only use global if payout_direction is not specified
-    payout_direction_same_as_global: !sub.payout_direction,
-    payout_direction: sub.payout_direction === 'depan' ? 'before' : 'after',
-    
-    // Admin Fee (default ikut global)
-    admin_fee_same_as_global: true,
-    admin_fee_enabled: false,
-    admin_fee_percentage: null,
-    
-    // Game whitelist (handle "ALL")
-    game_types: sub.game_types?.includes('ALL') ? ['Semua'] : (sub.game_types || []),
-    eligible_providers: sub.eligible_providers || [],  // ← NEW: provider names yang eligible
-    game_providers: mapGameProviders(sub.game_providers),
-    game_names: sub.game_names || [],
-    
-    // Game blacklist - Auto-enable if any array has content
-    game_blacklist_enabled: sub.blacklist?.enabled || 
-      (sub.blacklist?.types?.length || 0) > 0 ||
-      (sub.blacklist?.providers?.length || 0) > 0 ||
-      (sub.blacklist?.games?.length || 0) > 0 ||
-      (sub.blacklist?.rules?.length || 0) > 0,
-    game_types_blacklist: sub.blacklist?.types || [],
-    game_providers_blacklist: sub.blacklist?.providers || [],
-    game_names_blacklist: sub.blacklist?.games || [],
-    game_exclusion_rules: sub.blacklist?.rules || [],
-    
-    // Legacy fields
-    dinamis_reward_type: 'Freechip',
-    dinamis_reward_amount: 0,
-    dinamis_max_claim: sub.max_bonus ?? 0,
-    // null max_bonus = unlimited
-    dinamis_max_claim_unlimited: sub.max_bonus === null,
-    // 🔒 ONTOLOGY FIX: Map min_claim (payout threshold) ke dinamis_min_claim
-    // dinamis_min_claim = minimal bonus untuk DICAIRKAN (bukan syarat kualifikasi)
-    // minimum_base = syarat minimal untuk IKUT promo (eligibility)
-    // Ini adalah 2 field BERBEDA!
-    dinamis_min_claim: sub.min_claim || sub.payout_threshold || 0,
-    dinamis_min_claim_enabled: !!(sub.min_claim || sub.payout_threshold),
-  }));
+    return {
+      id: `sub_${Date.now()}_${idx}`,
+      name: sub.sub_name || `Varian ${idx + 1}`,
+      
+      // Dasar Perhitungan
+      calculation_base: sub.calculation_base || 'deposit',
+      calculation_method: sub.calculation_method || 'percentage',
+      calculation_value: sub.calculation_value || 0,
+      minimum_base: sub.minimum_base || 0,
+      minimum_base_enabled: sub.minimum_base > 0,
+      turnover_rule: sub.turnover_rule ? `${sub.turnover_rule}x` : '0x',
+      turnover_rule_enabled: sub.turnover_rule > 0,
+      turnover_rule_custom: '',
+      
+      // Jenis Hadiah & Max Bonus - NOW WITH DETECTION
+      jenis_hadiah_same_as_global: false, // Each sub can have different reward type
+      jenis_hadiah: mapRewardTypeToUI(detectedRewardType),
+      physical_reward_name: sub.physical_reward_name || '',
+      cash_reward_amount: sub.cash_reward_amount || undefined,
+      max_bonus_same_as_global: false, // Each sub has its own max
+      // Handle null max_bonus = unlimited
+      max_bonus: sub.max_bonus ?? 0,
+      max_bonus_unlimited: sub.max_bonus === null,
+      // Only use global if payout_direction is not specified
+      payout_direction_same_as_global: !sub.payout_direction,
+      payout_direction: sub.payout_direction === 'depan' ? 'before' : 'after',
+      
+      // Admin Fee (default ikut global)
+      admin_fee_same_as_global: true,
+      admin_fee_enabled: false,
+      admin_fee_percentage: null,
+      
+      // Game whitelist (handle "ALL")
+      game_types: sub.game_types?.includes('ALL') ? ['Semua'] : (sub.game_types || []),
+      eligible_providers: sub.eligible_providers || [],  // ← NEW: provider names yang eligible
+      game_providers: mapGameProviders(sub.game_providers),
+      game_names: sub.game_names || [],
+      
+      // Game blacklist - Auto-enable if any array has content
+      game_blacklist_enabled: sub.blacklist?.enabled || 
+        (sub.blacklist?.types?.length || 0) > 0 ||
+        (sub.blacklist?.providers?.length || 0) > 0 ||
+        (sub.blacklist?.games?.length || 0) > 0 ||
+        (sub.blacklist?.rules?.length || 0) > 0,
+      game_types_blacklist: sub.blacklist?.types || [],
+      game_providers_blacklist: sub.blacklist?.providers || [],
+      game_names_blacklist: sub.blacklist?.games || [],
+      game_exclusion_rules: sub.blacklist?.rules || [],
+      
+      // Legacy fields - NOW WITH DETECTION
+      dinamis_reward_type: mapRewardTypeToUI(detectedRewardType),
+      dinamis_reward_amount: 0,
+      dinamis_max_claim: sub.max_bonus ?? 0,
+      // null max_bonus = unlimited
+      dinamis_max_claim_unlimited: sub.max_bonus === null,
+      // 🔒 ONTOLOGY FIX: Map min_claim (payout threshold) ke dinamis_min_claim
+      // dinamis_min_claim = minimal bonus untuk DICAIRKAN (bukan syarat kualifikasi)
+      // minimum_base = syarat minimal untuk IKUT promo (eligibility)
+      // Ini adalah 2 field BERBEDA!
+      dinamis_min_claim: sub.min_claim || sub.payout_threshold || 0,
+      dinamis_min_claim_enabled: !!(sub.min_claim || sub.payout_threshold),
+    };
+  });
 
   // Check if any subcategory has unlimited max_bonus
   const hasUnlimitedMaxBonus = extracted.subcategories.some(sub => sub.max_bonus === null);
