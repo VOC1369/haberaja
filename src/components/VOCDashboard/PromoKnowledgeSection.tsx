@@ -595,11 +595,13 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
               // Jika custom_terms sudah ada, tampilkan dengan proper formatting
               if (viewTermsItem.custom_terms && viewTermsItem.custom_terms.trim()) {
                 // Parse custom_terms: split by newline, remove empty lines, remove number prefix
+                // Normalize: split by semicolon or newline, trim, remove empty/header lines
                 const termsList = viewTermsItem.custom_terms
-                  .split('\n')
-                  .filter(line => line.trim() !== '')
+                  .split(/[;\n]+/)
+                  .map(line => line.trim())
+                  .filter(line => line !== '')
                   .map(line => line.replace(/^\d+\.\s*/, '').replace(/^Syarat & Ketentuan:\s*/i, '').trim())
-                  .filter(line => line !== '');
+                  .filter(line => line !== '' && line.length > 10);
 
                 return (
                   <div className="bg-muted rounded-lg p-4 space-y-4">
