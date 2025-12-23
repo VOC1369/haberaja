@@ -857,6 +857,8 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                     if (/^\d[\d.,]*\s*[x×].*=.*\(.*\)$/i.test(line)) return false;
                     // Skip formula template lines
                     if (/^Total\s+.*\s*[x×].*%.*=/i.test(line)) return false;
+                    // Skip lines that are ONLY numbers (e.g., "0", "100", "1.000.000")
+                    if (/^[\d.,\s]+$/.test(line)) return false;
                     return true;
                   });
 
