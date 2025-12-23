@@ -150,36 +150,33 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
     periodEnd: string | undefined,
     fullData: PromoFormData
   ): string => {
+    // 🔒 PRIORITY 1: Use explicit claim_frequency or formula_metadata.period
+    // Explicit data takes precedence over day-range inference
+    const explicitPeriod = getPeriodDisplayFromData(fullData);
+    if (explicitPeriod !== 'berkala') {
+      return explicitPeriod;  // Return explicit value if available
+    }
+    
+    // PRIORITY 2: Infer from day range (only if no explicit data)
     if (periodStart && periodEnd) {
       const start = periodStart.toLowerCase();
       const end = periodEnd.toLowerCase();
       
-      // Senin s/d Minggu = MINGGUAN (full week)
-      if (start === 'senin' && end === 'minggu') {
-        return 'mingguan';
-      }
+      // Full week = MINGGUAN
+      if (start === 'senin' && end === 'minggu') return 'mingguan';
+      if (start === 'senin' && end === 'jumat') return 'mingguan';
+      if (start === 'sabtu' && end === 'minggu') return 'mingguan';
       
-      // Senin s/d Jumat = MINGGUAN (weekday only)
-      if (start === 'senin' && end === 'jumat') {
-        return 'mingguan';
-      }
-      
-      // Sabtu s/d Minggu = MINGGUAN (weekend only)
-      if (start === 'sabtu' && end === 'minggu') {
-        return 'mingguan';
-      }
-      
-      // Same day start-end = HARIAN
-      if (start === end) {
-        return 'harian';
-      }
+      // ✅ FIX: Same day (Senin s/d Senin) = MINGGUAN 
+      // (distribusi di hari tertentu setiap minggu, bukan setiap hari)
+      if (start === end) return 'mingguan';
       
       // Multiple days = MINGGUAN by default
       return 'mingguan';
     }
     
-    // No period info → use multi-source helper
-    return getPeriodDisplayFromData(fullData);
+    // Final fallback
+    return 'berkala';
   };
   
   // Get the CORRECT frequency (period-based inference takes priority)
