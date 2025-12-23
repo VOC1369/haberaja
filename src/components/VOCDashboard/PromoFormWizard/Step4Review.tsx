@@ -1344,36 +1344,42 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                {[1000000, 2000000, 5000000, 10000000, 20000000].map((amount, i) => {
-                                    const rawBonus = amount * (sub.calculation_value / 100);
-                                    // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
-                                    const maxClaim = getExplicitMaxBonus(sub);
-                                    const bonus = Math.min(rawBonus, maxClaim);
-                                    const isCapped = bonus < rawBonus;
-                                    // 🔒 ONTOLOGY: Check if bonus is below payout threshold
-                                    const minClaim = sub.dinamis_min_claim || 0;
-                                    const isBelowMinClaim = minClaim > 0 && bonus < minClaim;
-                                    return (
-                                      <tr key={i} className="border-t border-border">
-                                        <td className="py-1.5 px-3">
-                                          <span className={i === 0 ? "text-button-hover font-medium" : "text-foreground"}>
-                                            Rp {formatNumber(amount)}
-                                          </span>
-                                        </td>
-                                        <td className="py-1.5 px-3 text-muted-foreground">
-                                          {formatNumber(amount)} × {sub.calculation_value}%
-                                        </td>
-                                        <td className="py-1.5 px-3 font-medium text-foreground">
-                                          <span className={isBelowMinClaim ? "text-muted-foreground line-through" : ""}>
-                                            Rp {formatNumber(bonus)}{isCapped && ' (max)'}
-                                          </span>
-                                          {isBelowMinClaim && (
-                                            <span className="text-amber-500 text-xs ml-2">*</span>
-                                          )}
-                                        </td>
-                                      </tr>
-                                    );
-                                  })}
+                                {(() => {
+                                    // 🔧 FIX: Use minimum_base as start value (default 1M), limit to 3 rows
+                                    const startValue = sub.minimum_base && sub.minimum_base > 0 ? sub.minimum_base : 1000000;
+                                    const multipliers = [1, 2, 5]; // 3 rows: startValue × 1, 2, 5
+                                    return multipliers.map((mult, i) => {
+                                      const amount = startValue * mult;
+                                      const rawBonus = amount * (sub.calculation_value / 100);
+                                      // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
+                                      const maxClaim = getExplicitMaxBonus(sub);
+                                      const bonus = Math.min(rawBonus, maxClaim);
+                                      const isCapped = bonus < rawBonus;
+                                      // 🔒 ONTOLOGY: Check if bonus is below payout threshold
+                                      const minClaim = sub.dinamis_min_claim || 0;
+                                      const isBelowMinClaim = minClaim > 0 && bonus < minClaim;
+                                      return (
+                                        <tr key={i} className="border-t border-border">
+                                          <td className="py-1.5 px-3">
+                                            <span className={i === 0 ? "text-button-hover font-medium" : "text-foreground"}>
+                                              Rp {formatNumber(amount)}
+                                            </span>
+                                          </td>
+                                          <td className="py-1.5 px-3 text-muted-foreground">
+                                            {formatNumber(amount)} × {sub.calculation_value}%
+                                          </td>
+                                          <td className="py-1.5 px-3 font-medium text-foreground">
+                                            <span className={isBelowMinClaim ? "text-muted-foreground line-through" : ""}>
+                                              Rp {formatNumber(bonus)}{isCapped && ' (max)'}
+                                            </span>
+                                            {isBelowMinClaim && (
+                                              <span className="text-amber-500 text-xs ml-2">*</span>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      );
+                                    });
+                                  })()}
                                 </tbody>
                               </table>
                               {/* 🔒 ONTOLOGY: Payout threshold disclaimer */}
@@ -1447,36 +1453,42 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           </tr>
                         </thead>
                         <tbody>
-                        {[1000000, 2000000, 5000000, 10000000, 20000000].map((amount, index) => {
-                            const rawBonus = amount * (data.calculation_value / 100);
-                            // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
-                            const maxClaim = getExplicitMaxBonus(data);
-                            const bonus = Math.min(rawBonus, maxClaim);
-                            const isCapped = bonus < rawBonus;
-                            // 🔒 ONTOLOGY: Check if bonus is below payout threshold
-                            const minClaim = data.dinamis_min_claim || 0;
-                            const isBelowMinClaim = minClaim > 0 && bonus < minClaim;
-                            return (
-                              <tr key={index} className="border-t border-border">
-                                <td className="py-1.5 px-3">
-                                  <span className={index === 0 ? "text-button-hover font-medium" : "text-foreground"}>
-                                    Rp {formatNumber(amount)}
-                                  </span>
-                                </td>
-                                <td className="py-1.5 px-3 text-muted-foreground">
-                                  {formatNumber(amount)} × {data.calculation_value}%
-                                </td>
-                                <td className="py-1.5 px-3 font-medium text-foreground">
-                                  <span className={isBelowMinClaim ? "text-muted-foreground line-through" : ""}>
-                                    Rp {formatNumber(bonus)}{isCapped && ' (max)'}
-                                  </span>
-                                  {isBelowMinClaim && (
-                                    <span className="text-amber-500 text-xs ml-2">*</span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
+                        {(() => {
+                            // 🔧 FIX: Use minimum_base as start value (default 1M), limit to 3 rows
+                            const startValue = data.minimum_base && data.minimum_base > 0 ? data.minimum_base : 1000000;
+                            const multipliers = [1, 2, 5]; // 3 rows: startValue × 1, 2, 5
+                            return multipliers.map((mult, index) => {
+                              const amount = startValue * mult;
+                              const rawBonus = amount * (data.calculation_value / 100);
+                              // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
+                              const maxClaim = getExplicitMaxBonus(data);
+                              const bonus = Math.min(rawBonus, maxClaim);
+                              const isCapped = bonus < rawBonus;
+                              // 🔒 ONTOLOGY: Check if bonus is below payout threshold
+                              const minClaim = data.dinamis_min_claim || 0;
+                              const isBelowMinClaim = minClaim > 0 && bonus < minClaim;
+                              return (
+                                <tr key={index} className="border-t border-border">
+                                  <td className="py-1.5 px-3">
+                                    <span className={index === 0 ? "text-button-hover font-medium" : "text-foreground"}>
+                                      Rp {formatNumber(amount)}
+                                    </span>
+                                  </td>
+                                  <td className="py-1.5 px-3 text-muted-foreground">
+                                    {formatNumber(amount)} × {data.calculation_value}%
+                                  </td>
+                                  <td className="py-1.5 px-3 font-medium text-foreground">
+                                    <span className={isBelowMinClaim ? "text-muted-foreground line-through" : ""}>
+                                      Rp {formatNumber(bonus)}{isCapped && ' (max)'}
+                                    </span>
+                                    {isBelowMinClaim && (
+                                      <span className="text-amber-500 text-xs ml-2">*</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>
