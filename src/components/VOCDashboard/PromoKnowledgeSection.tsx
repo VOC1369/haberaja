@@ -761,18 +761,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                         </div>
                         </TableCell>
                         <TableCell className="py-3 text-center">
-                          {/* Sub-promo inherits parent classification with reduced opacity */}
-                          {item.program_classification && (
-                            <Badge 
-                              className={`opacity-60 text-xs ${
-                                item.program_classification === 'A' ? 'bg-warning/20 text-warning border border-warning/30' :
-                                item.program_classification === 'B' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                                'bg-pink-500/20 text-pink-400 border border-pink-500/30'
-                              }`}
-                            >
-                              {item.program_classification === 'A' ? '⚡' : item.program_classification === 'B' ? '🏆' : '🧠'}
-                            </Badge>
-                          )}
+                          {/* Empty for sub-categories */}
                         </TableCell>
                         <TableCell className="py-3 text-xs text-muted-foreground">
                           -
