@@ -251,6 +251,9 @@ export interface PromoFormData {
 
   // Physical Reward (untuk Hadiah Fisik)
   physical_reward_name?: string;  // Nama hadiah fisik manual (contoh: "MITSUBISHI PAJERO SPORT DAKAR 2025")
+  
+  // Cash Reward (untuk Uang Tunai)
+  cash_reward_amount?: number;  // Nominal uang tunai (contoh: 50000000 = Rp 50.000.000)
 
   // Contact Channel
   contact_channel_enabled: boolean;
@@ -296,6 +299,7 @@ export interface TierReward {
   reward_type: 'fixed' | 'percentage';
   type: string;
   physical_reward_name?: string;
+  cash_reward_amount?: number;  // Nominal uang tunai
 }
 
 export interface FastExpMission {
@@ -374,6 +378,9 @@ export interface PromoSubCategory {
   
   // Physical Reward (untuk Hadiah Fisik)
   physical_reward_name?: string;  // Nama hadiah fisik manual
+  
+  // Cash Reward (untuk Uang Tunai)
+  cash_reward_amount?: number;  // Nominal uang tunai
 }
 
 // Promo Item with metadata for storage
@@ -625,6 +632,7 @@ export const REWARD_TYPES = [
   { value: 'cashback', label: 'Cashback' },
   { value: 'custom', label: 'Custom' },
   { value: 'hadiah_fisik', label: 'Hadiah Fisik' },
+  { value: 'uang_tunai', label: 'Uang Tunai' },
 ];
 export const TURNOVER_RULES = [
   { value: '0x', label: '0x — Tanpa Syarat Main' },
@@ -771,6 +779,7 @@ export const DINAMIS_REWARD_TYPES = [
   { value: 'credit_game', label: 'Credit Game' },
   { value: 'lp', label: 'Loyalty Points' },
   { value: 'hadiah_fisik', label: 'Hadiah Fisik' },
+  { value: 'uang_tunai', label: 'Uang Tunai' },
 ];
 
 
@@ -878,6 +887,9 @@ export const initialPromoData: PromoFormData = {
   
   // Physical Reward
   physical_reward_name: '',
+  
+  // Cash Reward
+  cash_reward_amount: undefined,
   
   contact_channel_enabled: false,
   contact_channel: '',
