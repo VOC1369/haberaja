@@ -2798,25 +2798,56 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <CollapsibleContent className="collapsible-content">
                 <div className="space-y-4">
                   {data.tiers.map((tier) => (
-                    <div key={tier.id} className="flex items-end gap-4 p-3 bg-muted rounded-lg">
-                      <div className="flex-1 space-y-1">
-                        <Label className="text-xs">Minimal Poin</Label>
-                        <Input
-                          type="number"
-                          value={tier.minimal_point}
-                          onChange={(e) => updateTier(tier.id, { minimal_point: Number(e.target.value) })}
-                        />
+                    <div key={tier.id} className="p-4 bg-muted rounded-lg space-y-4">
+                      <div className="flex items-end gap-4">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Minimal Poin</Label>
+                          <Input
+                            type="number"
+                            value={tier.minimal_point}
+                            onChange={(e) => updateTier(tier.id, { minimal_point: Number(e.target.value) })}
+                          />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Reward</Label>
+                          <Input
+                            value={tier.reward}
+                            onChange={(e) => updateTier(tier.id, { reward: e.target.value })}
+                          />
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Jenis Hadiah</Label>
+                          <SelectWithAddNew
+                            value={tier.type || 'credit_game'}
+                            onValueChange={(value) => updateTier(tier.id, { 
+                              type: value,
+                              physical_reward_name: value === 'hadiah_fisik' ? tier.physical_reward_name : ''
+                            })}
+                            options={dinamisRewardTypeOptions}
+                            onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
+                            onDeleteOption={handleDeleteDinamisRewardType}
+                            placeholder="Pilih jenis"
+                          />
+                        </div>
+                        <Button variant="ghost" size="icon" className="shrink-0 rounded-full bg-muted hover:bg-declined/20 group" onClick={() => removeTier(tier.id)}>
+                          <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-declined" />
+                        </Button>
                       </div>
-                      <div className="flex-1 space-y-1">
-                        <Label className="text-xs">Reward</Label>
-                        <Input
-                          value={tier.reward}
-                          onChange={(e) => updateTier(tier.id, { reward: e.target.value })}
-                        />
-                      </div>
-                      <Button variant="ghost" size="icon" className="shrink-0 rounded-full bg-muted hover:bg-declined/20 group" onClick={() => removeTier(tier.id)}>
-                        <Trash2 className="h-4 w-4 text-muted-foreground group-hover:text-declined" />
-                      </Button>
+                      
+                      {/* Conditional Input untuk Hadiah Fisik */}
+                      {tier.type === 'hadiah_fisik' && (
+                        <div className="space-y-2">
+                          <Label className="text-xs">Nama Hadiah Fisik</Label>
+                          <Input
+                            value={tier.physical_reward_name || ''}
+                            onChange={(e) => updateTier(tier.id, { physical_reward_name: e.target.value })}
+                            placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Masukkan nama hadiah fisik untuk tier ini
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))}
                   <Button variant="outline" onClick={addTier} className="w-full border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover">
