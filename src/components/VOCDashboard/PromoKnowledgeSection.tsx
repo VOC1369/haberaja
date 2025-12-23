@@ -534,7 +534,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                           {/* Empty - Category column for alignment */}
                         </TableCell>
                         <TableCell className="py-3 text-xs text-muted-foreground">
-                          {sub.game_providers?.join(", ") || "-"}
+                          -
                         </TableCell>
                         <TableCell className="py-3 text-xs text-muted-foreground">
                           {sub.calculation_method || "-"}
