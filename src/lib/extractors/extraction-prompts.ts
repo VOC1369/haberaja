@@ -112,7 +112,10 @@ RULES:
       "game_types": string[],
       "eligible_providers": string[],
       "game_providers": string[],
-      "blacklist": { "enabled": boolean, "games": string[], "providers": string[], "rules": string[] }
+      "blacklist": { "enabled": boolean, "games": string[], "providers": string[], "rules": string[] },
+      "reward_type": "hadiah_fisik" | "uang_tunai" | "credit_game" | "voucher" | "other",
+      "physical_reward_name": "nama hadiah fisik" | null,
+      "cash_reward_amount": number | null
     }
   ] | null
 }
@@ -162,6 +165,25 @@ MAKA:
 Contoh: "SABUNG AYAM (SV388 & WS168)" → game_types: ["sabung_ayam"], eligible_providers: ["SV388", "WS168"]
 Jika tidak ada provider spesifik → eligible_providers: []
 
+🎁 JENIS HADIAH DETECTION (CRITICAL!):
+
+PATTERN 1 - HADIAH FISIK:
+- Kata kunci: "Grand Prize", "Hadiah Utama", nama produk (mobil, motor, HP, emas, laptop)
+- Contoh: "MITSUBISHI PAJERO SPORT", "EMAS ANTAM 150 Gram", "IPHONE 17 PRO MAX"
+→ reward_type: "hadiah_fisik"
+→ physical_reward_name: "[NAMA PRODUK]"
+
+PATTERN 2 - UANG TUNAI:
+- Kata kunci: "Uang Tunai", "Hadiah Uang Tunai sebesar Rp", "Cash"
+- Contoh: "Hadiah Uang Tunai sebesar Rp. 15.000.000,-"
+→ reward_type: "uang_tunai"
+→ cash_reward_amount: 15000000
+
+PATTERN 3 - CREDIT GAME (default):
+- Kata kunci: "Credit Game", "Saldo", "Bonus", angka saja tanpa konteks
+→ reward_type: "credit_game"
+→ value: [angka]
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama event",
@@ -180,7 +202,14 @@ Jika tidak ada provider spesifik → eligible_providers: []
   
   "prize_pool": number | null,
   "prizes": [
-    { "rank": "1", "prize": "deskripsi hadiah", "value": number | null }
+    { 
+      "rank": "1", 
+      "prize": "deskripsi hadiah", 
+      "value": number | null,
+      "reward_type": "hadiah_fisik" | "uang_tunai" | "credit_game" | "voucher" | "other",
+      "physical_reward_name": "MITSUBISHI PAJERO SPORT 2025" | null,
+      "cash_reward_amount": 15000000 | null
+    }
   ] | null,
   "winner_count": number | null,
   "winner_selection": "highest_score" | "random_draw" | "first_come" | null,
@@ -322,7 +351,13 @@ Jika tidak ada provider spesifik → eligible_providers: []
     "point_name": "LP" | "EXP" | "XP" | null,
     "earning_rule": "contoh: 1000 TO = 1 LP" | null,
     "exchange_table": [
-      { "points": number, "reward": "deskripsi" }
+      { 
+        "points": number, 
+        "reward": "deskripsi",
+        "reward_type": "hadiah_fisik" | "uang_tunai" | "credit_game",
+        "physical_reward_name": "nama hadiah" | null,
+        "cash_reward_amount": number | null
+      }
     ] | null,
     "tier_system": [
       { "tier_name": "Bronze", "requirement": "deskripsi" }
