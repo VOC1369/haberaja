@@ -25,6 +25,26 @@ const getStep4Title = (program: ProgramType) => {
   }
 };
 
+// Map ProgramType → program_classification
+const programToClassification = (program: ProgramType): 'A' | 'B' | 'C' | undefined => {
+  switch (program) {
+    case 'reward': return 'A';  // Bonus Instan
+    case 'event': return 'B';   // Event/Kompetisi
+    case 'policy': return 'C';  // Program Sistem
+    default: return undefined;
+  }
+};
+
+// Map program_classification → ProgramType (untuk restore saat edit)
+const classificationToProgram = (classification?: 'A' | 'B' | 'C'): ProgramType => {
+  switch (classification) {
+    case 'A': return 'reward';
+    case 'B': return 'event';
+    case 'C': return 'policy';
+    default: return null;
+  }
+};
+
 interface PromoFormWizardProps {
   onBack?: () => void;
   initialData?: PromoItem;
@@ -37,7 +57,10 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   const [formData, setFormData] = useState<PromoFormData>(initialData || initialPromoData);
   const [editingId, setEditingId] = useState<string | undefined>(initialData?.id);
   const [isEditingFromReview, setIsEditingFromReview] = useState(false);
-  const [selectedProgram, setSelectedProgram] = useState<ProgramType>(null);
+  // Restore selectedProgram from initialData when editing
+  const [selectedProgram, setSelectedProgram] = useState<ProgramType>(
+    initialData ? classificationToProgram(initialData.program_classification) : null
+  );
   const [eventData, setEventData] = useState<EventConfigData>(initialEventData);
   const [policyData, setPolicyData] = useState<PolicyConfigData>(initialPolicyData);
 
@@ -98,7 +121,12 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
 
   const handleSaveDraft = () => {
     const generatedTerms = generateFullTermsString(formData);
-    const dataToSave: PromoFormData = { ...formData, status: 'draft', custom_terms: generatedTerms };
+    const dataToSave: PromoFormData = { 
+      ...formData, 
+      status: 'draft', 
+      custom_terms: generatedTerms,
+      program_classification: programToClassification(selectedProgram),
+    };
     const saved = savePromoDraft(dataToSave, editingId);
     setEditingId(saved.id);
     toast.success(`Draft "${formData.promo_name || 'Untitled'}" tersimpan!`);
@@ -107,7 +135,12 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
 
   const handlePublish = () => {
     const generatedTerms = generateFullTermsString(formData);
-    const dataToSave: PromoFormData = { ...formData, status: 'active', custom_terms: generatedTerms };
+    const dataToSave: PromoFormData = { 
+      ...formData, 
+      status: 'active', 
+      custom_terms: generatedTerms,
+      program_classification: programToClassification(selectedProgram),
+    };
     const saved = savePromoDraft(dataToSave, editingId);
     toast.success(`Promo "${formData.promo_name}" berhasil dipublish!`);
     console.log("Published promo:", saved);
