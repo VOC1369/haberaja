@@ -757,34 +757,42 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                       })
                       .map((sub, subIndex) => (
                       <TableRow key={`${item.id}-sub-${subIndex}`} className="bg-muted/30 hover:bg-muted/50">
-                        <TableCell className="py-3 pl-10">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">↳</span>
+                        {/* No - kosongkan untuk subcategory */}
+                        <TableCell className="py-3"></TableCell>
+                        
+                        {/* Promo Name - dengan indent */}
+                        <TableCell className="py-3">
+                          <div className="flex items-center gap-2 pl-6">
+                            <span className="text-muted-foreground">↳</span>
                             <span className="text-sm text-foreground">{sub.name || `Varian ${subIndex + 1}`}</span>
                             {sub.game_types && sub.game_types.length > 0 && (
                               <Badge className="bg-button-hover/20 text-button-hover border-0 rounded-full px-2 py-0.5 text-xs">
                                 {sub.game_types.map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).join(", ")}
                               </Badge>
                             )}
-                        </div>
+                          </div>
                         </TableCell>
+                        
+                        {/* Category - tampilkan calculation method & value */}
                         <TableCell className="py-3 text-center">
-                          {/* Empty for sub-categories */}
+                          <span className="text-xs text-muted-foreground capitalize">
+                            {sub.calculation_method ? sub.calculation_method : '-'}
+                            {sub.calculation_value && Number(sub.calculation_value) > 0 
+                              ? ` ${sub.calculation_value}${item.promo_type?.toLowerCase().includes('loyalty') ? ' LP' : '%'}` 
+                              : ''}
+                          </span>
                         </TableCell>
-                        <TableCell className="py-3 text-xs text-muted-foreground">
-                          -
-                        </TableCell>
-                        <TableCell className="py-3 text-xs text-muted-foreground capitalize">
-                          {sub.calculation_method || "-"}
-                        </TableCell>
-                        <TableCell className="py-3">
-                          {sub.calculation_value && (
-                            <span className="text-xs text-muted-foreground">
-                              {sub.calculation_value}
-                              {item.promo_type?.toLowerCase().includes('loyalty') ? ' LP' : '%'}
-                            </span>
-                          )}
-                        </TableCell>
+                        
+                        {/* Valid Period */}
+                        <TableCell className="py-3 text-sm text-muted-foreground">-</TableCell>
+                        
+                        {/* Last Updated */}
+                        <TableCell className="py-3"></TableCell>
+                        
+                        {/* Status */}
+                        <TableCell className="py-3"></TableCell>
+                        
+                        {/* Actions */}
                         <TableCell className="py-3"></TableCell>
                       </TableRow>
                     ))}
