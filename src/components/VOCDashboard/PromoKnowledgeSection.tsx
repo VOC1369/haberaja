@@ -639,6 +639,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           <Table>
             <TableHeader>
               <TableRow className="bg-muted hover:bg-muted">
+                <TableHead className="text-foreground font-semibold w-12 text-center">No</TableHead>
                 <TableHead className="text-foreground font-semibold">Promo Name</TableHead>
                 <TableHead className="text-foreground font-semibold text-center">Category</TableHead>
                 <TableHead className="text-foreground font-semibold">Valid Period</TableHead>
@@ -648,7 +649,11 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => {
+              {[...items].sort((a, b) => {
+                const dateA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+                const dateB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+                return dateB - dateA;
+              }).map((item, index) => {
                 const hasSubcategories = item.has_subcategories && item.subcategories && item.subcategories.length > 0;
                 const isExpanded = expandedPromos.has(item.id);
                 
@@ -659,6 +664,9 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                       className={`hover:bg-card ${hasSubcategories ? 'cursor-pointer' : ''}`}
                       onClick={hasSubcategories ? () => toggleExpanded(item.id) : undefined}
                     >
+                      <TableCell className="py-4 text-center text-sm text-muted-foreground font-medium">
+                        {index + 1}
+                      </TableCell>
                       <TableCell className="py-4">
                         <div className="flex items-center gap-2">
                           {hasSubcategories && (
