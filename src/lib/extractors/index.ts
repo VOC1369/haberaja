@@ -62,6 +62,7 @@ export {
   getCategoryBadgeVariant,
   getConfidenceBadgeVariant,
   formatQualityFlag,
+  applyKeywordOverrides,
   CLASSIFIER_PROMPT_VERSION,
   CLASSIFICATION_MODEL,
   type ProgramCategory,

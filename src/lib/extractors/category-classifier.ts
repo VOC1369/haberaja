@@ -158,6 +158,44 @@ export function getCategoryName(category: ProgramCategory): string {
   }
 }
 
+/**
+ * Post-processing override untuk memastikan konsistensi classification
+ * ROLLINGAN = Policy Program (C) - turnover-based, recurring system
+ * CASHBACK = Reward Program (A) - loss-based, instant claim
+ * 
+ * This overrides LLM inconsistency for known promo types
+ */
+export function applyKeywordOverrides(
+  llmCategory: ProgramCategory,
+  promoName: string,
+  promoType?: string
+): { category: ProgramCategory; wasOverridden: boolean; overrideReason?: string } {
+  const nameLower = promoName.toLowerCase();
+  const typeLower = (promoType || '').toLowerCase();
+  const combined = `${nameLower} ${typeLower}`;
+  
+  // 🔒 ROLLINGAN = ALWAYS Policy Program (C) - ongoing turnover system
+  if (/rollingan|roll(ing)?an/i.test(combined)) {
+    if (llmCategory !== 'C') {
+      console.log('[Classifier] Keyword override: ROLLINGAN detected, forcing C (was', llmCategory, ')');
+      return { category: 'C', wasOverridden: true, overrideReason: 'ROLLINGAN keyword detected → Policy Program' };
+    }
+    return { category: 'C', wasOverridden: false };
+  }
+  
+  // 🔒 CASHBACK/REBATE = ALWAYS Reward Program (A) - instant loss-based reward
+  if (/cashback|cash\s*back|rebate/i.test(combined)) {
+    if (llmCategory !== 'A') {
+      console.log('[Classifier] Keyword override: CASHBACK detected, forcing A (was', llmCategory, ')');
+      return { category: 'A', wasOverridden: true, overrideReason: 'CASHBACK keyword detected → Reward Program' };
+    }
+    return { category: 'A', wasOverridden: false };
+  }
+  
+  // No override needed
+  return { category: llmCategory, wasOverridden: false };
+}
+
 // ============================================
 // QUALITY GATES (CONFIDENCE CALCULATION)
 // ============================================
