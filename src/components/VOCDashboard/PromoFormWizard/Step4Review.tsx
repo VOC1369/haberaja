@@ -1380,12 +1380,6 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                   })()}
                                 </tbody>
                               </table>
-                              {/* 🔒 ONTOLOGY: Payout threshold disclaimer */}
-                              {(sub.dinamis_min_claim && sub.dinamis_min_claim > 0) && (
-                                <p className="text-xs text-amber-500 mt-2 flex items-center gap-1">
-                                  <span>*</span> Nominal dengan tanda coret belum memenuhi syarat pencairan (min. Rp {formatNumber(sub.dinamis_min_claim)}).
-                                </p>
-                              )}
                               {/* 🔒 EPISTEMIC: Show "no max" disclaimer if max_bonus is NOT explicit */}
                               {!hasExplicitMaxBonus(sub) && !sub.dinamis_max_claim_unlimited && (
                                 <p className="text-xs text-muted-foreground mt-2 italic">
@@ -1493,12 +1487,6 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       <AlertCircle className="h-4 w-4 shrink-0" />
                       Nilai ini hanya ilustrasi. Nominal akhir diverifikasi oleh Human Agent & sistem.
                     </p>
-                    {/* 🔒 ONTOLOGY: Payout threshold disclaimer */}
-                    {(data.dinamis_min_claim && data.dinamis_min_claim > 0) && (
-                      <p className="text-xs text-amber-500 flex items-center gap-1">
-                        <span>*</span> Nominal dengan tanda coret belum memenuhi syarat pencairan (min. Rp {formatNumber(data.dinamis_min_claim)}).
-                      </p>
-                    )}
                     {/* 🔒 EPISTEMIC: Show "no max" disclaimer if max_bonus is NOT explicit */}
                     {!hasExplicitMaxBonus(data) && !data.dinamis_max_claim_unlimited && (
                       <p className="text-xs text-muted-foreground italic">
