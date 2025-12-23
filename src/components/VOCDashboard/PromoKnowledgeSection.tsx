@@ -641,7 +641,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
               <TableRow className="bg-muted hover:bg-muted">
                 <TableHead className="text-foreground font-semibold w-12 text-center">No</TableHead>
                 <TableHead className="text-foreground font-semibold">Promo Name</TableHead>
-                <TableHead className="text-foreground font-semibold text-center">Category</TableHead>
+                <TableHead className="text-foreground font-semibold">Category</TableHead>
                 <TableHead className="text-foreground font-semibold">Valid Period</TableHead>
                 <TableHead className="text-foreground font-semibold">Last Updated</TableHead>
                 <TableHead className="text-foreground font-semibold">Status</TableHead>
@@ -682,7 +682,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="py-4 text-center">
+                      <TableCell className="py-4">
                         {getCategoryBadge(item)}
                       </TableCell>
                       <TableCell className="py-4 text-sm text-muted-foreground">
@@ -774,7 +774,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                         </TableCell>
                         
                         {/* Category - tampilkan calculation method & value */}
-                        <TableCell className="py-3 text-center">
+                        <TableCell className="py-3">
                           <span className="text-xs text-muted-foreground capitalize">
                             {sub.calculation_method ? sub.calculation_method : '-'}
                             {sub.calculation_value && Number(sub.calculation_value) > 0 
