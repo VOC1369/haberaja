@@ -827,11 +827,22 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                 // Parse custom_terms: split by newline, remove empty lines, remove number prefix
                 // Normalize: split by semicolon or newline, trim, remove empty/header lines
                 const termsList = viewTermsItem.custom_terms
-                  .split(/[;\n]+/)
+                  .split(/\n+/)
                   .map(line => line.trim())
                   .filter(line => line !== '')
                   .map(line => line.replace(/^\d+\.\s*/, '').replace(/^Syarat & Ketentuan:\s*/i, '').trim())
-                  .filter(line => line !== '' && line.length > 10);
+                  .filter(line => {
+                    if (line === '' || line.length <= 10) return false;
+                    // Skip separator lines (dashes only)
+                    if (/^[-–—]+$/.test(line)) return false;
+                    // Skip "Contoh Perhitungan" section headers
+                    if (/^Contoh Perhitungan/i.test(line)) return false;
+                    // Skip calculation formula examples
+                    if (/^\d[\d.,]*\s*[x×].*=.*\(.*\)$/i.test(line)) return false;
+                    // Skip formula template lines
+                    if (/^Total\s+.*\s*[x×].*%.*=/i.test(line)) return false;
+                    return true;
+                  });
 
                 return (
                   <div className="bg-muted rounded-lg p-4 space-y-4">
