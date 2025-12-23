@@ -150,11 +150,25 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
     periodEnd: string | undefined,
     fullData: PromoFormData
   ): string => {
-    // 🔒 PRIORITY 1: Use explicit claim_frequency or formula_metadata.period
-    // Explicit data takes precedence over day-range inference
+    // 🔒 PRIORITY 0: Sanity check based on distribution_day
+    // If distribution is on a specific weekday, that implies WEEKLY distribution!
+    // This overrides any incorrect claim_frequency (e.g., "bulanan" with "selasa" distribution)
+    const distDay = fullData.distribution_day?.toLowerCase();
+    const weekdays = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu',
+                      'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    if (distDay && weekdays.includes(distDay)) {
+      return 'mingguan';  // Weekly distribution on specific day
+    }
+    
+    if (distDay === 'setiap_hari' || distDay === 'daily' || distDay === 'setiap hari') {
+      return 'harian';  // Daily distribution
+    }
+    
+    // PRIORITY 1: Use explicit claim_frequency or formula_metadata.period
     const explicitPeriod = getPeriodDisplayFromData(fullData);
     if (explicitPeriod !== 'berkala') {
-      return explicitPeriod;  // Return explicit value if available
+      return explicitPeriod;
     }
     
     // PRIORITY 2: Infer from day range (only if no explicit data)
@@ -167,15 +181,12 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
       if (start === 'senin' && end === 'jumat') return 'mingguan';
       if (start === 'sabtu' && end === 'minggu') return 'mingguan';
       
-      // ✅ FIX: Same day (Senin s/d Senin) = MINGGUAN 
-      // (distribusi di hari tertentu setiap minggu, bukan setiap hari)
+      // Same day (Senin s/d Senin) = MINGGUAN (weekly on specific day)
       if (start === end) return 'mingguan';
       
-      // Multiple days = MINGGUAN by default
       return 'mingguan';
     }
     
-    // Final fallback
     return 'berkala';
   };
   
