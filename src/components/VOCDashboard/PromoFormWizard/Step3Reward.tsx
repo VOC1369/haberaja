@@ -73,7 +73,20 @@ const DEFAULT_HADIAH_TYPES: SelectOption[] = [
   { value: 'lp', label: 'Loyalty Points (LP)' },
   { value: 'exp', label: 'Experience Points (EXP)' },
   { value: 'hadiah_fisik', label: 'Hadiah Fisik' },
+  { value: 'uang_tunai', label: 'Uang Tunai' },
 ];
+
+// Helper untuk format angka ke Rupiah Indonesia (dengan separator titik)
+const formatRupiah = (value: number | undefined): string => {
+  if (value === undefined || value === null || isNaN(value)) return '';
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+// Helper untuk parse Rupiah string ke number
+const parseRupiah = (value: string): number => {
+  const cleaned = value.replace(/\./g, '');
+  return parseInt(cleaned, 10) || 0;
+};
 
 const DEFAULT_LP_VALUE_TYPES: SelectOption[] = [
   { value: 'credit_game', label: 'Credit Game' },
@@ -340,7 +353,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   value={data.dinamis_reward_type}
                   onValueChange={(value) => onChange({ 
                     dinamis_reward_type: value,
-                    physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : ''
+                    physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : '',
+                    cash_reward_amount: value === 'uang_tunai' ? data.cash_reward_amount : undefined
                   })}
                   options={dinamisRewardTypeOptions}
                   onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
@@ -358,6 +372,24 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     />
                     <p className="text-xs text-muted-foreground">
                       Masukkan nama hadiah fisik yang akan diberikan kepada player
+                    </p>
+                  </div>
+                )}
+                {/* Conditional field untuk Uang Tunai */}
+                {data.dinamis_reward_type === 'uang_tunai' && (
+                  <div className="space-y-2 mt-2">
+                    <Label>Nominal Uang Tunai</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                      <Input
+                        className="pl-10"
+                        value={formatRupiah(data.cash_reward_amount)}
+                        onChange={(e) => onChange({ cash_reward_amount: parseRupiah(e.target.value) })}
+                        placeholder="50.000.000"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Masukkan nominal uang tunai (format: 10.000.000)
                     </p>
                   </div>
                 )}
@@ -1500,7 +1532,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   value={data.dinamis_reward_type}
                   onValueChange={(value) => onChange({ 
                     dinamis_reward_type: value,
-                    physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : ''
+                    physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : '',
+                    cash_reward_amount: value === 'uang_tunai' ? data.cash_reward_amount : undefined
                   })}
                   options={dinamisRewardTypeOptions}
                   onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
@@ -1518,6 +1551,24 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     />
                     <p className="text-xs text-muted-foreground">
                       Masukkan nama hadiah fisik yang akan diberikan kepada player
+                    </p>
+                  </div>
+                )}
+                {/* Conditional field untuk Uang Tunai */}
+                {data.dinamis_reward_type === 'uang_tunai' && (
+                  <div className="space-y-2 mt-2">
+                    <Label>Nominal Uang Tunai</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                      <Input
+                        className="pl-10"
+                        value={formatRupiah(data.cash_reward_amount)}
+                        onChange={(e) => onChange({ cash_reward_amount: parseRupiah(e.target.value) })}
+                        placeholder="50.000.000"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Masukkan nominal uang tunai (format: 10.000.000)
                     </p>
                   </div>
                 )}
@@ -2144,7 +2195,11 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     </div>
                     <SelectWithAddNew
                       value={data.global_jenis_hadiah || ''}
-                      onValueChange={(value) => onChange({ global_jenis_hadiah: value, physical_reward_name: value !== 'hadiah_fisik' ? '' : data.physical_reward_name })}
+                      onValueChange={(value) => onChange({ 
+                        global_jenis_hadiah: value, 
+                        physical_reward_name: value !== 'hadiah_fisik' ? '' : data.physical_reward_name,
+                        cash_reward_amount: value !== 'uang_tunai' ? undefined : data.cash_reward_amount
+                      })}
                       options={dinamisRewardTypeOptions}
                       onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
                       onDeleteOption={handleDeleteDinamisRewardType}
@@ -2163,6 +2218,24 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         />
                         <p className="text-xs text-muted-foreground">
                           Masukkan nama hadiah fisik yang akan diberikan kepada player
+                        </p>
+                      </div>
+                    )}
+                    {/* Jika Uang Tunai dipilih, tampilkan input nominal */}
+                    {data.global_jenis_hadiah === 'uang_tunai' && data.global_jenis_hadiah_enabled && (
+                      <div className="space-y-2 mt-3">
+                        <Label className="text-sm">Nominal Uang Tunai</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                          <Input
+                            className="pl-10"
+                            value={formatRupiah(data.cash_reward_amount)}
+                            onChange={(e) => onChange({ cash_reward_amount: parseRupiah(e.target.value) })}
+                            placeholder="50.000.000"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Masukkan nominal uang tunai (format: 10.000.000)
                         </p>
                       </div>
                     )}
@@ -2821,7 +2894,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                             value={tier.type || 'credit_game'}
                             onValueChange={(value) => updateTier(tier.id, { 
                               type: value,
-                              physical_reward_name: value === 'hadiah_fisik' ? tier.physical_reward_name : ''
+                              physical_reward_name: value === 'hadiah_fisik' ? tier.physical_reward_name : '',
+                              cash_reward_amount: value === 'uang_tunai' ? tier.cash_reward_amount : undefined
                             })}
                             options={dinamisRewardTypeOptions}
                             onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
@@ -2845,6 +2919,25 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                           />
                           <p className="text-xs text-muted-foreground">
                             Masukkan nama hadiah fisik untuk tier ini
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Conditional Input untuk Uang Tunai */}
+                      {tier.type === 'uang_tunai' && (
+                        <div className="space-y-2">
+                          <Label className="text-xs">Nominal Uang Tunai</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                            <Input
+                              className="pl-10"
+                              value={formatRupiah(tier.cash_reward_amount)}
+                              onChange={(e) => updateTier(tier.id, { cash_reward_amount: parseRupiah(e.target.value) })}
+                              placeholder="50.000.000"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Masukkan nominal uang tunai untuk tier ini
                           </p>
                         </div>
                       )}

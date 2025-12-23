@@ -11,7 +11,18 @@ import { PromoSubCategory, CALCULATION_BASES, CALCULATION_METHODS, DINAMIS_REWAR
 import { SelectWithAddNew, SelectOption } from "./SelectWithAddNew";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-// Inline component for exclusion rules
+// Helper untuk format angka ke Rupiah Indonesia (dengan separator titik)
+const formatRupiah = (value: number | undefined): string => {
+  if (value === undefined || value === null || isNaN(value)) return '';
+  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+// Helper untuk parse Rupiah string ke number
+const parseRupiah = (value: string): number => {
+  const cleaned = value.replace(/\./g, '');
+  return parseInt(cleaned, 10) || 0;
+};
+
 function ExclusionRulesInput({
   rules,
   onChange
@@ -231,7 +242,8 @@ export function SubCategoryCard({
             </div>
             <SelectWithAddNew value={subCategory.jenis_hadiah_same_as_global ? '' : subCategory.jenis_hadiah} onValueChange={value => onChange({
             jenis_hadiah: value,
-            physical_reward_name: value !== 'hadiah_fisik' ? '' : subCategory.physical_reward_name
+            physical_reward_name: value !== 'hadiah_fisik' ? '' : subCategory.physical_reward_name,
+            cash_reward_amount: value !== 'uang_tunai' ? undefined : subCategory.cash_reward_amount
           })} options={dinamisRewardTypeOptions} onAddOption={option => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])} onDeleteOption={value => setDinamisRewardTypeOptions(dinamisRewardTypeOptions.filter(d => d.value !== value))} placeholder={subCategory.jenis_hadiah_same_as_global ? "Mengikuti global" : "Pilih jenis"} disabled={subCategory.jenis_hadiah_same_as_global} className={subCategory.jenis_hadiah_same_as_global ? "opacity-50" : ""} />
             {/* Jika Hadiah Fisik dipilih, tampilkan input nama hadiah */}
             {subCategory.jenis_hadiah === 'hadiah_fisik' && !subCategory.jenis_hadiah_same_as_global && (
@@ -242,6 +254,24 @@ export function SubCategoryCard({
                   onChange={(e) => onChange({ physical_reward_name: e.target.value })}
                   placeholder="Contoh: iPhone 16 Pro Max 256GB"
                 />
+              </div>
+            )}
+            {/* Jika Uang Tunai dipilih, tampilkan input nominal */}
+            {subCategory.jenis_hadiah === 'uang_tunai' && !subCategory.jenis_hadiah_same_as_global && (
+              <div className="space-y-2 mt-3">
+                <Label className="text-sm">Nominal Uang Tunai</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                  <Input
+                    className="pl-10"
+                    value={formatRupiah(subCategory.cash_reward_amount)}
+                    onChange={(e) => onChange({ cash_reward_amount: parseRupiah(e.target.value) })}
+                    placeholder="50.000.000"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Masukkan nominal uang tunai (format: 10.000.000)
+                </p>
               </div>
             )}
           </div>
