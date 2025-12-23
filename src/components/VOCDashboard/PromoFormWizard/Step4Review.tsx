@@ -1219,8 +1219,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         <p className="text-muted-foreground text-xs">Jenis Hadiah</p>
                         <p className="text-foreground">
                           {sub.jenis_hadiah_same_as_global 
-                            ? `(Global) ${REWARD_TYPES.find(r => r.value === data.global_jenis_hadiah)?.label || data.global_jenis_hadiah || '-'}`
-                            : REWARD_TYPES.find(r => r.value === sub.jenis_hadiah)?.label || sub.jenis_hadiah || '-'}
+                            ? `(Global) ${REWARD_TYPES.find(r => r.value === data.global_jenis_hadiah)?.label || data.global_jenis_hadiah || '-'}${data.global_jenis_hadiah === 'hadiah_fisik' && data.physical_reward_name ? `: ${data.physical_reward_name}` : ''}`
+                            : `${REWARD_TYPES.find(r => r.value === sub.jenis_hadiah)?.label || sub.jenis_hadiah || '-'}${sub.jenis_hadiah === 'hadiah_fisik' && sub.physical_reward_name ? `: ${sub.physical_reward_name}` : ''}`}
                         </p>
                       </div>
                       
