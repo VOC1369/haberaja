@@ -1558,16 +1558,32 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 />
                 {/* Conditional field untuk Hadiah Fisik */}
                 {data.dinamis_reward_type === 'hadiah_fisik' && (
-                  <div className="space-y-2 mt-2">
-                    <Label>Nama Hadiah Fisik</Label>
-                    <Input
-                      value={data.physical_reward_name || ''}
-                      onChange={(e) => onChange({ physical_reward_name: e.target.value })}
-                      placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Masukkan nama hadiah fisik yang akan diberikan kepada player
-                    </p>
+                  <div className="grid grid-cols-3 gap-4 mt-2">
+                    <div className="col-span-2 space-y-2">
+                      <Label>Nama Hadiah Fisik</Label>
+                      <Input
+                        value={data.physical_reward_name || ''}
+                        onChange={(e) => onChange({ physical_reward_name: e.target.value })}
+                        placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Masukkan nama hadiah fisik yang akan diberikan kepada player
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Jumlah Unit</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={data.physical_reward_quantity || 1}
+                        onChange={(e) => onChange({ physical_reward_quantity: Number(e.target.value) || 1 })}
+                        placeholder="1"
+                        className="w-full"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Unit hadiah
+                      </p>
+                    </div>
                   </div>
                 )}
                 {/* Conditional field untuk Uang Tunai */}
