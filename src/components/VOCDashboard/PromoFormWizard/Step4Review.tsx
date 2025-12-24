@@ -1225,8 +1225,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         <p className="text-muted-foreground text-xs">Jenis Hadiah</p>
                         <p className="text-foreground">
                           {sub.jenis_hadiah_same_as_global 
-                            ? `(Global) ${REWARD_TYPES.find(r => r.value === data.global_jenis_hadiah)?.label || data.global_jenis_hadiah || '-'}${data.global_jenis_hadiah === 'hadiah_fisik' && data.physical_reward_name ? `: ${data.physical_reward_name}` : ''}${data.global_jenis_hadiah === 'uang_tunai' && data.cash_reward_amount ? `: Rp ${formatNumber(data.cash_reward_amount)}` : ''}`
-                            : `${REWARD_TYPES.find(r => r.value === sub.jenis_hadiah)?.label || sub.jenis_hadiah || '-'}${sub.jenis_hadiah === 'hadiah_fisik' && sub.physical_reward_name ? `: ${sub.physical_reward_name}` : ''}${sub.jenis_hadiah === 'uang_tunai' && sub.cash_reward_amount ? `: Rp ${formatNumber(sub.cash_reward_amount)}` : ''}`}
+                            ? `(Global) ${REWARD_TYPES.find(r => r.value === data.global_jenis_hadiah)?.label || data.global_jenis_hadiah || '-'}${data.global_jenis_hadiah === 'hadiah_fisik' && data.physical_reward_name ? `: ${data.physical_reward_name}${data.physical_reward_quantity && data.physical_reward_quantity > 1 ? ` x${data.physical_reward_quantity}` : ''}` : ''}${data.global_jenis_hadiah === 'uang_tunai' && data.cash_reward_amount ? `: Rp ${formatNumber(data.cash_reward_amount)}` : ''}`
+                            : `${REWARD_TYPES.find(r => r.value === sub.jenis_hadiah)?.label || sub.jenis_hadiah || '-'}${sub.jenis_hadiah === 'hadiah_fisik' && sub.physical_reward_name ? `: ${sub.physical_reward_name}${sub.physical_reward_quantity && sub.physical_reward_quantity > 1 ? ` x${sub.physical_reward_quantity}` : ''}` : ''}${sub.jenis_hadiah === 'uang_tunai' && sub.cash_reward_amount ? `: Rp ${formatNumber(sub.cash_reward_amount)}` : ''}`}
                         </p>
                       </div>
                       

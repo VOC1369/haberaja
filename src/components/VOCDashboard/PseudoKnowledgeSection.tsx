@@ -620,7 +620,7 @@ export function PseudoKnowledgeSection() {
               'text-foreground'
             }`}>
               {sub.reward_type === 'hadiah_fisik' 
-                ? (sub.physical_reward_name || 'Hadiah Fisik')
+                ? `${sub.physical_reward_name || 'Hadiah Fisik'}${sub.physical_reward_quantity && sub.physical_reward_quantity > 1 ? ` x${sub.physical_reward_quantity}` : ''}`
                 : sub.reward_type === 'uang_tunai'
                   ? (sub.cash_reward_amount ? `Rp ${sub.cash_reward_amount.toLocaleString('id-ID')}` : 'Uang Tunai')
                   : 'Credit Game'}
