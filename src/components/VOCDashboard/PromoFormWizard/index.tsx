@@ -119,7 +119,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
     return result;
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     const generatedTerms = generateFullTermsString(formData);
     const dataToSave: PromoFormData = { 
       ...formData, 
@@ -127,13 +127,13 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
       custom_terms: generatedTerms,
       program_classification: programToClassification(selectedProgram),
     };
-    const saved = savePromoDraft(dataToSave, editingId);
+    const saved = await savePromoDraft(dataToSave, editingId);
     setEditingId(saved.id);
     toast.success(`Draft "${formData.promo_name || 'Untitled'}" tersimpan!`);
     console.log("Saved draft:", saved);
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     const generatedTerms = generateFullTermsString(formData);
     const dataToSave: PromoFormData = { 
       ...formData, 
@@ -141,7 +141,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
       custom_terms: generatedTerms,
       program_classification: programToClassification(selectedProgram),
     };
-    const saved = savePromoDraft(dataToSave, editingId);
+    const saved = await savePromoDraft(dataToSave, editingId);
     toast.success(`Promo "${formData.promo_name}" berhasil dipublish!`);
     console.log("Published promo:", saved);
     

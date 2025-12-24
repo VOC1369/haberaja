@@ -88,18 +88,28 @@ const sampleAdmins: Admin[] = [
 ];
 
 export function AdminRoleSection() {
-  const [admins, setAdmins] = useState<Admin[]>(sampleAdmins);
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Sync admins to localStorage for use in other components
+  // Load admins from Supabase
   useEffect(() => {
-    const adminUsers: AdminUser[] = admins.map(a => ({
-      id: a.id,
-      name: a.name,
-      telegram: a.telegram,
-      position: a.position,
-    }));
-    saveAdminList(adminUsers);
-  }, [admins]);
+    const loadAdmins = async () => {
+      setIsLoading(true);
+      const adminUsers = await getAdminList();
+      setAdmins(adminUsers.map(a => ({
+        id: a.id,
+        name: a.name,
+        whatsapp: a.whatsapp || '',
+        telegram: a.telegram || '',
+        position: a.position,
+        assignedChats: a.assigned_chats || 0,
+        status: (a.status as Admin['status']) || 'Standby',
+        isSuperAdmin: a.is_super_admin,
+      })));
+      setIsLoading(false);
+    };
+    loadAdmins();
+  }, []);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newAdmin, setNewAdmin] = useState({
     name: "",

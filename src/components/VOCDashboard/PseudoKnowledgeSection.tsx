@@ -497,12 +497,12 @@ export function PseudoKnowledgeSection() {
   };
   
   // Separated commit logic for reuse after gate confirmation
-  const proceedWithCommit = () => {
+  const proceedWithCommit = async () => {
     if (!extractedPromo) return;
     
     try {
       const promoData = mapExtractedToPromoFormData(extractedPromo);
-      const savedPromo = promoKB.add(promoData);
+      const savedPromo = await promoKB.add(promoData);
       
       toast.success("Promo berhasil ditambahkan!", {
         description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`

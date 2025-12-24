@@ -151,12 +151,15 @@ export function TicketList({ category }: TicketListProps) {
     setIsDetailOpen(false);
   };
 
-  // Load promos and ticket statuses from localStorage
+  // Load promos and ticket statuses from Supabase
   useEffect(() => {
-    const loadedPromos = getPromoDrafts();
-    setPromos(loadedPromos);
-    setRewardTickets(generateRewardTickets(loadedPromos));
-    setTicketStatuses(getStoredTicketStatuses());
+    const loadData = async () => {
+      const loadedPromos = await getPromoDrafts();
+      setPromos(loadedPromos);
+      setRewardTickets(generateRewardTickets(loadedPromos));
+      setTicketStatuses(getStoredTicketStatuses());
+    };
+    loadData();
   }, []);
 
   // Combine base tickets with dynamically generated reward tickets and apply stored statuses
