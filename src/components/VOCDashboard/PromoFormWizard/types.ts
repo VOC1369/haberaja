@@ -251,6 +251,7 @@ export interface PromoFormData {
 
   // Physical Reward (untuk Hadiah Fisik)
   physical_reward_name?: string;  // Nama hadiah fisik manual (contoh: "MITSUBISHI PAJERO SPORT DAKAR 2025")
+  physical_reward_quantity?: number;  // Jumlah unit hadiah fisik (default: 1)
   
   // Cash Reward (untuk Uang Tunai)
   cash_reward_amount?: number;  // Nominal uang tunai (contoh: 50000000 = Rp 50.000.000)
@@ -299,6 +300,7 @@ export interface TierReward {
   reward_type: 'fixed' | 'percentage';
   type: string;
   physical_reward_name?: string;
+  physical_reward_quantity?: number;  // Jumlah unit hadiah fisik
   cash_reward_amount?: number;  // Nominal uang tunai
 }
 
@@ -378,6 +380,7 @@ export interface PromoSubCategory {
   
   // Physical Reward (untuk Hadiah Fisik)
   physical_reward_name?: string;  // Nama hadiah fisik manual
+  physical_reward_quantity?: number;  // Jumlah unit hadiah fisik
   
   // Cash Reward (untuk Uang Tunai)
   cash_reward_amount?: number;  // Nominal uang tunai
@@ -832,6 +835,7 @@ export const initialPromoData: PromoFormData = {
   
   // Physical Reward
   physical_reward_name: '',
+  physical_reward_quantity: 1,  // Default 1 unit
   
   // Cash Reward
   cash_reward_amount: undefined,
