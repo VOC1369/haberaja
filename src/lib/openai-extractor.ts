@@ -477,6 +477,10 @@ export interface ExtractedPromo {
   // Enhanced Prize structure for Category B (Event)
   prizes?: ExtractedPrize[];            // For leaderboard/tournament with mixed reward types
   
+  // Event-specific fields (Category B)
+  min_deposit?: number | null;          // Minimal deposit untuk participate (e.g., 50000 for Lucky Spin)
+  min_deposit_note?: string | null;     // Note like "Untuk 1 Tiket"
+  
   // Level Up / Event Unlock Conditions (progress gates, NOT financial requirements)
   // These are NOT min_deposit! They are tier progression conditions
   unlock_conditions?: UnlockCondition[];
@@ -1971,6 +1975,54 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       }
     }
     
+    // ============================================
+    // FIX 5: EVENT MIN_DEPOSIT MAPPING (Category B)
+    // Event promos have min_deposit at parent level, map to minimum_base
+    // ============================================
+    if (parsed.program_classification === 'B' || /lucky.*spin|tournament|undian|leaderboard|spin.*wheel/i.test(parsed.promo_name || '')) {
+      if (parsed.min_deposit && parsed.min_deposit > 0) {
+        console.log(`[Extractor] Event min_deposit detected: ${parsed.min_deposit} → mapping to minimum_base`);
+        
+        // If single-variant or no subcategories, create one with min_deposit
+        if (!parsed.subcategories || parsed.subcategories.length === 0) {
+          parsed.subcategories = [{
+            sub_name: parsed.promo_name || 'Default',
+            calculation_base: 'deposit',
+            calculation_method: 'fixed',
+            calculation_value: 0,
+            minimum_base: parsed.min_deposit,
+            max_bonus: null,
+            turnover_rule: null,
+            payout_direction: 'depan',
+            game_types: [],
+            game_providers: [],
+            game_names: [],
+            eligible_providers: [],
+            blacklist: { enabled: false, types: [], providers: [], games: [], rules: [] },
+            confidence: {
+              calculation_value: 'unknown',
+              minimum_base: 'explicit',
+              max_bonus: 'unknown',
+              turnover_rule: 'unknown',
+              payout_direction: 'unknown',
+              game_types: 'unknown',
+              game_providers: 'unknown'
+            }
+          }];
+        } else {
+          // Propagate min_deposit to all subcategories that don't have minimum_base
+          parsed.subcategories = parsed.subcategories.map(sub => ({
+            ...sub,
+            minimum_base: sub.minimum_base || parsed.min_deposit,
+            confidence: {
+              ...sub.confidence,
+              minimum_base: sub.minimum_base ? sub.confidence?.minimum_base : 'derived'
+            }
+          }));
+        }
+      }
+    }
+
     // Ensure each subcategory has blacklist and confidence
     parsed.subcategories = parsed.subcategories.map(sub => ({
       ...sub,
