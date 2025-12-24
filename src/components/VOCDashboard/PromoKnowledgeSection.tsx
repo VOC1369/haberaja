@@ -50,10 +50,11 @@ import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal
 import { classifyContent, type ProgramCategory } from "@/lib/extractors/category-classifier";
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
-import { PromoItem, forceSeedSamplePromos } from "./PromoFormWizard/types";
+import { PromoItem, forceSeedSamplePromos, deletePromoDraft, duplicatePromo } from "./PromoFormWizard/types";
+import { promoKB } from "@/lib/promo-storage";
 import { generateTermsList, formatNumber } from "./PromoFormWizard/Step4Review";
 
-const PROMO_STORAGE_KEY = "voc_promo_drafts";
+
 
 type ViewMode = "list" | "form" | "upload";
 
@@ -86,18 +87,14 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     });
   };
 
-  // Simple loadPromos - just read from localStorage, no seeding
-  const loadPromos = () => {
-    const stored = localStorage.getItem(PROMO_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setItems(Array.isArray(parsed) ? parsed : []);
-        console.log('[PromoKnowledgeSection] Loaded promos:', parsed?.length || 0);
-      } catch {
-        setItems([]);
-      }
-    } else {
+  // Load promos from Supabase
+  const loadPromos = async () => {
+    try {
+      const promos = await promoKB.getAll();
+      setItems(promos);
+      console.log('[PromoKnowledgeSection] Loaded promos from Supabase:', promos.length);
+    } catch (error) {
+      console.error('[PromoKnowledgeSection] Failed to load promos:', error);
       setItems([]);
     }
   };
@@ -111,27 +108,17 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     }
   }, [forceResetKey]);
 
-  // Listen for storage changes (when promo added from PseudoKnowledgeSection)
+  // Listen for custom event from promo-storage updates (Supabase-backed)
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === PROMO_STORAGE_KEY) {
-        console.log('[PromoKnowledgeSection] Storage changed, reloading promos...');
-        loadPromos();
-      }
-    };
-    
-    // Also listen for custom event from same-window storage updates
-    const handleCustomStorageEvent = () => {
-      console.log('[PromoKnowledgeSection] Custom storage event, reloading promos...');
+    const handleStorageEvent = () => {
+      console.log('[PromoKnowledgeSection] Storage event, reloading promos...');
       loadPromos();
     };
     
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('promo-storage-updated', handleCustomStorageEvent);
+    window.addEventListener('promo-storage-updated', handleStorageEvent);
     
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('promo-storage-updated', handleCustomStorageEvent);
+      window.removeEventListener('promo-storage-updated', handleStorageEvent);
     };
   }, []);
 
@@ -164,33 +151,36 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     loadPromos();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
-      const updatedItems = items.filter(item => item.id !== deleteId);
-      localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(updatedItems));
-      setItems(updatedItems);
-      toast.success("Promo berhasil dihapus");
-      setDeleteId(null);
+      try {
+        const success = await deletePromoDraft(deleteId);
+        if (success) {
+          setItems(items.filter(item => item.id !== deleteId));
+          toast.success("Promo berhasil dihapus");
+        } else {
+          toast.error("Gagal menghapus promo");
+        }
+      } catch (error) {
+        console.error('[PromoKnowledgeSection] Delete failed:', error);
+        toast.error("Gagal menghapus promo");
+      } finally {
+        setDeleteId(null);
+      }
     }
   };
 
-  const handleDuplicate = (promo: PromoItem) => {
-    const newPromo: PromoItem = {
-      ...promo,
-      id: crypto.randomUUID(),
-      promo_name: `${promo.promo_name} (Copy)`,
-      status: "draft",
-      is_active: false,
-      version: 1,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    const updatedItems = [newPromo, ...items];
-    localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(updatedItems));
-    setItems(updatedItems);
-    toast.success(`Promo "${promo.promo_name}" berhasil diduplikasi`);
-    // Langsung buka edit page
-    handleEdit(newPromo);
+  const handleDuplicate = async (promo: PromoItem) => {
+    try {
+      const newPromo = await duplicatePromo(promo);
+      setItems([newPromo, ...items]);
+      toast.success(`Promo "${promo.promo_name}" berhasil diduplikasi`);
+      // Langsung buka edit page
+      handleEdit(newPromo);
+    } catch (error) {
+      console.error('[PromoKnowledgeSection] Duplicate failed:', error);
+      toast.error("Gagal menduplikasi promo");
+    }
   };
 
   const getStatusBadge = (promo: PromoItem) => {
@@ -271,23 +261,16 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
       
       const result = await classifyContent(content);
       
-      // Update promo in localStorage
-      const stored = localStorage.getItem(PROMO_STORAGE_KEY);
-      if (stored) {
-        const allPromos = JSON.parse(stored) as PromoItem[];
-        const index = allPromos.findIndex(p => p.id === promo.id);
-        if (index !== -1) {
-          allPromos[index] = {
-            ...allPromos[index],
-            program_classification: result.category,
-            classification_confidence: result.confidence,
-          };
-          localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(allPromos));
-          console.log('[AutoClassify] Saved classification:', result.category, 'for', promo.promo_name);
-          
-          // Reload promos to reflect change
-          loadPromos();
-        }
+      // Update promo in Supabase
+      const success = await promoKB.update(promo.id, {
+        program_classification: result.category,
+        classification_confidence: result.confidence,
+      } as Partial<PromoItem>);
+      
+      if (success) {
+        console.log('[AutoClassify] Saved classification:', result.category, 'for', promo.promo_name);
+        // Reload promos to reflect change
+        loadPromos();
       }
     } catch (error) {
       console.error('[AutoClassify] Failed to classify promo:', promo.id, error);
@@ -362,7 +345,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     const badge = getBadgeContent();
     if (!badge) return <span className="text-muted-foreground">-</span>;
     
-    const handleOverride = () => {
+    const handleOverride = async () => {
       if (selectedCategory === classification) {
         toast.error('Kategori tidak berubah');
         return;
@@ -372,29 +355,30 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
         return;
       }
       
-      // Update in localStorage
-      const stored = localStorage.getItem(PROMO_STORAGE_KEY);
-      if (stored) {
-        const allPromos = JSON.parse(stored) as PromoItem[];
-        const index = allPromos.findIndex(p => p.id === promo.id);
-        if (index !== -1) {
-          allPromos[index] = {
-            ...allPromos[index],
-            program_classification: selectedCategory,
-            classification_override: {
-              from: classification,
-              to: selectedCategory,
-              reason: overrideReason.trim(),
-              overridden_by: 'Admin',
-              timestamp: new Date().toISOString(),
-            },
-          };
-          localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(allPromos));
+      // Update in Supabase
+      try {
+        const success = await promoKB.update(promo.id, {
+          program_classification: selectedCategory,
+          classification_override: {
+            from: classification,
+            to: selectedCategory,
+            reason: overrideReason.trim(),
+            overridden_by: 'Admin',
+            timestamp: new Date().toISOString(),
+          },
+        } as Partial<PromoItem>);
+        
+        if (success) {
           loadPromos();
           toast.success('Kategori berhasil diubah');
           setIsOpen(false);
           setOverrideReason('');
+        } else {
+          toast.error('Gagal mengubah kategori');
         }
+      } catch (error) {
+        console.error('[CategoryOverride] Failed:', error);
+        toast.error('Gagal mengubah kategori');
       }
     };
     
