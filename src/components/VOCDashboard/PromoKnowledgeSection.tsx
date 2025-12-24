@@ -740,7 +740,16 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                           <span className="text-xs text-muted-foreground capitalize">
                             {sub.calculation_method ? sub.calculation_method : '-'}
                             {sub.calculation_value && Number(sub.calculation_value) > 0 
-                              ? ` ${sub.calculation_value}${item.promo_type?.toLowerCase().includes('loyalty') ? ' LP' : '%'}` 
+                              ? (() => {
+                                  const method = sub.calculation_method?.toLowerCase();
+                                  if (method === 'threshold' || method === 'fixed') {
+                                    return ` Rp ${Number(sub.calculation_value).toLocaleString('id-ID')}`;
+                                  }
+                                  if (item.promo_type?.toLowerCase().includes('loyalty')) {
+                                    return ` ${sub.calculation_value} LP`;
+                                  }
+                                  return ` ${sub.calculation_value}%`;
+                                })()
                               : ''}
                           </span>
                         </TableCell>
