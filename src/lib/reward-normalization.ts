@@ -28,6 +28,11 @@ const CREDIT_GAME_PROMO_TYPES = [
   'bonus_new_member',
   'turnover_bonus',
   'rebate',
+  'scatter_bonus',
+  'level_up',
+  'event_bonus',
+  'daily_bonus',
+  'weekly_bonus',
 ];
 
 // Promo types yang default reward-nya adalah uang tunai
@@ -63,7 +68,7 @@ export function inferRewardType(
   if (sub.jenis_hadiah) {
     const jh = String(sub.jenis_hadiah).toLowerCase();
     if (jh.includes('fisik') || jh === 'hadiah_fisik') return 'hadiah_fisik';
-    if (jh.includes('credit') || jh === 'credit_game') return 'credit_game';
+    if (jh.includes('credit') || jh === 'credit_game' || jh === 'freechip' || jh === 'freebet') return 'credit_game';
     if (jh.includes('tunai') || jh === 'uang_tunai') return 'uang_tunai';
   }
 
