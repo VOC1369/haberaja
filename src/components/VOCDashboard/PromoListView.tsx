@@ -37,39 +37,12 @@ import {
 import { FileText, Plus, Pencil, Trash2, Eye, MoreHorizontal, Copy, ChevronRight, ChevronDown, Infinity } from "lucide-react";
 import { toast } from "sonner";
 import { PromoItem, getPromoDrafts, deletePromoDraft, savePromoDraft } from "./PromoFormWizard/types";
+import { inferRewardType, formatSubcategoryName, getRewardBadgeInfo } from "@/lib/reward-normalization";
 
 interface PromoListViewProps {
   onEdit?: (promo: PromoItem) => void;
   onAddNew?: () => void;
 }
-
-// Helper: Normalize reward type dari berbagai format legacy data
-const normalizeRewardType = (sub: any): 'hadiah_fisik' | 'credit_game' | 'uang_tunai' | null => {
-  // Coba dari jenis_hadiah dulu
-  const jh = (sub.jenis_hadiah || '').toLowerCase();
-  if (jh.includes('fisik') || jh === 'hadiah_fisik') return 'hadiah_fisik';
-  if (jh.includes('credit') || jh === 'credit_game') return 'credit_game';
-  if (jh.includes('tunai') || jh === 'uang_tunai') return 'uang_tunai';
-  
-  // Coba dari dinamis_reward_type (legacy)
-  const drt = (sub.dinamis_reward_type || '').toLowerCase();
-  if (drt.includes('fisik')) return 'hadiah_fisik';
-  if (drt.includes('credit') || drt === 'freechip') return 'credit_game';
-  if (drt.includes('tunai')) return 'uang_tunai';
-  
-  // Infer dari nama subcategory
-  const name = (sub.name || '').toLowerCase();
-  if (/honda|pcx|iphone|macbook|samsung|watch|emas|motor|mobil|apple|gold|voucher\s*(belanja|alfamart|indomaret)/.test(name)) return 'hadiah_fisik';
-  if (/credit\s*game|freechip|freebet|chip|rp\s*[\d.,]+/.test(name)) return 'credit_game';
-  if (/uang\s*tunai|cash|transfer/.test(name)) return 'uang_tunai';
-  
-  return null;
-};
-
-// Helper: Get quantity dengan fallback ke 1
-const getQuantity = (sub: any): number => {
-  return sub.physical_reward_quantity ?? 1;
-};
 
 export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
   const [promos, setPromos] = useState<PromoItem[]>([]);
@@ -347,22 +320,26 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                   </TableRow>
                   
                   {/* Expanded Subcategories Rows */}
-                  {hasSubcategories && isExpanded && promo.subcategories.map((sub, idx) => (
+                  {hasSubcategories && isExpanded && promo.subcategories.map((sub, idx) => {
+                    const rewardType = inferRewardType(sub, promo);
+                    const badgeInfo = getRewardBadgeInfo(rewardType);
+                    
+                    return (
                     <TableRow key={`${promo.id}-sub-${idx}`} className="bg-muted/10 hover:bg-muted/20">
                       <TableCell className="pl-10 pr-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-1 h-4 bg-purple-500/50 rounded-full" />
                           <span className="text-sm text-foreground font-medium">
-                            {getQuantity(sub)} {sub.name || `Varian ${idx + 1}`}
+                            {formatSubcategoryName(sub, rewardType, `Varian ${idx + 1}`)}
                           </span>
                           {/* Value Badge untuk Credit Game */}
-                          {normalizeRewardType(sub) === 'credit_game' && (sub.cash_reward_amount ?? 0) > 0 && (
+                          {rewardType === 'credit_game' && (sub.cash_reward_amount ?? 0) > 0 && (
                             <Badge variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/20">
                               Rp {sub.cash_reward_amount?.toLocaleString('id-ID')}
                             </Badge>
                           )}
                           {/* Value Badge untuk Uang Tunai */}
-                          {normalizeRewardType(sub) === 'uang_tunai' && (sub.cash_reward_amount ?? 0) > 0 && (
+                          {rewardType === 'uang_tunai' && (sub.cash_reward_amount ?? 0) > 0 && (
                             <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
                               Rp {sub.cash_reward_amount?.toLocaleString('id-ID')}
                             </Badge>
@@ -370,18 +347,13 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                         </div>
                       </TableCell>
                       <TableCell className="text-center text-sm px-4 py-3">
-                        {(() => {
-                          const rewardType = normalizeRewardType(sub);
-                          if (rewardType === 'hadiah_fisik') {
-                            return <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs">🎁 Hadiah Fisik</Badge>;
-                          } else if (rewardType === 'credit_game') {
-                            return <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-xs">🎮 Credit Game</Badge>;
-                          } else if (rewardType === 'uang_tunai') {
-                            return <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs">💰 Uang Tunai</Badge>;
-                          } else {
-                            return <span className="text-muted-foreground">-</span>;
-                          }
-                        })()}
+                        {badgeInfo ? (
+                          <Badge className={`${badgeInfo.bgClass} ${badgeInfo.textClass} border ${badgeInfo.borderClass} text-xs`}>
+                            {badgeInfo.emoji} {badgeInfo.label}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm px-4 py-3">
                         -
@@ -398,7 +370,8 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                         {/* No actions for subcategory rows */}
                       </TableCell>
                     </TableRow>
-                  ))}
+                  );
+                  })}
                 </Fragment>
               );
             })}
