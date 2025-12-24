@@ -260,21 +260,28 @@ export function ChatSection() {
                 </ScrollArea>
 
                 <div className="p-4 border-t border-border">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Ketik pesan..."
-                      value={replyMessage}
-                      onChange={(e) => setReplyMessage(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={handleSendMessage}
-                      className="border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {selectedChat.handledBy === "admin" ? (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Ketik pesan..."
+                        value={replyMessage}
+                        onChange={(e) => setReplyMessage(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={handleSendMessage}
+                        className="border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center py-3 bg-muted/50 rounded-lg text-muted-foreground text-sm">
+                      <Bot className="h-4 w-4 mr-2" />
+                      Mode baca saja — Chat diproses oleh AI
+                    </div>
+                  )}
                 </div>
               </>
             ) : (
