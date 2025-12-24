@@ -1,8 +1,10 @@
 /**
  * PROMO STORAGE ABSTRACTION LAYER
  * 
- * Supabase-backed storage:
- * - promoKB → Supabase table: voc_promo_kb
+ * PRE-SUPABASE MODE: Uses localStorage as primary storage
+ * Set USE_SUPABASE = true when Supabase is ready for production
+ * 
+ * - promoKB → localStorage (pre-production) / Supabase table: voc_promo_kb (production)
  * - extractorSession → sessionStorage (tetap browser-only)
  * 
  * SEMUA component WAJIB import dari file ini
@@ -13,11 +15,15 @@ import type { PromoFormData, PromoItem } from '@/components/VOCDashboard/PromoFo
 import type { ExtractedPromo } from '@/lib/openai-extractor';
 import { supabase, DEFAULT_CLIENT_ID, generateUUID, logSupabaseError } from '@/lib/supabase-client';
 
-// Storage keys for session
+// ============================================
+// PRE-SUPABASE MODE CONFIGURATION
+// ============================================
+const USE_SUPABASE = false; // Set to true when Supabase table is ready
+const STORAGE_KEY = 'voc_promo_kb';
 const SESSION_KEY = 'pseudo_extractor_session';
 
 // ============================================
-// KNOWLEDGE BASE STORAGE (Supabase)
+// KNOWLEDGE BASE STORAGE
 // ============================================
 
 export const promoKB = {
@@ -25,6 +31,20 @@ export const promoKB = {
    * Get all promos from Knowledge Base
    */
   getAll: async (): Promise<PromoItem[]> => {
+    // PRE-SUPABASE: Use localStorage
+    if (!USE_SUPABASE) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const promos = stored ? JSON.parse(stored) : [];
+        console.log('[promoKB] Loaded from localStorage:', promos.length, 'promos');
+        return promos;
+      } catch (error) {
+        console.error('[promoKB] Failed to load from localStorage:', error);
+        return [];
+      }
+    }
+
+    // SUPABASE MODE (for production)
     try {
       const { data, error } = await supabase
         .from('voc_promo_kb')
@@ -37,7 +57,6 @@ export const promoKB = {
         return [];
       }
 
-      // Map Supabase row to PromoItem
       return (data || []).map(row => ({
         ...row.promo_data,
         id: row.id,
@@ -62,6 +81,19 @@ export const promoKB = {
    * Get single promo by ID
    */
   getById: async (id: string): Promise<PromoItem | null> => {
+    // PRE-SUPABASE: Use localStorage
+    if (!USE_SUPABASE) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const promos: PromoItem[] = stored ? JSON.parse(stored) : [];
+        return promos.find(p => p.id === id) || null;
+      } catch (error) {
+        console.error('[promoKB] Failed to get by id from localStorage:', error);
+        return null;
+      }
+    }
+
+    // SUPABASE MODE
     try {
       const { data, error } = await supabase
         .from('voc_promo_kb')
@@ -102,6 +134,37 @@ export const promoKB = {
     const promoWithId = promo as PromoFormData & { id?: string };
     const id = promoWithId.id || generateUUID();
 
+    const newItem: PromoItem = {
+      ...promo,
+      id,
+      status: promo.status || 'draft',
+      is_active: false,
+      version: 1,
+      created_at: now,
+      updated_at: now,
+      updated_by: 'Admin',
+    };
+
+    // PRE-SUPABASE: Use localStorage
+    if (!USE_SUPABASE) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const promos: PromoItem[] = stored ? JSON.parse(stored) : [];
+        
+        promos.unshift(newItem); // Add to beginning (newest first)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(promos));
+        
+        window.dispatchEvent(new CustomEvent('promo-storage-updated'));
+        console.log('[promoKB] Added promo (localStorage):', id, promo.promo_name);
+        
+        return newItem;
+      } catch (error) {
+        console.error('[promoKB] Failed to add to localStorage:', error);
+        throw new Error('Failed to add promo to localStorage');
+      }
+    }
+
+    // SUPABASE MODE
     const newRow = {
       id,
       client_id: DEFAULT_CLIENT_ID,
@@ -129,9 +192,7 @@ export const promoKB = {
       throw new Error('Failed to add promo to database');
     }
 
-    // Dispatch custom event for same-window listeners
     window.dispatchEvent(new CustomEvent('promo-storage-updated'));
-
     console.log('[promoKB] Added promo:', data.id, data.promo_name);
 
     return {
@@ -154,8 +215,38 @@ export const promoKB = {
    * Update existing promo
    */
   update: async (id: string, updates: Partial<PromoFormData>): Promise<boolean> => {
+    // PRE-SUPABASE: Use localStorage
+    if (!USE_SUPABASE) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const promos: PromoItem[] = stored ? JSON.parse(stored) : [];
+        
+        const index = promos.findIndex(p => p.id === id);
+        if (index === -1) {
+          console.warn('[promoKB] Promo not found:', id);
+          return false;
+        }
+        
+        promos[index] = {
+          ...promos[index],
+          ...updates,
+          version: (promos[index].version || 1) + 1,
+          updated_at: new Date().toISOString(),
+        };
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(promos));
+        window.dispatchEvent(new CustomEvent('promo-storage-updated'));
+        console.log('[promoKB] Updated promo (localStorage):', id);
+        
+        return true;
+      } catch (error) {
+        console.error('[promoKB] Failed to update in localStorage:', error);
+        return false;
+      }
+    }
+
+    // SUPABASE MODE
     try {
-      // First get current data to merge
       const { data: current } = await supabase
         .from('voc_promo_kb')
         .select('promo_data, version')
@@ -180,7 +271,6 @@ export const promoKB = {
         updated_at: new Date().toISOString(),
       };
 
-      // Handle is_active from updates or merged data
       if ('is_active' in updates) {
         updatePayload.is_active = updates.is_active;
       } else if ('is_active' in mergedData) {
@@ -197,7 +287,6 @@ export const promoKB = {
         return false;
       }
 
-      // Dispatch event
       window.dispatchEvent(new CustomEvent('promo-storage-updated'));
       console.log('[promoKB] Updated promo:', id);
       return true;
@@ -211,6 +300,26 @@ export const promoKB = {
    * Delete promo from Knowledge Base
    */
   delete: async (id: string): Promise<boolean> => {
+    // PRE-SUPABASE: Use localStorage
+    if (!USE_SUPABASE) {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const promos: PromoItem[] = stored ? JSON.parse(stored) : [];
+        
+        const filtered = promos.filter(p => p.id !== id);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+        
+        window.dispatchEvent(new CustomEvent('promo-storage-updated'));
+        console.log('[promoKB] Deleted promo (localStorage):', id);
+        
+        return true;
+      } catch (error) {
+        console.error('[promoKB] Failed to delete from localStorage:', error);
+        return false;
+      }
+    }
+
+    // SUPABASE MODE
     try {
       const { error } = await supabase
         .from('voc_promo_kb')
@@ -222,7 +331,6 @@ export const promoKB = {
         return false;
       }
 
-      // Dispatch event
       window.dispatchEvent(new CustomEvent('promo-storage-updated'));
       console.log('[promoKB] Deleted promo:', id);
       return true;
