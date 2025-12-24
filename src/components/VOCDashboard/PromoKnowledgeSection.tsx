@@ -636,7 +636,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             </span>
                           )}
-                          <span className="text-sm font-medium text-foreground">{item.promo_name || "Untitled Promo"}</span>
+                          <span className="text-sm font-medium text-foreground">{item.promo_name?.toUpperCase() || "UNTITLED PROMO"}</span>
                           {hasSubcategories && (
                             <Badge className="bg-purple-500/20 text-purple-400 border-0 rounded-full h-7 w-7 p-0 flex items-center justify-center text-xs">
                               {item.subcategories!.length}
