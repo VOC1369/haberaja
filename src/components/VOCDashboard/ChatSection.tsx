@@ -5,8 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Send, MessageCircle } from "lucide-react";
+import { Search, Send, MessageCircle, Trash2, Bot, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ChatMessage {
   id: string;
@@ -23,9 +35,10 @@ interface Chat {
   unread: number;
   status: "active" | "waiting" | "closed";
   messages: ChatMessage[];
+  handledBy?: "ai" | "admin";
 }
 
-const mockChats: Chat[] = [
+const initialMockChats: Chat[] = [
   {
     id: "1",
     userName: "Ahmad Yusuf",
@@ -33,6 +46,7 @@ const mockChats: Chat[] = [
     timestamp: "10:30",
     unread: 2,
     status: "active",
+    handledBy: "ai",
     messages: [
       { id: "1", sender: "user", message: "Halo, saya mau tanya", timestamp: "10:25" },
       { id: "2", sender: "agent", message: "Halo kak! Ada yang bisa Danila bantu?", timestamp: "10:26" },
@@ -46,6 +60,7 @@ const mockChats: Chat[] = [
     timestamp: "09:45",
     unread: 0,
     status: "closed",
+    handledBy: "ai",
     messages: [
       { id: "1", sender: "user", message: "Withdraw saya sudah masuk?", timestamp: "09:40" },
       { id: "2", sender: "agent", message: "Sudah diproses ya kak!", timestamp: "09:42" },
@@ -56,17 +71,40 @@ const mockChats: Chat[] = [
 
 export function ChatSection() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedChat, setSelectedChat] = useState<Chat | null>(mockChats[0]);
+  const [chats, setChats] = useState<Chat[]>(initialMockChats);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(initialMockChats[0]);
   const [replyMessage, setReplyMessage] = useState("");
 
-  const filteredChats = mockChats.filter(chat =>
+  const filteredChats = chats.filter(chat =>
     chat.userName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleSendMessage = () => {
     if (!replyMessage.trim() || !selectedChat) return;
-    // In real app, send message to backend
     setReplyMessage("");
+  };
+
+  const handleToggleHandler = (chatId: string) => {
+    setChats(prev => prev.map(chat => {
+      if (chat.id === chatId) {
+        const newHandler = chat.handledBy === "admin" ? "ai" : "admin";
+        toast.success(newHandler === "admin" ? "Chat diambil alih oleh Admin" : "Chat dialihkan ke AI");
+        return { ...chat, handledBy: newHandler };
+      }
+      return chat;
+    }));
+    
+    if (selectedChat?.id === chatId) {
+      setSelectedChat(prev => prev ? { ...prev, handledBy: prev.handledBy === "admin" ? "ai" : "admin" } : null);
+    }
+  };
+
+  const handleDeleteChat = (chatId: string) => {
+    setChats(prev => prev.filter(chat => chat.id !== chatId));
+    if (selectedChat?.id === chatId) {
+      setSelectedChat(null);
+    }
+    toast.success("Chat berhasil dihapus");
   };
 
   return (
@@ -126,17 +164,67 @@ export function ChatSection() {
           <div className="flex-1 flex flex-col">
             {selectedChat ? (
               <>
-                <div className="p-4 border-b border-border flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-button-hover/20 text-button-hover">
-                      {selectedChat.userName.split(" ").map(n => n[0]).join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-medium">{selectedChat.userName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {selectedChat.status === "active" ? "Online" : "Offline"}
+                <div className="p-4 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-button-hover/20 text-button-hover">
+                        {selectedChat.userName.split(" ").map(n => n[0]).join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium">{selectedChat.userName}</div>
+                      <div className="text-xs text-muted-foreground">
+                        via LiveChat • {selectedChat.messages.length} pesan
+                      </div>
                     </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="gap-1">
+                          <Trash2 className="h-4 w-4" />
+                          Hapus
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Hapus Chat?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Apakah Anda yakin ingin menghapus chat dengan {selectedChat.userName}? 
+                            Tindakan ini tidak dapat dibatalkan.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Batal</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDeleteChat(selectedChat.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Hapus
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    
+                    <Button 
+                      variant={selectedChat.handledBy === "admin" ? "golden" : "golden-outline"}
+                      size="sm"
+                      className="gap-1"
+                      onClick={() => handleToggleHandler(selectedChat.id)}
+                    >
+                      {selectedChat.handledBy === "admin" ? (
+                        <>
+                          <Bot className="h-4 w-4" />
+                          Alihkan ke AI
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="h-4 w-4" />
+                          Ambil Alih Chat
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
 
