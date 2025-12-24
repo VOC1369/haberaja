@@ -85,6 +85,15 @@ export const APBE_ENUMS = {
   
   // VIP Threshold Type v1.0 - LOCKED
   vip_threshold_type: ["total_deposit", "turnover", "ggr"] as const,
+  
+  // Reward Type v1.0 - LOCKED (Canonical reward types for promo)
+  reward_type: [
+    "hadiah_fisik",   // Physical reward (gadgets, vehicles, etc.)
+    "credit_game",    // In-game credit (freechip, freebet, bonus)
+    "uang_tunai",     // Cash reward
+    "voucher",        // Voucher (mapped to credit_game in logic)
+    "other",          // Unknown/other (fallthrough)
+  ] as const,
 } as const;
 
 // ============================================================
@@ -105,6 +114,7 @@ export type ToneModifier = typeof APBE_ENUMS.tone_modifier[number];
 export type IssueCategory = typeof APBE_ENUMS.issue_category[number];
 export type HunterResponseStyle = typeof APBE_ENUMS.hunter_response_style[number];
 export type VIPThresholdType = typeof APBE_ENUMS.vip_threshold_type[number];
+export type RewardTypeEnum = typeof APBE_ENUMS.reward_type[number];
 
 // ============================================================
 // DISPLAY LABELS (Indonesian UI)
@@ -222,6 +232,14 @@ export const ENUM_LABELS = {
     total_deposit: "Total Deposit",
     turnover: "Turnover",
     ggr: "GGR (Gross Gaming Revenue)",
+  },
+  
+  reward_type: {
+    hadiah_fisik: "Hadiah Fisik",
+    credit_game: "Credit Game",
+    uang_tunai: "Uang Tunai",
+    voucher: "Voucher",
+    other: "Lainnya",
   },
 } as const;
 
