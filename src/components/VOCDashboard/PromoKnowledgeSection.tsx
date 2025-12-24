@@ -841,7 +841,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                     </div>
                     
                     {/* Contoh Perhitungan untuk formula (dinamis) mode */}
-                    {viewTermsItem.reward_mode === 'formula' && viewTermsItem.calculation_value && (
+                    {viewTermsItem.reward_mode === 'formula' && (viewTermsItem.calculation_value ?? 0) > 0 && (
                       <div className="bg-background rounded-lg p-3 font-mono text-xs space-y-1 border border-border">
                         <p className="font-semibold text-foreground mb-1">Contoh Perhitungan:</p>
                         <p className="text-muted-foreground">
@@ -880,7 +880,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                   </div>
                   
                   {/* Contoh Perhitungan untuk formula (dinamis) mode */}
-                  {viewTermsItem.reward_mode === 'formula' && viewTermsItem.calculation_value && (
+                  {viewTermsItem.reward_mode === 'formula' && (viewTermsItem.calculation_value ?? 0) > 0 && (
                     <div className="bg-background rounded-lg p-3 font-mono text-xs space-y-1 border border-border">
                       <p className="font-semibold text-foreground mb-1">Contoh Perhitungan:</p>
                       <p className="text-muted-foreground">
