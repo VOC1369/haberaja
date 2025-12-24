@@ -143,11 +143,23 @@ Q4: Apakah ada KOMPETISI dengan PERIODE TERBATAS dan PEMENANG/UNDIAN?
 // ============================================
 
 export function calculateCategory(q1: string, q2: string, q3: string, q4: string): ProgramCategory {
-  // Priority order: Policy first, then Reward, then Event
-  if (q1 === 'ya' || q2 === 'ya') return 'C'; // Policy
-  if (q3 === 'ya') return 'A'; // Reward
-  if (q4 === 'ya') return 'B'; // Event
-  return 'C'; // Default to Policy (most restrictive)
+  // FIXED PRIORITY ORDER (2025-12-24):
+  // 1. Q1 (Penalty/Restriction) → C (Policy) - MUTLAK
+  if (q1 === 'ya') return 'C';
+  
+  // 2. Q4 (Event dengan periode + pemenang) → B (Event)
+  //    Lucky Spin, Tournament, Undian = Event, BUKAN Policy!
+  //    Q4 harus dicek SEBELUM Q2 agar Event tidak kalah dari Ongoing System
+  if (q4 === 'ya') return 'B';
+  
+  // 3. Q3 (Instant Reward tanpa akumulasi) → A (Reward)
+  if (q3 === 'ya') return 'A';
+  
+  // 4. Q2 (Ongoing System - loyalty, tier, LP) → C (Policy)
+  if (q2 === 'ya') return 'C';
+  
+  // 5. Default to Policy (most restrictive)
+  return 'C';
 }
 
 export function getCategoryName(category: ProgramCategory): string {
@@ -207,6 +219,24 @@ export function applyKeywordOverrides(
       return { category: 'A', wasOverridden: true, overrideReason: 'BIRTHDAY → Bonus Instan' };
     }
     return { category: 'A', wasOverridden: false };
+  }
+  
+  // LUCKY SPIN / MINI GAME / RODA → B (event with random/undian mechanism)
+  if (/lucky\s*spin|mini\s*game|roda\s*keberuntungan|spin\s*the\s*wheel|putar\s*roda/i.test(nameLower)) {
+    if (llmCategory !== 'B') {
+      console.log('[Classifier] Keyword override: LUCKY SPIN/MINI GAME in promo_name, forcing B (was', llmCategory, ')');
+      return { category: 'B', wasOverridden: true, overrideReason: 'LUCKY SPIN → Event Program' };
+    }
+    return { category: 'B', wasOverridden: false };
+  }
+  
+  // TOURNAMENT / TURNAMEN / KOMPETISI → B (event with ranking/winners)
+  if (/tournament|turnamen|kompetisi|leaderboard|ranking\s*event/i.test(nameLower)) {
+    if (llmCategory !== 'B') {
+      console.log('[Classifier] Keyword override: TOURNAMENT in promo_name, forcing B (was', llmCategory, ')');
+      return { category: 'B', wasOverridden: true, overrideReason: 'TOURNAMENT → Event Program' };
+    }
+    return { category: 'B', wasOverridden: false };
   }
   
   // If promo_name contains ROLLINGAN → C (ongoing turnover system)
