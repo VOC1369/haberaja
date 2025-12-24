@@ -326,19 +326,19 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                           <div className="w-1 h-4 bg-purple-500/50 rounded-full" />
                           <span className="text-sm text-foreground">{sub.name || `Varian ${idx + 1}`}</span>
                           {/* Quantity Badge untuk Hadiah Fisik */}
-                          {sub.jenis_hadiah === 'physical' && (sub.physical_reward_quantity ?? 0) > 0 && (
+                          {sub.jenis_hadiah === 'hadiah_fisik' && (sub.physical_reward_quantity ?? 0) > 0 && (
                             <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-400 border-amber-500/20">
                               x{sub.physical_reward_quantity} unit
                             </Badge>
                           )}
                           {/* Value Badge untuk Credit Game */}
-                          {sub.jenis_hadiah === 'credit' && (sub.cash_reward_amount ?? 0) > 0 && (
+                          {sub.jenis_hadiah === 'credit_game' && (sub.cash_reward_amount ?? 0) > 0 && (
                             <Badge variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/20">
                               Rp {sub.cash_reward_amount?.toLocaleString('id-ID')}
                             </Badge>
                           )}
                           {/* Value Badge untuk Uang Tunai */}
-                          {sub.jenis_hadiah === 'cash' && (sub.cash_reward_amount ?? 0) > 0 && (
+                          {sub.jenis_hadiah === 'uang_tunai' && (sub.cash_reward_amount ?? 0) > 0 && (
                             <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
                               Rp {sub.cash_reward_amount?.toLocaleString('id-ID')}
                             </Badge>
@@ -346,11 +346,11 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                         </div>
                       </TableCell>
                       <TableCell className="text-center text-sm px-4 py-3">
-                        {sub.jenis_hadiah === 'physical' ? (
+                        {sub.jenis_hadiah === 'hadiah_fisik' ? (
                           <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs">🎁 Hadiah Fisik</Badge>
-                        ) : sub.jenis_hadiah === 'credit' ? (
+                        ) : sub.jenis_hadiah === 'credit_game' ? (
                           <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-xs">🎮 Credit Game</Badge>
-                        ) : sub.jenis_hadiah === 'cash' ? (
+                        ) : sub.jenis_hadiah === 'uang_tunai' ? (
                           <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs">💰 Uang Tunai</Badge>
                         ) : (
                           <span className="text-muted-foreground">-</span>
