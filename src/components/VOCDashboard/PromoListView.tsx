@@ -108,24 +108,20 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear().toString().slice(-2);
+    return `${day}/${month}/${year}`;
   };
 
   const formatDateTime = (dateString: string) => {
-    // Parse ISO date string
     const date = new Date(dateString);
     
-    // Check if date is valid ISO format
     if (!isNaN(date.getTime())) {
-      const dateStr = date.toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      });
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2);
+      const dateStr = `${day}/${month}/${year}`;
       const timeStr = date.toLocaleTimeString('id-ID', {
         hour: '2-digit',
         minute: '2-digit',
@@ -134,7 +130,6 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
       return `${dateStr}, ${timeStr}`;
     }
     
-    // Fallback: return date portion only if can't parse
     return dateString.split(',')[0] || dateString;
   };
 
