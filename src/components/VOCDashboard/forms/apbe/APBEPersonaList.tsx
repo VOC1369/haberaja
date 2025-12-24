@@ -52,7 +52,8 @@ import {
   Briefcase,
   FileText,
   Download,
-  Upload
+  Upload,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -125,6 +126,7 @@ const samplePersonaCards = [
 
 export function APBEPersonaList({ onBack, onCreateNew, onEdit, onLoadSample, onImport, searchQuery = "" }: APBEPersonaListProps) {
   const [versions, setVersions] = useState<APBEVersion[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deactivateId, setDeactivateId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("version");
@@ -154,9 +156,17 @@ export function APBEPersonaList({ onBack, onCreateNew, onEdit, onLoadSample, onI
     );
   });
 
-  const loadVersions = () => {
-    const data = getConfigVersions();
-    setVersions(sortVersions(data, sortBy));
+  const loadVersions = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getConfigVersions();
+      setVersions(sortVersions(data, sortBy));
+    } catch (error) {
+      console.error('Failed to load versions:', error);
+      toast.error("Gagal memuat daftar persona");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const sortVersions = (data: APBEVersion[], sort: SortOption): APBEVersion[] => {
@@ -182,7 +192,7 @@ export function APBEPersonaList({ onBack, onCreateNew, onEdit, onLoadSample, onI
     setVersions(prev => sortVersions(prev, sortBy));
   }, [sortBy]);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteId) return;
     
     const version = versions.find(v => v.id === deleteId);
@@ -192,38 +202,53 @@ export function APBEPersonaList({ onBack, onCreateNew, onEdit, onLoadSample, onI
       return;
     }
 
-    const success = deleteVersion(deleteId);
-    if (success) {
-      toast.success("Persona berhasil dihapus");
-      loadVersions();
-    } else {
+    try {
+      const success = await deleteVersion(deleteId);
+      if (success) {
+        toast.success("Persona berhasil dihapus");
+        await loadVersions();
+      } else {
+        toast.error("Gagal menghapus persona");
+      }
+    } catch (error) {
+      console.error('Delete failed:', error);
       toast.error("Gagal menghapus persona");
     }
     setDeleteId(null);
   };
 
-  const handleToggleActive = (versionId: string, currentlyActive: boolean) => {
+  const handleToggleActive = async (versionId: string, currentlyActive: boolean) => {
     if (currentlyActive) {
       setDeactivateId(versionId);
     } else {
-      const success = activateVersion(versionId);
-      if (success) {
-        toast.success("Persona berhasil diaktifkan");
-        loadVersions();
-      } else {
+      try {
+        const success = await activateVersion(versionId);
+        if (success) {
+          toast.success("Persona berhasil diaktifkan");
+          await loadVersions();
+        } else {
+          toast.error("Gagal mengaktifkan persona");
+        }
+      } catch (error) {
+        console.error('Activate failed:', error);
         toast.error("Gagal mengaktifkan persona");
       }
     }
   };
 
-  const handleConfirmDeactivate = () => {
+  const handleConfirmDeactivate = async () => {
     if (!deactivateId) return;
     
-    const success = deactivateVersion(deactivateId);
-    if (success) {
-      toast.success("Persona berhasil dinonaktifkan");
-      loadVersions();
-    } else {
+    try {
+      const success = await deactivateVersion(deactivateId);
+      if (success) {
+        toast.success("Persona berhasil dinonaktifkan");
+        await loadVersions();
+      } else {
+        toast.error("Gagal menonaktifkan persona");
+      }
+    } catch (error) {
+      console.error('Deactivate failed:', error);
       toast.error("Gagal menonaktifkan persona");
     }
     setDeactivateId(null);
@@ -386,7 +411,12 @@ export function APBEPersonaList({ onBack, onCreateNew, onEdit, onLoadSample, onI
             )}
           </div>
 
-          {filteredVersions.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">Memuat daftar persona...</p>
+            </div>
+          ) : filteredVersions.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
                   <FileText className="h-8 w-8 text-muted-foreground" />

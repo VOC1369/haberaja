@@ -101,8 +101,11 @@ const Dashboard = () => {
 
   // Load existing config on mount
   useEffect(() => {
-    const savedConfig = loadInitialConfig();
-    apbeForm.reset(savedConfig);
+    const loadConfig = async () => {
+      const savedConfig = await loadInitialConfig();
+      apbeForm.reset(savedConfig);
+    };
+    loadConfig();
   }, []);
 
   // Debounced save function with status indicator
@@ -112,9 +115,9 @@ const Dashboard = () => {
       clearTimeout(saveTimeoutRef.current);
     }
     setAutosaveStatus("saving");
-    saveTimeoutRef.current = setTimeout(() => {
+    saveTimeoutRef.current = setTimeout(async () => {
       try {
-        saveAPBEDraft(data);
+        await saveAPBEDraft(data);
         setAutosaveStatus("saved");
       } catch (e) {
         setAutosaveStatus("error");
@@ -199,7 +202,7 @@ const Dashboard = () => {
   };
 
   // Handle publish persona
-  const handlePublish = (adminName: string) => {
+  const handlePublish = async (adminName: string) => {
     const config = apbeForm.getValues();
     const runtimePrompt = compileRuntimePrompt(config);
     const currentAdmin = adminName || "Admin";
@@ -208,7 +211,7 @@ const Dashboard = () => {
     
     if (editingPersonaId) {
       // Update existing persona (version increment, same row)
-      result = updateExistingPersona(editingPersonaId, config, runtimePrompt, currentAdmin);
+      result = await updateExistingPersona(editingPersonaId, config, runtimePrompt, currentAdmin);
       if (result) {
         toast.success(`Persona "${result.persona_name}" updated to v${result.version}!`);
       } else {
@@ -217,8 +220,13 @@ const Dashboard = () => {
       }
     } else {
       // Create new persona
-      result = publishAPBEConfig(config, runtimePrompt, currentAdmin);
-      toast.success(`Persona "${result.persona_name}" v${result.version} berhasil dipublish!`);
+      result = await publishAPBEConfig(config, runtimePrompt, currentAdmin);
+      if (result) {
+        toast.success(`Persona "${result.persona_name}" v${result.version} berhasil dipublish!`);
+      } else {
+        toast.error("Gagal publish persona");
+        return;
+      }
     }
     
     // Reset editing state
