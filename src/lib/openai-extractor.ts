@@ -2252,7 +2252,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       switch (type) {
         case 'hadiah_fisik': return 'hadiah_fisik';
         case 'uang_tunai': return 'uang_tunai';
-        case 'credit_game': return 'Freechip';
+        case 'credit_game': return 'credit_game';
         case 'voucher': return 'voucher';
         default: return 'Freechip';
       }
