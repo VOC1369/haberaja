@@ -1,19 +1,28 @@
 /**
- * Reward Normalization Utility v1.0
+ * Reward Normalization Utility v1.1
  * 
  * REASONING-BASED reward type inference (NO keyword guessing from name!)
  * 
  * Priority Order:
- * 1. Explicit reward_type field (dari ekstraksi AI)
+ * 1. Explicit reward_type field (dari ekstraksi AI) - handles voucher/other
  * 2. Physical reward indicators (physical_reward_name exists)
- * 3. Cash reward indicators (cash_reward_amount > 0)
- * 4. Promo archetype inference (cashback/bonus = credit_game by default)
- * 5. jenis_hadiah / dinamis_reward_type legacy fields
+ * 3. jenis_hadiah legacy field (structured, bukan keyword)
+ * 4. dinamis_reward_type legacy field
+ * 5. Promo archetype inference (cashback/bonus = credit_game by default)
+ * 6. Cash reward amount fallback
  * 
  * NEVER guess from sub.name keywords!
+ * 
+ * @see src/lib/apbe-enums.ts for canonical REWARD_TYPES enum
  */
 
+import { APBE_ENUMS, type RewardTypeEnum } from './apbe-enums';
+
+// Re-export canonical type from apbe-enums (includes voucher, other)
 export type RewardType = 'hadiah_fisik' | 'credit_game' | 'uang_tunai';
+
+// Extended type that includes all enum values (for internal matching)
+type ExtendedRewardType = RewardTypeEnum;
 
 // Promo types yang default reward-nya adalah credit game
 const CREDIT_GAME_PROMO_TYPES = [
@@ -42,6 +51,28 @@ const CASH_PROMO_TYPES = [
 ];
 
 /**
+ * Normalize extended reward type to canonical 3-type system
+ * voucher → credit_game, other → null (fallthrough)
+ */
+function normalizeToCanonical(rt: ExtendedRewardType): RewardType | null {
+  switch (rt) {
+    case 'hadiah_fisik': return 'hadiah_fisik';
+    case 'credit_game': return 'credit_game';
+    case 'uang_tunai': return 'uang_tunai';
+    case 'voucher': return 'credit_game';  // Voucher treated as credit game
+    case 'other': return null;  // Unknown, let it fallthrough
+    default: return null;
+  }
+}
+
+/**
+ * Check if value is valid reward type from enum
+ */
+function isValidRewardType(value: string): value is ExtendedRewardType {
+  return (APBE_ENUMS.reward_type as readonly string[]).includes(value);
+}
+
+/**
  * Infer reward type berdasarkan structured data (REASONING, bukan keyword)
  * 
  * @param sub - Subcategory data
@@ -54,9 +85,18 @@ export function inferRewardType(
   // PRIORITY 1: Explicit reward_type field dari AI extraction
   if (sub.reward_type) {
     const rt = String(sub.reward_type).toLowerCase();
+    
+    // Check if it's a valid enum value first
+    if (isValidRewardType(rt)) {
+      return normalizeToCanonical(rt);
+    }
+    
+    // Fallback string matching for flexibility
     if (rt.includes('fisik') || rt === 'hadiah_fisik') return 'hadiah_fisik';
     if (rt.includes('credit') || rt === 'credit_game') return 'credit_game';
     if (rt.includes('tunai') || rt === 'uang_tunai') return 'uang_tunai';
+    if (rt === 'voucher') return 'credit_game';  // Voucher → credit_game
+    if (rt === 'other') return null;  // Other → fallthrough
   }
 
   // PRIORITY 2: Physical reward name exists = hadiah fisik
@@ -70,6 +110,7 @@ export function inferRewardType(
     if (jh.includes('fisik') || jh === 'hadiah_fisik') return 'hadiah_fisik';
     if (jh.includes('credit') || jh === 'credit_game' || jh === 'freechip' || jh === 'freebet') return 'credit_game';
     if (jh.includes('tunai') || jh === 'uang_tunai') return 'uang_tunai';
+    if (jh === 'voucher') return 'credit_game';  // Voucher → credit_game
   }
 
   // PRIORITY 4: dinamis_reward_type legacy field
@@ -78,6 +119,7 @@ export function inferRewardType(
     if (drt.includes('fisik')) return 'hadiah_fisik';
     if (drt.includes('credit') || drt === 'freechip' || drt === 'freebet') return 'credit_game';
     if (drt.includes('tunai') || drt === 'cash') return 'uang_tunai';
+    if (drt === 'voucher') return 'credit_game';  // Voucher → credit_game
   }
 
   // PRIORITY 5: Promo type archetype inference

@@ -331,6 +331,10 @@ export interface PromoSubCategory {
   id: string;
   name: string;  // Custom name for this sub-category
   
+  // Canonical Reward Type (v1.0 - from APBE_ENUMS.reward_type)
+  // Priority 1 for inferRewardType() - directly from AI extraction
+  reward_type?: 'hadiah_fisik' | 'credit_game' | 'uang_tunai' | 'voucher' | 'other';
+  
   // Dasar Perhitungan Bonus
   calculation_base: string;
   calculation_method: string;
@@ -343,7 +347,7 @@ export interface PromoSubCategory {
   
   // Jenis Hadiah, Max Bonus & Payout Direction (dengan opsi ikut global)
   jenis_hadiah_same_as_global: boolean;
-  jenis_hadiah: string;
+  jenis_hadiah: string;  // @deprecated - use reward_type instead
   max_bonus_same_as_global: boolean;
   max_bonus: number;
   max_bonus_unlimited: boolean;
@@ -371,7 +375,7 @@ export interface PromoSubCategory {
   game_exclusion_rules: string[];
   
   // Bonus (Legacy - kept for backward compatibility)
-  dinamis_reward_type: string;
+  dinamis_reward_type: string;  // @deprecated - use reward_type instead
   dinamis_reward_amount: number;
   dinamis_max_claim: number;
   dinamis_max_claim_unlimited: boolean;
