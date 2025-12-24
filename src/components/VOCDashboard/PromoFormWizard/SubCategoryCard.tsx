@@ -243,17 +243,36 @@ export function SubCategoryCard({
             <SelectWithAddNew value={subCategory.jenis_hadiah_same_as_global ? '' : subCategory.jenis_hadiah} onValueChange={value => onChange({
             jenis_hadiah: value,
             physical_reward_name: value !== 'hadiah_fisik' ? '' : subCategory.physical_reward_name,
-            cash_reward_amount: value !== 'uang_tunai' ? undefined : subCategory.cash_reward_amount
+            physical_reward_value: value !== 'hadiah_fisik' ? undefined : subCategory.physical_reward_value,
+            cash_reward_amount: value !== 'uang_tunai' ? undefined : subCategory.cash_reward_amount,
+            credit_game_amount: value !== 'credit_game' ? undefined : subCategory.credit_game_amount
           })} options={dinamisRewardTypeOptions} onAddOption={option => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])} onDeleteOption={value => setDinamisRewardTypeOptions(dinamisRewardTypeOptions.filter(d => d.value !== value))} placeholder={subCategory.jenis_hadiah_same_as_global ? "Mengikuti global" : "Pilih jenis"} disabled={subCategory.jenis_hadiah_same_as_global} className={subCategory.jenis_hadiah_same_as_global ? "opacity-50" : ""} />
-            {/* Jika Hadiah Fisik dipilih, tampilkan input nama hadiah */}
+            {/* Jika Hadiah Fisik dipilih, tampilkan input nama hadiah + estimasi nilai */}
             {subCategory.jenis_hadiah === 'hadiah_fisik' && !subCategory.jenis_hadiah_same_as_global && (
-              <div className="space-y-2 mt-3">
-                <Label className="text-sm">Nama Hadiah Fisik</Label>
-                <Input
-                  value={subCategory.physical_reward_name || ''}
-                  onChange={(e) => onChange({ physical_reward_name: e.target.value })}
-                  placeholder="Contoh: iPhone 16 Pro Max 256GB"
-                />
+              <div className="space-y-3 mt-3">
+                <div className="space-y-2">
+                  <Label className="text-sm">Nama Hadiah Fisik</Label>
+                  <Input
+                    value={subCategory.physical_reward_name || ''}
+                    onChange={(e) => onChange({ physical_reward_name: e.target.value })}
+                    placeholder="Contoh: iPhone 16 Pro Max 256GB"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Estimasi Nilai (Opsional)</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                    <Input
+                      className="pl-10"
+                      value={formatRupiah(subCategory.physical_reward_value)}
+                      onChange={(e) => onChange({ physical_reward_value: parseRupiah(e.target.value) })}
+                      placeholder="25.000.000"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Masukkan estimasi nilai hadiah fisik untuk keperluan laporan
+                  </p>
+                </div>
               </div>
             )}
             {/* Jika Uang Tunai dipilih, tampilkan input nominal */}
@@ -271,6 +290,24 @@ export function SubCategoryCard({
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Masukkan nominal uang tunai (format: 10.000.000)
+                </p>
+              </div>
+            )}
+            {/* Jika Credit Game dipilih, tampilkan input nilai */}
+            {subCategory.jenis_hadiah === 'credit_game' && !subCategory.jenis_hadiah_same_as_global && (
+              <div className="space-y-2 mt-3">
+                <Label className="text-sm">Nilai Credit Game</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                  <Input
+                    className="pl-10"
+                    value={formatRupiah(subCategory.credit_game_amount)}
+                    onChange={(e) => onChange({ credit_game_amount: parseRupiah(e.target.value) })}
+                    placeholder="5.000.000"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Masukkan nilai credit game (format: 5.000.000)
                 </p>
               </div>
             )}
@@ -812,6 +849,8 @@ export function createInitialSubCategory(index: number): PromoSubCategory {
     dinamis_max_claim: 0,
     dinamis_max_claim_unlimited: false,
     dinamis_min_claim: 0,
-    dinamis_min_claim_enabled: false
+    dinamis_min_claim_enabled: false,
+    physical_reward_value: undefined,
+    credit_game_amount: undefined
   };
 }
