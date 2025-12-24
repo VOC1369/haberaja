@@ -311,7 +311,7 @@ const FIELD_STATUS_MATRIX: Record<RewardArchetype, Record<string, FieldStatus>> 
     turnover_rule: 'not_applicable',
     payout_direction: 'optional',
     max_bonus: 'optional',
-    minimum_base: 'not_applicable',
+    minimum_base: 'optional',  // Changed: Event can have min_deposit requirement
   },
   tiered_fixed: {
     calculation_value: 'not_applicable',
