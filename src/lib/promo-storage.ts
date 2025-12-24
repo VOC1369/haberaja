@@ -1,35 +1,59 @@
 /**
  * PROMO STORAGE ABSTRACTION LAYER
  * 
- * Pre-Supabase architecture - easy migration later:
- * - promoKB → localStorage (akan jadi Supabase)
+ * Supabase-backed storage:
+ * - promoKB → Supabase table: voc_promo_kb
  * - extractorSession → sessionStorage (tetap browser-only)
  * 
  * SEMUA component WAJIB import dari file ini
- * JANGAN langsung akses localStorage/sessionStorage
+ * JANGAN langsung akses Supabase atau localStorage
  */
 
 import type { PromoFormData, PromoItem } from '@/components/VOCDashboard/PromoFormWizard/types';
 import type { ExtractedPromo } from '@/lib/openai-extractor';
+import { supabase, DEFAULT_CLIENT_ID, generateUUID, logSupabaseError } from '@/lib/supabase-client';
 
-// Storage keys
-const PROMO_KB_KEY = 'voc_promo_drafts';
+// Storage keys for session
 const SESSION_KEY = 'pseudo_extractor_session';
 
 // ============================================
-// KNOWLEDGE BASE STORAGE (akan jadi Supabase)
+// KNOWLEDGE BASE STORAGE (Supabase)
 // ============================================
 
 export const promoKB = {
   /**
    * Get all promos from Knowledge Base
    */
-  getAll: (): PromoItem[] => {
+  getAll: async (): Promise<PromoItem[]> => {
     try {
-      const data = localStorage.getItem(PROMO_KB_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch {
-      console.error('[promoKB] Failed to parse storage');
+      const { data, error } = await supabase
+        .from('voc_promo_kb')
+        .select('*')
+        .eq('client_id', DEFAULT_CLIENT_ID)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        logSupabaseError('promoKB.getAll', error);
+        return [];
+      }
+
+      // Map Supabase row to PromoItem
+      return (data || []).map(row => ({
+        ...row.promo_data,
+        id: row.id,
+        promo_name: row.promo_name,
+        promo_type: row.promo_type,
+        intent_category: row.intent_category,
+        status: row.status,
+        is_active: row.is_active,
+        version: row.version,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        updated_by: row.updated_by,
+        program_classification: row.program_classification,
+      }));
+    } catch (error) {
+      logSupabaseError('promoKB.getAll', error);
       return [];
     }
   },
@@ -37,85 +61,176 @@ export const promoKB = {
   /**
    * Get single promo by ID
    */
-  getById: (id: string): PromoItem | null => {
-    const all = promoKB.getAll();
-    return all.find(p => p.id === id) || null;
+  getById: async (id: string): Promise<PromoItem | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('voc_promo_kb')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error || !data) {
+        if (error) logSupabaseError('promoKB.getById', error);
+        return null;
+      }
+
+      return {
+        ...data.promo_data,
+        id: data.id,
+        promo_name: data.promo_name,
+        promo_type: data.promo_type,
+        intent_category: data.intent_category,
+        status: data.status,
+        is_active: data.is_active,
+        version: data.version,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        updated_by: data.updated_by,
+        program_classification: data.program_classification,
+      };
+    } catch (error) {
+      logSupabaseError('promoKB.getById', error);
+      return null;
+    }
   },
 
   /**
    * Add new promo to Knowledge Base
    */
-  add: (promo: PromoFormData): PromoItem => {
-    const existing = promoKB.getAll();
+  add: async (promo: PromoFormData): Promise<PromoItem> => {
     const now = new Date().toISOString();
-    
     const promoWithId = promo as PromoFormData & { id?: string };
-    
-    const newPromo: PromoItem = {
-      ...promo,
-      id: promoWithId.id || `promo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      version: 1,
+    const id = promoWithId.id || generateUUID();
+
+    const newRow = {
+      id,
+      client_id: DEFAULT_CLIENT_ID,
+      promo_name: promo.promo_name,
+      promo_type: promo.promo_type,
+      intent_category: promo.intent_category,
+      promo_data: promo,
+      status: promo.status || 'draft',
       is_active: false,
-      status: promo.status || 'draft', // Preserve status from promo or default to draft
+      version: 1,
+      program_classification: promo.program_classification || null,
       created_at: now,
       updated_at: now,
       updated_by: 'Admin',
     };
-    
-    existing.push(newPromo);
-    localStorage.setItem(PROMO_KB_KEY, JSON.stringify(existing));
-    
-    // Dispatch custom event for same-window listeners (storage event only fires for other windows)
+
+    const { data, error } = await supabase
+      .from('voc_promo_kb')
+      .insert(newRow)
+      .select()
+      .single();
+
+    if (error) {
+      logSupabaseError('promoKB.add', error);
+      throw new Error('Failed to add promo to database');
+    }
+
+    // Dispatch custom event for same-window listeners
     window.dispatchEvent(new CustomEvent('promo-storage-updated'));
-    
-    console.log('[promoKB] Added promo:', newPromo.id, newPromo.promo_name);
-    return newPromo;
+
+    console.log('[promoKB] Added promo:', data.id, data.promo_name);
+
+    return {
+      ...data.promo_data,
+      id: data.id,
+      promo_name: data.promo_name,
+      promo_type: data.promo_type,
+      intent_category: data.intent_category,
+      status: data.status,
+      is_active: data.is_active,
+      version: data.version,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      updated_by: data.updated_by,
+      program_classification: data.program_classification,
+    };
   },
 
   /**
    * Update existing promo
    */
-  update: (id: string, updates: Partial<PromoFormData>): boolean => {
-    const existing = promoKB.getAll();
-    const index = existing.findIndex(p => p.id === id);
-    
-    if (index === -1) {
-      console.warn('[promoKB] Promo not found:', id);
+  update: async (id: string, updates: Partial<PromoFormData>): Promise<boolean> => {
+    try {
+      // First get current data to merge
+      const { data: current } = await supabase
+        .from('voc_promo_kb')
+        .select('promo_data, version')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (!current) {
+        console.warn('[promoKB] Promo not found:', id);
+        return false;
+      }
+
+      const mergedData = { ...current.promo_data, ...updates };
+
+      const updatePayload: Record<string, unknown> = {
+        promo_name: updates.promo_name || mergedData.promo_name,
+        promo_type: updates.promo_type || mergedData.promo_type,
+        intent_category: updates.intent_category || mergedData.intent_category,
+        promo_data: mergedData,
+        status: updates.status || mergedData.status,
+        version: (current.version || 1) + 1,
+        program_classification: updates.program_classification || mergedData.program_classification,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Handle is_active from updates or merged data
+      if ('is_active' in updates) {
+        updatePayload.is_active = updates.is_active;
+      } else if ('is_active' in mergedData) {
+        updatePayload.is_active = mergedData.is_active;
+      }
+
+      const { error } = await supabase
+        .from('voc_promo_kb')
+        .update(updatePayload)
+        .eq('id', id);
+
+      if (error) {
+        logSupabaseError('promoKB.update', error);
+        return false;
+      }
+
+      // Dispatch event
+      window.dispatchEvent(new CustomEvent('promo-storage-updated'));
+      console.log('[promoKB] Updated promo:', id);
+      return true;
+    } catch (error) {
+      logSupabaseError('promoKB.update', error);
       return false;
     }
-    
-    existing[index] = {
-      ...existing[index],
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
-    
-    localStorage.setItem(PROMO_KB_KEY, JSON.stringify(existing));
-    console.log('[promoKB] Updated promo:', id);
-    return true;
   },
 
   /**
    * Delete promo from Knowledge Base
    */
-  delete: (id: string): boolean => {
-    const existing = promoKB.getAll();
-    const filtered = existing.filter(p => p.id !== id);
-    
-    if (filtered.length === existing.length) {
-      console.warn('[promoKB] Promo not found for deletion:', id);
+  delete: async (id: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase
+        .from('voc_promo_kb')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        logSupabaseError('promoKB.delete', error);
+        return false;
+      }
+
+      // Dispatch event
+      window.dispatchEvent(new CustomEvent('promo-storage-updated'));
+      console.log('[promoKB] Deleted promo:', id);
+      return true;
+    } catch (error) {
+      logSupabaseError('promoKB.delete', error);
       return false;
     }
-    
-    localStorage.setItem(PROMO_KB_KEY, JSON.stringify(filtered));
-    console.log('[promoKB] Deleted promo:', id);
-    return true;
   },
-
-  // Nanti tinggal ganti implementation:
-  // getAll: async () => await supabase.from('promo_kb').select('*')
-  // add: async (promo) => await supabase.from('promo_kb').insert(promo)
-  // etc.
 };
 
 // ============================================
@@ -154,13 +269,13 @@ export const extractorSession = {
         imagePreview: null,
         timestamp: Date.now(),
       };
-      
+
       const updated: ExtractorSession = {
         ...current,
         ...data,
         timestamp: Date.now(),
       };
-      
+
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(updated));
       console.log('[extractorSession] Saved');
     } catch (e) {

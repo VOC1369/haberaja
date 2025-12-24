@@ -1,6 +1,6 @@
 import { PERSONA_BINDING_FIELDS, DROPPED_FIELDS, extractPersonaBindingFields, savePersonaBinding } from '@/lib/promo-persona-binding';
-
-// ============================================
+import { promoKB } from '@/lib/promo-storage';
+import { generateUUID } from '@/lib/supabase-client';
 // PKB FIELD WHITELIST
 // ============================================
 
@@ -393,20 +393,16 @@ export interface PromoItem extends PromoFormData {
   updated_by?: string;
   // NOTE: classification fields inherited from PromoFormData
 }
-// LocalStorage helpers
-const PROMO_STORAGE_KEY = 'voc_promo_drafts';
+// ============================================
+// PROMO STORAGE FUNCTIONS (Supabase-backed via promo-storage.ts)
+// ============================================
 
 export function generatePromoId(): string {
-  return `promo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return generateUUID();
 }
 
-export function getPromoDrafts(): PromoItem[] {
-  try {
-    const data = localStorage.getItem(PROMO_STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
+export async function getPromoDrafts(): Promise<PromoItem[]> {
+  return promoKB.getAll();
 }
 
 /**
@@ -479,113 +475,62 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
 
 /**
  * Save promo draft with DUAL PAYLOAD strategy:
- * 1. PKB fields → saved to voc_promo_drafts (main storage)
+ * 1. PKB fields → saved to voc_promo_kb (Supabase)
  * 2. Persona/AI fields → saved to voc_promo_persona_bindings (separate storage)
  */
-export function savePromoDraft(promoData: PromoFormData, existingId?: string, updatedBy?: string): PromoItem {
-  const drafts = getPromoDrafts();
-  const now = new Date().toISOString();
-  const adminName = updatedBy || "Admin";
-  
-  // Build PKB-clean payload (strips AI/persona fields)
-  const pkbPayload = buildPKBPayload(promoData);
-  
+export async function savePromoDraft(promoData: PromoFormData, existingId?: string, updatedBy?: string): Promise<PromoItem> {
   // Also save persona binding separately
   const personaFields = extractPersonaBindingFields(promoData as unknown as Record<string, unknown>);
   
-  let savedPromo: PromoItem;
-  
   if (existingId) {
-    // Update existing - increment version
-    const index = drafts.findIndex(d => d.id === existingId);
-    if (index !== -1) {
-      drafts[index] = {
-        ...drafts[index],
-        ...pkbPayload,
-        // Keep the full data for UI compatibility (backward compat)
-        ...promoData,
-        version: (drafts[index].version || 1) + 1,
-        updated_at: now,
-        updated_by: adminName,
-      };
-      localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(drafts));
-      savedPromo = drafts[index];
-      
-      // Save persona binding separately
+    // Update existing
+    const success = await promoKB.update(existingId, promoData);
+    if (success) {
       savePersonaBinding(existingId, personaFields);
-      
-      return savedPromo;
+      const updated = await promoKB.getById(existingId);
+      if (updated) return updated;
     }
+    throw new Error('Failed to update promo');
   }
   
   // Create new
-  const newId = generatePromoId();
-  const newPromo: PromoItem = {
-    ...promoData,
-    ...pkbPayload,
-    id: newId,
-    version: 1,
-    is_active: false,
-    created_at: now,
-    updated_at: now,
-    updated_by: adminName,
-  };
-  drafts.push(newPromo);
-  localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(drafts));
-  
-  // Save persona binding separately
-  savePersonaBinding(newId, personaFields);
-  
+  const newPromo = await promoKB.add(promoData);
+  savePersonaBinding(newPromo.id, personaFields);
   return newPromo;
 }
 
-export function duplicatePromo(promo: PromoItem): PromoItem {
-  const drafts = getPromoDrafts();
-  const now = new Date().toISOString();
-  
-  const newPromo: PromoItem = {
+export async function duplicatePromo(promo: PromoItem): Promise<PromoItem> {
+  const newPromoData = {
     ...promo,
-    id: generatePromoId(),
     promo_name: `${promo.promo_name} (Copy)`,
-    version: 1,
+    status: 'draft' as const,
     is_active: false,
-    status: 'draft',
-    created_at: now,
-    updated_at: now,
-    updated_by: "Admin",
   };
   
-  drafts.push(newPromo);
-  localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(drafts));
-  return newPromo;
+  // Remove id so a new one is generated
+  const { id, version, created_at, updated_at, ...dataWithoutMeta } = newPromoData;
+  
+  return promoKB.add(dataWithoutMeta as PromoFormData);
 }
 
-export function togglePromoActive(id: string): PromoItem | undefined {
-  const drafts = getPromoDrafts();
-  const index = drafts.findIndex(d => d.id === id);
+export async function togglePromoActive(id: string): Promise<PromoItem | undefined> {
+  const promo = await promoKB.getById(id);
+  if (!promo) return undefined;
   
-  if (index !== -1) {
-    drafts[index].is_active = !drafts[index].is_active;
-    drafts[index].updated_at = new Date().toISOString();
-    localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(drafts));
-    return drafts[index];
+  const success = await promoKB.update(id, { is_active: !promo.is_active } as Partial<PromoFormData>);
+  if (success) {
+    return promoKB.getById(id) as Promise<PromoItem | undefined>;
   }
   return undefined;
 }
 
-export function deletePromoDraft(id: string): boolean {
-  const drafts = getPromoDrafts();
-  const filtered = drafts.filter(d => d.id !== id);
-  if (filtered.length !== drafts.length) {
-    localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(filtered));
-    return true;
-  }
-  return false;
+export async function deletePromoDraft(id: string): Promise<boolean> {
+  return promoKB.delete(id);
 }
 
-export function getPromoById(id: string): PromoItem | undefined {
-  const drafts = getPromoDrafts();
-  return drafts.find(d => d.id === id);
+export async function getPromoById(id: string): Promise<PromoItem | undefined> {
+  const promo = await promoKB.getById(id);
+  return promo || undefined;
 }
 
 export const PROMO_TYPES = [
@@ -1169,25 +1114,25 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
 };
 
 /**
- * Seed sample promos ke localStorage jika belum ada
+ * Seed sample promos ke database jika belum ada
  * @returns true jika data di-seed, false jika sudah ada data
  */
-export function seedSamplePromos(): boolean {
-  const existing = getPromoDrafts();
+export async function seedSamplePromos(): Promise<boolean> {
+  const existing = await getPromoDrafts();
   if (existing.length > 0) {
     return false; // Already has data
   }
   
-  const samplePromos: PromoItem[] = [SAMPLE_PROMO_WELCOME_BONUS];
-  localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(samplePromos));
+  await promoKB.add(SAMPLE_PROMO_WELCOME_BONUS);
   return true;
 }
 
 /**
- * Force clear dan seed sample promos ke localStorage
+ * Force clear dan seed sample promos ke database
  * Digunakan untuk reset data ke sample awal
  */
-export function forceSeedSamplePromos(): void {
-  const samplePromos: PromoItem[] = [SAMPLE_PROMO_WELCOME_BONUS];
-  localStorage.setItem(PROMO_STORAGE_KEY, JSON.stringify(samplePromos));
+export async function forceSeedSamplePromos(): Promise<void> {
+  // Note: In Supabase mode, we just add the sample without clearing
+  // Full clear would require additional implementation
+  await promoKB.add(SAMPLE_PROMO_WELCOME_BONUS);
 }

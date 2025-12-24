@@ -44,6 +44,7 @@ interface PromoListViewProps {
 
 export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
   const [promos, setPromos] = useState<PromoItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewTermsPromo, setViewTermsPromo] = useState<PromoItem | null>(null);
   const [expandedPromos, setExpandedPromos] = useState<Set<string>>(new Set());
@@ -60,26 +61,33 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
     });
   };
 
-  const loadPromos = () => {
-    const data = getPromoDrafts();
-    setPromos(data);
+  const loadPromos = async () => {
+    setIsLoading(true);
+    try {
+      const data = await getPromoDrafts();
+      setPromos(data);
+    } catch (error) {
+      console.error('Failed to load promos:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
     loadPromos();
   }, []);
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
       const promo = promos.find(p => p.id === deleteId);
-      deletePromoDraft(deleteId);
+      await deletePromoDraft(deleteId);
       toast.success(`Promo "${promo?.promo_name || 'Untitled'}" berhasil dihapus`);
-      loadPromos();
+      await loadPromos();
       setDeleteId(null);
     }
   };
 
-  const handleDuplicate = (promo: PromoItem) => {
+  const handleDuplicate = async (promo: PromoItem) => {
     const newPromoData = {
       ...promo,
       promo_name: `${promo.promo_name} (Copy)`,
@@ -90,10 +98,10 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
     // Remove id so savePromoDraft creates a new one
     const { id, version, created_at, updated_at, ...dataWithoutMeta } = newPromoData;
     
-    const savedPromo = savePromoDraft(dataWithoutMeta);
+    const savedPromo = await savePromoDraft(dataWithoutMeta);
     if (savedPromo) {
       toast.success(`Promo "${promo.promo_name}" berhasil diduplikasi`);
-      loadPromos();
+      await loadPromos();
       onEdit?.(savedPromo);
     }
   };
