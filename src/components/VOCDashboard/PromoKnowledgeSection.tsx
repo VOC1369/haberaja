@@ -53,29 +53,7 @@ import { PromoFormWizard } from "./PromoFormWizard";
 import { PromoItem, forceSeedSamplePromos, deletePromoDraft, duplicatePromo } from "./PromoFormWizard/types";
 import { promoKB } from "@/lib/promo-storage";
 import { generateTermsList, formatNumber } from "./PromoFormWizard/Step4Review";
-
-// Helper: Normalize reward type dari data yang di-extract
-const normalizeRewardType = (sub: any): 'hadiah_fisik' | 'credit_game' | 'uang_tunai' | null => {
-  const jh = (sub.jenis_hadiah || '').toLowerCase();
-  if (jh.includes('fisik') || jh === 'hadiah_fisik') return 'hadiah_fisik';
-  if (jh.includes('credit') || jh === 'credit_game') return 'credit_game';
-  if (jh.includes('tunai') || jh === 'uang_tunai') return 'uang_tunai';
-  
-  const drt = (sub.dinamis_reward_type || '').toLowerCase();
-  if (drt.includes('fisik')) return 'hadiah_fisik';
-  if (drt.includes('credit') || drt === 'freechip') return 'credit_game';
-  if (drt.includes('tunai')) return 'uang_tunai';
-  
-  const name = (sub.name || '').toLowerCase();
-  if (/honda|pcx|iphone|macbook|samsung|watch|emas|motor|mobil|apple|gold|kaos|voucher/.test(name)) return 'hadiah_fisik';
-  if (/credit\s*game|freechip|freebet|chip/.test(name)) return 'credit_game';
-  if (/uang\s*tunai|cash|transfer/.test(name)) return 'uang_tunai';
-  
-  return null;
-};
-
-// Helper: Get quantity dari extracted data
-const getQuantity = (sub: any): number => sub.physical_reward_quantity ?? 1;
+import { inferRewardType, formatSubcategoryName, getRewardBadgeInfo } from "@/lib/reward-normalization";
 
 type ViewMode = "list" | "form" | "upload";
 
@@ -747,7 +725,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                         <TableCell className="py-3">
                           <div className="flex items-center gap-2 pl-6">
                             <span className="text-muted-foreground">↳</span>
-                            <span className="text-sm text-foreground font-medium">{getQuantity(sub)} {sub.name || `Varian ${subIndex + 1}`}</span>
+                            <span className="text-sm text-foreground font-medium">{formatSubcategoryName(sub, inferRewardType(sub, item), `Varian ${subIndex + 1}`)}</span>
                             {sub.game_types && sub.game_types.length > 0 && (
                               <Badge className="bg-button-hover/20 text-button-hover border-0 rounded-full px-2 py-0.5 text-xs">
                                 {sub.game_types.map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).join(", ")}
@@ -759,16 +737,16 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                         {/* Category - tampilkan reward type */}
                         <TableCell className="py-3">
                           {(() => {
-                            const rewardType = normalizeRewardType(sub);
-                            if (rewardType === 'hadiah_fisik') {
-                              return <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs">🎁 Hadiah Fisik</Badge>;
-                            } else if (rewardType === 'credit_game') {
-                              return <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-xs">🎮 Credit Game</Badge>;
-                            } else if (rewardType === 'uang_tunai') {
-                              return <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs">💰 Uang Tunai</Badge>;
-                            } else {
-                              return <span className="text-muted-foreground">-</span>;
+                            const rewardType = inferRewardType(sub, item);
+                            const badgeInfo = getRewardBadgeInfo(rewardType);
+                            if (badgeInfo) {
+                              return (
+                                <Badge className={`${badgeInfo.bgClass} ${badgeInfo.textClass} border ${badgeInfo.borderClass} text-xs`}>
+                                  {badgeInfo.emoji} {badgeInfo.label}
+                                </Badge>
+                              );
                             }
+                            return <span className="text-muted-foreground">-</span>;
                           })()}
                         </TableCell>
                         
