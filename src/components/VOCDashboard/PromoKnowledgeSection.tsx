@@ -227,11 +227,11 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const formatValidPeriod = (from?: string, until?: string): React.ReactNode => {
     if (!from && !until) return "-";
     const formatSingleDate = (dateStr: string) => {
-      return new Date(dateStr).toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-      });
+      const date = new Date(dateStr);
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear().toString().slice(-2);
+      return `${day}/${month}/${year}`;
     };
     const fromFormatted = from ? formatSingleDate(from) : null;
     const untilFormatted = until ? formatSingleDate(until) : null;
@@ -252,11 +252,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
       const dateObj = new Date(dateString);
       if (isNaN(dateObj.getTime())) return "-";
       
-      const date = dateObj.toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric"
-      });
+      const day = dateObj.getDate().toString().padStart(2, '0');
+      const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+      const year = dateObj.getFullYear().toString().slice(-2);
+      const date = `${day}/${month}/${year}`;
       const time = dateObj.toLocaleTimeString("id-ID", {
         hour: "2-digit",
         minute: "2-digit",
