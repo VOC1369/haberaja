@@ -378,9 +378,13 @@ export interface PromoSubCategory {
   
   // Physical Reward (untuk Hadiah Fisik)
   physical_reward_name?: string;  // Nama hadiah fisik manual
+  physical_reward_value?: number;  // Estimasi nilai hadiah fisik (Rp)
   
   // Cash Reward (untuk Uang Tunai)
   cash_reward_amount?: number;  // Nominal uang tunai
+  
+  // Credit Game (untuk Credit Game promo)
+  credit_game_amount?: number;  // Nilai credit game (Rp)
 }
 
 // Promo Item with metadata for storage
