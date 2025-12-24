@@ -108,9 +108,9 @@ export function ChatSection() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <Card className="p-0 overflow-hidden">
-        <div className="flex h-[calc(100vh-200px)]">
+    <div className="mx-auto">
+      <Card className="p-0 overflow-hidden w-[1069px] h-[849px]">
+        <div className="flex h-full">
           {/* Chat List */}
           <div className="w-80 border-r border-border flex flex-col">
             <div className="p-4 border-b border-border">
