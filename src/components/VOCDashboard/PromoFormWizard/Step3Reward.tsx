@@ -363,8 +363,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 />
                 {/* Conditional field untuk Hadiah Fisik */}
                 {data.dinamis_reward_type === 'hadiah_fisik' && (
-                  <div className="space-y-4 mt-2">
-                    <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-4 mt-2">
+                    <div className="col-span-2 space-y-2">
                       <Label>Nama Hadiah Fisik</Label>
                       <Input
                         value={data.physical_reward_name || ''}
@@ -376,17 +376,17 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <Label>Jumlah Unit Hadiah</Label>
+                      <Label>Jumlah Unit</Label>
                       <Input
                         type="number"
                         min={1}
                         value={data.physical_reward_quantity || 1}
                         onChange={(e) => onChange({ physical_reward_quantity: parseInt(e.target.value) || 1 })}
                         placeholder="1"
-                        className="w-32"
+                        className="w-full"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Berapa unit hadiah yang akan diberikan
+                        Unit hadiah
                       </p>
                     </div>
                   </div>
@@ -2926,16 +2926,26 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       
                       {/* Conditional Input untuk Hadiah Fisik */}
                       {tier.type === 'hadiah_fisik' && (
-                        <div className="space-y-2">
-                          <Label className="text-xs">Nama Hadiah Fisik</Label>
-                          <Input
-                            value={tier.physical_reward_name || ''}
-                            onChange={(e) => updateTier(tier.id, { physical_reward_name: e.target.value })}
-                            placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Masukkan nama hadiah fisik untuk tier ini
-                          </p>
+                        <div className="grid grid-cols-3 gap-4">
+                          <div className="col-span-2 space-y-2">
+                            <Label className="text-xs">Nama Hadiah Fisik</Label>
+                            <Input
+                              value={tier.physical_reward_name || ''}
+                              onChange={(e) => updateTier(tier.id, { physical_reward_name: e.target.value })}
+                              placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Jumlah Unit</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={tier.physical_reward_quantity || 1}
+                              onChange={(e) => updateTier(tier.id, { physical_reward_quantity: parseInt(e.target.value) || 1 })}
+                              placeholder="1"
+                              className="w-full"
+                            />
+                          </div>
                         </div>
                       )}
                       
