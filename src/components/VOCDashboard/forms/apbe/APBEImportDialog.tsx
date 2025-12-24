@@ -23,7 +23,7 @@ import {
   X,
   FileText
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { APBEConfig } from "@/types/apbe-config";
 import {
   validateImportedConfig,
@@ -106,17 +106,7 @@ export function APBEImportDialog({ open, onOpenChange, onImport }: APBEImportDia
     onOpenChange(false);
   };
 
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-    } catch {
-      return dateStr;
-    }
-  };
+  // formatDate now imported from @/lib/utils
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment } from "react";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -106,32 +107,7 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear().toString().slice(-2);
-    return `${day}/${month}/${year}`;
-  };
-
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    
-    if (!isNaN(date.getTime())) {
-      const day = date.getDate().toString().padStart(2, '0');
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const year = date.getFullYear().toString().slice(-2);
-      const dateStr = `${day}/${month}/${year}`;
-      const timeStr = date.toLocaleTimeString('id-ID', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      });
-      return `${dateStr}, ${timeStr}`;
-    }
-    
-    return dateString.split(',')[0] || dateString;
-  };
+  // formatDate and formatDateTime now imported from @/lib/utils
 
   const getCategoryBadge = (classification?: string) => {
     switch (classification) {

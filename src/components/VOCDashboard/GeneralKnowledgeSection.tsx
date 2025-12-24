@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatDate } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,13 +120,7 @@ export function GeneralKnowledgeSection({ onBack }: GeneralKnowledgeSectionProps
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    });
-  };
+  // formatDate now imported from @/lib/utils
 
   return (
     <div className="page-wrapper">

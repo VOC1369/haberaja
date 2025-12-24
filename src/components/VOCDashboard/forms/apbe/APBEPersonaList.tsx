@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { formatDateTime } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -262,13 +263,7 @@ export function APBEPersonaList({ onBack, onCreateNew, onEdit, onLoadSample, onI
     }
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), "dd MMM yyyy, HH:mm", { locale: id });
-    } catch {
-      return dateString;
-    }
-  };
+  // formatDateTime now imported from @/lib/utils
 
   const handleExport = (version: APBEVersion) => {
     if (version.persona_json) {
@@ -460,7 +455,7 @@ export function APBEPersonaList({ onBack, onCreateNew, onEdit, onLoadSample, onI
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground px-4 py-4">
-                          {formatDate(version.created_at)}
+                          {formatDateTime(version.created_at)}
                         </TableCell>
                         <TableCell className="text-muted-foreground px-4 py-4">
                           by {version.updated_by || version.created_by || "Admin"}

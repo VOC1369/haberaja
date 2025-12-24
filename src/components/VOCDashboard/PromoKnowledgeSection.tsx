@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment, useRef } from "react";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -224,17 +225,11 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     }
   };
 
+  // formatDate and formatDateTime now imported from @/lib/utils
   const formatValidPeriod = (from?: string, until?: string): React.ReactNode => {
     if (!from && !until) return "-";
-    const formatSingleDate = (dateStr: string) => {
-      const date = new Date(dateStr);
-      const day = date.getDate().toString().padStart(2, '0');
-      const month = (date.getMonth() + 1).toString().padStart(2, '0');
-      const year = date.getFullYear().toString().slice(-2);
-      return `${day}/${month}/${year}`;
-    };
-    const fromFormatted = from ? formatSingleDate(from) : null;
-    const untilFormatted = until ? formatSingleDate(until) : null;
+    const fromFormatted = from ? formatDate(from) : null;
+    const untilFormatted = until ? formatDate(until) : null;
     
     return (
       <span className="inline-flex items-center gap-1">
@@ -247,24 +242,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
 
   const formatLastUpdated = (dateString?: string) => {
     if (!dateString) return "-";
-    
-    try {
-      const dateObj = new Date(dateString);
-      if (isNaN(dateObj.getTime())) return "-";
-      
-      const day = dateObj.getDate().toString().padStart(2, '0');
-      const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-      const year = dateObj.getFullYear().toString().slice(-2);
-      const date = `${day}/${month}/${year}`;
-      const time = dateObj.toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false
-      });
-      return `${date}, ${time}`;
-    } catch {
-      return "-";
-    }
+    return formatDateTime(dateString);
   };
 
   // ============================================
