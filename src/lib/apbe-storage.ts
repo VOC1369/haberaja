@@ -1,44 +1,15 @@
 /**
- * APBE v1.2 LocalStorage Persistence
+ * APBE v1.3 Supabase Storage
  * 
- * Supabase-Ready: Includes client_id and schema_version for multi-tenant support.
- * TIDAK CONNECT ke Supabase - menggunakan localStorage untuk testing.
+ * Full Supabase integration for 3-table architecture:
+ * - voc_agent_persona (core identity)
+ * - voc_agent_library (templates)
+ * - voc_agent_rules (business logic)
  */
 
 import { APBEConfig, initialAPBEConfig, DEFAULT_VERIFICATION_FIELDS } from "@/types/apbe-config";
-
-// ============================================================
-// CONSTANTS - Supabase Ready
-// ============================================================
-
-export const CURRENT_SCHEMA_VERSION = "1.2.0";
-export const DEFAULT_CLIENT_ID = "local_dev"; // Untuk localStorage testing
-
-// ============================================================
-// CLIENT-AWARE STORAGE KEYS (Multi-tenant safe)
-// ============================================================
-
-function getDraftKey(clientId: string = DEFAULT_CLIENT_ID): string {
-  return `apbe_draft_${clientId}`;
-}
-
-function getPublishedKey(clientId: string = DEFAULT_CLIENT_ID): string {
-  return `apbe_published_${clientId}`;
-}
-
-function getVersionsKey(clientId: string = DEFAULT_CLIENT_ID): string {
-  return `apbe_versions_${clientId}`;
-}
-
-// Legacy keys for migration
-const LEGACY_DRAFT_KEY = "apbe_draft_config";
-const LEGACY_VERSIONS_KEY = "apbe_config_versions";
-
-// UUID validation helper
-function isValidUUID(id: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(id);
-}
+import { supabase, DEFAULT_CLIENT_ID, CURRENT_SCHEMA_VERSION, generateUUID, logSupabaseError } from "./supabase-client";
+import { splitConfigForSupabase, mergeConfigFromSupabase, SplitAPBEData } from "./apbe-supabase-schema";
 
 // ============================================================
 // INTERFACES
@@ -46,9 +17,9 @@ function isValidUUID(id: string): boolean {
 
 export interface APBEVersion {
   id: string;
-  client_id: string;           // Multi-tenant support
+  client_id: string;
   version: number;
-  schema_version: string;      // For migrations
+  schema_version: string;
   persona_name: string;
   persona_json: APBEConfig;
   runtime_prompt?: string;
@@ -59,31 +30,35 @@ export interface APBEVersion {
   updated_by?: string;
 }
 
+// Re-export for backward compatibility
+export { DEFAULT_CLIENT_ID, CURRENT_SCHEMA_VERSION };
+
+// Draft identifier pattern
+const DRAFT_PERSONA_PREFIX = "[DRAFT]";
+
+function getDraftPersonaName(clientId: string): string {
+  return `${DRAFT_PERSONA_PREFIX} ${clientId}`;
+}
+
+function isDraftPersona(personaName: string): boolean {
+  return personaName.startsWith(DRAFT_PERSONA_PREFIX);
+}
+
 // ============================================================
-// DRAFT MANAGEMENT
+// HELPER: Auto-fix emoji conflicts
 // ============================================================
 
-/**
- * Auto-fix emoji conflicts before saving
- * Removes emojis from allowed list if they exist in forbidden list
- */
 function autoFixEmojiConflicts(config: APBEConfig): APBEConfig {
   const allowed = config.agent?.emoji_allowed || [];
   const forbidden = config.agent?.emoji_forbidden || [];
   
   if (allowed.length === 0 || forbidden.length === 0) return config;
   
-  // Convert forbidden to lowercase for case-insensitive comparison
   const forbiddenSet = new Set(forbidden.map(e => e.toLowerCase()));
-  
-  // Filter out any allowed emojis that exist in forbidden
   const cleanedAllowed = allowed.filter(emoji => !forbiddenSet.has(emoji.toLowerCase()));
   
-  // Only update if there were conflicts
   if (cleanedAllowed.length !== allowed.length) {
-    const conflictCount = allowed.length - cleanedAllowed.length;
-    console.log(`[APBE Storage] Auto-fixed ${conflictCount} emoji conflict(s)`);
-    
+    console.log(`[APBE Storage] Auto-fixed ${allowed.length - cleanedAllowed.length} emoji conflict(s)`);
     return {
       ...config,
       agent: {
@@ -96,265 +71,621 @@ function autoFixEmojiConflicts(config: APBEConfig): APBEConfig {
   return config;
 }
 
-export function saveAPBEDraft(config: APBEConfig, clientId: string = DEFAULT_CLIENT_ID): void {
-  // Auto-fix emoji conflicts before saving
+// ============================================================
+// DRAFT MANAGEMENT (Async)
+// ============================================================
+
+export async function saveAPBEDraft(config: APBEConfig, clientId: string = DEFAULT_CLIENT_ID): Promise<void> {
   const cleanedConfig = autoFixEmojiConflicts(config);
+  const draftName = getDraftPersonaName(clientId);
+  const splitData = splitConfigForSupabase(cleanedConfig);
   
-  const draft = {
-    config: cleanedConfig,
-    updated_at: new Date().toISOString(),
-  };
-  localStorage.setItem(getDraftKey(clientId), JSON.stringify(draft));
+  // Check if draft exists
+  const { data: existingDraft } = await supabase
+    .from('voc_agent_persona')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('persona_name', draftName)
+    .maybeSingle();
+  
+  if (existingDraft) {
+    // Update existing draft
+    const { error } = await supabase
+      .from('voc_agent_persona')
+      .update({
+        config_A: splitData.persona.config_A,
+        config_agent: splitData.persona.config_agent,
+        config_C: splitData.persona.config_C,
+        config_timezone: splitData.persona.config_timezone,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existingDraft.id);
+    
+    if (error) logSupabaseError('saveAPBEDraft:update', error);
+  } else {
+    // Insert new draft
+    const { error } = await supabase
+      .from('voc_agent_persona')
+      .insert({
+        id: generateUUID(),
+        client_id: clientId,
+        persona_name: draftName,
+        config_A: splitData.persona.config_A,
+        config_agent: splitData.persona.config_agent,
+        config_C: splitData.persona.config_C,
+        config_timezone: splitData.persona.config_timezone,
+        is_active: false,
+        version: 0,
+        schema_version: CURRENT_SCHEMA_VERSION,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    
+    if (error) logSupabaseError('saveAPBEDraft:insert', error);
+  }
 }
 
-export function loadAPBEDraft(clientId: string = DEFAULT_CLIENT_ID): APBEConfig | null {
-  // Try new key first, then legacy
-  let data = localStorage.getItem(getDraftKey(clientId));
-  if (!data && clientId === DEFAULT_CLIENT_ID) {
-    data = localStorage.getItem(LEGACY_DRAFT_KEY);
-  }
-  if (!data) return null;
+export async function loadAPBEDraft(clientId: string = DEFAULT_CLIENT_ID): Promise<APBEConfig | null> {
+  const draftName = getDraftPersonaName(clientId);
   
-  try {
-    const parsed = JSON.parse(data);
-    return parsed.config || null;
-  } catch {
+  const { data: draft, error } = await supabase
+    .from('voc_agent_persona')
+    .select('*')
+    .eq('client_id', clientId)
+    .eq('persona_name', draftName)
+    .maybeSingle();
+  
+  if (error) {
+    logSupabaseError('loadAPBEDraft', error);
     return null;
   }
+  
+  if (!draft) return null;
+  
+  // Reconstruct APBEConfig from persona data (draft doesn't have library/rules)
+  const partialConfig: APBEConfig = {
+    A: draft.config_A || initialAPBEConfig.A,
+    agent: draft.config_agent || initialAPBEConfig.agent,
+    C: draft.config_C || initialAPBEConfig.C,
+    L: initialAPBEConfig.L,
+    O: initialAPBEConfig.O,
+    B: initialAPBEConfig.B,
+    V: initialAPBEConfig.V,
+    timezone: draft.config_timezone || initialAPBEConfig.timezone,
+  };
+  
+  return partialConfig;
 }
 
-export function clearAPBEDraft(clientId: string = DEFAULT_CLIENT_ID): void {
-  localStorage.removeItem(getDraftKey(clientId));
-  // Also clear legacy key if exists
-  if (clientId === DEFAULT_CLIENT_ID) {
-    localStorage.removeItem(LEGACY_DRAFT_KEY);
-  }
+export async function clearAPBEDraft(clientId: string = DEFAULT_CLIENT_ID): Promise<void> {
+  const draftName = getDraftPersonaName(clientId);
+  
+  const { error } = await supabase
+    .from('voc_agent_persona')
+    .delete()
+    .eq('client_id', clientId)
+    .eq('persona_name', draftName);
+  
+  if (error) logSupabaseError('clearAPBEDraft', error);
 }
 
 // ============================================================
-// PUBLISHED CONFIG MANAGEMENT
+// PUBLISH & UPDATE (Async - 3 Table Insert)
 // ============================================================
 
-export function publishAPBEConfig(
-  config: APBEConfig, 
-  runtimePrompt: string, 
+export async function publishAPBEConfig(
+  config: APBEConfig,
+  runtimePrompt: string,
   createdBy: string = "Admin",
   clientId: string = DEFAULT_CLIENT_ID
-): APBEVersion {
-  // Auto-fix emoji conflicts before publishing
+): Promise<APBEVersion | null> {
   const cleanedConfig = autoFixEmojiConflicts(config);
-  const versions = getConfigVersions(clientId);
+  const splitData = splitConfigForSupabase(cleanedConfig);
   
-  // Deactivate all existing versions for this client
-  versions.forEach(v => {
-    if (v.client_id === clientId) {
-      v.is_active = false;
-    }
-  });
+  // Get current version count for this client
+  const { data: existingVersions } = await supabase
+    .from('voc_agent_persona')
+    .select('version')
+    .eq('client_id', clientId)
+    .not('persona_name', 'like', `${DRAFT_PERSONA_PREFIX}%`);
   
-  // Create new version with persona_name from agent.name or group_name
+  const nextVersion = (existingVersions?.length || 0) + 1;
   const personaName = config.agent?.name || config.A?.group_name || "Unnamed Persona";
+  const personaId = generateUUID();
+  const now = new Date().toISOString();
   
-  const newVersion: APBEVersion = {
-    id: crypto.randomUUID(),
+  // 1. Deactivate all existing versions for this client
+  await supabase
+    .from('voc_agent_persona')
+    .update({ is_active: false })
+    .eq('client_id', clientId)
+    .not('persona_name', 'like', `${DRAFT_PERSONA_PREFIX}%`);
+  
+  // 2. Insert persona
+  const { error: personaError } = await supabase
+    .from('voc_agent_persona')
+    .insert({
+      id: personaId,
+      client_id: clientId,
+      persona_name: personaName,
+      config_A: splitData.persona.config_A,
+      config_agent: splitData.persona.config_agent,
+      config_C: splitData.persona.config_C,
+      config_timezone: splitData.persona.config_timezone,
+      is_active: true,
+      version: nextVersion,
+      schema_version: CURRENT_SCHEMA_VERSION,
+      created_at: now,
+      updated_at: now,
+      created_by: createdBy,
+    });
+  
+  if (personaError) {
+    logSupabaseError('publishAPBEConfig:persona', personaError);
+    return null;
+  }
+  
+  // 3. Insert library
+  const { error: libraryError } = await supabase
+    .from('voc_agent_library')
+    .insert({
+      id: generateUUID(),
+      client_id: clientId,
+      persona_id: personaId,
+      greetings: splitData.library.greetings,
+      closings: splitData.library.closings,
+      apologies: splitData.library.apologies,
+      empathy_phrases: splitData.library.empathy_phrases,
+      updated_at: now,
+    });
+  
+  if (libraryError) {
+    logSupabaseError('publishAPBEConfig:library', libraryError);
+  }
+  
+  // 4. Insert rules
+  const { error: rulesError } = await supabase
+    .from('voc_agent_rules')
+    .insert({
+      id: generateUUID(),
+      client_id: clientId,
+      persona_id: personaId,
+      config_O: splitData.rules.config_O,
+      config_B_legacy: splitData.rules.config_B,
+      config_V: splitData.rules.config_V,
+      archetype_ruleset_version: CURRENT_SCHEMA_VERSION,
+      region: 'indonesia',
+      updated_at: now,
+    });
+  
+  if (rulesError) {
+    logSupabaseError('publishAPBEConfig:rules', rulesError);
+  }
+  
+  // 5. Clear draft
+  await clearAPBEDraft(clientId);
+  
+  // Return APBEVersion
+  return {
+    id: personaId,
     client_id: clientId,
-    version: versions.filter(v => v.client_id === clientId).length + 1,
+    version: nextVersion,
     schema_version: CURRENT_SCHEMA_VERSION,
     persona_name: personaName,
-    persona_json: config,
+    persona_json: cleanedConfig,
     runtime_prompt: runtimePrompt,
     is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: now,
+    updated_at: now,
     created_by: createdBy,
   };
-  
-  versions.push(newVersion);
-  
-  // Save versions
-  localStorage.setItem(getVersionsKey(clientId), JSON.stringify(versions));
-  
-  // Save active config
-  localStorage.setItem(getPublishedKey(clientId), JSON.stringify(newVersion));
-  
-  // Clear draft after publish
-  clearAPBEDraft(clientId);
-  
-  return newVersion;
 }
 
-// Update existing persona (for edit flow - replaces instead of creating new)
-export function updateExistingPersona(
-  personaId: string, 
-  config: APBEConfig, 
-  runtimePrompt: string, 
+export async function updateExistingPersona(
+  personaId: string,
+  config: APBEConfig,
+  runtimePrompt: string,
   updatedBy: string = "Admin",
   clientId: string = DEFAULT_CLIENT_ID
-): APBEVersion | null {
-  const versions = getConfigVersions(clientId);
-  const existingIndex = versions.findIndex(v => v.id === personaId);
+): Promise<APBEVersion | null> {
+  const cleanedConfig = autoFixEmojiConflicts(config);
+  const splitData = splitConfigForSupabase(cleanedConfig);
+  const now = new Date().toISOString();
   
-  if (existingIndex === -1) return null;
+  // Get existing version
+  const { data: existing, error: fetchError } = await supabase
+    .from('voc_agent_persona')
+    .select('*')
+    .eq('id', personaId)
+    .maybeSingle();
   
-  const existing = versions[existingIndex];
+  if (fetchError || !existing) {
+    logSupabaseError('updateExistingPersona:fetch', fetchError);
+    return null;
+  }
+  
   const personaName = config.agent?.name || config.A?.group_name || existing.persona_name;
+  const newVersion = (existing.version || 0) + 1;
   
-  // Update the existing version with incremented version number
-  const updatedVersion: APBEVersion = {
-    ...existing,
-    version: existing.version + 1,
+  // 1. Update persona
+  const { error: personaError } = await supabase
+    .from('voc_agent_persona')
+    .update({
+      persona_name: personaName,
+      config_A: splitData.persona.config_A,
+      config_agent: splitData.persona.config_agent,
+      config_C: splitData.persona.config_C,
+      config_timezone: splitData.persona.config_timezone,
+      version: newVersion,
+      schema_version: CURRENT_SCHEMA_VERSION,
+      updated_at: now,
+      updated_by: updatedBy,
+    })
+    .eq('id', personaId);
+  
+  if (personaError) {
+    logSupabaseError('updateExistingPersona:persona', personaError);
+    return null;
+  }
+  
+  // 2. Upsert library
+  const { data: existingLibrary } = await supabase
+    .from('voc_agent_library')
+    .select('id')
+    .eq('persona_id', personaId)
+    .maybeSingle();
+  
+  if (existingLibrary) {
+    await supabase
+      .from('voc_agent_library')
+      .update({
+        greetings: splitData.library.greetings,
+        closings: splitData.library.closings,
+        apologies: splitData.library.apologies,
+        empathy_phrases: splitData.library.empathy_phrases,
+        updated_at: now,
+      })
+      .eq('id', existingLibrary.id);
+  } else {
+    await supabase
+      .from('voc_agent_library')
+      .insert({
+        id: generateUUID(),
+        client_id: clientId,
+        persona_id: personaId,
+        greetings: splitData.library.greetings,
+        closings: splitData.library.closings,
+        apologies: splitData.library.apologies,
+        empathy_phrases: splitData.library.empathy_phrases,
+        updated_at: now,
+      });
+  }
+  
+  // 3. Upsert rules
+  const { data: existingRules } = await supabase
+    .from('voc_agent_rules')
+    .select('id')
+    .eq('persona_id', personaId)
+    .maybeSingle();
+  
+  if (existingRules) {
+    await supabase
+      .from('voc_agent_rules')
+      .update({
+        config_O: splitData.rules.config_O,
+        config_B_legacy: splitData.rules.config_B,
+        config_V: splitData.rules.config_V,
+        updated_at: now,
+      })
+      .eq('id', existingRules.id);
+  } else {
+    await supabase
+      .from('voc_agent_rules')
+      .insert({
+        id: generateUUID(),
+        client_id: clientId,
+        persona_id: personaId,
+        config_O: splitData.rules.config_O,
+        config_B_legacy: splitData.rules.config_B,
+        config_V: splitData.rules.config_V,
+        archetype_ruleset_version: CURRENT_SCHEMA_VERSION,
+        region: 'indonesia',
+        updated_at: now,
+      });
+  }
+  
+  // 4. Clear draft
+  await clearAPBEDraft(clientId);
+  
+  return {
+    id: personaId,
+    client_id: clientId,
+    version: newVersion,
     schema_version: CURRENT_SCHEMA_VERSION,
     persona_name: personaName,
-    persona_json: config,
+    persona_json: cleanedConfig,
     runtime_prompt: runtimePrompt,
-    updated_at: new Date().toISOString(),
+    is_active: existing.is_active,
+    created_at: existing.created_at,
+    updated_at: now,
+    created_by: existing.created_by,
     updated_by: updatedBy,
   };
-  
-  // Replace in array
-  versions[existingIndex] = updatedVersion;
-  
-  // If this was active, update the published config too
-  if (updatedVersion.is_active) {
-    localStorage.setItem(getPublishedKey(clientId), JSON.stringify(updatedVersion));
-  }
-  
-  // Save versions
-  localStorage.setItem(getVersionsKey(clientId), JSON.stringify(versions));
-  
-  // Clear draft after update
-  clearAPBEDraft(clientId);
-  
-  return updatedVersion;
 }
 
-export function getActiveConfig(clientId: string = DEFAULT_CLIENT_ID): APBEVersion | null {
-  const versions = getConfigVersions(clientId);
-  return versions.find(v => v.client_id === clientId && v.is_active) || null;
-}
+// ============================================================
+// QUERY FUNCTIONS (Async)
+// ============================================================
 
-export function getConfigVersions(clientId?: string): APBEVersion[] {
-  // Try client-specific key first
-  const specificClientId = clientId || DEFAULT_CLIENT_ID;
-  let data = localStorage.getItem(getVersionsKey(specificClientId));
+export async function getActiveConfig(clientId: string = DEFAULT_CLIENT_ID): Promise<APBEVersion | null> {
+  const { data: persona, error } = await supabase
+    .from('voc_agent_persona')
+    .select('*')
+    .eq('client_id', clientId)
+    .eq('is_active', true)
+    .not('persona_name', 'like', `${DRAFT_PERSONA_PREFIX}%`)
+    .maybeSingle();
   
-  // Fall back to legacy key for migration
-  if (!data && specificClientId === DEFAULT_CLIENT_ID) {
-    data = localStorage.getItem(LEGACY_VERSIONS_KEY);
+  if (error || !persona) {
+    if (error) logSupabaseError('getActiveConfig', error);
+    return null;
   }
   
-  if (!data) return [];
+  // Fetch library and rules
+  const [libraryResult, rulesResult] = await Promise.all([
+    supabase.from('voc_agent_library').select('*').eq('persona_id', persona.id).maybeSingle(),
+    supabase.from('voc_agent_rules').select('*').eq('persona_id', persona.id).maybeSingle(),
+  ]);
   
-  try {
-    const versions: APBEVersion[] = JSON.parse(data);
-    
-    // Migrate old versions without client_id
-    const migratedVersions = versions.map(v => ({
-      ...v,
-      client_id: v.client_id || DEFAULT_CLIENT_ID,
-      schema_version: v.schema_version || "1.0.0",
-    }));
-    
-    // Filter by client if specified
-    if (clientId) {
-      return migratedVersions.filter(v => v.client_id === clientId);
-    }
-    
-    return migratedVersions;
-  } catch {
+  const splitData: SplitAPBEData = {
+    persona: {
+      config_A: persona.config_A,
+      config_agent: persona.config_agent,
+      config_C: persona.config_C,
+      config_timezone: persona.config_timezone,
+    },
+    library: libraryResult.data || {
+      greetings: initialAPBEConfig.L.greetings,
+      closings: initialAPBEConfig.L.closings,
+      apologies: initialAPBEConfig.L.apologies,
+      empathy_phrases: initialAPBEConfig.L.empathy_phrases,
+    },
+    rules: {
+      config_O: rulesResult.data?.config_O || initialAPBEConfig.O,
+      config_B: rulesResult.data?.config_B_legacy || initialAPBEConfig.B,
+      config_V: rulesResult.data?.config_V || initialAPBEConfig.V,
+    },
+  };
+  
+  return {
+    id: persona.id,
+    client_id: persona.client_id,
+    version: persona.version,
+    schema_version: persona.schema_version,
+    persona_name: persona.persona_name,
+    persona_json: mergeConfigFromSupabase(splitData),
+    is_active: persona.is_active,
+    created_at: persona.created_at,
+    updated_at: persona.updated_at,
+    created_by: persona.created_by,
+    updated_by: persona.updated_by,
+  };
+}
+
+export async function getConfigVersions(clientId?: string): Promise<APBEVersion[]> {
+  const targetClientId = clientId || DEFAULT_CLIENT_ID;
+  
+  const { data: personas, error } = await supabase
+    .from('voc_agent_persona')
+    .select('*')
+    .eq('client_id', targetClientId)
+    .not('persona_name', 'like', `${DRAFT_PERSONA_PREFIX}%`)
+    .order('version', { ascending: false });
+  
+  if (error || !personas) {
+    if (error) logSupabaseError('getConfigVersions', error);
     return [];
   }
-}
-
-export function activateVersion(versionId: string, clientId: string = DEFAULT_CLIENT_ID): boolean {
-  const versions = getConfigVersions(clientId);
-  const targetVersion = versions.find(v => v.id === versionId);
   
-  if (!targetVersion) return false;
+  // Fetch all libraries and rules for these personas
+  const personaIds = personas.map(p => p.id);
   
-  // Deactivate all versions for this client, activate target
-  versions.forEach(v => {
-    if (v.client_id === targetVersion.client_id) {
-      v.is_active = v.id === versionId;
-    }
+  const [librariesResult, rulesResult] = await Promise.all([
+    supabase.from('voc_agent_library').select('*').in('persona_id', personaIds),
+    supabase.from('voc_agent_rules').select('*').in('persona_id', personaIds),
+  ]);
+  
+  const librariesMap = new Map(librariesResult.data?.map(l => [l.persona_id, l]) || []);
+  const rulesMap = new Map(rulesResult.data?.map(r => [r.persona_id, r]) || []);
+  
+  return personas.map(persona => {
+    const library = librariesMap.get(persona.id);
+    const rules = rulesMap.get(persona.id);
+    
+    const splitData: SplitAPBEData = {
+      persona: {
+        config_A: persona.config_A,
+        config_agent: persona.config_agent,
+        config_C: persona.config_C,
+        config_timezone: persona.config_timezone,
+      },
+      library: library || {
+        greetings: initialAPBEConfig.L.greetings,
+        closings: initialAPBEConfig.L.closings,
+        apologies: initialAPBEConfig.L.apologies,
+        empathy_phrases: initialAPBEConfig.L.empathy_phrases,
+      },
+      rules: {
+        config_O: rules?.config_O || initialAPBEConfig.O,
+        config_B: rules?.config_B_legacy || initialAPBEConfig.B,
+        config_V: rules?.config_V || initialAPBEConfig.V,
+      },
+    };
+    
+    return {
+      id: persona.id,
+      client_id: persona.client_id,
+      version: persona.version,
+      schema_version: persona.schema_version,
+      persona_name: persona.persona_name,
+      persona_json: mergeConfigFromSupabase(splitData),
+      is_active: persona.is_active,
+      created_at: persona.created_at,
+      updated_at: persona.updated_at,
+      created_by: persona.created_by,
+      updated_by: persona.updated_by,
+    };
   });
-  
-  localStorage.setItem(getVersionsKey(clientId), JSON.stringify(versions));
-  localStorage.setItem(getPublishedKey(clientId), JSON.stringify(targetVersion));
-  
-  return true;
 }
 
-export function deactivateVersion(versionId: string, clientId: string = DEFAULT_CLIENT_ID): boolean {
-  const versions = getConfigVersions(clientId);
-  const targetVersion = versions.find(v => v.id === versionId);
+export async function getVersionById(versionId: string, clientId: string = DEFAULT_CLIENT_ID): Promise<APBEVersion | null> {
+  const { data: persona, error } = await supabase
+    .from('voc_agent_persona')
+    .select('*')
+    .eq('id', versionId)
+    .maybeSingle();
   
-  if (!targetVersion) return false;
+  if (error || !persona) {
+    if (error) logSupabaseError('getVersionById', error);
+    return null;
+  }
   
-  // Deactivate target
-  targetVersion.is_active = false;
+  // Fetch library and rules
+  const [libraryResult, rulesResult] = await Promise.all([
+    supabase.from('voc_agent_library').select('*').eq('persona_id', versionId).maybeSingle(),
+    supabase.from('voc_agent_rules').select('*').eq('persona_id', versionId).maybeSingle(),
+  ]);
   
-  localStorage.setItem(getVersionsKey(clientId), JSON.stringify(versions));
+  const splitData: SplitAPBEData = {
+    persona: {
+      config_A: persona.config_A,
+      config_agent: persona.config_agent,
+      config_C: persona.config_C,
+      config_timezone: persona.config_timezone,
+    },
+    library: libraryResult.data || {
+      greetings: initialAPBEConfig.L.greetings,
+      closings: initialAPBEConfig.L.closings,
+      apologies: initialAPBEConfig.L.apologies,
+      empathy_phrases: initialAPBEConfig.L.empathy_phrases,
+    },
+    rules: {
+      config_O: rulesResult.data?.config_O || initialAPBEConfig.O,
+      config_B: rulesResult.data?.config_B_legacy || initialAPBEConfig.B,
+      config_V: rulesResult.data?.config_V || initialAPBEConfig.V,
+    },
+  };
   
-  // Clear published if this was the active one
-  const published = getActiveConfig(targetVersion.client_id);
-  if (!published) {
-    localStorage.removeItem(getPublishedKey(clientId));
+  return {
+    id: persona.id,
+    client_id: persona.client_id,
+    version: persona.version,
+    schema_version: persona.schema_version,
+    persona_name: persona.persona_name,
+    persona_json: mergeConfigFromSupabase(splitData),
+    is_active: persona.is_active,
+    created_at: persona.created_at,
+    updated_at: persona.updated_at,
+    created_by: persona.created_by,
+    updated_by: persona.updated_by,
+  };
+}
+
+// ============================================================
+// ACTIVATION FUNCTIONS (Async)
+// ============================================================
+
+export async function activateVersion(versionId: string, clientId: string = DEFAULT_CLIENT_ID): Promise<boolean> {
+  // 1. Deactivate all versions for this client
+  await supabase
+    .from('voc_agent_persona')
+    .update({ is_active: false })
+    .eq('client_id', clientId)
+    .not('persona_name', 'like', `${DRAFT_PERSONA_PREFIX}%`);
+  
+  // 2. Activate target version
+  const { error } = await supabase
+    .from('voc_agent_persona')
+    .update({ is_active: true, updated_at: new Date().toISOString() })
+    .eq('id', versionId);
+  
+  if (error) {
+    logSupabaseError('activateVersion', error);
+    return false;
   }
   
   return true;
 }
 
-export function deleteVersion(versionId: string, clientId: string = DEFAULT_CLIENT_ID): boolean {
-  let versions = getConfigVersions(clientId);
-  const targetVersion = versions.find(v => v.id === versionId);
+export async function deactivateVersion(versionId: string, clientId: string = DEFAULT_CLIENT_ID): Promise<boolean> {
+  const { error } = await supabase
+    .from('voc_agent_persona')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('id', versionId);
   
-  if (!targetVersion) return false;
-  
-  // Don't delete if it's the only active version for this client
-  const clientVersions = versions.filter(v => v.client_id === targetVersion.client_id);
-  if (targetVersion.is_active && clientVersions.length === 1) return false;
-  
-  versions = versions.filter(v => v.id !== versionId);
-  
-  // If deleted version was active, activate the latest for this client
-  if (targetVersion.is_active) {
-    const remainingClientVersions = versions.filter(v => v.client_id === targetVersion.client_id);
-    if (remainingClientVersions.length > 0) {
-      remainingClientVersions[remainingClientVersions.length - 1].is_active = true;
-      localStorage.setItem(getPublishedKey(clientId), JSON.stringify(remainingClientVersions[remainingClientVersions.length - 1]));
-    }
+  if (error) {
+    logSupabaseError('deactivateVersion', error);
+    return false;
   }
-  
-  localStorage.setItem(getVersionsKey(clientId), JSON.stringify(versions));
   
   return true;
 }
 
-// Get version by ID
-export function getVersionById(versionId: string, clientId: string = DEFAULT_CLIENT_ID): APBEVersion | null {
-  const versions = getConfigVersions(clientId);
-  return versions.find(v => v.id === versionId) || null;
+// ============================================================
+// DELETE FUNCTION (Async - CASCADE)
+// ============================================================
+
+export async function deleteVersion(versionId: string, clientId: string = DEFAULT_CLIENT_ID): Promise<boolean> {
+  // Check if version exists and is not active
+  const { data: version, error: fetchError } = await supabase
+    .from('voc_agent_persona')
+    .select('is_active')
+    .eq('id', versionId)
+    .maybeSingle();
+  
+  if (fetchError || !version) {
+    logSupabaseError('deleteVersion:fetch', fetchError);
+    return false;
+  }
+  
+  if (version.is_active) {
+    console.warn('[APBE Storage] Cannot delete active version');
+    return false;
+  }
+  
+  // Delete persona (CASCADE will delete library and rules)
+  const { error } = await supabase
+    .from('voc_agent_persona')
+    .delete()
+    .eq('id', versionId);
+  
+  if (error) {
+    logSupabaseError('deleteVersion', error);
+    return false;
+  }
+  
+  return true;
 }
 
 // ============================================================
-// INITIAL CONFIG LOADING
+// INITIAL CONFIG LOADING (Async)
 // ============================================================
 
-// Load config on startup - prioritize draft, then published, then default
-// WITH MIGRATION: Ensure new fields (like data_verification) are populated
-export function loadInitialConfig(clientId: string = DEFAULT_CLIENT_ID): APBEConfig {
-  const draft = loadAPBEDraft(clientId);
-  const published = getActiveConfig(clientId);
+export async function loadInitialConfig(clientId: string = DEFAULT_CLIENT_ID): Promise<APBEConfig> {
+  // Try draft first
+  const draft = await loadAPBEDraft(clientId);
+  if (draft) return migrateConfig(draft);
   
-  // Priority: draft > published > default
-  const loadedConfig = draft || published?.persona_json || null;
+  // Try active published
+  const active = await getActiveConfig(clientId);
+  if (active) return migrateConfig(active.persona_json);
   
-  // If no saved config, return fresh default
-  if (!loadedConfig) return initialAPBEConfig;
-  
-  // MIGRATION: Deep merge to ensure new fields exist with defaults
-  const migratedConfig: APBEConfig = {
+  // Return default
+  return initialAPBEConfig;
+}
+
+function migrateConfig(loadedConfig: APBEConfig): APBEConfig {
+  return {
     ...initialAPBEConfig,
     ...loadedConfig,
     A: {
@@ -368,7 +699,6 @@ export function loadInitialConfig(clientId: string = DEFAULT_CLIENT_ID): APBECon
     C: {
       ...initialAPBEConfig.C,
       ...loadedConfig.C,
-      // Ensure data_verification exists with defaults
       data_verification: {
         enabled: loadedConfig.C?.data_verification?.enabled ?? initialAPBEConfig.C.data_verification.enabled,
         fields: (loadedConfig.C?.data_verification?.fields?.length > 0)
@@ -376,12 +706,10 @@ export function loadInitialConfig(clientId: string = DEFAULT_CLIENT_ID): APBECon
           : DEFAULT_VERIFICATION_FIELDS,
         interaction_mode: loadedConfig.C?.data_verification?.interaction_mode ?? initialAPBEConfig.C.data_verification.interaction_mode,
       },
-      // Ensure personalization exists
       personalization: {
         ...initialAPBEConfig.C.personalization,
         ...loadedConfig.C?.personalization,
       },
-      // Ensure boundary_rules exists  
       boundary_rules: {
         ...initialAPBEConfig.C.boundary_rules,
         ...loadedConfig.C?.boundary_rules,
@@ -396,30 +724,21 @@ export function loadInitialConfig(clientId: string = DEFAULT_CLIENT_ID): APBECon
       ...loadedConfig.V,
     },
   };
-  
-  return migratedConfig;
 }
 
 // ============================================================
-// MIGRATION HELPERS (for future Supabase migration)
+// MIGRATION & UTILITY FUNCTIONS
 // ============================================================
 
-/**
- * Export all local data for migration to Supabase
- */
-export function exportForMigration(clientId: string = DEFAULT_CLIENT_ID): {
+export async function exportForMigration(clientId: string = DEFAULT_CLIENT_ID): Promise<{
   versions: APBEVersion[];
   draft: APBEConfig | null;
-} {
-  return {
-    versions: getConfigVersions(clientId),
-    draft: loadAPBEDraft(clientId),
-  };
+}> {
+  const versions = await getConfigVersions(clientId);
+  const draft = await loadAPBEDraft(clientId);
+  return { versions, draft };
 }
 
-/**
- * Validate version data structure before save
- */
 export function validateVersionData(version: APBEVersion): boolean {
   return !!(
     version.id &&
@@ -433,22 +752,20 @@ export function validateVersionData(version: APBEVersion): boolean {
   );
 }
 
-/**
- * Get statistics about stored data
- */
-export function getStorageStats(clientId: string = DEFAULT_CLIENT_ID): {
+export async function getStorageStats(clientId: string = DEFAULT_CLIENT_ID): Promise<{
   totalVersions: number;
   activeVersions: number;
   uniqueClients: number;
   hasDraft: boolean;
-} {
-  const versions = getConfigVersions(clientId);
+}> {
+  const versions = await getConfigVersions(clientId);
+  const draft = await loadAPBEDraft(clientId);
   const uniqueClients = new Set(versions.map(v => v.client_id)).size;
   
   return {
     totalVersions: versions.length,
     activeVersions: versions.filter(v => v.is_active).length,
     uniqueClients,
-    hasDraft: loadAPBEDraft(clientId) !== null,
+    hasDraft: draft !== null,
   };
 }
