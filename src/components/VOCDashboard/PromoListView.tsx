@@ -43,6 +43,34 @@ interface PromoListViewProps {
   onAddNew?: () => void;
 }
 
+// Helper: Normalize reward type dari berbagai format legacy data
+const normalizeRewardType = (sub: any): 'hadiah_fisik' | 'credit_game' | 'uang_tunai' | null => {
+  // Coba dari jenis_hadiah dulu
+  const jh = (sub.jenis_hadiah || '').toLowerCase();
+  if (jh.includes('fisik') || jh === 'hadiah_fisik') return 'hadiah_fisik';
+  if (jh.includes('credit') || jh === 'credit_game') return 'credit_game';
+  if (jh.includes('tunai') || jh === 'uang_tunai') return 'uang_tunai';
+  
+  // Coba dari dinamis_reward_type (legacy)
+  const drt = (sub.dinamis_reward_type || '').toLowerCase();
+  if (drt.includes('fisik')) return 'hadiah_fisik';
+  if (drt.includes('credit') || drt === 'freechip') return 'credit_game';
+  if (drt.includes('tunai')) return 'uang_tunai';
+  
+  // Infer dari nama subcategory
+  const name = (sub.name || '').toLowerCase();
+  if (/honda|pcx|iphone|macbook|samsung|watch|emas|motor|mobil|apple|gold|voucher\s*(belanja|alfamart|indomaret)/.test(name)) return 'hadiah_fisik';
+  if (/credit\s*game|freechip|freebet|chip|rp\s*[\d.,]+/.test(name)) return 'credit_game';
+  if (/uang\s*tunai|cash|transfer/.test(name)) return 'uang_tunai';
+  
+  return null;
+};
+
+// Helper: Get quantity dengan fallback ke 1
+const getQuantity = (sub: any): number => {
+  return sub.physical_reward_quantity ?? 1;
+};
+
 export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
   const [promos, setPromos] = useState<PromoItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -325,16 +353,16 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                         <div className="flex items-center gap-2">
                           <div className="w-1 h-4 bg-purple-500/50 rounded-full" />
                           <span className="text-sm text-foreground font-medium">
-                            {sub.physical_reward_quantity ?? 1} {sub.name || `Varian ${idx + 1}`}
+                            {getQuantity(sub)} {sub.name || `Varian ${idx + 1}`}
                           </span>
                           {/* Value Badge untuk Credit Game */}
-                          {sub.jenis_hadiah === 'credit_game' && (sub.cash_reward_amount ?? 0) > 0 && (
+                          {normalizeRewardType(sub) === 'credit_game' && (sub.cash_reward_amount ?? 0) > 0 && (
                             <Badge variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/20">
                               Rp {sub.cash_reward_amount?.toLocaleString('id-ID')}
                             </Badge>
                           )}
                           {/* Value Badge untuk Uang Tunai */}
-                          {sub.jenis_hadiah === 'uang_tunai' && (sub.cash_reward_amount ?? 0) > 0 && (
+                          {normalizeRewardType(sub) === 'uang_tunai' && (sub.cash_reward_amount ?? 0) > 0 && (
                             <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-400 border-yellow-500/20">
                               Rp {sub.cash_reward_amount?.toLocaleString('id-ID')}
                             </Badge>
@@ -342,15 +370,18 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                         </div>
                       </TableCell>
                       <TableCell className="text-center text-sm px-4 py-3">
-                        {sub.jenis_hadiah === 'hadiah_fisik' ? (
-                          <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs">🎁 Hadiah Fisik</Badge>
-                        ) : sub.jenis_hadiah === 'credit_game' ? (
-                          <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-xs">🎮 Credit Game</Badge>
-                        ) : sub.jenis_hadiah === 'uang_tunai' ? (
-                          <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs">💰 Uang Tunai</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
+                        {(() => {
+                          const rewardType = normalizeRewardType(sub);
+                          if (rewardType === 'hadiah_fisik') {
+                            return <Badge className="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs">🎁 Hadiah Fisik</Badge>;
+                          } else if (rewardType === 'credit_game') {
+                            return <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-xs">🎮 Credit Game</Badge>;
+                          } else if (rewardType === 'uang_tunai') {
+                            return <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-xs">💰 Uang Tunai</Badge>;
+                          } else {
+                            return <span className="text-muted-foreground">-</span>;
+                          }
+                        })()}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm px-4 py-3">
                         -
