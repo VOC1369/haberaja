@@ -115,6 +115,7 @@ RULES:
       "blacklist": { "enabled": boolean, "games": string[], "providers": string[], "rules": string[] },
       "reward_type": "hadiah_fisik" | "uang_tunai" | "credit_game" | "voucher" | "other",
       "physical_reward_name": "nama hadiah fisik" | null,
+      "physical_reward_quantity": number | null,
       "cash_reward_amount": number | null
     }
   ] | null
@@ -170,8 +171,10 @@ Jika tidak ada provider spesifik → eligible_providers: []
 PATTERN 1 - HADIAH FISIK:
 - Kata kunci: "Grand Prize", "Hadiah Utama", nama produk (mobil, motor, HP, emas, laptop)
 - Contoh: "MITSUBISHI PAJERO SPORT", "EMAS ANTAM 150 Gram", "IPHONE 17 PRO MAX"
+- Deteksi jumlah: "2 unit", "3 pcs", "5 buah", "x2", "x3" dll
 → reward_type: "hadiah_fisik"
 → physical_reward_name: "[NAMA PRODUK]"
+→ physical_reward_quantity: [JUMLAH UNIT] atau 1 jika tidak disebutkan
 
 PATTERN 2 - UANG TUNAI:
 - Kata kunci: "Uang Tunai", "Hadiah Uang Tunai sebesar Rp", "Cash"
@@ -208,6 +211,7 @@ PATTERN 3 - CREDIT GAME (default):
       "value": number | null,
       "reward_type": "hadiah_fisik" | "uang_tunai" | "credit_game" | "voucher" | "other",
       "physical_reward_name": "MITSUBISHI PAJERO SPORT 2025" | null,
+      "physical_reward_quantity": 1 | null,
       "cash_reward_amount": 15000000 | null
     }
   ] | null,
@@ -356,6 +360,7 @@ Jika tidak ada provider spesifik → eligible_providers: []
         "reward": "deskripsi",
         "reward_type": "hadiah_fisik" | "uang_tunai" | "credit_game",
         "physical_reward_name": "nama hadiah" | null,
+        "physical_reward_quantity": number | null,
         "cash_reward_amount": number | null
       }
     ] | null,

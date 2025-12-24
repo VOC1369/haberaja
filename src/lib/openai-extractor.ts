@@ -56,6 +56,7 @@ export interface ExtractedPrize {
   value: number | null;
   reward_type?: 'hadiah_fisik' | 'uang_tunai' | 'credit_game' | 'voucher' | 'other';
   physical_reward_name?: string;
+  physical_reward_quantity?: number;
   cash_reward_amount?: number;
 }
 
@@ -384,6 +385,7 @@ export interface ExtractedPromoSubCategory {
   // NEW: Jenis Hadiah Detection (v1.1)
   reward_type?: 'hadiah_fisik' | 'uang_tunai' | 'credit_game' | 'voucher' | 'other';
   physical_reward_name?: string;   // e.g., "MITSUBISHI PAJERO SPORT 2025"
+  physical_reward_quantity?: number; // e.g., 2 (untuk "2 unit")
   cash_reward_amount?: number;     // e.g., 15000000 (untuk Rp 15.000.000)
   
   // Game Scope
@@ -2222,6 +2224,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       jenis_hadiah_same_as_global: false, // Each sub can have different reward type
       jenis_hadiah: mapRewardTypeToUI(detectedRewardType),
       physical_reward_name: sub.physical_reward_name || '',
+      physical_reward_quantity: sub.physical_reward_quantity || 1,
       cash_reward_amount: sub.cash_reward_amount || undefined,
       max_bonus_same_as_global: false, // Each sub has its own max
       // Handle null max_bonus = unlimited
