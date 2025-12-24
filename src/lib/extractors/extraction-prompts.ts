@@ -12,7 +12,7 @@ import type { ProgramCategory } from './category-classifier';
 
 export const EXTRACTOR_PROMPT_VERSIONS = {
   A: 'v1.0.0+2025-12-21',
-  B: 'v1.0.0+2025-12-21',
+  B: 'v1.1.0+2025-12-24',  // Added min_deposit field
   C: 'v1.0.0+2025-12-21',
 } as const;
 
@@ -187,6 +187,16 @@ PATTERN 3 - CREDIT GAME (default):
 → reward_type: "credit_game"
 → value: [angka]
 
+🔹 MIN DEPOSIT DETECTION (CRITICAL!):
+Cari pola "Minimal Deposit Rp. XX" atau "Min Depo XX":
+- "Minimal Deposit Rp. 50.000,- Untuk 1 Tiket" → min_deposit: 50000, min_deposit_note: "Untuk 1 Tiket"
+- "Min Depo 25rb" → min_deposit: 25000
+- "Syarat deposit minimal 100.000" → min_deposit: 100000
+- "Deposit minimal Rp 10.000 untuk ikut" → min_deposit: 10000
+
+JANGAN masukkan angka ini ke qualification_rules sebagai string!
+min_deposit adalah ANGKA (number), bukan string.
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama event",
@@ -199,6 +209,8 @@ PATTERN 3 - CREDIT GAME (default):
   "is_recurring": boolean,
   "recurrence_pattern": "daily" | "weekly" | "monthly" | null,
   
+  "min_deposit": number | null,
+  "min_deposit_note": "catatan tambahan seperti 'Untuk 1 Tiket'" | null,
   "participation_method": "auto" | "opt_in" | "deposit" | "turnover_based",
   "qualification_rules": ["syarat 1", "syarat 2", ...] | null,
   "scoring_system": "deskripsi sistem poin/ranking" | null,
