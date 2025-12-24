@@ -324,13 +324,9 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
                       <TableCell className="pl-10 pr-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-1 h-4 bg-purple-500/50 rounded-full" />
-                          <span className="text-sm text-foreground">{sub.name || `Varian ${idx + 1}`}</span>
-                          {/* Quantity Badge untuk Hadiah Fisik */}
-                          {sub.jenis_hadiah === 'hadiah_fisik' && (sub.physical_reward_quantity ?? 0) > 0 && (
-                            <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-400 border-amber-500/20">
-                              x{sub.physical_reward_quantity} unit
-                            </Badge>
-                          )}
+                          <span className="text-sm text-foreground font-medium">
+                            {sub.physical_reward_quantity ?? 1} {sub.name || `Varian ${idx + 1}`}
+                          </span>
                           {/* Value Badge untuk Credit Game */}
                           {sub.jenis_hadiah === 'credit_game' && (sub.cash_reward_amount ?? 0) > 0 && (
                             <Badge variant="outline" className="text-xs bg-green-500/10 text-green-400 border-green-500/20">
