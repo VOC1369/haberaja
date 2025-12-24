@@ -247,13 +247,26 @@ export function SubCategoryCard({
           })} options={dinamisRewardTypeOptions} onAddOption={option => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])} onDeleteOption={value => setDinamisRewardTypeOptions(dinamisRewardTypeOptions.filter(d => d.value !== value))} placeholder={subCategory.jenis_hadiah_same_as_global ? "Mengikuti global" : "Pilih jenis"} disabled={subCategory.jenis_hadiah_same_as_global} className={subCategory.jenis_hadiah_same_as_global ? "opacity-50" : ""} />
             {/* Jika Hadiah Fisik dipilih, tampilkan input nama hadiah */}
             {subCategory.jenis_hadiah === 'hadiah_fisik' && !subCategory.jenis_hadiah_same_as_global && (
-              <div className="space-y-2 mt-3">
-                <Label className="text-sm">Nama Hadiah Fisik</Label>
-                <Input
-                  value={subCategory.physical_reward_name || ''}
-                  onChange={(e) => onChange({ physical_reward_name: e.target.value })}
-                  placeholder="Contoh: iPhone 16 Pro Max 256GB"
-                />
+              <div className="grid grid-cols-3 gap-4 mt-3">
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-sm">Nama Hadiah Fisik</Label>
+                  <Input
+                    value={subCategory.physical_reward_name || ''}
+                    onChange={(e) => onChange({ physical_reward_name: e.target.value })}
+                    placeholder="Contoh: iPhone 16 Pro Max 256GB"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Jumlah Unit</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={subCategory.physical_reward_quantity || 1}
+                    onChange={(e) => onChange({ physical_reward_quantity: parseInt(e.target.value) || 1 })}
+                    placeholder="1"
+                    className="w-full"
+                  />
+                </div>
               </div>
             )}
             {/* Jika Uang Tunai dipilih, tampilkan input nominal */}
