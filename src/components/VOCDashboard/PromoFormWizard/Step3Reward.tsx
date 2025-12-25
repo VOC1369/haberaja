@@ -2948,7 +2948,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 if (checked && (!data.subcategories || data.subcategories.length === 0)) {
                   onChange({ 
                     has_subcategories: checked,
-                    subcategories: [createInitialSubCategory(1)]
+                    subcategories: [createInitialSubCategory(0)]
                   });
                 } else {
                   onChange({ has_subcategories: checked });
