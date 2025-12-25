@@ -2862,6 +2862,91 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           </div>
 
+          {/* Point Store Configuration - Only for tier_point_store */}
+          {data.tier_archetype === 'tier_point_store' && (
+            <div className="p-4 bg-card border border-border rounded-xl space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Star className="h-5 w-5 text-button-hover" />
+                <span className="font-semibold text-sm text-foreground">Point Store Configuration</span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Point Unit Selector */}
+                <div className="space-y-2">
+                  <Label className="text-sm">Point Unit</Label>
+                  <Select
+                    value={data.promo_unit || 'lp'}
+                    onValueChange={(value: 'lp' | 'exp' | 'hybrid') => onChange({ promo_unit: value })}
+                  >
+                    <SelectTrigger className="w-full bg-card border-border">
+                      <SelectValue placeholder="Pilih unit point..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="lp">Loyalty Point (LP)</SelectItem>
+                      <SelectItem value="exp">Experience Point (EXP)</SelectItem>
+                      <SelectItem value="hybrid">Hybrid (LP + EXP)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Jenis point yang digunakan</p>
+                </div>
+                
+                {/* EXP Mode Selector */}
+                <div className="space-y-2">
+                  <Label className="text-sm">EXP Mode</Label>
+                  <Select
+                    value={data.exp_mode || 'exp_store'}
+                    onValueChange={(value: 'level_up' | 'exp_store' | 'both') => onChange({ exp_mode: value })}
+                  >
+                    <SelectTrigger className="w-full bg-card border-border">
+                      <SelectValue placeholder="Pilih mode EXP..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="exp_store">Point Store Only</SelectItem>
+                      <SelectItem value="level_up">Level Up Only</SelectItem>
+                      <SelectItem value="both">Both (Store + Level)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Bagaimana EXP digunakan</p>
+                </div>
+              </div>
+              
+              {/* LP Formula */}
+              <div className="space-y-2">
+                <Label className="text-sm">Formula Konversi Point</Label>
+                <Input
+                  value={data.lp_formula || ''}
+                  onChange={(e) => onChange({ lp_formula: e.target.value })}
+                  placeholder="Contoh: 1 LP = Rp 1.000 deposit"
+                  className="bg-card border-border"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Rumus konversi point ke rupiah atau sebaliknya
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Level/Milestone Configuration - Only for tier_level */}
+          {data.tier_archetype === 'tier_level' && (
+            <div className="p-4 bg-card border border-border rounded-xl space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Trophy className="h-5 w-5 text-button-hover" />
+                <span className="font-semibold text-sm text-foreground">Level/Milestone Configuration</span>
+              </div>
+              
+              <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                <p className="text-xs text-blue-200">
+                  💡 Gunakan mode ini untuk promo seperti <strong>NALEN (Naik Level)</strong>, 
+                  <strong> VIP Upgrade Bonus</strong>, atau <strong>Milestone Achievement</strong>.
+                </p>
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                Konfigurasi reward per level dapat diatur di Sub Kategori jika promo memiliki multiple tier.
+              </p>
+            </div>
+          )}
+
           {/* Sub Kategori (Combo Promo) - Toggle */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch
