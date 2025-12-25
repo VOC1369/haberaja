@@ -2926,119 +2926,17 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           )}
 
-          {/* Level/Milestone Configuration - Only for tier_level */}
+          {/* Info Box for tier_level - Direct to Sub Kategori */}
           {data.tier_archetype === 'tier_level' && (
-            <div className="p-4 bg-card border border-border rounded-xl space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-button-hover" />
-                  <span className="font-semibold text-sm text-foreground">Level/Milestone Tiers</span>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newTier: LevelUpReward = {
-                      id: `level_${Date.now()}`,
-                      tier: '',
-                      min_exp: 0,
-                      reward: 0,
-                      reward_type: 'fixed',
-                      type: 'level_up'
-                    };
-                    onChange({ level_up_rewards: [...(data.level_up_rewards || []), newTier] });
-                  }}
-                  className="gap-1 text-xs"
-                >
-                  <Plus className="h-3 w-3" />
-                  Tambah Level
-                </Button>
+            <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+              <div className="flex items-center gap-2 mb-2">
+                <Trophy className="h-5 w-5 text-blue-400" />
+                <span className="font-semibold text-sm text-blue-200">Level/Milestone Configuration</span>
               </div>
-              
-              <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                <p className="text-xs text-blue-200">
-                  💡 Gunakan untuk promo seperti <strong>NALEN</strong>, <strong>VIP Upgrade</strong>, atau <strong>Milestone</strong>. 
-                  Isi nama level dan reward masing-masing.
-                </p>
-              </div>
-
-              {/* Level Tiers List */}
-              {(!data.level_up_rewards || data.level_up_rewards.length === 0) ? (
-                <div className="p-6 border border-dashed border-border rounded-lg text-center">
-                  <Trophy className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Belum ada level tier</p>
-                  <p className="text-xs text-muted-foreground mt-1">Klik "Tambah Level" untuk mulai</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {data.level_up_rewards.map((levelTier, index) => (
-                    <div key={levelTier.id} className="p-3 bg-muted/30 border border-border rounded-lg">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge variant="outline" className="text-xs">Level {index + 1}</Badge>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            const updated = data.level_up_rewards.filter((_, i) => i !== index);
-                            onChange({ level_up_rewards: updated });
-                          }}
-                          className="ml-auto h-6 w-6 p-0 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {/* Level Name */}
-                        <div className="space-y-1">
-                          <Label className="text-xs">Nama Level</Label>
-                          <Input
-                            value={levelTier.tier || ''}
-                            onChange={(e) => {
-                              const updated = [...data.level_up_rewards];
-                              updated[index] = { ...updated[index], tier: e.target.value };
-                              onChange({ level_up_rewards: updated });
-                            }}
-                            placeholder="Contoh: Bronze → Silver"
-                            className="bg-card border-border text-sm h-9"
-                          />
-                        </div>
-                        {/* Reward Amount */}
-                        <div className="space-y-1">
-                          <Label className="text-xs">Reward (Rp)</Label>
-                          <Input
-                            type="number"
-                            value={levelTier.reward || ''}
-                            onChange={(e) => {
-                              const updated = [...data.level_up_rewards];
-                              updated[index] = { ...updated[index], reward: Number(e.target.value) };
-                              onChange({ level_up_rewards: updated });
-                            }}
-                            placeholder="50000"
-                            className="bg-card border-border text-sm h-9"
-                          />
-                        </div>
-                        {/* Min Requirement */}
-                        <div className="space-y-1">
-                          <Label className="text-xs">Min. Syarat (opsional)</Label>
-                          <Input
-                            type="number"
-                            value={levelTier.min_exp || ''}
-                            onChange={(e) => {
-                              const updated = [...data.level_up_rewards];
-                              updated[index] = { ...updated[index], min_exp: Number(e.target.value) };
-                              onChange({ level_up_rewards: updated });
-                            }}
-                            placeholder="0"
-                            className="bg-card border-border text-sm h-9"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <p className="text-sm text-blue-200/80">
+                💡 Gunakan <strong>Sub Kategori</strong> di bawah untuk membedakan reward per level (Bronze, Silver, Gold, dll). 
+                Setiap sub kategori bisa memiliki konfigurasi reward, syarat minimum, dan batasan game yang berbeda.
+              </p>
             </div>
           )}
 
