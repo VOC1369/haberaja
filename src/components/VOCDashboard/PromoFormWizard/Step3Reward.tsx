@@ -48,6 +48,8 @@ interface Step3Props {
   onChange: (data: Partial<PromoFormData>) => void;
   isEditingFromReview?: boolean;
   onSaveAndReturn?: () => void;
+  stepNumber?: number;
+  stepTitle?: string;
 }
 
 const DEFAULT_PROMO_UNITS: SelectOption[] = [
@@ -93,7 +95,7 @@ const DEFAULT_LP_VALUE_TYPES: SelectOption[] = [
   { value: 'freechip', label: 'Freechip' },
 ];
 
-export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndReturn }: Step3Props) {
+export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndReturn, stepNumber = 3, stepTitle = "Konfigurasi Reward" }: Step3Props) {
   // State for new requirement input
   const [newRequirement, setNewRequirement] = useState("");
   
@@ -296,7 +298,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           <Settings className="icon-circle-icon" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-button-hover">Step 3 — Konfigurasi Reward</h3>
+          <h3 className="text-lg font-semibold text-button-hover">Step {stepNumber} — {stepTitle}</h3>
           <p className="text-sm text-muted-foreground">
             Atur mode dan detail reward promo
           </p>
