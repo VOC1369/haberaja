@@ -717,6 +717,8 @@ export const CALCULATION_BASES = [
   { value: 'deposit', label: 'Deposit' },
   { value: 'win_loss', label: 'Win/Loss' },
   { value: 'bet_amount', label: 'Bet Amount' },
+  { value: 'loyalty_point', label: 'Loyalty Point' },
+  { value: 'experience_point', label: 'Experience Point' },
 ];
 
 export const CALCULATION_METHODS = [
