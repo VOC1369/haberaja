@@ -2845,20 +2845,20 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 value={data.tier_archetype || 'tier_advanced'}
                 onValueChange={(value: TierArchetype) => onChange({ tier_archetype: value })}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-card border-border">
                   <SelectValue placeholder="Pilih tipe tier..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-card border-border">
                   {TIER_ARCHETYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{option.label}</span>
-                        <span className="text-xs text-muted-foreground">{option.description}</span>
-                      </div>
+                    <SelectItem key={option.value} value={option.value} className="py-3">
+                      <span className="font-medium text-foreground">{option.label}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                {TIER_ARCHETYPE_OPTIONS.find(o => o.value === (data.tier_archetype || 'tier_advanced'))?.description}
+              </p>
             </div>
           </div>
 
