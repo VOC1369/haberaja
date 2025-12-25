@@ -276,6 +276,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
               setCurrentStep(5);
               setIsEditingFromReview(false);
             }}
+            stepTitle="Konfigurasi Policy"
           />
         )}
         {currentStep === 4 && selectedProgram !== 'event' && selectedProgram !== 'policy' && (
