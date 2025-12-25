@@ -276,6 +276,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
               setCurrentStep(5);
               setIsEditingFromReview(false);
             }}
+            stepNumber={4}
             stepTitle="Konfigurasi Policy"
           />
         )}
@@ -288,6 +289,8 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
               setCurrentStep(5);
               setIsEditingFromReview(false);
             }}
+            stepNumber={4}
+            stepTitle="Konfigurasi Reward"
           />
         )}
         {currentStep === 5 && <Step4Review data={formData} onGoToStep={handleGoToStepFromReview} />}
