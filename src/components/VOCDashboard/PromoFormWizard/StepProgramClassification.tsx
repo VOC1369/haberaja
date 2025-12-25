@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -8,6 +8,8 @@ type ProgramType = "reward" | "event" | "policy" | null;
 interface StepProgramClassificationProps {
   selectedProgram: ProgramType;
   onSelect: (program: ProgramType) => void;
+  stepNumber?: number;
+  stepTitle?: string;
 }
 
 interface ProgramCard {
@@ -87,17 +89,24 @@ const PROGRAM_CARDS: ProgramCard[] = [
 export function StepProgramClassification({
   selectedProgram,
   onSelect,
+  stepNumber = 3,
+  stepTitle = "Jenis Program",
 }: StepProgramClassificationProps) {
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold text-foreground">
-          Pilih Jenis Program
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Jenis program menentukan cara sistem membaca promo dan form apa yang akan kamu isi selanjutnya.
-        </p>
+      {/* Header - EXACT pattern from Step3Reward */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="icon-circle">
+          <Layers className="icon-circle-icon" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-button-hover">
+            Step {stepNumber} — {stepTitle}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Jenis program menentukan cara sistem membaca promo dan form apa yang akan kamu isi selanjutnya.
+          </p>
+        </div>
       </div>
 
       {/* Cards Grid */}
