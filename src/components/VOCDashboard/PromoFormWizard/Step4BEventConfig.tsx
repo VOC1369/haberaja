@@ -22,7 +22,7 @@ export function Step4BEventConfig({
       onChange={onFormDataChange}
       isEditingFromReview={isEditingFromReview}
       onSaveAndReturn={onSaveAndReturn}
-      stepNumber={4}
+      stepNumber={3}
       stepTitle="Konfigurasi Event"
     />
   );
