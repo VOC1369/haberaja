@@ -260,6 +260,8 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
           <Step4BEventConfig
             data={eventData}
             onChange={setEventData}
+            formData={formData}
+            onFormDataChange={handleChange}
           />
         )}
         {/* Phase 1: Policy disabled - fallback to Reward config */}
