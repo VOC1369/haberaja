@@ -2961,29 +2961,28 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 Aktifkan jika promo punya sub-kategori berbeda.
               </p>
             </div>
+            {data.has_subcategories && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const currentCount = data.subcategories?.length || 0;
+                  const newSubCategory = createInitialSubCategory(currentCount + 1);
+                  onChange({ subcategories: [...(data.subcategories || []), newSubCategory] });
+                  toast.success("Sub kategori baru ditambahkan");
+                }}
+                className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
+              >
+                <Plus className="h-4 w-4" />
+                Tambah Sub Kategori
+              </Button>
+            )}
           </div>
 
           {/* SubCategory Cards - Only show when has_subcategories is true */}
           {data.has_subcategories && (
             <div className="space-y-4">
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const currentCount = data.subcategories?.length || 0;
-                    const newSubCategory = createInitialSubCategory(currentCount + 1);
-                    onChange({ subcategories: [...(data.subcategories || []), newSubCategory] });
-                    toast.success("Sub kategori baru ditambahkan");
-                  }}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Tambah Sub Kategori
-                </Button>
-              </div>
-              
               {(data.subcategories || []).map((subCategory, index) => (
                   <SubCategoryCard
                     key={subCategory.id || index}
