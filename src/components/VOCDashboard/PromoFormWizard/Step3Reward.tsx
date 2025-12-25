@@ -13,6 +13,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -39,6 +46,8 @@ import {
   GAME_RESTRICTIONS,
   GAME_PROVIDERS,
   GAME_NAMES,
+  TIER_ARCHETYPE_OPTIONS,
+  TierArchetype,
 } from "./types";
 import { SelectWithAddNew, SelectOption } from "./SelectWithAddNew";
 import { SubCategoryCard, createInitialSubCategory } from "./SubCategoryCard";
@@ -2821,12 +2830,36 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
       {/* Blok C - Mode Tier (DUPLICATED FROM DINAMIS - UI ONLY) */}
       {data.reward_mode === 'tier' && (
         <>
-          {/* Scope Lock Info */}
-          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-            <p className="text-xs text-amber-200">
-              ⚠️ Mode <strong>Tier</strong> digunakan untuk <strong>Event berbasis level atau milestone</strong>, 
-              bukan program sistem jangka panjang (LP Store / Referral).
-            </p>
+          {/* Tier Archetype Selector (UI-gating only) */}
+          <div className="space-y-3">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <p className="text-xs text-amber-200">
+                ⚠️ Mode <strong>Tier</strong> digunakan untuk <strong>Event berbasis level, milestone, atau point store</strong>. 
+                Pilih tipe tier di bawah untuk menampilkan field yang relevan.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Tier Archetype <span className="text-red-500">*</span></Label>
+              <Select
+                value={data.tier_archetype || 'tier_advanced'}
+                onValueChange={(value: TierArchetype) => onChange({ tier_archetype: value })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Pilih tipe tier..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIER_ARCHETYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{option.label}</span>
+                        <span className="text-xs text-muted-foreground">{option.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Sub Kategori (Combo Promo) - Toggle */}
@@ -2908,7 +2941,14 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           )}
 
           {/* Section 1-5: Only show when NOT using subcategories */}
-          {!data.has_subcategories && (
+          {!data.has_subcategories && (() => {
+            // Tier Archetype field visibility helpers (UI-gating only)
+            const tierArchetype = data.tier_archetype || 'tier_advanced';
+            const showLevelFields = tierArchetype === 'tier_level' || tierArchetype === 'tier_advanced';
+            const showPointStoreFields = tierArchetype === 'tier_point_store' || tierArchetype === 'tier_advanced';
+            const showFormulaFields = tierArchetype === 'tier_formula' || tierArchetype === 'tier_advanced';
+            
+            return (
             <>
           {/* Section 1 - Dasar Perhitungan Bonus */}
           <Collapsible>
@@ -2967,6 +3007,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 <Input type="text" value={data.dinamis_max_claim_unlimited ? '' : (data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : '')} onChange={(e) => onChange({ dinamis_max_claim: Number(e.target.value.replace(/\D/g, '')) })} placeholder={data.dinamis_max_claim_unlimited ? "Unlimited" : "Contoh: 100.000"} disabled={data.dinamis_max_claim_unlimited} className={data.dinamis_max_claim_unlimited ? "opacity-50" : ""} />
               </div>
             </div>
+            {/* Payout Direction & Admin Fee - Only for Formula tier */}
+            {showFormulaFields && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div className="space-y-2">
                 <Label>Payout Direction</Label>
@@ -2989,6 +3031,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
             </div>
+            )}
+            {/* Dasar Perhitungan - Only for Point Store and Formula tier */}
+            {(showPointStoreFields || showFormulaFields) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Dasar Perhitungan</Label>
@@ -3016,6 +3061,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 <Input type="text" value={data.minimum_base_enabled && data.minimum_base ? data.minimum_base.toLocaleString('id-ID') : ''} onChange={(e) => onChange({ minimum_base: Number(e.target.value.replace(/\D/g, '')) })} placeholder={data.minimum_base_enabled ? "Contoh: 1.000.000" : "Tidak aktif"} disabled={!data.minimum_base_enabled} className={!data.minimum_base_enabled ? "opacity-50" : ""} />
               </div>
             </div>
+            )}
             <div className="pt-4">
               <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-2">
                 <Switch checked={data.turnover_rule_enabled === true} onCheckedChange={(checked) => onChange({ turnover_rule_enabled: checked })} />
@@ -3210,7 +3256,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           )}
             </>
-          )}
+            );
+          })()}
         </>
       )}
 

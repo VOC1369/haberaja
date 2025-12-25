@@ -154,6 +154,7 @@ export interface PromoFormData {
   claim_date_until: string;
 
   // Tier mode
+  tier_archetype?: 'tier_level' | 'tier_point_store' | 'tier_formula' | 'tier_advanced';  // UI-gating only (optional for backward compat)
   promo_unit: 'lp' | 'exp' | 'hybrid';
   exp_mode: 'level_up' | 'exp_store' | 'both';
   lp_calc_method: string;
@@ -540,6 +541,32 @@ export async function getPromoById(id: string): Promise<PromoItem | undefined> {
   return promo || undefined;
 }
 
+// Tier Archetype Options (UI-gating only, NOT business logic)
+export const TIER_ARCHETYPE_OPTIONS = [
+  { 
+    value: 'tier_level' as const, 
+    label: 'Level/Milestone Tier',
+    description: 'Event berbasis level atau milestone (NALEN, VIP Upgrade)'
+  },
+  { 
+    value: 'tier_point_store' as const, 
+    label: 'Point Store (LP/EXP)',
+    description: 'Loyalty point atau experience redemption store'
+  },
+  { 
+    value: 'tier_formula' as const, 
+    label: 'Formula Tier (Cashback/Referral)',
+    description: 'Perhitungan persentase dengan formula'
+  },
+  { 
+    value: 'tier_advanced' as const, 
+    label: 'Advanced (Tampilkan Semua)',
+    description: 'Untuk kasus hybrid atau custom'
+  },
+] as const;
+
+export type TierArchetype = typeof TIER_ARCHETYPE_OPTIONS[number]['value'];
+
 export const PROMO_TYPES = [
   'Rollingan / Cashback',
   'Welcome Bonus',
@@ -757,6 +784,7 @@ export const initialPromoData: PromoFormData = {
   claim_frequency: '',
   claim_date_from: '',
   claim_date_until: '',
+  tier_archetype: 'tier_advanced',  // Default: show all fields (backward compatible)
   promo_unit: 'lp',
   exp_mode: 'level_up',
   lp_calc_method: 'turnover',
