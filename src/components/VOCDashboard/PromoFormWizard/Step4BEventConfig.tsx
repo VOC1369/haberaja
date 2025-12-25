@@ -9,7 +9,6 @@ import {
 import {
   Calendar,
   Target,
-  Gift,
   Megaphone,
   Image,
   Shield,
@@ -24,8 +23,6 @@ import {
   EventHeaderData,
   ObjectiveKPI,
   ObjectiveKPIData,
-  RewardMechanism,
-  RewardMechanismData,
   ChannelActivation,
   ChannelActivationData,
   AssetManager,
@@ -45,7 +42,6 @@ import { PromoFormData } from "./types";
 export interface EventConfigData {
   header: EventHeaderData;
   objective: ObjectiveKPIData;
-  reward: RewardMechanismData;
   channel: ChannelActivationData;
   asset: AssetManagerData;
   rules: RulesAntiAbuseData;
@@ -69,14 +65,6 @@ const initialEventData: EventConfigData = {
     kpi_ndp_harian: "",
     kpi_traffic_lift: "",
     catatan_kpi: "",
-  },
-  reward: {
-    tipe_reward: [],
-    mekanisme_distribusi: "",
-    min_deposit: "",
-    turnover: "",
-    batas_klaim: "",
-    syarat_tambahan: "",
   },
   channel: {
     channels: { telegram: false, whatsapp: false, instagram: false },
@@ -194,7 +182,7 @@ export function Step4BEventConfig({
     useState<EventConfigData>(initialEventData);
   const data = externalData || internalData;
 
-  const [openSections, setOpenSections] = useState<string[]>(["header"]);
+  const [openSections, setOpenSections] = useState<string[]>(["header", "reward_config"]);
 
   const handleUpdate = <K extends keyof EventConfigData>(
     section: K,
