@@ -42,6 +42,8 @@ import {
 interface Step4CPolicyProps {
   data?: PolicyConfigData;
   onChange?: (data: PolicyConfigData) => void;
+  stepNumber?: number;
+  stepTitle?: string;
 }
 
 // Section definitions matching Step4BEventConfig pattern
@@ -97,7 +99,7 @@ const SECTIONS = [
   },
 ];
 
-export function Step4CPolicy({ data: externalData, onChange }: Step4CPolicyProps) {
+export function Step4CPolicy({ data: externalData, onChange, stepNumber = 4, stepTitle = "Konfigurasi Policy" }: Step4CPolicyProps) {
   const [internalData, setInternalData] = useState<PolicyConfigData>(initialPolicyData);
   const data = externalData || internalData;
 
@@ -170,14 +172,17 @@ export function Step4CPolicy({ data: externalData, onChange }: Step4CPolicyProps
 
   return (
     <div className="space-y-6">
-      {/* Page Header - EXACT pattern from Step4BEventConfig */}
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold text-foreground">
-          Konfigurasi Policy Program
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Atur detail aturan, batasan, dan ketentuan yang berlaku.
-        </p>
+      {/* Page Header - EXACT pattern from Step3Reward */}
+      <div className="flex items-center gap-4 mb-6">
+        <div className="icon-circle">
+          <ScrollText className="icon-circle-icon" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-button-hover">Step {stepNumber} — {stepTitle}</h3>
+          <p className="text-sm text-muted-foreground">
+            Atur detail aturan, batasan, dan ketentuan yang berlaku.
+          </p>
+        </div>
       </div>
 
       {/* Accordion Sections */}

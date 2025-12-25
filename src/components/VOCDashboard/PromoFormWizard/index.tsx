@@ -20,8 +20,10 @@ const getStep4Title = (program: ProgramType) => {
     case 'policy':
       return "Konfigurasi Policy";
     case 'reward':
-    default:
       return "Konfigurasi Reward";
+    default:
+      // Placeholder saat belum pilih program (Step 3)
+      return "Konfigurasi";
   }
 };
 
@@ -207,21 +209,30 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
 
         {/* Step Navigation */}
         <div className="flex items-center justify-between text-sm">
-          {STEPS.map((step) => (
-            <button
-              key={step.id}
-              onClick={() => setCurrentStep(step.id)}
-              className={`transition-colors ${
-                currentStep === step.id
-                  ? "text-button-hover font-medium"
-                  : currentStep > step.id
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              } cursor-pointer`}
-            >
-              {step.title}
-            </button>
-          ))}
+          {STEPS.map((step) => {
+            // Block navigation to Step 4 if no program selected yet
+            const isStep4Blocked = step.id === 4 && !selectedProgram;
+            
+            return (
+              <button
+                key={step.id}
+                onClick={() => {
+                  if (isStep4Blocked) return; // Block click
+                  setCurrentStep(step.id);
+                }}
+                disabled={isStep4Blocked}
+                className={`transition-colors ${
+                  currentStep === step.id
+                    ? "text-button-hover font-medium"
+                    : currentStep > step.id
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                } ${isStep4Blocked ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+              >
+                {step.title}
+              </button>
+            );
+          })}
         </div>
       </Card>
 
