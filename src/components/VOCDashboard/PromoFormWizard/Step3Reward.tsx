@@ -2821,6 +2821,14 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
       {/* Blok C - Mode Tier (DUPLICATED FROM DINAMIS - UI ONLY) */}
       {data.reward_mode === 'tier' && (
         <>
+          {/* Scope Lock Info */}
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <p className="text-xs text-amber-200">
+              ⚠️ Mode <strong>Tier</strong> digunakan untuk <strong>Event berbasis level atau milestone</strong>, 
+              bukan program sistem jangka panjang (LP Store / Referral).
+            </p>
+          </div>
+
           {/* Sub Kategori (Combo Promo) - Toggle */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch
