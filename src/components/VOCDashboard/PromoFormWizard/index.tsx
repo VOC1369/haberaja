@@ -8,7 +8,7 @@ import { Step1Identity } from "./Step1Identity";
 import { Step2Access } from "./Step2Access";
 import { StepProgramClassification, type ProgramType } from "./StepProgramClassification";
 import { Step3Reward } from "./Step3Reward";
-import { Step4BEventConfig, EventConfigData, initialEventData } from "./Step4BEventConfig";
+import { Step4BEventConfig } from "./Step4BEventConfig";
 import { Step4CPolicy, PolicyConfigData, initialPolicyData } from "./Step4CPolicy";
 import { Step4Review, generateTermsList, formatNumber } from "./Step4Review";
 
@@ -61,7 +61,6 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   const [selectedProgram, setSelectedProgram] = useState<ProgramType>(
     initialData ? classificationToProgram(initialData.program_classification) : null
   );
-  const [eventData, setEventData] = useState<EventConfigData>(initialEventData);
   const [policyData, setPolicyData] = useState<PolicyConfigData>(initialPolicyData);
 
   const handleChange = (updates: Partial<PromoFormData>) => {
@@ -258,8 +257,6 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
         )}
         {currentStep === 4 && selectedProgram === 'event' && (
           <Step4BEventConfig
-            data={eventData}
-            onChange={setEventData}
             formData={formData}
             onFormDataChange={handleChange}
             isEditingFromReview={isEditingFromReview}
