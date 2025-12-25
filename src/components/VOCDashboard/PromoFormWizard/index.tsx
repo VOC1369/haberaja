@@ -262,10 +262,16 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
             onChange={setEventData}
           />
         )}
+        {/* Phase 1: Policy disabled - fallback to Reward config */}
         {currentStep === 4 && selectedProgram === 'policy' && (
-          <Step4CPolicy
-            data={policyData}
-            onChange={setPolicyData}
+          <Step3Reward 
+            data={formData} 
+            onChange={handleChange}
+            isEditingFromReview={isEditingFromReview}
+            onSaveAndReturn={() => {
+              setCurrentStep(5);
+              setIsEditingFromReview(false);
+            }}
           />
         )}
         {currentStep === 4 && selectedProgram !== 'event' && selectedProgram !== 'policy' && (
