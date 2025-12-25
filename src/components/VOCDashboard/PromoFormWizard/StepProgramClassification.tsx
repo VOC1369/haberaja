@@ -101,7 +101,7 @@ export function StepProgramClassification({
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {PROGRAM_CARDS.filter((card) => card.id !== "policy").map((card) => {
           const isSelected = selectedProgram === card.id;
 
