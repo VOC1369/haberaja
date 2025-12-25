@@ -2899,6 +2899,310 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           )}
 
+          {/* Section 1-5: Only show when NOT using subcategories */}
+          {!data.has_subcategories && (
+            <>
+          {/* Section 1 - Dasar Perhitungan Bonus */}
+          <Collapsible>
+            <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
+              <div className="flex items-center gap-3">
+                <Calculator className="h-5 w-5 text-button-hover" />
+                <div className="text-left">
+                  <div className="text-sm font-semibold text-foreground">1. Dasar Perhitungan Bonus</div>
+                  <div className="text-xs text-muted-foreground">Konfigurasi dasar kalkulasi reward</div>
+                </div>
+              </div>
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="space-y-2">
+                <Label>Jenis Hadiah</Label>
+                <SelectWithAddNew
+                  value={data.dinamis_reward_type}
+                  onValueChange={(value) => onChange({ dinamis_reward_type: value, physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : '', cash_reward_amount: value === 'uang_tunai' ? data.cash_reward_amount : undefined })}
+                  options={dinamisRewardTypeOptions}
+                  onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
+                  onDeleteOption={handleDeleteDinamisRewardType}
+                  placeholder="Pilih jenis"
+                />
+                {data.dinamis_reward_type === 'hadiah_fisik' && (
+                  <div className="grid grid-cols-3 gap-4 mt-2">
+                    <div className="col-span-2 space-y-2">
+                      <Label>Nama Hadiah Fisik</Label>
+                      <Input value={data.physical_reward_name || ''} onChange={(e) => onChange({ physical_reward_name: e.target.value })} placeholder="Contoh: MITSUBISHI PAJERO" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Jumlah Unit</Label>
+                      <Input type="number" min={1} value={data.physical_reward_quantity || 1} onChange={(e) => onChange({ physical_reward_quantity: Number(e.target.value) || 1 })} placeholder="1" />
+                    </div>
+                  </div>
+                )}
+                {data.dinamis_reward_type === 'uang_tunai' && (
+                  <div className="space-y-2 mt-2">
+                    <Label>Nominal Uang Tunai</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
+                      <Input className="pl-10" value={formatRupiah(data.cash_reward_amount)} onChange={(e) => onChange({ cash_reward_amount: parseRupiah(e.target.value) })} placeholder="50.000.000" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Max Bonus</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Unlimited</span>
+                    <Switch checked={data.dinamis_max_claim_unlimited ?? false} onCheckedChange={(checked) => onChange({ dinamis_max_claim_unlimited: checked, dinamis_max_claim: checked ? 0 : data.dinamis_max_claim })} />
+                  </div>
+                </div>
+                <Input type="text" value={data.dinamis_max_claim_unlimited ? '' : (data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : '')} onChange={(e) => onChange({ dinamis_max_claim: Number(e.target.value.replace(/\D/g, '')) })} placeholder={data.dinamis_max_claim_unlimited ? "Unlimited" : "Contoh: 100.000"} disabled={data.dinamis_max_claim_unlimited} className={data.dinamis_max_claim_unlimited ? "opacity-50" : ""} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="space-y-2">
+                <Label>Payout Direction</Label>
+                <RadioGroup value={data.global_payout_direction || 'after'} onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })} className="flex gap-6 pt-2">
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="before" id="tier-payout-before" /><Label htmlFor="tier-payout-before" className="cursor-pointer font-normal text-sm">Didepan</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="after" id="tier-payout-after" /><Label htmlFor="tier-payout-after" className="cursor-pointer font-normal text-sm">Dibelakang</Label></div>
+                </RadioGroup>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Admin Fee</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Aktifkan</span>
+                    <Switch checked={data.admin_fee_enabled ?? false} onCheckedChange={(checked) => onChange({ admin_fee_enabled: checked, admin_fee_percentage: checked ? (data.admin_fee_percentage ?? 0) : 0 })} />
+                  </div>
+                </div>
+                <div className="relative">
+                  <Input type="number" min={0} max={100} value={data.admin_fee_enabled ? (data.admin_fee_percentage ?? 0) : ''} onChange={(e) => onChange({ admin_fee_percentage: Number(e.target.value) || 0 })} placeholder={data.admin_fee_enabled ? "0" : "Tidak aktif"} disabled={!data.admin_fee_enabled} className={cn("pr-10", !data.admin_fee_enabled && "opacity-50")} />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Dasar Perhitungan</Label>
+                <SelectWithAddNew value={data.calculation_base} onValueChange={(value) => onChange({ calculation_base: value })} options={calcBaseOptions} onAddOption={(option) => setCalcBaseOptions([...calcBaseOptions, option])} onDeleteOption={handleDeleteCalcBase} placeholder="Pilih dasar" />
+              </div>
+              <div className="space-y-2">
+                <Label>Jenis Perhitungan</Label>
+                <SelectWithAddNew value={data.calculation_method} onValueChange={(value) => onChange({ calculation_method: value })} options={calcMethodOptions} onAddOption={(option) => setCalcMethodOptions([...calcMethodOptions, option])} onDeleteOption={handleDeleteCalcMethod} placeholder="Pilih jenis" />
+              </div>
+              <div className="space-y-2">
+                <Label>Nilai Bonus</Label>
+                <div className="relative">
+                  <Input type="text" inputMode="decimal" value={calcValueInput} onChange={(e) => { const rawValue = e.target.value.replace(/[^0-9.,]/g, ''); setCalcValueInput(rawValue); const normalizedValue = rawValue.replace(',', '.'); const numValue = parseFloat(normalizedValue); if (!isNaN(numValue)) { onChange({ calculation_value: numValue }); } else if (rawValue === '' || rawValue === '0' || rawValue === '0,' || rawValue === '0.') { onChange({ calculation_value: 0 }); } }} onBlur={() => { if (data.calculation_value !== undefined && data.calculation_value !== null) { setCalcValueInput(String(data.calculation_value).replace('.', ',')); } }} placeholder="Contoh: 0,5" className="pr-10" />
+                  {data.calculation_method === 'percentage' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>{getMinimumBaseLabel()}</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Aktifkan</span>
+                    <Switch checked={data.minimum_base_enabled} onCheckedChange={(checked) => onChange({ minimum_base_enabled: checked, minimum_base: checked ? data.minimum_base : 0 })} />
+                  </div>
+                </div>
+                <Input type="text" value={data.minimum_base_enabled && data.minimum_base ? data.minimum_base.toLocaleString('id-ID') : ''} onChange={(e) => onChange({ minimum_base: Number(e.target.value.replace(/\D/g, '')) })} placeholder={data.minimum_base_enabled ? "Contoh: 1.000.000" : "Tidak aktif"} disabled={!data.minimum_base_enabled} className={!data.minimum_base_enabled ? "opacity-50" : ""} />
+              </div>
+            </div>
+            <div className="pt-4">
+              <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-2">
+                <Switch checked={data.turnover_rule_enabled === true} onCheckedChange={(checked) => onChange({ turnover_rule_enabled: checked })} />
+                <div>
+                  <div className="font-medium text-sm text-button-hover">Syarat Main Sebelum WD</div>
+                  <p className="text-xs text-muted-foreground">Aktifkan jika ada syarat kelipatan main</p>
+                </div>
+              </div>
+              {data.turnover_rule_enabled && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Kelipatan Main Bonus (TO)</Label>
+                    <SelectWithAddNew value={data.turnover_rule} onValueChange={(value) => onChange({ turnover_rule: value })} options={turnoverRuleOptions} onAddOption={(option) => setTurnoverRuleOptions([...turnoverRuleOptions, option])} onDeleteOption={handleDeleteTurnoverRule} placeholder="Pilih kelipatan" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nilai Custom</Label>
+                    <Input value={data.turnover_rule_custom || ''} onChange={(e) => onChange({ turnover_rule_custom: e.target.value })} placeholder="Contoh: 3x, 10x" disabled={data.turnover_rule !== 'custom'} className={data.turnover_rule !== 'custom' ? 'opacity-50' : ''} />
+                  </div>
+                </div>
+              )}
+            </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Section 2 - Permainan & Provider */}
+          <Collapsible>
+            <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
+              <div className="flex items-center gap-3">
+                <Gamepad2 className="h-5 w-5 text-button-hover" />
+                <div className="text-left">
+                  <div className="text-sm font-semibold text-foreground">2. Permainan & Provider</div>
+                  <div className="text-xs text-muted-foreground">Target game dan provider</div>
+                </div>
+              </div>
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 mb-6">
+              <div className="space-y-2 mb-4">
+                <Label>Jenis Game</Label>
+                {(data.game_types?.length > 0) && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(data.game_types || []).map((type, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
+                        {gameTypeOptions.find(g => g.value === type)?.label || type}
+                        <button type="button" onClick={() => { const updated = [...(data.game_types || [])]; updated.splice(idx, 1); onChange({ game_types: updated }); }} className="hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_types?.includes(value)) { onChange({ game_types: [...(data.game_types || []), value] }); } }} options={gameTypeOptions} onAddOption={(option) => setGameTypeOptions([...gameTypeOptions, option])} onDeleteOption={handleDeleteGameType} placeholder="Pilih jenis game" />
+              </div>
+              <div className="space-y-2 mb-4">
+                <Label>Provider Game</Label>
+                {data.game_providers?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {data.game_providers.map((provider, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
+                        {gameProviderOptions.find(p => p.value === provider)?.label || provider}
+                        <button type="button" onClick={() => { const updated = [...data.game_providers]; updated.splice(idx, 1); onChange({ game_providers: updated }); }} className="hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_providers?.includes(value)) { onChange({ game_providers: [...(data.game_providers || []), value] }); } }} options={gameProviderOptions} onAddOption={(option) => setGameProviderOptions([...gameProviderOptions, option])} onDeleteOption={handleDeleteGameProvider} placeholder="Pilih provider" />
+              </div>
+              <div className="space-y-2">
+                <Label>Nama Game</Label>
+                {data.game_names?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {data.game_names.map((name, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
+                        {gameNameOptions.find(n => n.value === name)?.label || name}
+                        <button type="button" onClick={() => { const updated = [...data.game_names]; updated.splice(idx, 1); onChange({ game_names: updated }); }} className="hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_names?.includes(value)) { onChange({ game_names: [...(data.game_names || []), value] }); } }} options={gameNameOptions} onAddOption={(option) => setGameNameOptions([...gameNameOptions, option])} onDeleteOption={handleDeleteGameName} placeholder="Pilih nama game" />
+              </div>
+              <div className="mt-6 pt-4 border-t border-border">
+                <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-4">
+                  <Switch checked={data.game_blacklist_enabled ?? false} onCheckedChange={(checked) => onChange({ game_blacklist_enabled: checked })} />
+                  <div>
+                    <div className="font-medium text-sm text-button-hover">Game Dilarang (Blacklist)</div>
+                    <p className="text-xs text-muted-foreground">Kecualikan game tertentu dari promo</p>
+                  </div>
+                </div>
+                {data.game_blacklist_enabled && (
+                  <div className="space-y-4">
+                    <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
+                      <p className="text-xs text-warning">⚠️ Promo TIDAK berlaku untuk game yang dipilih di sini.</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Jenis Game Dilarang</Label>
+                      {data.game_types_blacklist?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {data.game_types_blacklist.map((type, idx) => (
+                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">{type}<button type="button" onClick={() => { const updated = [...data.game_types_blacklist]; updated.splice(idx, 1); onChange({ game_types_blacklist: updated }); }} className="hover:text-destructive"><X className="h-3.5 w-3.5" /></button></span>
+                          ))}
+                        </div>
+                      )}
+                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_types_blacklist?.includes(value)) { onChange({ game_types_blacklist: [...(data.game_types_blacklist || []), value] }); } }} options={gameTypeBlacklistOptions} onAddOption={(option) => setGameTypeBlacklistOptions([...gameTypeBlacklistOptions, option])} onDeleteOption={handleDeleteGameTypeBlacklist} placeholder="Pilih jenis game" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Section 3 - Hadiah dan Waktu */}
+          <Collapsible>
+            <CollapsibleTrigger className="collapsible-trigger w-full">
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-button-hover" />
+                <div className="text-left">
+                  <div className="text-sm font-semibold text-foreground">3. Hadiah dan Waktu</div>
+                  <div className="text-xs text-muted-foreground">Waktu claim dan periode pembagian</div>
+                </div>
+              </div>
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="collapsible-content">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Periode Klaim</Label>
+                  <SelectWithAddNew value={data.claim_frequency} onValueChange={(value) => onChange({ claim_frequency: value })} options={claimFrequencyOptions} onAddOption={(option) => setClaimFrequencyOptions([...claimFrequencyOptions, option])} onDeleteOption={handleDeleteClaimFrequency} placeholder="Pilih periode" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Waktu Pembagian Bonus</Label>
+                  <SelectWithAddNew value={data.reward_distribution} onValueChange={(value) => onChange({ reward_distribution: value })} options={rewardDistributionOptions} onAddOption={(option) => setRewardDistributionOptions([...rewardDistributionOptions, option])} onDeleteOption={handleDeleteRewardDistribution} placeholder="Pilih waktu pembagian" />
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Section 4 - Syarat Khusus */}
+          <Collapsible>
+            <CollapsibleTrigger className="collapsible-trigger w-full">
+              <div className="flex items-center gap-3">
+                <Zap className="h-5 w-5 text-button-hover" />
+                <div className="text-left">
+                  <div className="text-sm font-semibold text-foreground">4. Syarat Khusus</div>
+                  <div className="text-xs text-muted-foreground">Ketentuan tambahan</div>
+                </div>
+              </div>
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="collapsible-content">
+              <div className="space-y-3">
+                <Label>Syarat & Ketentuan Tambahan</Label>
+                {(data.special_requirements || []).length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {(data.special_requirements || []).map((req, index) => (
+                      <Badge key={index} variant="secondary" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted text-foreground border border-border rounded-full">
+                        <span>{req}</span>
+                        <button type="button" onClick={() => { const updated = (data.special_requirements || []).filter((_, i) => i !== index); onChange({ special_requirements: updated }); }} className="text-muted-foreground hover:text-destructive"><X className="h-3 w-3" /></button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                <div className="relative">
+                  <Input placeholder="Tambah syarat (pisahkan dengan koma)..." value={newRequirement} onChange={(e) => setNewRequirement(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddRequirement(); } }} className="pr-10" />
+                  <button type="button" onClick={handleAddRequirement} disabled={!newRequirement.trim()} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-button-hover disabled:opacity-50"><Plus className="h-4 w-4" /></button>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Section 5 - Kontak Official */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch checked={data.contact_channel_enabled || false} onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })} />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover">5. Tampilkan Kontak Official</div>
+              <p className="text-xs text-muted-foreground">Tampilkan info kontak resmi di respons AI</p>
+            </div>
+          </div>
+
+          {data.contact_channel_enabled && (
+            <div className="p-4 bg-muted rounded-lg space-y-4">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Channel</Label>
+                  <SelectWithAddNew value={data.contact_channel || ''} onValueChange={(value) => onChange({ contact_channel: value })} options={[{ value: 'whatsapp', label: 'WhatsApp' }, { value: 'telegram', label: 'Telegram' }, { value: 'livechat', label: 'Live Chat' }, { value: 'email', label: 'Email' }]} placeholder="Pilih channel" />
+                </div>
+                {data.contact_channel !== 'livechat' && (
+                  <div className="space-y-2">
+                    <Label>Link / Nomor</Label>
+                    <Input value={data.contact_link || ''} onChange={(e) => onChange({ contact_link: e.target.value })} placeholder="Masukkan link/nomor" />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+            </>
+          )}
         </>
       )}
 
