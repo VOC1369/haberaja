@@ -2818,20 +2818,101 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
         </>
       )}
 
-      {/* Blok C - Mode Tier */}
+      {/* Blok C - Mode Tier (DUPLICATED FROM DINAMIS - UI ONLY) */}
       {data.reward_mode === 'tier' && (
         <>
-          {/* C0 - Unit Poin Reward */}
+          {/* Sub Kategori (Combo Promo) - Toggle */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch
+              checked={data.has_subcategories || false}
+              onCheckedChange={(checked) => {
+                if (checked && (!data.subcategories || data.subcategories.length === 0)) {
+                  onChange({ 
+                    has_subcategories: checked,
+                    subcategories: [createInitialSubCategory(1)]
+                  });
+                } else {
+                  onChange({ has_subcategories: checked });
+                }
+              }}
+            />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover">Sub Kategori (Combo Promo)</div>
+              <p className="text-xs text-muted-foreground">
+                Aktifkan jika promo punya sub-kategori berbeda.
+              </p>
+            </div>
+          </div>
+
+          {/* SubCategory Cards - Only show when has_subcategories is true */}
+          {data.has_subcategories && (
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const currentCount = data.subcategories?.length || 0;
+                    const newSubCategory = createInitialSubCategory(currentCount + 1);
+                    onChange({ subcategories: [...(data.subcategories || []), newSubCategory] });
+                    toast.success("Sub kategori baru ditambahkan");
+                  }}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Tambah Sub Kategori
+                </Button>
+              </div>
+              
+              {(data.subcategories || []).map((subCategory, index) => (
+                  <SubCategoryCard
+                    key={subCategory.id || index}
+                    index={index}
+                    data={subCategory}
+                    globalJenisHadiahEnabled={data.global_jenis_hadiah_enabled}
+                    globalMaxBonusEnabled={data.global_max_bonus_enabled}
+                    globalPayoutDirectionEnabled={data.global_payout_direction_enabled}
+                    onInvertGlobalJenisHadiah={() => onChange({ global_jenis_hadiah_enabled: false })}
+                    onInvertGlobalMaxBonus={() => onChange({ global_max_bonus_enabled: false })}
+                    onInvertGlobalPayoutDirection={() => onChange({ global_payout_direction_enabled: false })}
+                    onChange={(updates) => {
+                      const updatedSubcategories = [...(data.subcategories || [])];
+                      updatedSubcategories[index] = { ...subCategory, ...updates };
+                      onChange({ subcategories: updatedSubcategories });
+                    }}
+                    onDelete={() => {
+                      const currentCount = data.subcategories?.length || 0;
+                      if (currentCount <= 1) {
+                        toast.error("Minimal 1 sub kategori harus ada");
+                        return;
+                      }
+                      const updatedSubcategories = (data.subcategories || []).filter((_, i) => i !== index);
+                      onChange({ subcategories: updatedSubcategories });
+                      toast.success("Sub kategori dihapus");
+                    }}
+                    onSave={() => {
+                      toast.success(`${subCategory.name || `Sub Kategori ${index + 1}`} disimpan`);
+                    }}
+                  />
+                ))}
+            </div>
+          )}
+
+          {/* Section 1-3: Only show when NOT using subcategories */}
+          {!data.has_subcategories && (
+            <>
+          {/* Section 1 - Dasar Perhitungan Bonus */}
           <Collapsible>
-            <CollapsibleTrigger className="collapsible-trigger w-full">
+            <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
               <div className="flex items-center gap-3">
-                <Target className="h-5 w-5 text-button-hover" />
+                <Calculator className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">Unit Poin Reward</div>
-                  <div className="text-xs text-muted-foreground">Pilih sistem poin</div>
+                  <div className="text-sm font-semibold text-foreground">1. Dasar Perhitungan Bonus</div>
+                  <div className="text-xs text-muted-foreground">Konfigurasi dasar kalkulasi reward</div>
                 </div>
               </div>
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content">
               <div className="space-y-4">
