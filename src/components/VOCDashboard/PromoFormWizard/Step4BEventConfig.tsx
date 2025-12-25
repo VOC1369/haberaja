@@ -16,6 +16,7 @@ import {
   CheckSquare,
   Activity,
   FileText,
+  Settings,
 } from "lucide-react";
 
 import {
@@ -38,6 +39,8 @@ import {
   PostEventSummary,
   PostEventSummaryData,
 } from "./event-config";
+import { Step3Reward } from "./Step3Reward";
+import { PromoFormData } from "./types";
 
 export interface EventConfigData {
   header: EventHeaderData;
@@ -119,6 +122,9 @@ const initialEventData: EventConfigData = {
 interface Step4BEventConfigProps {
   data?: EventConfigData;
   onChange?: (data: EventConfigData) => void;
+  // Props for embedded Reward config (writes to formData, not eventData)
+  formData?: PromoFormData;
+  onFormDataChange?: (data: Partial<PromoFormData>) => void;
 }
 
 const SECTIONS = [
@@ -127,6 +133,12 @@ const SECTIONS = [
     title: "Identitas Event",
     icon: Calendar,
     description: "Context locking — prevent wrong claims",
+  },
+  {
+    id: "reward_config",
+    title: "Konfigurasi Reward",
+    icon: Settings,
+    description: "Mode reward: Fixed, Dinamis, atau Tier",
   },
   {
     id: "objective",
@@ -181,6 +193,8 @@ const SECTIONS = [
 export function Step4BEventConfig({
   data: externalData,
   onChange,
+  formData,
+  onFormDataChange,
 }: Step4BEventConfigProps) {
   const [internalData, setInternalData] =
     useState<EventConfigData>(initialEventData);
@@ -263,6 +277,12 @@ export function Step4BEventConfig({
                   <EventHeader
                     data={data.header}
                     onChange={(updates) => handleUpdate("header", updates)}
+                  />
+                )}
+                {section.id === "reward_config" && formData && onFormDataChange && (
+                  <Step3Reward
+                    data={formData}
+                    onChange={onFormDataChange}
                   />
                 )}
                 {section.id === "objective" && (
