@@ -147,12 +147,6 @@ const SECTIONS = [
     description: "Clear objectives, not just activity",
   },
   {
-    id: "reward",
-    title: "Reward & Mekanisme",
-    icon: Gift,
-    description: "Single source of truth for CS & Community",
-  },
-  {
     id: "channel",
     title: "Aktivasi Channel",
     icon: Megaphone,
@@ -289,12 +283,6 @@ export function Step4BEventConfig({
                   <ObjectiveKPI
                     data={data.objective}
                     onChange={(updates) => handleUpdate("objective", updates)}
-                  />
-                )}
-                {section.id === "reward" && (
-                  <RewardMechanism
-                    data={data.reward}
-                    onChange={(updates) => handleUpdate("reward", updates)}
                   />
                 )}
                 {section.id === "channel" && (
