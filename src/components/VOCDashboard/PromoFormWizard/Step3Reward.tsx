@@ -2956,12 +2956,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               }}
             />
             <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover flex items-center gap-2">
-                <Layers className="h-4 w-4" />
-                Aktifkan Sub Kategori (Combo Promo){data.has_subcategories && ` (${data.subcategories?.length || 0})`}
-              </div>
+              <div className="font-medium text-sm text-button-hover">Sub Kategori (Combo Promo)</div>
               <p className="text-xs text-muted-foreground">
-                Jika diaktifkan, promo ini memiliki beberapa sub kategori / varian bonus.
+                Aktifkan jika promo punya sub-kategori berbeda.
               </p>
             </div>
           </div>
