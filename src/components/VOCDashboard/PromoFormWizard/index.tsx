@@ -262,6 +262,11 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
             onChange={setEventData}
             formData={formData}
             onFormDataChange={handleChange}
+            isEditingFromReview={isEditingFromReview}
+            onSaveAndReturn={() => {
+              setCurrentStep(5);
+              setIsEditingFromReview(false);
+            }}
           />
         )}
         {/* Phase 1: Policy disabled - fallback to Reward config */}

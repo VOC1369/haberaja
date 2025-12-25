@@ -15,7 +15,6 @@ import {
   CheckSquare,
   Activity,
   FileText,
-  Settings,
 } from "lucide-react";
 
 import {
@@ -113,6 +112,9 @@ interface Step4BEventConfigProps {
   // Props for embedded Reward config (writes to formData, not eventData)
   formData?: PromoFormData;
   onFormDataChange?: (data: Partial<PromoFormData>) => void;
+  // Forwarded to Step3Reward to keep UI/behavior identical to Reward program
+  isEditingFromReview?: boolean;
+  onSaveAndReturn?: () => void;
 }
 
 const SECTIONS = [
@@ -121,12 +123,6 @@ const SECTIONS = [
     title: "Identitas Event",
     icon: Calendar,
     description: "Context locking — prevent wrong claims",
-  },
-  {
-    id: "reward_config",
-    title: "Konfigurasi Reward",
-    icon: Settings,
-    description: "Mode reward: Fixed, Dinamis, atau Tier",
   },
   {
     id: "objective",
@@ -177,12 +173,14 @@ export function Step4BEventConfig({
   onChange,
   formData,
   onFormDataChange,
+  isEditingFromReview,
+  onSaveAndReturn,
 }: Step4BEventConfigProps) {
   const [internalData, setInternalData] =
     useState<EventConfigData>(initialEventData);
   const data = externalData || internalData;
 
-  const [openSections, setOpenSections] = useState<string[]>(["header", "reward_config"]);
+  const [openSections, setOpenSections] = useState<string[]>(["header"]);
 
   const handleUpdate = <K extends keyof EventConfigData>(
     section: K,
@@ -224,6 +222,16 @@ export function Step4BEventConfig({
         </p>
       </div>
 
+      {/* Reward Config (MUST be identical to Reward program UI) */}
+      {formData && onFormDataChange && (
+        <Step3Reward
+          data={formData}
+          onChange={onFormDataChange}
+          isEditingFromReview={isEditingFromReview}
+          onSaveAndReturn={onSaveAndReturn}
+        />
+      )}
+
       {/* Accordion Sections */}
       <Accordion
         type="multiple"
@@ -259,12 +267,6 @@ export function Step4BEventConfig({
                   <EventHeader
                     data={data.header}
                     onChange={(updates) => handleUpdate("header", updates)}
-                  />
-                )}
-                {section.id === "reward_config" && formData && onFormDataChange && (
-                  <Step3Reward
-                    data={formData}
-                    onChange={onFormDataChange}
                   />
                 )}
                 {section.id === "objective" && (
