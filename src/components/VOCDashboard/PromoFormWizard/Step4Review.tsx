@@ -1132,7 +1132,27 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                   <>
                     <ValueBox label="Satuan Poin" value={data.promo_unit} />
                     <ValueBox label="Mode EXP" value={data.exp_mode} />
-                    <ValueBox label="Earn Rule" value={data.lp_earn_turnover_amount && data.lp_earn_point_amount ? `${data.lp_earn_turnover_amount} TO → ${data.lp_earn_point_amount} LP` : '-'} />
+                    <ValueBox 
+                      label="Basis Perhitungan LP" 
+                      value={
+                        data.lp_earn_basis === 'turnover' ? 'Turnover' :
+                        data.lp_earn_basis === 'win' ? 'Kemenangan' :
+                        data.lp_earn_basis === 'lose' ? 'Kekalahan Bersih' :
+                        data.lp_earn_basis === 'deposit' ? 'Deposit' : 'Turnover'
+                      } 
+                    />
+                    <ValueBox 
+                      label="Earn Rule" 
+                      value={data.lp_earn_amount && data.lp_earn_point_amount 
+                        ? `${data.lp_earn_amount.toLocaleString('id-ID')} ${
+                            data.lp_earn_basis === 'turnover' ? 'TO' :
+                            data.lp_earn_basis === 'win' ? 'Win' :
+                            data.lp_earn_basis === 'lose' ? 'Loss' :
+                            data.lp_earn_basis === 'deposit' ? 'Deposit' : 'TO'
+                          } → ${data.lp_earn_point_amount} LP` 
+                        : '-'
+                      } 
+                    />
                     <ValueBox label="Jumlah Tier" value={`${data.tiers.length} tier`} />
                   </>
                 )}
