@@ -643,16 +643,16 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
     ];
     const step2Percentage = Math.round((step2Fields.filter(Boolean).length / step2Fields.length) * 100);
     
-    // Step 3: Konfigurasi Reward
-    let step3Fields: boolean[] = [];
+    // Step 4: Konfigurasi Reward (Event Config)
+    let step4Fields: boolean[] = [];
     if (data.reward_mode === 'fixed') {
-      step3Fields = [
+      step4Fields = [
         !!data.reward_mode,
         !!data.reward_type,
         data.reward_amount > 0
       ];
     } else if (data.reward_mode === 'formula') {
-      step3Fields = [
+      step4Fields = [
         !!data.reward_mode,
         !!data.calculation_base,
         !!data.calculation_method,
@@ -660,33 +660,33 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
         !!data.dinamis_reward_type
       ];
     } else if (data.reward_mode === 'tier') {
-      step3Fields = [
+      step4Fields = [
         !!data.reward_mode,
         !!data.promo_unit
       ];
     } else {
-      step3Fields = [!!data.reward_mode];
+      step4Fields = [!!data.reward_mode];
     }
-    const step3Percentage = step3Fields.length > 0 
-      ? Math.round((step3Fields.filter(Boolean).length / step3Fields.length) * 100)
+    const step4Percentage = step4Fields.length > 0 
+      ? Math.round((step4Fields.filter(Boolean).length / step4Fields.length) * 100)
       : 0;
 
     return {
       step1: { percentage: step1Percentage, complete: step1Percentage === 100 },
       step2: { percentage: step2Percentage, complete: step2Percentage === 100 },
-      step3: { percentage: step3Percentage, complete: step3Percentage === 100 }
+      step4: { percentage: step4Percentage, complete: step4Percentage === 100 }
     };
   }, [data]);
 
   const overallScore = useMemo(() => {
     return Math.round(
-      (stepCompletion.step1.percentage + stepCompletion.step2.percentage + stepCompletion.step3.percentage) / 3
+      (stepCompletion.step1.percentage + stepCompletion.step2.percentage + stepCompletion.step4.percentage) / 3
     );
   }, [stepCompletion]);
 
-  const hasCriticalErrors = !stepCompletion.step1.complete || !stepCompletion.step2.complete || !stepCompletion.step3.complete;
+  const hasCriticalErrors = !stepCompletion.step1.complete || !stepCompletion.step2.complete || !stepCompletion.step4.complete;
 
-  const isAllComplete = stepCompletion.step1.complete && stepCompletion.step2.complete && stepCompletion.step3.complete;
+  const isAllComplete = stepCompletion.step1.complete && stepCompletion.step2.complete && stepCompletion.step4.complete;
 
   return (
     <div className="rounded-xl bg-card border border-border p-6 mb-6">
@@ -749,10 +749,10 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
           onClick={() => onGoToStep?.(2)}
         />
         <BlockCard
-          blockKey="step3"
+          blockKey="step4"
           label="Konfigurasi Reward"
-          percentage={stepCompletion.step3.percentage}
-          complete={stepCompletion.step3.complete}
+          percentage={stepCompletion.step4.percentage}
+          complete={stepCompletion.step4.complete}
           onClick={() => onGoToStep?.(4)}
         />
       </div>
