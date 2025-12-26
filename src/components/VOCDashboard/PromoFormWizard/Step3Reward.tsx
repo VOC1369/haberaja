@@ -3053,14 +3053,14 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </p>
                 )}
 
-                {/* Conditional Day & Time Selector for Hari Tertentu */}
-                {data.reward_distribution === 'hari_tertentu' && (
-                  <div className="p-4 bg-muted rounded-lg space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Conditional untuk Hari Tertentu */}
+                {(data.claim_frequency === 'hari_tertentu' || data.reward_distribution === 'hari_tertentu') && (
+                  <div className="mt-4 p-4 bg-muted rounded-lg space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Hari</Label>
                         <SelectWithAddNew
-                          value={data.distribution_day}
+                          value={data.distribution_day || ''}
                           onValueChange={(value) => onChange({ distribution_day: value })}
                           options={[
                             { value: 'senin', label: 'Senin' },
@@ -3072,120 +3072,255 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                             { value: 'minggu', label: 'Minggu' },
                             { value: 'setiap_hari', label: 'Setiap Hari' },
                           ]}
-                          onAddOption={() => {}}
-                          onDeleteOption={() => {}}
                           placeholder="Pilih hari"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Jam (WIB)</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>Dari Jam (WIB)</Label>
+                          <Switch 
+                            checked={data.distribution_day_time_enabled || false}
+                            onCheckedChange={(checked) => onChange({ distribution_day_time_enabled: checked })}
+                          />
+                        </div>
                         <SelectWithAddNew
-                          value={data.distribution_time}
-                          onValueChange={(value) => onChange({ distribution_time: value })}
+                          value={data.distribution_time_from || ''}
+                          onValueChange={(value) => onChange({ distribution_time_from: value })}
                           options={[
                             { value: '00:00', label: '00:00' },
+                            { value: '01:00', label: '01:00' },
+                            { value: '02:00', label: '02:00' },
+                            { value: '03:00', label: '03:00' },
+                            { value: '04:00', label: '04:00' },
+                            { value: '05:00', label: '05:00' },
                             { value: '06:00', label: '06:00' },
+                            { value: '07:00', label: '07:00' },
+                            { value: '08:00', label: '08:00' },
                             { value: '09:00', label: '09:00' },
+                            { value: '10:00', label: '10:00' },
+                            { value: '11:00', label: '11:00' },
                             { value: '12:00', label: '12:00' },
+                            { value: '13:00', label: '13:00' },
+                            { value: '14:00', label: '14:00' },
                             { value: '15:00', label: '15:00' },
+                            { value: '16:00', label: '16:00' },
+                            { value: '17:00', label: '17:00' },
                             { value: '18:00', label: '18:00' },
+                            { value: '19:00', label: '19:00' },
+                            { value: '20:00', label: '20:00' },
                             { value: '21:00', label: '21:00' },
+                            { value: '22:00', label: '22:00' },
+                            { value: '23:00', label: '23:00' },
+                          ]}
+                          placeholder="Pilih jam mulai"
+                          disabled={!data.distribution_day_time_enabled}
+                          className={!data.distribution_day_time_enabled ? "opacity-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Hingga Jam (WIB)</Label>
+                        <SelectWithAddNew
+                          value={data.distribution_time_until || ''}
+                          onValueChange={(value) => onChange({ distribution_time_until: value })}
+                          options={[
+                            { value: '00:00', label: '00:00' },
+                            { value: '01:00', label: '01:00' },
+                            { value: '02:00', label: '02:00' },
+                            { value: '03:00', label: '03:00' },
+                            { value: '04:00', label: '04:00' },
+                            { value: '05:00', label: '05:00' },
+                            { value: '06:00', label: '06:00' },
+                            { value: '07:00', label: '07:00' },
+                            { value: '08:00', label: '08:00' },
+                            { value: '09:00', label: '09:00' },
+                            { value: '10:00', label: '10:00' },
+                            { value: '11:00', label: '11:00' },
+                            { value: '12:00', label: '12:00' },
+                            { value: '13:00', label: '13:00' },
+                            { value: '14:00', label: '14:00' },
+                            { value: '15:00', label: '15:00' },
+                            { value: '16:00', label: '16:00' },
+                            { value: '17:00', label: '17:00' },
+                            { value: '18:00', label: '18:00' },
+                            { value: '19:00', label: '19:00' },
+                            { value: '20:00', label: '20:00' },
+                            { value: '21:00', label: '21:00' },
+                            { value: '22:00', label: '22:00' },
+                            { value: '23:00', label: '23:00' },
                             { value: '23:59', label: '23:59' },
                           ]}
-                          onAddOption={() => {}}
-                          onDeleteOption={() => {}}
-                          placeholder="Pilih jam"
+                          placeholder="Pilih jam selesai"
+                          disabled={!data.distribution_day_time_enabled}
+                          className={!data.distribution_day_time_enabled ? "opacity-50" : ""}
                         />
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      💡 Contoh: Rollingan mingguan dikirim setiap Senin 00:00 WIB.
+                    <p className="text-xs text-yellow-500">
+                      💡 Contoh: Rollingan mingguan dikirim setiap Senin 14:00 - 16:00 WIB.
                     </p>
                   </div>
                 )}
 
-                {/* Conditional Date Range Selector for Tanggal Tertentu */}
-                {data.reward_distribution === 'tanggal_tertentu' && (
-                  <div className="p-4 bg-muted rounded-lg space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Dari Tanggal</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !data.distribution_date_from && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {data.distribution_date_from ? format(parse(data.distribution_date_from, 'yyyy-MM-dd', new Date()), 'dd MMMM yyyy') : "Pilih tanggal"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={data.distribution_date_from ? parse(data.distribution_date_from, 'yyyy-MM-dd', new Date()) : undefined}
-                              onSelect={(date) => onChange({ distribution_date_from: date ? format(date, 'yyyy-MM-dd') : '' })}
-                              initialFocus
-                              className="pointer-events-auto"
-                            />
-                          </PopoverContent>
-                        </Popover>
+                {/* Conditional untuk Tanggal Tertentu */}
+                {(data.claim_frequency === 'tanggal_tertentu' || data.reward_distribution === 'tanggal_tertentu') && (
+                  <div className="mt-4 p-4 bg-muted rounded-lg space-y-4">
+                    {/* Periode Aktif Promo */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <CalendarIcon className="h-4 w-4 text-button-hover" />
+                        <span className="text-sm font-medium">Periode Aktif Promo</span>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Hingga Tanggal</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !data.distribution_date_until && "text-muted-foreground"
-                              )}
-                            >
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {data.distribution_date_until ? format(parse(data.distribution_date_until, 'yyyy-MM-dd', new Date()), 'dd MMMM yyyy') : "Pilih tanggal"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={data.distribution_date_until ? parse(data.distribution_date_until, 'yyyy-MM-dd', new Date()) : undefined}
-                              onSelect={(date) => onChange({ distribution_date_until: date ? format(date, 'yyyy-MM-dd') : '' })}
-                              initialFocus
-                              className="pointer-events-auto"
-                            />
-                          </PopoverContent>
-                        </Popover>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Dari Tanggal</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal rounded-lg",
+                                  !data.claim_date_from && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {data.claim_date_from ? format(parse(data.claim_date_from, 'yyyy-MM-dd', new Date()), 'dd MMMM yyyy') : "Pilih tanggal"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={data.claim_date_from ? parse(data.claim_date_from, 'yyyy-MM-dd', new Date()) : undefined}
+                                onSelect={(date) => onChange({ claim_date_from: date ? format(date, 'yyyy-MM-dd') : '' })}
+                                initialFocus
+                                className="pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Hingga Tanggal</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal rounded-lg",
+                                  !data.claim_date_until && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {data.claim_date_until ? format(parse(data.claim_date_until, 'yyyy-MM-dd', new Date()), 'dd MMMM yyyy') : "Pilih tanggal"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={data.claim_date_until ? parse(data.claim_date_until, 'yyyy-MM-dd', new Date()) : undefined}
+                                onSelect={(date) => onChange({ claim_date_until: date ? format(date, 'yyyy-MM-dd') : '' })}
+                                initialFocus
+                                className="pointer-events-auto"
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        💡 Untuk promo 1 hari saja, isi kedua tanggal dengan tanggal yang sama
+                      </p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                      <div className="space-y-2">
-                        <Label>Jam (WIB)</Label>
-                        <SelectWithAddNew
-                          value={data.distribution_time}
-                          onValueChange={(value) => onChange({ distribution_time: value })}
-                          options={[
-                            { value: '00:00', label: '00:00' },
-                            { value: '06:00', label: '06:00' },
-                            { value: '09:00', label: '09:00' },
-                            { value: '12:00', label: '12:00' },
-                            { value: '15:00', label: '15:00' },
-                            { value: '18:00', label: '18:00' },
-                            { value: '21:00', label: '21:00' },
-                            { value: '23:59', label: '23:59' },
-                          ]}
-                          onAddOption={() => {}}
-                          onDeleteOption={() => {}}
-                          placeholder="Pilih jam"
-                        />
+
+                    {/* Batas Jam Aktif (Opsional) */}
+                    <div className="space-y-3 pt-3 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-button-hover" />
+                          <span className="text-sm font-medium">Batas Jam Aktif (Opsional)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={data.distribution_time_enabled || false}
+                            onCheckedChange={(checked) => onChange({ distribution_time_enabled: checked })}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {data.distribution_time_enabled ? 'Aktif' : 'Nonaktif'}
+                          </span>
+                        </div>
                       </div>
+
+                      {data.distribution_time_enabled && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Dari Jam</Label>
+                            <SelectWithAddNew
+                              value={data.distribution_time_from || ''}
+                              onValueChange={(value) => onChange({ distribution_time_from: value })}
+                              options={[
+                                { value: '00:00', label: '00:00 WIB' },
+                                { value: '01:00', label: '01:00 WIB' },
+                                { value: '02:00', label: '02:00 WIB' },
+                                { value: '03:00', label: '03:00 WIB' },
+                                { value: '04:00', label: '04:00 WIB' },
+                                { value: '05:00', label: '05:00 WIB' },
+                                { value: '06:00', label: '06:00 WIB' },
+                                { value: '07:00', label: '07:00 WIB' },
+                                { value: '08:00', label: '08:00 WIB' },
+                                { value: '09:00', label: '09:00 WIB' },
+                                { value: '10:00', label: '10:00 WIB' },
+                                { value: '11:00', label: '11:00 WIB' },
+                                { value: '12:00', label: '12:00 WIB' },
+                                { value: '13:00', label: '13:00 WIB' },
+                                { value: '14:00', label: '14:00 WIB' },
+                                { value: '15:00', label: '15:00 WIB' },
+                                { value: '16:00', label: '16:00 WIB' },
+                                { value: '17:00', label: '17:00 WIB' },
+                                { value: '18:00', label: '18:00 WIB' },
+                                { value: '19:00', label: '19:00 WIB' },
+                                { value: '20:00', label: '20:00 WIB' },
+                                { value: '21:00', label: '21:00 WIB' },
+                                { value: '22:00', label: '22:00 WIB' },
+                                { value: '23:00', label: '23:00 WIB' },
+                              ]}
+                              placeholder="Pilih jam mulai"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Hingga Jam</Label>
+                            <SelectWithAddNew
+                              value={data.distribution_time_until || ''}
+                              onValueChange={(value) => onChange({ distribution_time_until: value })}
+                              options={[
+                                { value: '00:00', label: '00:00 WIB' },
+                                { value: '01:00', label: '01:00 WIB' },
+                                { value: '02:00', label: '02:00 WIB' },
+                                { value: '03:00', label: '03:00 WIB' },
+                                { value: '04:00', label: '04:00 WIB' },
+                                { value: '05:00', label: '05:00 WIB' },
+                                { value: '06:00', label: '06:00 WIB' },
+                                { value: '07:00', label: '07:00 WIB' },
+                                { value: '08:00', label: '08:00 WIB' },
+                                { value: '09:00', label: '09:00 WIB' },
+                                { value: '10:00', label: '10:00 WIB' },
+                                { value: '11:00', label: '11:00 WIB' },
+                                { value: '12:00', label: '12:00 WIB' },
+                                { value: '13:00', label: '13:00 WIB' },
+                                { value: '14:00', label: '14:00 WIB' },
+                                { value: '15:00', label: '15:00 WIB' },
+                                { value: '16:00', label: '16:00 WIB' },
+                                { value: '17:00', label: '17:00 WIB' },
+                                { value: '18:00', label: '18:00 WIB' },
+                                { value: '19:00', label: '19:00 WIB' },
+                                { value: '20:00', label: '20:00 WIB' },
+                                { value: '21:00', label: '21:00 WIB' },
+                                { value: '22:00', label: '22:00 WIB' },
+                                { value: '23:00', label: '23:00 WIB' },
+                                { value: '23:59', label: '23:59 WIB' },
+                              ]}
+                              placeholder="Pilih jam selesai"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      💡 Jika hanya 1 hari saja, isi kedua tanggal dengan tanggal yang sama.
-                    </p>
                   </div>
                 )}
               </div>
