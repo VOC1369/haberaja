@@ -40,7 +40,8 @@ export const PKB_FIELD_WHITELIST = [
   'exp_mode',
   'lp_calc_method',
   'exp_calc_method',
-  'lp_formula',
+  'lp_earn_turnover_amount',
+  'lp_earn_point_amount',
   'exp_formula',
   'lp_value',
   'exp_value',
@@ -159,7 +160,9 @@ export interface PromoFormData {
   exp_mode: 'level_up' | 'exp_store' | 'both';
   lp_calc_method: string;
   exp_calc_method: string;
-  lp_formula: string;
+  // LP Earn Rule - structured (replaces free-text lp_formula)
+  lp_earn_turnover_amount: number;  // Setiap [X] Turnover
+  lp_earn_point_amount: number;      // → mendapatkan [Y] LP
   exp_formula: string;
   lp_value: string;
   exp_value: string;
@@ -790,7 +793,8 @@ export const initialPromoData: PromoFormData = {
   exp_mode: 'level_up',
   lp_calc_method: 'turnover',
   exp_calc_method: 'turnover',
-  lp_formula: '',
+  lp_earn_turnover_amount: 1000,  // Default: 1000 Turnover
+  lp_earn_point_amount: 1,         // Default: 1 LP
   exp_formula: '',
   lp_value: '',
   exp_value: '',
@@ -937,7 +941,8 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   exp_mode: 'level_up',
   lp_calc_method: 'turnover',
   exp_calc_method: 'turnover',
-  lp_formula: '',
+  lp_earn_turnover_amount: 1000,
+  lp_earn_point_amount: 1,
   exp_formula: '',
   lp_value: '',
   exp_value: '',

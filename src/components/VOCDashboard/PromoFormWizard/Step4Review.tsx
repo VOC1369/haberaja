@@ -1132,7 +1132,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                   <>
                     <ValueBox label="Satuan Poin" value={data.promo_unit} />
                     <ValueBox label="Mode EXP" value={data.exp_mode} />
-                    <ValueBox label="Formula LP" value={data.lp_formula} />
+                    <ValueBox label="Earn Rule" value={data.lp_earn_turnover_amount && data.lp_earn_point_amount ? `${data.lp_earn_turnover_amount} TO → ${data.lp_earn_point_amount} LP` : '-'} />
                     <ValueBox label="Jumlah Tier" value={`${data.tiers.length} tier`} />
                   </>
                 )}
