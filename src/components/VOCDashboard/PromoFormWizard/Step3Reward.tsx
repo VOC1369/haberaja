@@ -2732,8 +2732,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 <span className="font-semibold text-sm text-foreground">Point Store Configuration</span>
               </div>
               
+              {/* Row 1: Point Unit + Basis Perhitungan */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Point Unit Selector */}
+                {/* Col 1: Point Unit */}
                 <div className="space-y-2">
                   <Label className="text-sm">Point Unit</Label>
                   <Select
@@ -2749,10 +2750,33 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       <SelectItem value="hybrid">Hybrid (LP + EXP)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">Jenis point yang digunakan</p>
                 </div>
                 
-                {/* EXP Mode Selector */}
+                {/* Col 2: Basis Perhitungan */}
+                <div className="space-y-2">
+                  <Label className="text-sm">
+                    Basis Perhitungan {getPointUnitShort(data.promo_unit)} <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={data.lp_earn_basis || 'turnover'}
+                    onValueChange={(value) => onChange({ lp_earn_basis: value as 'turnover' | 'win' | 'lose' | 'deposit' })}
+                  >
+                    <SelectTrigger className="bg-card border-border">
+                      <SelectValue placeholder="Pilih basis perhitungan" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border z-50">
+                      <SelectItem value="turnover">Turnover</SelectItem>
+                      <SelectItem value="win">Kemenangan (Win)</SelectItem>
+                      <SelectItem value="lose">Kekalahan Bersih (Net Loss)</SelectItem>
+                      <SelectItem value="deposit">Deposit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              {/* Row 2: EXP Mode + Aturan Perolehan */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Col 1: EXP Mode */}
                 <div className="space-y-2">
                   <Label className="text-sm">EXP Mode</Label>
                   <Select
@@ -2768,77 +2792,67 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       <SelectItem value="both">Both (Store + Level)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">Bagaimana EXP digunakan</p>
+                </div>
+                
+                {/* Col 2: Aturan Perolehan */}
+                <div className="space-y-2">
+                  <Label className="text-sm">
+                    Aturan Perolehan {getPointUnitShort(data.promo_unit)} <span className="text-destructive">*</span>
+                  </Label>
+                  <div className="flex items-center gap-2 flex-wrap p-2 bg-muted rounded-lg">
+                    <span className="text-xs text-muted-foreground">Setiap</span>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={data.lp_earn_amount || ''}
+                      onChange={(e) => onChange({ lp_earn_amount: parseInt(e.target.value) || 0 })}
+                      placeholder={data.lp_earn_basis === 'lose' || data.lp_earn_basis === 'win' ? '1000000' : '1000'}
+                      className="w-20 h-8 bg-card border-border text-center text-sm"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {data.lp_earn_basis === 'turnover' && 'TO'}
+                      {data.lp_earn_basis === 'win' && 'Win'}
+                      {data.lp_earn_basis === 'lose' && 'Loss'}
+                      {data.lp_earn_basis === 'deposit' && 'Dep'}
+                      {!data.lp_earn_basis && 'TO'}
+                    </span>
+                    <span className="text-xs text-muted-foreground">→</span>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={data.lp_earn_point_amount || ''}
+                      onChange={(e) => onChange({ lp_earn_point_amount: parseInt(e.target.value) || 0 })}
+                      placeholder="1"
+                      className="w-16 h-8 bg-card border-border text-center text-sm"
+                    />
+                    <span className="text-xs text-muted-foreground">{getPointUnitShort(data.promo_unit)}</span>
+                  </div>
                 </div>
               </div>
               
-              {/* A. Basis Perhitungan - DROPDOWN */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  Basis Perhitungan {getPointUnitShort(data.promo_unit)} <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={data.lp_earn_basis || 'turnover'}
-                  onValueChange={(value) => onChange({ lp_earn_basis: value as 'turnover' | 'win' | 'lose' | 'deposit' })}
-                >
-                  <SelectTrigger className="bg-card border-border">
-                    <SelectValue placeholder="Pilih basis perhitungan" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border z-50">
-                    <SelectItem value="turnover">Turnover</SelectItem>
-                    <SelectItem value="win">Kemenangan (Win)</SelectItem>
-                    <SelectItem value="lose">Kekalahan Bersih (Net Loss)</SelectItem>
-                    <SelectItem value="deposit">Deposit</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Menentukan aktivitas apa yang menghasilkan {getPointUnitLabel(data.promo_unit)}
+              {/* Helper Text Section - Semua dikumpulkan di sini */}
+              <div className="p-3 bg-muted/50 rounded-lg space-y-1.5 text-xs text-muted-foreground">
+                <p>
+                  💡 <strong>Point Unit:</strong> {
+                    data.promo_unit === 'exp' ? 'Experience Point untuk leveling dan achievement system.' :
+                    data.promo_unit === 'hybrid' ? 'Kombinasi LP untuk rewards dan EXP untuk leveling.' :
+                    'Loyalty Point yang bisa ditukar dengan hadiah di Point Store.'
+                  }
                 </p>
-              </div>
-
-              {/* B. Aturan Perolehan - UI DINAMIS */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">
-                  Aturan Perolehan {getPointUnitLabel(data.promo_unit)} <span className="text-destructive">*</span>
-                </Label>
-                
-                <div className="flex items-center gap-2 flex-wrap p-3 bg-muted rounded-lg">
-                  <span className="text-sm text-muted-foreground">Setiap</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={data.lp_earn_amount || ''}
-                    onChange={(e) => onChange({ lp_earn_amount: parseInt(e.target.value) || 0 })}
-                    placeholder={data.lp_earn_basis === 'lose' || data.lp_earn_basis === 'win' ? '1000000' : '1000'}
-                    className="w-28 bg-card border-border text-center"
-                  />
-                  {/* UNIT DINAMIS berdasarkan basis */}
-                  <span className="text-sm text-muted-foreground">
-                    {data.lp_earn_basis === 'turnover' && 'Turnover'}
-                    {data.lp_earn_basis === 'win' && 'Kemenangan'}
-                    {data.lp_earn_basis === 'lose' && 'Kekalahan Bersih'}
-                    {data.lp_earn_basis === 'deposit' && 'Deposit'}
-                    {!data.lp_earn_basis && 'Turnover'}
-                  </span>
-                  <span className="text-sm text-muted-foreground">→ mendapatkan</span>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={data.lp_earn_point_amount || ''}
-                    onChange={(e) => onChange({ lp_earn_point_amount: parseInt(e.target.value) || 0 })}
-                    placeholder="1"
-                    className="w-20 bg-card border-border text-center"
-                  />
-                  <span className="text-sm text-muted-foreground">{getPointUnitLabel(data.promo_unit)}</span>
-                </div>
-                
-                {/* Helper text DINAMIS */}
-                <p className="text-xs text-muted-foreground">
-                  {data.lp_earn_basis === 'turnover' && `💡 ${getPointUnitLabel(data.promo_unit)} terakumulasi otomatis berdasarkan total turnover pemain.`}
-                  {data.lp_earn_basis === 'win' && `💡 ${getPointUnitLabel(data.promo_unit)} diberikan berdasarkan total kemenangan pemain.`}
-                  {data.lp_earn_basis === 'lose' && `💡 ${getPointUnitLabel(data.promo_unit)} diberikan sebagai kompensasi atas kekalahan bersih pemain.`}
-                  {data.lp_earn_basis === 'deposit' && `💡 ${getPointUnitLabel(data.promo_unit)} diberikan berdasarkan total deposit pemain.`}
-                  {!data.lp_earn_basis && `💡 ${getPointUnitLabel(data.promo_unit)} terakumulasi otomatis berdasarkan total turnover pemain.`}
+                <p>
+                  💡 <strong>EXP Mode:</strong> {
+                    data.exp_mode === 'level_up' ? 'EXP hanya untuk naik level, tidak bisa ditukar.' :
+                    data.exp_mode === 'both' ? 'EXP bisa untuk naik level dan ditukar hadiah.' :
+                    'Point hanya untuk ditukar hadiah di store, tidak ada sistem level.'
+                  }
+                </p>
+                <p>
+                  💡 <strong>Earn Rule:</strong> {
+                    data.lp_earn_basis === 'win' ? `${getPointUnitLabel(data.promo_unit)} diberikan berdasarkan total kemenangan pemain.` :
+                    data.lp_earn_basis === 'lose' ? `${getPointUnitLabel(data.promo_unit)} diberikan sebagai kompensasi atas kekalahan bersih.` :
+                    data.lp_earn_basis === 'deposit' ? `${getPointUnitLabel(data.promo_unit)} diberikan berdasarkan total deposit pemain.` :
+                    `${getPointUnitLabel(data.promo_unit)} terakumulasi otomatis berdasarkan total turnover.`
+                  }
                 </p>
               </div>
 
