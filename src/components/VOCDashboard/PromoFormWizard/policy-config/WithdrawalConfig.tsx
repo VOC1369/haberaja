@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { WithdrawalPolicyData } from "./types";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 
 interface WithdrawalConfigProps {
   data: WithdrawalPolicyData;
@@ -33,12 +34,11 @@ export function WithdrawalConfig({ data, onChange }: WithdrawalConfigProps) {
           <Label className="text-sm font-medium text-foreground">
             Minimum Withdrawal <span className="text-destructive">*</span>
           </Label>
-          <Input
-            type="number"
+          <FormattedNumberInput
             className="bg-muted"
-            placeholder="50000"
-            value={data.min_withdrawal || ''}
-            onChange={(e) => onChange({ min_withdrawal: parseInt(e.target.value) || 0 })}
+            placeholder="50.000"
+            value={data.min_withdrawal || 0}
+            onChange={(val) => onChange({ min_withdrawal: val })}
           />
         </div>
 
@@ -46,12 +46,11 @@ export function WithdrawalConfig({ data, onChange }: WithdrawalConfigProps) {
           <Label className="text-sm font-medium text-foreground">
             Maximum Withdrawal
           </Label>
-          <Input
-            type="number"
+          <FormattedNumberInput
             className="bg-muted"
             placeholder="Kosongkan jika tidak ada limit"
-            value={data.max_withdrawal || ''}
-            onChange={(e) => onChange({ max_withdrawal: e.target.value ? parseInt(e.target.value) : undefined })}
+            value={data.max_withdrawal || 0}
+            onChange={(val) => onChange({ max_withdrawal: val || undefined })}
           />
         </div>
       </div>
@@ -62,12 +61,11 @@ export function WithdrawalConfig({ data, onChange }: WithdrawalConfigProps) {
           <Label className="text-sm font-medium text-foreground">
             Limit Harian
           </Label>
-          <Input
-            type="number"
+          <FormattedNumberInput
             className="bg-muted"
-            placeholder="Contoh: 50000000"
-            value={data.daily_limit || ''}
-            onChange={(e) => onChange({ daily_limit: e.target.value ? parseInt(e.target.value) : undefined })}
+            placeholder="50.000.000"
+            value={data.daily_limit || 0}
+            onChange={(val) => onChange({ daily_limit: val || undefined })}
           />
           <p className="text-xs text-muted-foreground">
             Total maksimal WD per hari (opsional)

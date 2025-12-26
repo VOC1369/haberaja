@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2 } from "lucide-react";
 import { DepositPolicyData, DEPOSIT_CHANNELS } from "./types";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 
 interface DepositConfigProps {
   data: DepositPolicyData;
@@ -41,12 +42,11 @@ export function DepositConfig({ data, onChange }: DepositConfigProps) {
           <Label className="text-sm font-medium text-foreground">
             Minimum Deposit <span className="text-destructive">*</span>
           </Label>
-          <Input
-            type="number"
+          <FormattedNumberInput
             className="bg-muted"
-            placeholder="10000"
-            value={data.min_deposit || ''}
-            onChange={(e) => onChange({ min_deposit: parseInt(e.target.value) || 0 })}
+            placeholder="10.000"
+            value={data.min_deposit || 0}
+            onChange={(val) => onChange({ min_deposit: val })}
           />
         </div>
 
@@ -54,12 +54,11 @@ export function DepositConfig({ data, onChange }: DepositConfigProps) {
           <Label className="text-sm font-medium text-foreground">
             Maximum Deposit
           </Label>
-          <Input
-            type="number"
+          <FormattedNumberInput
             className="bg-muted"
             placeholder="Kosongkan jika tidak ada limit"
-            value={data.max_deposit || ''}
-            onChange={(e) => onChange({ max_deposit: e.target.value ? parseInt(e.target.value) : undefined })}
+            value={data.max_deposit || 0}
+            onChange={(val) => onChange({ max_deposit: val || undefined })}
           />
         </div>
       </div>

@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { BettingRestrictionData } from "./types";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 
 interface BettingConfigProps {
   data: BettingRestrictionData;
@@ -65,12 +66,11 @@ export function BettingConfig({ data, onChange }: BettingConfigProps) {
         <Label className="text-sm font-medium text-foreground">
           Maximum Bet
         </Label>
-        <Input
-          type="number"
+        <FormattedNumberInput
           className="bg-muted"
-          placeholder="Contoh: 100000"
-          value={data.max_bet || ''}
-          onChange={(e) => onChange({ max_bet: e.target.value ? parseInt(e.target.value) : undefined })}
+          placeholder="100.000"
+          value={data.max_bet || 0}
+          onChange={(val) => onChange({ max_bet: val || undefined })}
         />
         <p className="text-xs text-muted-foreground">
           Maksimal taruhan per spin/round (kosongkan jika tidak ada limit)

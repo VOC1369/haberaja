@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2 } from "lucide-react";
 import { LoyaltyProgramData, ExchangeTier, EARNING_PERIODS } from "./types";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 
 interface LoyaltyConfigProps {
   data: LoyaltyProgramData;
@@ -140,19 +141,17 @@ export function LoyaltyConfig({ data, onChange }: LoyaltyConfigProps) {
                   value={tier.tier_name || ''}
                   onChange={(e) => updateTier(idx, 'tier_name', e.target.value)}
                 />
-                <Input
-                  type="number"
+                <FormattedNumberInput
                   className="bg-muted h-8"
                   placeholder="0"
-                  value={tier.lp_required || ''}
-                  onChange={(e) => updateTier(idx, 'lp_required', parseInt(e.target.value) || 0)}
+                  value={tier.lp_required || 0}
+                  onChange={(val) => updateTier(idx, 'lp_required', val)}
                 />
-                <Input
-                  type="number"
+                <FormattedNumberInput
                   className="bg-muted h-8"
                   placeholder="0"
-                  value={tier.reward_credit || ''}
-                  onChange={(e) => updateTier(idx, 'reward_credit', parseInt(e.target.value) || 0)}
+                  value={tier.reward_credit || 0}
+                  onChange={(val) => updateTier(idx, 'reward_credit', val)}
                 />
                 <Button variant="ghost" size="sm" onClick={() => removeTier(idx)}>
                   <Trash2 className="h-4 w-4 text-destructive" />
