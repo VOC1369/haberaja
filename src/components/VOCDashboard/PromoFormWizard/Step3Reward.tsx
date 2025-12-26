@@ -2799,33 +2799,32 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <Label className="text-sm">
                     Aturan Perolehan {getPointUnitShort(data.promo_unit)} <span className="text-destructive">*</span>
                   </Label>
-                  <div className="flex items-center gap-2 flex-wrap p-2 bg-muted rounded-lg">
-                    <span className="text-xs text-muted-foreground">Setiap</span>
+                  <div className="flex items-center justify-center gap-3 p-3 bg-muted rounded-lg">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">Setiap</span>
                     <Input
                       type="number"
                       min={1}
                       value={data.lp_earn_amount || ''}
                       onChange={(e) => onChange({ lp_earn_amount: parseInt(e.target.value) || 0 })}
                       placeholder={data.lp_earn_basis === 'lose' || data.lp_earn_basis === 'win' ? '1000000' : '1000'}
-                      className="w-20 h-8 bg-card border-border text-center text-sm"
+                      className="w-24 h-8 bg-card border-border text-center text-sm"
                     />
-                    <span className="text-xs text-muted-foreground">
-                      {data.lp_earn_basis === 'turnover' && 'TO'}
-                      {data.lp_earn_basis === 'win' && 'Win'}
-                      {data.lp_earn_basis === 'lose' && 'Loss'}
-                      {data.lp_earn_basis === 'deposit' && 'Dep'}
-                      {!data.lp_earn_basis && 'TO'}
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {data.lp_earn_basis === 'turnover' && 'TO →'}
+                      {data.lp_earn_basis === 'win' && 'Win →'}
+                      {data.lp_earn_basis === 'lose' && 'Loss →'}
+                      {data.lp_earn_basis === 'deposit' && 'Dep →'}
+                      {!data.lp_earn_basis && 'TO →'}
                     </span>
-                    <span className="text-xs text-muted-foreground">→</span>
                     <Input
                       type="number"
                       min={1}
                       value={data.lp_earn_point_amount || ''}
                       onChange={(e) => onChange({ lp_earn_point_amount: parseInt(e.target.value) || 0 })}
                       placeholder="1"
-                      className="w-16 h-8 bg-card border-border text-center text-sm"
+                      className="w-20 h-8 bg-card border-border text-center text-sm"
                     />
-                    <span className="text-xs text-muted-foreground">{getPointUnitShort(data.promo_unit)}</span>
+                    <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">{getPointUnitShort(data.promo_unit)}</span>
                   </div>
                 </div>
               </div>
