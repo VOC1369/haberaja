@@ -643,6 +643,12 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
     ];
     const step2Percentage = Math.round((step2Fields.filter(Boolean).length / step2Fields.length) * 100);
     
+    // Step 3: Jenis Program
+    const step3Fields = [
+      !!data.program_classification
+    ];
+    const step3Percentage = Math.round((step3Fields.filter(Boolean).length / step3Fields.length) * 100);
+    
     // Step 4: Konfigurasi Reward (Event Config)
     let step4Fields: boolean[] = [];
     if (data.reward_mode === 'fixed') {
@@ -674,19 +680,20 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
     return {
       step1: { percentage: step1Percentage, complete: step1Percentage === 100 },
       step2: { percentage: step2Percentage, complete: step2Percentage === 100 },
+      step3: { percentage: step3Percentage, complete: step3Percentage === 100 },
       step4: { percentage: step4Percentage, complete: step4Percentage === 100 }
     };
   }, [data]);
 
   const overallScore = useMemo(() => {
     return Math.round(
-      (stepCompletion.step1.percentage + stepCompletion.step2.percentage + stepCompletion.step4.percentage) / 3
+      (stepCompletion.step1.percentage + stepCompletion.step2.percentage + stepCompletion.step3.percentage + stepCompletion.step4.percentage) / 4
     );
   }, [stepCompletion]);
 
-  const hasCriticalErrors = !stepCompletion.step1.complete || !stepCompletion.step2.complete || !stepCompletion.step4.complete;
+  const hasCriticalErrors = !stepCompletion.step1.complete || !stepCompletion.step2.complete || !stepCompletion.step3.complete || !stepCompletion.step4.complete;
 
-  const isAllComplete = stepCompletion.step1.complete && stepCompletion.step2.complete && stepCompletion.step4.complete;
+  const isAllComplete = stepCompletion.step1.complete && stepCompletion.step2.complete && stepCompletion.step3.complete && stepCompletion.step4.complete;
 
   return (
     <div className="rounded-xl bg-card border border-border p-6 mb-6">
