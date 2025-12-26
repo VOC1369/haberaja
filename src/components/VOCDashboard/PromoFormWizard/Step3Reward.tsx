@@ -325,7 +325,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           ].map((mode) => (
             <div
               key={mode.value}
-              onClick={() => onChange({ reward_mode: mode.value as 'fixed' | 'tier' | 'formula' })}
+              onClick={() => {
+                const newMode = mode.value as 'fixed' | 'tier' | 'formula';
+                if (newMode !== data.reward_mode) {
+                  if (data.has_subcategories && data.subcategories?.length > 0) {
+                    toast.warning("Mode reward berubah - sub kategori di-reset");
+                  }
+                  onChange({ 
+                    reward_mode: newMode,
+                    has_subcategories: false,
+                    subcategories: []
+                  });
+                }
+              }}
               className={data.reward_mode === mode.value ? 'radio-card-selected' : 'radio-card'}
             >
               <input type="radio" className="sr-only" checked={data.reward_mode === mode.value} readOnly />
