@@ -740,7 +740,7 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
       <p className="text-sm font-medium text-foreground mb-3">Block Completion</p>
 
       {/* Block Completion Grid - Bottom */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <BlockCard
           blockKey="step1"
           label="Identitas Promo"
@@ -754,6 +754,13 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
           percentage={stepCompletion.step2.percentage}
           complete={stepCompletion.step2.complete}
           onClick={() => onGoToStep?.(2)}
+        />
+        <BlockCard
+          blockKey="step3"
+          label="Jenis Program"
+          percentage={stepCompletion.step3.percentage}
+          complete={stepCompletion.step3.complete}
+          onClick={() => onGoToStep?.(3)}
         />
         <BlockCard
           blockKey="step4"
