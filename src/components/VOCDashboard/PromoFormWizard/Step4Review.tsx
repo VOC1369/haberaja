@@ -74,6 +74,25 @@ export const getExplicitMaxBonus = (sub: any): number => {
 // Helper: capitalize first letter
 const capitalizeFirst = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
+// Helper: Dynamic Point Unit labels based on promo_unit selection
+const getPointUnitLabel = (promoUnit: string | undefined) => {
+  switch (promoUnit) {
+    case 'exp': return 'Experience Point';
+    case 'hybrid': return 'Point';
+    case 'lp':
+    default: return 'Loyalty Point';
+  }
+};
+
+const getPointUnitShort = (promoUnit: string | undefined) => {
+  switch (promoUnit) {
+    case 'exp': return 'EXP';
+    case 'hybrid': return 'Point';
+    case 'lp':
+    default: return 'LP';
+  }
+};
+
 /**
  * Get calculation period display string (multi-source)
  * Priority: 
@@ -1133,7 +1152,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     <ValueBox label="Satuan Poin" value={data.promo_unit} />
                     <ValueBox label="Mode EXP" value={data.exp_mode} />
                     <ValueBox 
-                      label="Basis Perhitungan LP" 
+                      label={`Basis Perhitungan ${getPointUnitShort(data.promo_unit)}`}
                       value={
                         data.lp_earn_basis === 'turnover' ? 'Turnover' :
                         data.lp_earn_basis === 'win' ? 'Kemenangan' :
@@ -1149,7 +1168,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                             data.lp_earn_basis === 'win' ? 'Win' :
                             data.lp_earn_basis === 'lose' ? 'Loss' :
                             data.lp_earn_basis === 'deposit' ? 'Deposit' : 'TO'
-                          } → ${data.lp_earn_point_amount} LP` 
+                          } → ${data.lp_earn_point_amount} ${getPointUnitShort(data.promo_unit)}` 
                         : '-'
                       } 
                     />
