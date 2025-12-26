@@ -188,6 +188,25 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
     return baseOption?.label?.toLowerCase() || 'aktivitas';
   };
 
+  // Helper untuk menampilkan nama point unit yang benar berdasarkan pilihan user
+  const getPointUnitLabel = (pointUnit: string | undefined) => {
+    switch (pointUnit) {
+      case 'exp': return 'Experience Point';
+      case 'hybrid': return 'Point';
+      case 'lp':
+      default: return 'Loyalty Point';
+    }
+  };
+
+  const getPointUnitShort = (pointUnit: string | undefined) => {
+    switch (pointUnit) {
+      case 'exp': return 'EXP';
+      case 'hybrid': return 'Point';
+      case 'lp':
+      default: return 'LP';
+    }
+  };
+
   const showC2 = data.promo_unit === 'lp' || data.promo_unit === 'hybrid';
   const showC3 = data.promo_unit === 'lp' || data.promo_unit === 'hybrid' || 
                  data.exp_mode === 'exp_store' || data.exp_mode === 'both';
@@ -2753,10 +2772,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
-              {/* A. Basis Perhitungan LP - DROPDOWN */}
+              {/* A. Basis Perhitungan - DROPDOWN */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">
-                  Basis Perhitungan LP <span className="text-destructive">*</span>
+                  Basis Perhitungan {getPointUnitShort(data.promo_unit)} <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   value={data.lp_earn_basis || 'turnover'}
@@ -2773,14 +2792,14 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Menentukan aktivitas apa yang menghasilkan Loyalty Point
+                  Menentukan aktivitas apa yang menghasilkan {getPointUnitLabel(data.promo_unit)}
                 </p>
               </div>
 
-              {/* B. Aturan Perolehan LP - UI DINAMIS */}
+              {/* B. Aturan Perolehan - UI DINAMIS */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">
-                  Aturan Perolehan Loyalty Point <span className="text-destructive">*</span>
+                  Aturan Perolehan {getPointUnitLabel(data.promo_unit)} <span className="text-destructive">*</span>
                 </Label>
                 
                 <div className="flex items-center gap-2 flex-wrap p-3 bg-muted rounded-lg">
@@ -2810,24 +2829,24 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     placeholder="1"
                     className="w-20 bg-card border-border text-center"
                   />
-                  <span className="text-sm text-muted-foreground">Loyalty Point</span>
+                  <span className="text-sm text-muted-foreground">{getPointUnitLabel(data.promo_unit)}</span>
                 </div>
                 
                 {/* Helper text DINAMIS */}
                 <p className="text-xs text-muted-foreground">
-                  {data.lp_earn_basis === 'turnover' && '💡 Loyalty Point terakumulasi otomatis berdasarkan total turnover pemain.'}
-                  {data.lp_earn_basis === 'win' && '💡 Loyalty Point diberikan berdasarkan total kemenangan pemain.'}
-                  {data.lp_earn_basis === 'lose' && '💡 Loyalty Point diberikan sebagai kompensasi atas kekalahan bersih pemain.'}
-                  {data.lp_earn_basis === 'deposit' && '💡 Loyalty Point diberikan berdasarkan total deposit pemain.'}
-                  {!data.lp_earn_basis && '💡 Loyalty Point terakumulasi otomatis berdasarkan total turnover pemain.'}
+                  {data.lp_earn_basis === 'turnover' && `💡 ${getPointUnitLabel(data.promo_unit)} terakumulasi otomatis berdasarkan total turnover pemain.`}
+                  {data.lp_earn_basis === 'win' && `💡 ${getPointUnitLabel(data.promo_unit)} diberikan berdasarkan total kemenangan pemain.`}
+                  {data.lp_earn_basis === 'lose' && `💡 ${getPointUnitLabel(data.promo_unit)} diberikan sebagai kompensasi atas kekalahan bersih pemain.`}
+                  {data.lp_earn_basis === 'deposit' && `💡 ${getPointUnitLabel(data.promo_unit)} diberikan berdasarkan total deposit pemain.`}
+                  {!data.lp_earn_basis && `💡 ${getPointUnitLabel(data.promo_unit)} terakumulasi otomatis berdasarkan total turnover pemain.`}
                 </p>
               </div>
 
               {/* 2️⃣ Daftar Hadiah Penukaran (Redeem Rule) */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Daftar Hadiah Penukaran Loyalty Point</Label>
+                <Label className="text-sm font-medium">Daftar Hadiah Penukaran {getPointUnitLabel(data.promo_unit)}</Label>
                 <p className="text-xs text-muted-foreground">
-                  💡 Penukaran dilakukan dengan memilih hadiah di bawah sesuai jumlah Loyalty Point yang dimiliki.
+                  💡 Penukaran dilakukan dengan memilih hadiah di bawah sesuai jumlah {getPointUnitLabel(data.promo_unit)} yang dimiliki.
                 </p>
               </div>
             </div>
