@@ -6,6 +6,26 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Format number ke Indonesian format dengan titik ribuan
+ * e.g., 10000000 → "10.000.000"
+ */
+export function formatNumberWithSeparator(num: number): string {
+  if (isNaN(num) || num === 0) return '';
+  return num.toLocaleString('id-ID');
+}
+
+/**
+ * Parse string dengan format Indonesian ke number
+ * e.g., "10.000.000" → 10000000
+ */
+export function parseFormattedNumber(str: string): number {
+  if (!str) return 0;
+  // Hapus titik ribuan, ganti koma desimal dengan titik
+  const normalized = str.replace(/\./g, '').replace(',', '.');
+  return parseFloat(normalized) || 0;
+}
+
+/**
  * Format promo type to Title Case (without underscores)
  * e.g., "event_level_up" → "Event Level Up"
  * e.g., "welcome_bonus" → "Welcome Bonus"
