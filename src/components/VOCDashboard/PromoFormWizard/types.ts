@@ -40,8 +40,9 @@ export const PKB_FIELD_WHITELIST = [
   'exp_mode',
   'lp_calc_method',
   'exp_calc_method',
-  'lp_earn_turnover_amount',
-  'lp_earn_point_amount',
+  'lp_earn_basis',           // Basis perhitungan LP: 'turnover' | 'win' | 'lose' | 'deposit'
+  'lp_earn_amount',          // Setiap [X] (unit sesuai basis)
+  'lp_earn_point_amount',    // → mendapatkan [Y] LP
   'exp_formula',
   'lp_value',
   'exp_value',
@@ -161,8 +162,9 @@ export interface PromoFormData {
   lp_calc_method: string;
   exp_calc_method: string;
   // LP Earn Rule - structured (replaces free-text lp_formula)
-  lp_earn_turnover_amount: number;  // Setiap [X] Turnover
-  lp_earn_point_amount: number;      // → mendapatkan [Y] LP
+  lp_earn_basis: 'turnover' | 'win' | 'lose' | 'deposit';  // Basis perhitungan LP
+  lp_earn_amount: number;          // Setiap [X] (unit sesuai basis)
+  lp_earn_point_amount: number;    // → mendapatkan [Y] LP
   exp_formula: string;
   lp_value: string;
   exp_value: string;
@@ -571,6 +573,16 @@ export const TIER_ARCHETYPE_OPTIONS = [
 
 export type TierArchetype = typeof TIER_ARCHETYPE_OPTIONS[number]['value'];
 
+// LP Earn Basis Options - untuk dropdown "Basis Perhitungan LP"
+export const LP_EARN_BASIS_OPTIONS = [
+  { value: 'turnover' as const, label: 'Turnover', unit: 'Turnover' },
+  { value: 'win' as const, label: 'Kemenangan (Win)', unit: 'Kemenangan' },
+  { value: 'lose' as const, label: 'Kekalahan Bersih (Net Loss)', unit: 'Kekalahan Bersih' },
+  { value: 'deposit' as const, label: 'Deposit', unit: 'Deposit' },
+] as const;
+
+export type LpEarnBasis = typeof LP_EARN_BASIS_OPTIONS[number]['value'];
+
 export const PROMO_TYPES = [
   'Rollingan / Cashback',
   'Welcome Bonus',
@@ -793,8 +805,9 @@ export const initialPromoData: PromoFormData = {
   exp_mode: 'level_up',
   lp_calc_method: 'turnover',
   exp_calc_method: 'turnover',
-  lp_earn_turnover_amount: 1000,  // Default: 1000 Turnover
-  lp_earn_point_amount: 1,         // Default: 1 LP
+  lp_earn_basis: 'turnover',     // Default: Turnover
+  lp_earn_amount: 1000,          // Setiap 1000
+  lp_earn_point_amount: 1,       // → 1 LP
   exp_formula: '',
   lp_value: '',
   exp_value: '',
@@ -941,7 +954,8 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   exp_mode: 'level_up',
   lp_calc_method: 'turnover',
   exp_calc_method: 'turnover',
-  lp_earn_turnover_amount: 1000,
+  lp_earn_basis: 'turnover',
+  lp_earn_amount: 1000,
   lp_earn_point_amount: 1,
   exp_formula: '',
   lp_value: '',

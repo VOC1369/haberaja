@@ -2753,7 +2753,31 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
-              {/* 1️⃣ Aturan Perolehan Loyalty Point (Earn Rule) */}
+              {/* A. Basis Perhitungan LP - DROPDOWN */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">
+                  Basis Perhitungan LP <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={data.lp_earn_basis || 'turnover'}
+                  onValueChange={(value) => onChange({ lp_earn_basis: value as 'turnover' | 'win' | 'lose' | 'deposit' })}
+                >
+                  <SelectTrigger className="bg-card border-border">
+                    <SelectValue placeholder="Pilih basis perhitungan" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border z-50">
+                    <SelectItem value="turnover">Turnover</SelectItem>
+                    <SelectItem value="win">Kemenangan (Win)</SelectItem>
+                    <SelectItem value="lose">Kekalahan Bersih (Net Loss)</SelectItem>
+                    <SelectItem value="deposit">Deposit</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Menentukan aktivitas apa yang menghasilkan Loyalty Point
+                </p>
+              </div>
+
+              {/* B. Aturan Perolehan LP - UI DINAMIS */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">
                   Aturan Perolehan Loyalty Point <span className="text-destructive">*</span>
@@ -2764,12 +2788,20 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <Input
                     type="number"
                     min={1}
-                    value={data.lp_earn_turnover_amount || ''}
-                    onChange={(e) => onChange({ lp_earn_turnover_amount: parseInt(e.target.value) || 0 })}
-                    placeholder="1000"
-                    className="w-24 bg-card border-border text-center"
+                    value={data.lp_earn_amount || ''}
+                    onChange={(e) => onChange({ lp_earn_amount: parseInt(e.target.value) || 0 })}
+                    placeholder={data.lp_earn_basis === 'lose' || data.lp_earn_basis === 'win' ? '1000000' : '1000'}
+                    className="w-28 bg-card border-border text-center"
                   />
-                  <span className="text-sm text-muted-foreground">Turnover → mendapatkan</span>
+                  {/* UNIT DINAMIS berdasarkan basis */}
+                  <span className="text-sm text-muted-foreground">
+                    {data.lp_earn_basis === 'turnover' && 'Turnover'}
+                    {data.lp_earn_basis === 'win' && 'Kemenangan'}
+                    {data.lp_earn_basis === 'lose' && 'Kekalahan Bersih'}
+                    {data.lp_earn_basis === 'deposit' && 'Deposit'}
+                    {!data.lp_earn_basis && 'Turnover'}
+                  </span>
+                  <span className="text-sm text-muted-foreground">→ mendapatkan</span>
                   <Input
                     type="number"
                     min={1}
@@ -2781,8 +2813,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <span className="text-sm text-muted-foreground">Loyalty Point</span>
                 </div>
                 
+                {/* Helper text DINAMIS */}
                 <p className="text-xs text-muted-foreground">
-                  💡 Loyalty Point akan terakumulasi otomatis berdasarkan total turnover pemain.
+                  {data.lp_earn_basis === 'turnover' && '💡 Loyalty Point terakumulasi otomatis berdasarkan total turnover pemain.'}
+                  {data.lp_earn_basis === 'win' && '💡 Loyalty Point diberikan berdasarkan total kemenangan pemain.'}
+                  {data.lp_earn_basis === 'lose' && '💡 Loyalty Point diberikan sebagai kompensasi atas kekalahan bersih pemain.'}
+                  {data.lp_earn_basis === 'deposit' && '💡 Loyalty Point diberikan berdasarkan total deposit pemain.'}
+                  {!data.lp_earn_basis && '💡 Loyalty Point terakumulasi otomatis berdasarkan total turnover pemain.'}
                 </p>
               </div>
 
