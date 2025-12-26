@@ -116,7 +116,22 @@ export function SubCategoryCard({
     return '';
   });
 
-  // Options state for dropdowns
+  // State for Max Bonus input with thousand separators
+  const [maxBonusInput, setMaxBonusInput] = useState(() => {
+    if (subCategory.max_bonus !== undefined && subCategory.max_bonus !== null && subCategory.max_bonus > 0) {
+      return formatThousands(subCategory.max_bonus);
+    }
+    return '';
+  });
+
+  // State for Minimal Perhitungan input with thousand separators
+  const [minBaseInput, setMinBaseInput] = useState(() => {
+    if (subCategory.minimum_base !== undefined && subCategory.minimum_base !== null && subCategory.minimum_base > 0) {
+      return formatThousands(subCategory.minimum_base);
+    }
+    return '';
+  });
+
   const [calcBaseOptions, setCalcBaseOptions] = useState<SelectOption[]>(CALCULATION_BASES.map(c => ({
     value: c.value,
     label: c.label
@@ -337,10 +352,21 @@ export function SubCategoryCard({
             </div>
             <Input 
               type="text" 
-              value={subCategory.max_bonus_unlimited ? '' : (subCategory.max_bonus_same_as_global ? '' : (subCategory.max_bonus ? subCategory.max_bonus.toLocaleString('id-ID') : ''))} 
-              onChange={e => onChange({
-                max_bonus: Number(e.target.value.replace(/\D/g, ''))
-              })} 
+              inputMode="numeric"
+              value={subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global ? '' : maxBonusInput} 
+              onChange={e => {
+                const rawValue = e.target.value.replace(/[^0-9.]/g, '');
+                setMaxBonusInput(rawValue);
+                const numValue = parseFormattedNumber(rawValue);
+                onChange({ max_bonus: numValue });
+              }}
+              onBlur={() => {
+                if (subCategory.max_bonus > 0 && !subCategory.max_bonus_unlimited && !subCategory.max_bonus_same_as_global) {
+                  setMaxBonusInput(formatThousands(subCategory.max_bonus));
+                } else {
+                  setMaxBonusInput('');
+                }
+              }}
               placeholder={subCategory.max_bonus_unlimited ? "Unlimited / Tanpa Batas" : (subCategory.max_bonus_same_as_global ? "-" : "Contoh: 100.000")} 
               disabled={subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global} 
               className={(subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global) ? "opacity-50" : ""} 
@@ -489,10 +515,21 @@ export function SubCategoryCard({
               </div>
               <Input 
                 type="text" 
-                value={subCategory.minimum_base_enabled && subCategory.minimum_base ? subCategory.minimum_base.toLocaleString('id-ID') : ''} 
-                onChange={e => onChange({
-                  minimum_base: Number(e.target.value.replace(/\D/g, ''))
-                })} 
+                inputMode="numeric"
+                value={!subCategory.minimum_base_enabled ? '' : minBaseInput} 
+                onChange={e => {
+                  const rawValue = e.target.value.replace(/[^0-9.]/g, '');
+                  setMinBaseInput(rawValue);
+                  const numValue = parseFormattedNumber(rawValue);
+                  onChange({ minimum_base: numValue });
+                }}
+                onBlur={() => {
+                  if (subCategory.minimum_base > 0 && subCategory.minimum_base_enabled) {
+                    setMinBaseInput(formatThousands(subCategory.minimum_base));
+                  } else {
+                    setMinBaseInput('');
+                  }
+                }}
                 placeholder={subCategory.minimum_base_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
                 disabled={!subCategory.minimum_base_enabled}
                 className={!subCategory.minimum_base_enabled ? "opacity-50" : ""}
