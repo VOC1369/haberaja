@@ -1061,6 +1061,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
+              {/* Helper text based on selection */}
+              {data.reward_distribution && (
+                <p className="text-xs text-muted-foreground">
+                  {REWARD_DISTRIBUTIONS.find(d => d.value === data.reward_distribution)?.helper || ''}
+                </p>
+              )}
+              
               {/* Conditional untuk Hari Tertentu */}
               {(data.claim_frequency === 'hari_tertentu' || data.reward_distribution === 'hari_tertentu') && (
                 <div className="mt-4 p-4 bg-muted rounded-lg space-y-4">
@@ -2168,6 +2175,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
+              {/* Helper text based on selection */}
+              {data.reward_distribution && (
+                <p className="text-xs text-muted-foreground">
+                  {REWARD_DISTRIBUTIONS.find(d => d.value === data.reward_distribution)?.helper || ''}
+                </p>
+              )}
+              
               {/* Conditional untuk Hari Tertentu */}
               {(data.claim_frequency === 'hari_tertentu' || data.reward_distribution === 'hari_tertentu') && (
                 <div className="mt-4 p-4 bg-muted rounded-lg space-y-4">
@@ -3027,7 +3041,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 <Clock className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
                   <div className="text-sm font-semibold text-foreground">3. Hadiah dan Waktu</div>
-                  <div className="text-xs text-muted-foreground">Waktu claim dan periode pembagian</div>
+                  <div className="text-xs text-muted-foreground">Jenis hadiah, waktu claim, dan periode pembagian</div>
                 </div>
               </div>
               <ChevronDown className="h-5 w-5 text-muted-foreground" />
