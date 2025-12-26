@@ -97,7 +97,24 @@ export function SubCategoryCard({
   onInvertGlobalPayoutDirection
 }: SubCategoryCardProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [calcValueInput, setCalcValueInput] = useState(() => subCategory.calculation_value !== undefined && subCategory.calculation_value !== null ? String(subCategory.calculation_value).replace('.', ',') : '');
+  // Helper to format number with thousand separators (Indonesian format: dots)
+  const formatThousands = (num: number): string => {
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
+  
+  // Helper to parse formatted number back to numeric value
+  const parseFormattedNumber = (str: string): number => {
+    // Remove thousand separators (dots) and convert comma to dot for decimal
+    const cleaned = str.replace(/\./g, '').replace(',', '.');
+    return parseFloat(cleaned) || 0;
+  };
+
+  const [calcValueInput, setCalcValueInput] = useState(() => {
+    if (subCategory.calculation_value !== undefined && subCategory.calculation_value !== null && subCategory.calculation_value > 0) {
+      return formatThousands(subCategory.calculation_value);
+    }
+    return '';
+  });
 
   // Options state for dropdowns
   const [calcBaseOptions, setCalcBaseOptions] = useState<SelectOption[]>(CALCULATION_BASES.map(c => ({
@@ -430,25 +447,28 @@ export function SubCategoryCard({
             <div className="space-y-2">
               <Label>Nilai Bonus</Label>
               <div className="relative">
-                <Input type="text" inputMode="decimal" value={calcValueInput} onChange={e => {
-                const rawValue = e.target.value.replace(/[^0-9.,]/g, '');
-                setCalcValueInput(rawValue);
-                const normalizedValue = rawValue.replace(',', '.');
-                const numValue = parseFloat(normalizedValue);
-                if (!isNaN(numValue)) {
-                  onChange({
-                    calculation_value: numValue
-                  });
-                } else if (rawValue === '' || rawValue === '0' || rawValue === '0,' || rawValue === '0.') {
-                  onChange({
-                    calculation_value: 0
-                  });
-                }
-              }} onBlur={() => {
-                if (subCategory.calculation_value !== undefined && subCategory.calculation_value !== null) {
-                  setCalcValueInput(String(subCategory.calculation_value).replace('.', ','));
-                }
-              }} placeholder="Contoh: 0,5" className="pr-10" />
+                <Input 
+                  type="text" 
+                  inputMode="numeric" 
+                  value={calcValueInput} 
+                  onChange={e => {
+                    // Allow only digits and dots (thousand separator)
+                    const rawValue = e.target.value.replace(/[^0-9.]/g, '');
+                    setCalcValueInput(rawValue);
+                    const numValue = parseFormattedNumber(rawValue);
+                    onChange({ calculation_value: numValue });
+                  }} 
+                  onBlur={() => {
+                    // Format with thousand separators on blur
+                    if (subCategory.calculation_value !== undefined && subCategory.calculation_value !== null && subCategory.calculation_value > 0) {
+                      setCalcValueInput(formatThousands(subCategory.calculation_value));
+                    } else {
+                      setCalcValueInput('');
+                    }
+                  }} 
+                  placeholder="Contoh: 25.000" 
+                  className="pr-10" 
+                />
                 {subCategory.calculation_method === 'percentage' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>}
               </div>
             </div>
