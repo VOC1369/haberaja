@@ -2,6 +2,7 @@ import { useState } from "react";
 import { format, parse } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { FormattedNumberInput } from "@/components/ui/formatted-number-input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -2801,13 +2802,12 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </Label>
                   <div className="flex items-center justify-center gap-3 p-3 bg-muted rounded-lg">
                     <span className="text-xs text-muted-foreground whitespace-nowrap">Setiap</span>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={data.lp_earn_amount || ''}
-                      onChange={(e) => onChange({ lp_earn_amount: parseInt(e.target.value) || 0 })}
-                      placeholder={data.lp_earn_basis === 'lose' || data.lp_earn_basis === 'win' ? '1000000' : '1000'}
+                    <FormattedNumberInput
+                      value={data.lp_earn_amount || 0}
+                      onChange={(val) => onChange({ lp_earn_amount: val })}
+                      placeholder={data.lp_earn_basis === 'lose' || data.lp_earn_basis === 'win' ? '1.000.000' : '1.000'}
                       className="w-36 h-8 bg-card border-border text-center text-sm"
+                      min={1}
                     />
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {data.lp_earn_basis === 'turnover' && 'TO →'}
