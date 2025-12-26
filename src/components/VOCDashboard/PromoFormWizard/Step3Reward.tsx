@@ -2776,9 +2776,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               
               {/* Row 2: EXP Mode + Aturan Perolehan */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Col 1: EXP Mode */}
+                {/* Col 1: Point Mode */}
                 <div className="space-y-2">
-                  <Label className="text-sm">EXP Mode</Label>
+                  <Label className="text-sm">{getPointUnitShort(data.promo_unit)} Mode</Label>
                   <Select
                     value={data.exp_mode || 'exp_store'}
                     onValueChange={(value: 'level_up' | 'exp_store' | 'both') => onChange({ exp_mode: value })}
