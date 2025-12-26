@@ -225,18 +225,13 @@ export function SubCategoryCard({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Jenis Hadiah</Label>
-              {/* Toggle SELALU tampil & SELALU clickable - inverse logic */}
+              {/* Toggle On/Off untuk field */}
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Sama dengan Promo Global</span>
-                <Switch checked={subCategory.jenis_hadiah_same_as_global} onCheckedChange={checked => {
+                <Switch checked={!subCategory.jenis_hadiah_same_as_global} onCheckedChange={checked => {
                 onChange({
-                  jenis_hadiah_same_as_global: checked,
-                  jenis_hadiah: checked ? '' : subCategory.jenis_hadiah
+                  jenis_hadiah_same_as_global: !checked,
+                  jenis_hadiah: !checked ? '' : subCategory.jenis_hadiah
                 });
-                // Inverse logic: jika sub-category ON, global harus OFF
-                if (checked && globalJenisHadiahEnabled && onInvertGlobalJenisHadiah) {
-                  onInvertGlobalJenisHadiah();
-                }
               }} />
               </div>
             </div>
@@ -244,7 +239,7 @@ export function SubCategoryCard({
             jenis_hadiah: value,
             physical_reward_name: value !== 'hadiah_fisik' ? '' : subCategory.physical_reward_name,
             cash_reward_amount: value !== 'uang_tunai' ? undefined : subCategory.cash_reward_amount
-          })} options={dinamisRewardTypeOptions} onAddOption={option => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])} onDeleteOption={value => setDinamisRewardTypeOptions(dinamisRewardTypeOptions.filter(d => d.value !== value))} placeholder={subCategory.jenis_hadiah_same_as_global ? "Mengikuti global" : "Pilih jenis"} disabled={subCategory.jenis_hadiah_same_as_global} className={subCategory.jenis_hadiah_same_as_global ? "opacity-50" : ""} />
+          })} options={dinamisRewardTypeOptions} onAddOption={option => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])} onDeleteOption={value => setDinamisRewardTypeOptions(dinamisRewardTypeOptions.filter(d => d.value !== value))} placeholder={subCategory.jenis_hadiah_same_as_global ? "-" : "Pilih jenis"} disabled={subCategory.jenis_hadiah_same_as_global} className={subCategory.jenis_hadiah_same_as_global ? "opacity-50" : ""} />
             {/* Jika Hadiah Fisik dipilih, tampilkan input nama hadiah */}
             {subCategory.jenis_hadiah === 'hadiah_fisik' && !subCategory.jenis_hadiah_same_as_global && (
               <div className="grid grid-cols-3 gap-4 mt-3">
@@ -308,21 +303,16 @@ export function SubCategoryCard({
                     }} 
                   />
                 </div>
-                {/* Toggle Sama dengan Global */}
+                {/* Toggle On/Off untuk field */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Sama dengan Global</span>
                   <Switch 
-                    checked={subCategory.max_bonus_same_as_global} 
+                    checked={!subCategory.max_bonus_same_as_global} 
                     disabled={subCategory.max_bonus_unlimited}
                     onCheckedChange={checked => {
                       onChange({
-                        max_bonus_same_as_global: checked,
-                        max_bonus: checked ? 0 : subCategory.max_bonus
+                        max_bonus_same_as_global: !checked,
+                        max_bonus: !checked ? 0 : subCategory.max_bonus
                       });
-                      // Inverse logic: jika sub-category ON, global harus OFF
-                      if (checked && globalMaxBonusEnabled && onInvertGlobalMaxBonus) {
-                        onInvertGlobalMaxBonus();
-                      }
                     }} 
                   />
                 </div>
@@ -334,7 +324,7 @@ export function SubCategoryCard({
               onChange={e => onChange({
                 max_bonus: Number(e.target.value.replace(/\D/g, ''))
               })} 
-              placeholder={subCategory.max_bonus_unlimited ? "Unlimited / Tanpa Batas" : (subCategory.max_bonus_same_as_global ? "Mengikuti global" : "Contoh: 100.000")} 
+              placeholder={subCategory.max_bonus_unlimited ? "Unlimited / Tanpa Batas" : (subCategory.max_bonus_same_as_global ? "-" : "Contoh: 100.000")} 
               disabled={subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global} 
               className={(subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global) ? "opacity-50" : ""} 
             />
@@ -347,18 +337,13 @@ export function SubCategoryCard({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Payout Direction</Label>
-              {/* Toggle SELALU tampil & SELALU clickable - inverse logic */}
+              {/* Toggle On/Off untuk field */}
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Sama dengan Promo Global</span>
-                <Switch checked={subCategory.payout_direction_same_as_global} onCheckedChange={checked => {
+                <Switch checked={!subCategory.payout_direction_same_as_global} onCheckedChange={checked => {
                 onChange({
-                  payout_direction_same_as_global: checked,
-                  payout_direction: checked ? 'after' : subCategory.payout_direction
+                  payout_direction_same_as_global: !checked,
+                  payout_direction: !checked ? 'after' : subCategory.payout_direction
                 });
-                // Inverse logic: jika sub-category ON, global harus OFF
-                if (checked && globalPayoutDirectionEnabled && onInvertGlobalPayoutDirection) {
-                  onInvertGlobalPayoutDirection();
-                }
               }} />
               </div>
             </div>
