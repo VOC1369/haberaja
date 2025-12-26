@@ -3033,15 +3033,161 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <ChevronDown className="h-5 w-5 text-muted-foreground" />
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Periode Klaim</Label>
-                  <SelectWithAddNew value={data.claim_frequency} onValueChange={(value) => onChange({ claim_frequency: value })} options={claimFrequencyOptions} onAddOption={(option) => setClaimFrequencyOptions([...claimFrequencyOptions, option])} onDeleteOption={handleDeleteClaimFrequency} placeholder="Pilih periode" />
+              <div className="space-y-4">
+                {/* Row 1: Periode Klaim + Waktu Distribusi */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Periode Klaim</Label>
+                    <SelectWithAddNew value={data.claim_frequency} onValueChange={(value) => onChange({ claim_frequency: value })} options={claimFrequencyOptions} onAddOption={(option) => setClaimFrequencyOptions([...claimFrequencyOptions, option])} onDeleteOption={handleDeleteClaimFrequency} placeholder="Pilih periode" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Waktu Pembagian Bonus</Label>
+                    <SelectWithAddNew value={data.reward_distribution} onValueChange={(value) => onChange({ reward_distribution: value })} options={rewardDistributionOptions} onAddOption={(option) => setRewardDistributionOptions([...rewardDistributionOptions, option])} onDeleteOption={handleDeleteRewardDistribution} placeholder="Pilih waktu pembagian" />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Waktu Pembagian Bonus</Label>
-                  <SelectWithAddNew value={data.reward_distribution} onValueChange={(value) => onChange({ reward_distribution: value })} options={rewardDistributionOptions} onAddOption={(option) => setRewardDistributionOptions([...rewardDistributionOptions, option])} onDeleteOption={handleDeleteRewardDistribution} placeholder="Pilih waktu pembagian" />
-                </div>
+
+                {/* Helper text based on selection */}
+                {data.reward_distribution && (
+                  <p className="text-xs text-muted-foreground">
+                    {REWARD_DISTRIBUTIONS.find(d => d.value === data.reward_distribution)?.helper || ''}
+                  </p>
+                )}
+
+                {/* Conditional Day & Time Selector for Hari Tertentu */}
+                {data.reward_distribution === 'hari_tertentu' && (
+                  <div className="p-4 bg-muted rounded-lg space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Hari</Label>
+                        <SelectWithAddNew
+                          value={data.distribution_day}
+                          onValueChange={(value) => onChange({ distribution_day: value })}
+                          options={[
+                            { value: 'senin', label: 'Senin' },
+                            { value: 'selasa', label: 'Selasa' },
+                            { value: 'rabu', label: 'Rabu' },
+                            { value: 'kamis', label: 'Kamis' },
+                            { value: 'jumat', label: 'Jumat' },
+                            { value: 'sabtu', label: 'Sabtu' },
+                            { value: 'minggu', label: 'Minggu' },
+                            { value: 'setiap_hari', label: 'Setiap Hari' },
+                          ]}
+                          onAddOption={() => {}}
+                          onDeleteOption={() => {}}
+                          placeholder="Pilih hari"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Jam (WIB)</Label>
+                        <SelectWithAddNew
+                          value={data.distribution_time}
+                          onValueChange={(value) => onChange({ distribution_time: value })}
+                          options={[
+                            { value: '00:00', label: '00:00' },
+                            { value: '06:00', label: '06:00' },
+                            { value: '09:00', label: '09:00' },
+                            { value: '12:00', label: '12:00' },
+                            { value: '15:00', label: '15:00' },
+                            { value: '18:00', label: '18:00' },
+                            { value: '21:00', label: '21:00' },
+                            { value: '23:59', label: '23:59' },
+                          ]}
+                          onAddOption={() => {}}
+                          onDeleteOption={() => {}}
+                          placeholder="Pilih jam"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      💡 Contoh: Rollingan mingguan dikirim setiap Senin 00:00 WIB.
+                    </p>
+                  </div>
+                )}
+
+                {/* Conditional Date Range Selector for Tanggal Tertentu */}
+                {data.reward_distribution === 'tanggal_tertentu' && (
+                  <div className="p-4 bg-muted rounded-lg space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Dari Tanggal</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !data.distribution_date_from && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {data.distribution_date_from ? format(parse(data.distribution_date_from, 'yyyy-MM-dd', new Date()), 'dd MMMM yyyy') : "Pilih tanggal"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={data.distribution_date_from ? parse(data.distribution_date_from, 'yyyy-MM-dd', new Date()) : undefined}
+                              onSelect={(date) => onChange({ distribution_date_from: date ? format(date, 'yyyy-MM-dd') : '' })}
+                              initialFocus
+                              className="pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Hingga Tanggal</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !data.distribution_date_until && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {data.distribution_date_until ? format(parse(data.distribution_date_until, 'yyyy-MM-dd', new Date()), 'dd MMMM yyyy') : "Pilih tanggal"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={data.distribution_date_until ? parse(data.distribution_date_until, 'yyyy-MM-dd', new Date()) : undefined}
+                              onSelect={(date) => onChange({ distribution_date_until: date ? format(date, 'yyyy-MM-dd') : '' })}
+                              initialFocus
+                              className="pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div className="space-y-2">
+                        <Label>Jam (WIB)</Label>
+                        <SelectWithAddNew
+                          value={data.distribution_time}
+                          onValueChange={(value) => onChange({ distribution_time: value })}
+                          options={[
+                            { value: '00:00', label: '00:00' },
+                            { value: '06:00', label: '06:00' },
+                            { value: '09:00', label: '09:00' },
+                            { value: '12:00', label: '12:00' },
+                            { value: '15:00', label: '15:00' },
+                            { value: '18:00', label: '18:00' },
+                            { value: '21:00', label: '21:00' },
+                            { value: '23:59', label: '23:59' },
+                          ]}
+                          onAddOption={() => {}}
+                          onDeleteOption={() => {}}
+                          placeholder="Pilih jam"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      💡 Jika hanya 1 hari saja, isi kedua tanggal dengan tanggal yang sama.
+                    </p>
+                  </div>
+                )}
               </div>
             </CollapsibleContent>
           </Collapsible>
@@ -3110,185 +3256,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
         </>
       )}
 
-      {/* Blok D - Waktu Pembagian (only for Fixed & Tier modes) */}
-      {(data.reward_mode === 'fixed' || data.reward_mode === 'tier') && (
+
+      {/* Blok E - Syarat Khusus (only for Fixed mode) */}
+      {data.reward_mode === 'fixed' && (
         <Collapsible>
           <CollapsibleTrigger className="collapsible-trigger w-full">
             <div className="flex items-center gap-3">
               <Settings className="h-5 w-5 text-button-hover" />
               <div className="text-left">
-                <div className="text-sm font-semibold text-foreground">2. Waktu Distribusi Hadiah</div>
-                <div className="text-xs text-muted-foreground">Kapan sistem mendistribusikan reward setelah klaim disetujui</div>
-              </div>
-            </div>
-            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="collapsible-content">
-            <div className="space-y-4">
-              <SelectWithAddNew
-                value={data.reward_distribution}
-                onValueChange={(value) => onChange({ reward_distribution: value })}
-                options={rewardDistributionOptions}
-                onAddOption={(option) => setRewardDistributionOptions([...rewardDistributionOptions, option])}
-                onDeleteOption={handleDeleteRewardDistribution}
-                placeholder="Pilih waktu distribusi"
-              />
-              
-              {/* Helper text based on selection */}
-              {data.reward_distribution && (
-                <p className="text-xs text-muted-foreground">
-                  {REWARD_DISTRIBUTIONS.find(d => d.value === data.reward_distribution)?.helper || ''}
-                </p>
-              )}
-              
-              {/* Conditional Day & Time Selector for Hari Tertentu */}
-              {data.reward_distribution === 'hari_tertentu' && (
-                <div className="p-4 bg-muted rounded-lg space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Hari</Label>
-                      <SelectWithAddNew
-                        value={data.distribution_day}
-                        onValueChange={(value) => onChange({ distribution_day: value })}
-                        options={[
-                          { value: 'senin', label: 'Senin' },
-                          { value: 'selasa', label: 'Selasa' },
-                          { value: 'rabu', label: 'Rabu' },
-                          { value: 'kamis', label: 'Kamis' },
-                          { value: 'jumat', label: 'Jumat' },
-                          { value: 'sabtu', label: 'Sabtu' },
-                          { value: 'minggu', label: 'Minggu' },
-                          { value: 'setiap_hari', label: 'Setiap Hari' },
-                        ]}
-                        onAddOption={() => {}}
-                        onDeleteOption={() => {}}
-                        placeholder="Pilih hari"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Jam (WIB)</Label>
-                      <SelectWithAddNew
-                        value={data.distribution_time}
-                        onValueChange={(value) => onChange({ distribution_time: value })}
-                        options={[
-                          { value: '00:00', label: '00:00' },
-                          { value: '06:00', label: '06:00' },
-                          { value: '09:00', label: '09:00' },
-                          { value: '12:00', label: '12:00' },
-                          { value: '15:00', label: '15:00' },
-                          { value: '18:00', label: '18:00' },
-                          { value: '21:00', label: '21:00' },
-                          { value: '23:59', label: '23:59' },
-                        ]}
-                        onAddOption={() => {}}
-                        onDeleteOption={() => {}}
-                        placeholder="Pilih jam"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    💡 Contoh: Rollingan mingguan dikirim setiap Senin 00:00 WIB.
-                  </p>
-                </div>
-              )}
-
-              {/* Conditional Date Range Selector for Tanggal Tertentu */}
-              {data.reward_distribution === 'tanggal_tertentu' && (
-                <div className="p-4 bg-muted rounded-lg space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Dari Tanggal</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !data.distribution_date_from && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {data.distribution_date_from ? format(parse(data.distribution_date_from, 'yyyy-MM-dd', new Date()), 'dd MMMM yyyy') : "Pilih tanggal"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={data.distribution_date_from ? parse(data.distribution_date_from, 'yyyy-MM-dd', new Date()) : undefined}
-                            onSelect={(date) => onChange({ distribution_date_from: date ? format(date, 'yyyy-MM-dd') : '' })}
-                            initialFocus
-                            className="pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Hingga Tanggal</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !data.distribution_date_until && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {data.distribution_date_until ? format(parse(data.distribution_date_until, 'yyyy-MM-dd', new Date()), 'dd MMMM yyyy') : "Pilih tanggal"}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={data.distribution_date_until ? parse(data.distribution_date_until, 'yyyy-MM-dd', new Date()) : undefined}
-                            onSelect={(date) => onChange({ distribution_date_until: date ? format(date, 'yyyy-MM-dd') : '' })}
-                            initialFocus
-                            className="pointer-events-auto"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <div className="space-y-2">
-                      <Label>Jam (WIB)</Label>
-                      <SelectWithAddNew
-                        value={data.distribution_time}
-                        onValueChange={(value) => onChange({ distribution_time: value })}
-                        options={[
-                          { value: '00:00', label: '00:00' },
-                          { value: '06:00', label: '06:00' },
-                          { value: '09:00', label: '09:00' },
-                          { value: '12:00', label: '12:00' },
-                          { value: '15:00', label: '15:00' },
-                          { value: '18:00', label: '18:00' },
-                          { value: '21:00', label: '21:00' },
-                          { value: '23:59', label: '23:59' },
-                        ]}
-                        onAddOption={() => {}}
-                        onDeleteOption={() => {}}
-                        placeholder="Pilih jam"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    💡 Jika hanya 1 hari saja, isi kedua tanggal dengan tanggal yang sama.
-                  </p>
-                </div>
-              )}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
-
-      {/* Blok E - Syarat Khusus (only for Fixed & Tier modes) */}
-      {(data.reward_mode === 'fixed' || data.reward_mode === 'tier') && (
-        <Collapsible>
-          <CollapsibleTrigger className="collapsible-trigger w-full">
-            <div className="flex items-center gap-3">
-              <Settings className="h-5 w-5 text-button-hover" />
-              <div className="text-left">
-                <div className="text-sm font-semibold text-foreground">3. Syarat Khusus</div>
+                <div className="text-sm font-semibold text-foreground">2. Syarat Khusus</div>
                 <div className="text-xs text-muted-foreground">Terms & Conditions tambahan</div>
               </div>
             </div>
