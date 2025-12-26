@@ -2265,6 +2265,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       // Dasar Perhitungan
       calculation_base: sub.calculation_base || 'deposit',
       calculation_method: sub.calculation_method || 'percentage',
+      calculation_method_enabled: true,
       calculation_value: sub.calculation_value || 0,
       minimum_base: sub.minimum_base || 0,
       minimum_base_enabled: sub.minimum_base > 0,

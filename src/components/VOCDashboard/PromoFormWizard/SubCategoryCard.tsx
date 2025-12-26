@@ -407,10 +407,25 @@ export function SubCategoryCard({
             })} options={calcBaseOptions} onAddOption={option => setCalcBaseOptions([...calcBaseOptions, option])} onDeleteOption={value => setCalcBaseOptions(calcBaseOptions.filter(c => c.value !== value))} placeholder="Pilih dasar (TO, Deposit, dll)" />
             </div>
             <div className="space-y-2">
-              <Label>Jenis Perhitungan</Label>
-              <SelectWithAddNew value={subCategory.calculation_method} onValueChange={value => onChange({
-              calculation_method: value
-            })} options={calcMethodOptions} onAddOption={option => setCalcMethodOptions([...calcMethodOptions, option])} onDeleteOption={value => setCalcMethodOptions(calcMethodOptions.filter(c => c.value !== value))} placeholder="Pilih jenis (%, Fixed)" />
+              <div className="flex items-center justify-between">
+                <Label>Jenis Perhitungan</Label>
+                <Switch 
+                  checked={subCategory.calculation_method_enabled !== false} 
+                  onCheckedChange={checked => onChange({
+                    calculation_method_enabled: checked,
+                    calculation_method: checked ? subCategory.calculation_method : ''
+                  })}
+                />
+              </div>
+              <SelectWithAddNew 
+                value={subCategory.calculation_method} 
+                onValueChange={value => onChange({ calculation_method: value })} 
+                options={calcMethodOptions} 
+                onAddOption={option => setCalcMethodOptions([...calcMethodOptions, option])} 
+                onDeleteOption={value => setCalcMethodOptions(calcMethodOptions.filter(c => c.value !== value))} 
+                placeholder={subCategory.calculation_method_enabled !== false ? "Pilih jenis (%, Fixed)" : "-"}
+                disabled={subCategory.calculation_method_enabled === false}
+              />
             </div>
             <div className="space-y-2">
               <Label>Nilai Bonus</Label>
@@ -781,6 +796,7 @@ export function createInitialSubCategory(index: number): PromoSubCategory {
     name: `Sub Kategori ${index + 1}`,
     calculation_base: '',
     calculation_method: '',
+    calculation_method_enabled: true,
     calculation_value: 0,
     minimum_base: 0,
     minimum_base_enabled: true,

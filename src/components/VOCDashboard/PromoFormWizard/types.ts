@@ -339,6 +339,7 @@ export interface PromoSubCategory {
   // Dasar Perhitungan Bonus
   calculation_base: string;
   calculation_method: string;
+  calculation_method_enabled: boolean;
   calculation_value: number;
   minimum_base: number;
   minimum_base_enabled: boolean;
@@ -1030,6 +1031,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       name: 'WBSLT100 — Slot 100%',
       calculation_base: 'deposit',
       calculation_method: 'percentage',
+      calculation_method_enabled: true,
       calculation_value: 100,
       minimum_base: 50000,
       minimum_base_enabled: true,
@@ -1066,6 +1068,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       name: 'WBCAS50 — Casino 50%',
       calculation_base: 'deposit',
       calculation_method: 'percentage',
+      calculation_method_enabled: true,
       calculation_value: 50,
       minimum_base: 100000,
       minimum_base_enabled: true,
@@ -1102,6 +1105,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       name: 'WBSPT50 — Sports 50%',
       calculation_base: 'deposit',
       calculation_method: 'percentage',
+      calculation_method_enabled: true,
       calculation_value: 50,
       minimum_base: 100000,
       minimum_base_enabled: true,
