@@ -2807,7 +2807,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       value={data.lp_earn_amount || ''}
                       onChange={(e) => onChange({ lp_earn_amount: parseInt(e.target.value) || 0 })}
                       placeholder={data.lp_earn_basis === 'lose' || data.lp_earn_basis === 'win' ? '1000000' : '1000'}
-                      className="w-24 h-8 bg-card border-border text-center text-sm"
+                      className="w-36 h-8 bg-card border-border text-center text-sm"
                     />
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {data.lp_earn_basis === 'turnover' && 'TO →'}
@@ -2822,7 +2822,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       value={data.lp_earn_point_amount || ''}
                       onChange={(e) => onChange({ lp_earn_point_amount: parseInt(e.target.value) || 0 })}
                       placeholder="1"
-                      className="w-20 h-8 bg-card border-border text-center text-sm"
+                      className="w-24 h-8 bg-card border-border text-center text-sm"
                     />
                     <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">{getPointUnitShort(data.promo_unit)}</span>
                   </div>
