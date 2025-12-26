@@ -2839,10 +2839,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   }
                 </p>
                 <p>
-                  💡 <strong>EXP Mode:</strong> {
-                    data.exp_mode === 'level_up' ? 'EXP hanya untuk naik level, tidak bisa ditukar.' :
-                    data.exp_mode === 'both' ? 'EXP bisa untuk naik level dan ditukar hadiah.' :
-                    'Point hanya untuk ditukar hadiah di store, tidak ada sistem level.'
+                  💡 <strong>{getPointUnitShort(data.promo_unit)} Mode:</strong> {
+                    data.exp_mode === 'level_up' ? `${getPointUnitShort(data.promo_unit)} hanya untuk naik level, tidak bisa ditukar.` :
+                    data.exp_mode === 'both' ? `${getPointUnitShort(data.promo_unit)} bisa untuk naik level dan ditukar hadiah.` :
+                    `${getPointUnitShort(data.promo_unit)} hanya untuk ditukar hadiah di store, tidak ada sistem level.`
                   }
                 </p>
                 <p>
