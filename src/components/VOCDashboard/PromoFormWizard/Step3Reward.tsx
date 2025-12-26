@@ -2753,17 +2753,44 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
-              {/* LP Formula */}
-              <div className="space-y-2">
-                <Label className="text-sm">Formula Konversi Point</Label>
-                <Input
-                  value={data.lp_formula || ''}
-                  onChange={(e) => onChange({ lp_formula: e.target.value })}
-                  placeholder="Contoh: 1 LP = Rp 1.000 deposit"
-                  className="bg-card border-border"
-                />
+              {/* 1️⃣ Aturan Perolehan Loyalty Point (Earn Rule) */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">
+                  Aturan Perolehan Loyalty Point <span className="text-destructive">*</span>
+                </Label>
+                
+                <div className="flex items-center gap-2 flex-wrap p-3 bg-muted rounded-lg">
+                  <span className="text-sm text-muted-foreground">Setiap</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={data.lp_earn_turnover_amount || ''}
+                    onChange={(e) => onChange({ lp_earn_turnover_amount: parseInt(e.target.value) || 0 })}
+                    placeholder="1000"
+                    className="w-24 bg-card border-border text-center"
+                  />
+                  <span className="text-sm text-muted-foreground">Turnover → mendapatkan</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={data.lp_earn_point_amount || ''}
+                    onChange={(e) => onChange({ lp_earn_point_amount: parseInt(e.target.value) || 0 })}
+                    placeholder="1"
+                    className="w-20 bg-card border-border text-center"
+                  />
+                  <span className="text-sm text-muted-foreground">Loyalty Point</span>
+                </div>
+                
                 <p className="text-xs text-muted-foreground">
-                  Rumus konversi point ke rupiah atau sebaliknya
+                  💡 Loyalty Point akan terakumulasi otomatis berdasarkan total turnover pemain.
+                </p>
+              </div>
+
+              {/* 2️⃣ Daftar Hadiah Penukaran (Redeem Rule) */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Daftar Hadiah Penukaran Loyalty Point</Label>
+                <p className="text-xs text-muted-foreground">
+                  💡 Penukaran dilakukan dengan memilih hadiah di bawah sesuai jumlah Loyalty Point yang dimiliki.
                 </p>
               </div>
             </div>
