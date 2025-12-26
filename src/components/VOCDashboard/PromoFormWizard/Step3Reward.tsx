@@ -1457,6 +1457,63 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Section 5 - Kontak Official */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch
+              checked={data.contact_channel_enabled || false}
+              onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })}
+            />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover">5. Tampilkan Kontak Official</div>
+              <p className="text-xs text-muted-foreground">
+                Tampilkan info kontak resmi di respons AI untuk promo ini
+              </p>
+            </div>
+          </div>
+
+          {data.contact_channel_enabled && (
+            <div className="p-4 bg-muted rounded-lg space-y-4">
+              <div className={`grid gap-4 ${data.contact_channel !== 'livechat' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                <div className="space-y-2">
+                  <Label>Channel</Label>
+                  <SelectWithAddNew
+                    value={data.contact_channel || ''}
+                    onValueChange={(value) => onChange({ contact_channel: value })}
+                    options={[
+                      { value: 'whatsapp', label: 'WhatsApp' },
+                      { value: 'telegram', label: 'Telegram' },
+                      { value: 'livechat', label: 'Live Chat' },
+                      { value: 'email', label: 'Email' },
+                    ]}
+                    placeholder="Pilih channel"
+                  />
+                </div>
+                
+                {data.contact_channel !== 'livechat' && (
+                  <div className="space-y-2">
+                    <Label>Link / Nomor</Label>
+                    <Input
+                      value={data.contact_link || ''}
+                      onChange={(e) => onChange({ contact_link: e.target.value })}
+                      placeholder={
+                        data.contact_channel === 'whatsapp' ? 'https://wa.me/628xxx' :
+                        data.contact_channel === 'telegram' ? 'https://t.me/xxx' :
+                        data.contact_channel === 'email' ? 'support@example.com' :
+                        'Masukkan link atau nomor'
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {data.contact_channel === 'livechat' 
+                  ? '💬 Live Chat sudah tersedia di website — tidak perlu link tambahan.'
+                  : '💡 Kontak ini akan ditampilkan di akhir respons AI saat menjelaskan promo.'
+                }
+              </p>
+            </div>
+          )}
         </>
       )}
 
@@ -3405,69 +3462,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
         </>
       )}
 
-
-      {/* Blok E - Syarat Khusus (only for Fixed mode) */}
-      {data.reward_mode === 'fixed' && (
-        <Collapsible>
-          <CollapsibleTrigger className="collapsible-trigger w-full">
-            <div className="flex items-center gap-3">
-              <Settings className="h-5 w-5 text-button-hover" />
-              <div className="text-left">
-                <div className="text-sm font-semibold text-foreground">2. Syarat Khusus</div>
-                <div className="text-xs text-muted-foreground">Terms & Conditions tambahan</div>
-              </div>
-            </div>
-            <ChevronDown className="h-5 w-5 text-muted-foreground" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="collapsible-content">
-            <div className="space-y-3">
-              {/* Badge List */}
-              {data.special_requirements && data.special_requirements.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {data.special_requirements.map((req, index) => (
-                    <Badge 
-                      key={index} 
-                      variant="secondary" 
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted text-foreground border border-border rounded-full"
-                    >
-                      <span>{req}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRequirement(req)}
-                        className="hover:text-destructive transition-colors"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              
-              {/* Input dengan Plus icon inline */}
-              <div className="relative">
-                <Input
-                  placeholder="Tambah syarat (pisahkan dengan koma)..."
-                  value={newRequirement}
-                  onChange={(e) => setNewRequirement(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddRequirement())}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddRequirement}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-button-hover transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-              
-              <p className="text-xs text-muted-foreground">
-                Pisahkan beberapa syarat dengan koma, lalu tekan Enter atau klik ikon +
-              </p>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
 
       {/* Simpan & Kembali Button (Edit Mode from Review) */}
       {isEditingFromReview && onSaveAndReturn && (
