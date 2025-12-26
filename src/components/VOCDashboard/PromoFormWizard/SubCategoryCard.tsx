@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -111,6 +111,11 @@ export function SubCategoryCard({
 
   const [calcValueInput, setCalcValueInput] = useState(() => {
     if (subCategory.calculation_value !== undefined && subCategory.calculation_value !== null && subCategory.calculation_value > 0) {
+      // For percentage: show plain number (e.g., 25 or 0.5)
+      // For fixed/threshold: show with thousand separators
+      if (subCategory.calculation_method === 'percentage') {
+        return String(subCategory.calculation_value).replace('.', ',');
+      }
       return formatThousands(subCategory.calculation_value);
     }
     return '';
@@ -181,6 +186,21 @@ export function SubCategoryCard({
     value: n.value,
     label: n.label
   }))]);
+
+  // Reformat calcValueInput when calculation_method changes
+  useEffect(() => {
+    if (subCategory.calculation_value !== undefined && subCategory.calculation_value !== null && subCategory.calculation_value > 0) {
+      if (subCategory.calculation_method === 'percentage') {
+        // Format as decimal (use comma as separator)
+        setCalcValueInput(String(subCategory.calculation_value).replace('.', ','));
+      } else {
+        // Format with thousand separator
+        setCalcValueInput(formatThousands(subCategory.calculation_value));
+      }
+    } else {
+      setCalcValueInput('');
+    }
+  }, [subCategory.calculation_method]);
 
   // Generate summary for collapsed header
   const getSummary = (): string => {
@@ -473,28 +493,47 @@ export function SubCategoryCard({
             <div className="space-y-2">
               <Label>Nilai Bonus</Label>
               <div className="relative">
-                <Input 
-                  type="text" 
-                  inputMode="numeric" 
-                  value={calcValueInput} 
-                  onChange={e => {
-                    // Allow only digits and dots (thousand separator)
-                    const rawValue = e.target.value.replace(/[^0-9.]/g, '');
-                    setCalcValueInput(rawValue);
-                    const numValue = parseFormattedNumber(rawValue);
-                    onChange({ calculation_value: numValue });
-                  }} 
-                  onBlur={() => {
-                    // Format with thousand separators on blur
-                    if (subCategory.calculation_value !== undefined && subCategory.calculation_value !== null && subCategory.calculation_value > 0) {
-                      setCalcValueInput(formatThousands(subCategory.calculation_value));
-                    } else {
-                      setCalcValueInput('');
-                    }
-                  }} 
-                  placeholder="Contoh: 25.000" 
-                  className="pr-10" 
-                />
+                {subCategory.calculation_method === 'percentage' ? (
+                  // Percentage mode: allow decimals, no thousand separator
+                  <Input 
+                    type="text" 
+                    inputMode="decimal" 
+                    value={calcValueInput} 
+                    onChange={e => {
+                      // Allow digits, comma, and dot for decimals
+                      const rawValue = e.target.value.replace(/[^0-9.,]/g, '');
+                      setCalcValueInput(rawValue);
+                      const numValue = parseFloat(rawValue.replace(',', '.')) || 0;
+                      onChange({ calculation_value: numValue });
+                    }} 
+                    placeholder="Contoh: 25 atau 0,5" 
+                    className="pr-10" 
+                  />
+                ) : (
+                  // Fixed/Threshold mode: use thousand separator
+                  <Input 
+                    type="text" 
+                    inputMode="numeric" 
+                    value={calcValueInput} 
+                    onChange={e => {
+                      // Allow only digits and dots (thousand separator)
+                      const rawValue = e.target.value.replace(/[^0-9.]/g, '');
+                      setCalcValueInput(rawValue);
+                      const numValue = parseFormattedNumber(rawValue);
+                      onChange({ calculation_value: numValue });
+                    }} 
+                    onBlur={() => {
+                      // Format with thousand separators on blur
+                      if (subCategory.calculation_value !== undefined && subCategory.calculation_value !== null && subCategory.calculation_value > 0) {
+                        setCalcValueInput(formatThousands(subCategory.calculation_value));
+                      } else {
+                        setCalcValueInput('');
+                      }
+                    }} 
+                    placeholder="Contoh: 25.000" 
+                    className="pr-10" 
+                  />
+                )}
                 {subCategory.calculation_method === 'percentage' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>}
               </div>
             </div>

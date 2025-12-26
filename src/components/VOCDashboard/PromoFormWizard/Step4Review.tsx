@@ -1194,9 +1194,9 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         <p className="text-muted-foreground text-xs">Nilai</p>
                         <p className="text-button-hover font-medium">
                           {sub.calculation_value 
-                            ? (sub.calculation_method === 'threshold' 
-                                ? `Rp ${formatNumber(sub.calculation_value)}` 
-                                : `${sub.calculation_value}%`)
+                            ? (sub.calculation_method === 'percentage' 
+                                ? `${sub.calculation_value}%` 
+                                : formatNumber(sub.calculation_value))
                             : '-'}
                         </p>
                       </div>
