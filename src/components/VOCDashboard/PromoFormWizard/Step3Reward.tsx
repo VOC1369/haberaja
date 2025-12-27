@@ -2795,36 +2795,42 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </Select>
                 </div>
                 
-                {/* Col 2: Aturan Perolehan */}
+                {/* Col 2: Aturan Perolehan - Grid 2 kolom */}
                 <div className="space-y-2">
                   <Label className="text-sm">
                     Aturan Perolehan {getPointUnitShort(data.promo_unit)} <span className="text-destructive">*</span>
                   </Label>
-                  <div className="flex items-center justify-center gap-3 p-3 bg-muted rounded-lg">
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">Setiap</span>
-                    <FormattedNumberInput
-                      value={data.lp_earn_amount || 0}
-                      onChange={(val) => onChange({ lp_earn_amount: val })}
-                      placeholder={data.lp_earn_basis === 'lose' || data.lp_earn_basis === 'win' ? '1.000.000' : '1.000'}
-                      className="w-36 h-8 bg-card border-border text-center text-sm"
-                      min={1}
-                    />
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {data.lp_earn_basis === 'turnover' && 'TO →'}
-                      {data.lp_earn_basis === 'win' && 'Win →'}
-                      {data.lp_earn_basis === 'lose' && 'Loss →'}
-                      {data.lp_earn_basis === 'deposit' && 'Dep →'}
-                      {!data.lp_earn_basis && 'TO →'}
-                    </span>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={data.lp_earn_point_amount || ''}
-                      onChange={(e) => onChange({ lp_earn_point_amount: parseInt(e.target.value) || 0 })}
-                      placeholder="1"
-                      className="w-24 h-8 bg-card border-border text-center text-sm"
-                    />
-                    <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">{getPointUnitShort(data.promo_unit)}</span>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Kolom 4a - Turnover/Win/Loss/Deposit */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">
+                        {data.lp_earn_basis === 'turnover' && 'Turnover'}
+                        {data.lp_earn_basis === 'win' && 'Kemenangan'}
+                        {data.lp_earn_basis === 'lose' && 'Kekalahan'}
+                        {data.lp_earn_basis === 'deposit' && 'Deposit'}
+                        {!data.lp_earn_basis && 'Turnover'}
+                      </Label>
+                      <FormattedNumberInput
+                        value={data.lp_earn_amount || 0}
+                        onChange={(val) => onChange({ lp_earn_amount: val })}
+                        className="w-full bg-muted"
+                        min={1}
+                      />
+                    </div>
+                    
+                    {/* Kolom 4b - Loyalty Point/EXP */}
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">
+                        {getPointUnitShort(data.promo_unit)}
+                      </Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={data.lp_earn_point_amount || ''}
+                        onChange={(e) => onChange({ lp_earn_point_amount: parseInt(e.target.value) || 0 })}
+                        className="w-full bg-muted"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
