@@ -3112,126 +3112,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             
             return (
             <>
-          {/* Section 1 - Dasar Perhitungan Bonus (Global) - Hidden for tier_point_store */}
-          {tierArchetype !== 'tier_point_store' && (
-          <Collapsible>
-            <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
-              <div className="flex items-center gap-3">
-                <Calculator className="h-5 w-5 text-button-hover" />
-                <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">1. Dasar Perhitungan Bonus {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
-                  <div className="text-xs text-muted-foreground">Konfigurasi dasar kalkulasi reward</div>
-                </div>
-              </div>
-              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-4 mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label>Jenis Hadiah</Label>
-                <SelectWithAddNew
-                  value={data.dinamis_reward_type}
-                  onValueChange={(value) => onChange({ dinamis_reward_type: value, physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : '', cash_reward_amount: value === 'uang_tunai' ? data.cash_reward_amount : undefined })}
-                  options={dinamisRewardTypeOptions}
-                  onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
-                  onDeleteOption={handleDeleteDinamisRewardType}
-                  placeholder="Pilih jenis"
-                />
-                {data.dinamis_reward_type === 'hadiah_fisik' && (
-                  <div className="grid grid-cols-3 gap-4 mt-2">
-                    <div className="col-span-2 space-y-2">
-                      <Label>Nama Hadiah Fisik</Label>
-                      <Input value={data.physical_reward_name || ''} onChange={(e) => onChange({ physical_reward_name: e.target.value })} placeholder="Contoh: MITSUBISHI PAJERO" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Jumlah Unit</Label>
-                      <Input type="number" min={1} value={data.physical_reward_quantity || 1} onChange={(e) => onChange({ physical_reward_quantity: Number(e.target.value) || 1 })} placeholder="1" />
-                    </div>
-                  </div>
-                )}
-                {data.dinamis_reward_type === 'uang_tunai' && (
-                  <div className="space-y-2 mt-2">
-                    <Label>Nominal Uang Tunai</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
-                      <Input className="pl-10" value={formatRupiah(data.cash_reward_amount)} onChange={(e) => onChange({ cash_reward_amount: parseRupiah(e.target.value) })} placeholder="50.000.000" />
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Max Bonus</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Unlimited</span>
-                    <Switch checked={data.dinamis_max_claim_unlimited ?? false} onCheckedChange={(checked) => onChange({ dinamis_max_claim_unlimited: checked, dinamis_max_claim: checked ? 0 : data.dinamis_max_claim })} />
-                  </div>
-                </div>
-                <Input type="text" value={data.dinamis_max_claim_unlimited ? '' : (data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : '')} onChange={(e) => onChange({ dinamis_max_claim: Number(e.target.value.replace(/\D/g, '')) })} placeholder={data.dinamis_max_claim_unlimited ? "Unlimited" : "Contoh: 100.000"} disabled={data.dinamis_max_claim_unlimited} className={data.dinamis_max_claim_unlimited ? "opacity-50" : ""} />
-              </div>
-            </div>
-            {/* Dasar Perhitungan - Only for Point Store tier */}
-            {showPointStoreFields && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Dasar Perhitungan</Label>
-                <SelectWithAddNew value={data.calculation_base} onValueChange={(value) => onChange({ calculation_base: value })} options={calcBaseOptions} onAddOption={(option) => setCalcBaseOptions([...calcBaseOptions, option])} onDeleteOption={handleDeleteCalcBase} placeholder="Pilih dasar" />
-              </div>
-              <div className="space-y-2">
-                <Label>Jenis Perhitungan</Label>
-                <SelectWithAddNew value={data.calculation_method} onValueChange={(value) => onChange({ calculation_method: value })} options={calcMethodOptions} onAddOption={(option) => setCalcMethodOptions([...calcMethodOptions, option])} onDeleteOption={handleDeleteCalcMethod} placeholder="Pilih jenis" />
-              </div>
-              <div className="space-y-2">
-                <Label>Nilai Bonus</Label>
-                <div className="relative">
-                  <Input type="text" inputMode="decimal" value={calcValueInput} onChange={(e) => { const rawValue = e.target.value.replace(/[^0-9.,]/g, ''); setCalcValueInput(rawValue); const normalizedValue = rawValue.replace(',', '.'); const numValue = parseFloat(normalizedValue); if (!isNaN(numValue)) { onChange({ calculation_value: numValue }); } else if (rawValue === '' || rawValue === '0' || rawValue === '0,' || rawValue === '0.') { onChange({ calculation_value: 0 }); } }} onBlur={() => { if (data.calculation_value !== undefined && data.calculation_value !== null) { setCalcValueInput(String(data.calculation_value).replace('.', ',')); } }} placeholder="Contoh: 0,5" className="pr-10" />
-                  {data.calculation_method === 'percentage' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>{getMinimumBaseLabel()}</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Aktifkan</span>
-                    <Switch checked={data.minimum_base_enabled} onCheckedChange={(checked) => onChange({ minimum_base_enabled: checked, minimum_base: checked ? data.minimum_base : 0 })} />
-                  </div>
-                </div>
-                <Input type="text" value={data.minimum_base_enabled && data.minimum_base ? data.minimum_base.toLocaleString('id-ID') : ''} onChange={(e) => onChange({ minimum_base: Number(e.target.value.replace(/\D/g, '')) })} placeholder={data.minimum_base_enabled ? "Contoh: 1.000.000" : "Tidak aktif"} disabled={!data.minimum_base_enabled} className={!data.minimum_base_enabled ? "opacity-50" : ""} />
-              </div>
-            </div>
-            )}
-            <div className="pt-4">
-              <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-2">
-                <Switch checked={data.turnover_rule_enabled === true} onCheckedChange={(checked) => onChange({ turnover_rule_enabled: checked })} />
-                <div>
-                  <div className="font-medium text-sm text-button-hover">Syarat Main Sebelum WD</div>
-                  <p className="text-xs text-muted-foreground">Aktifkan jika ada syarat kelipatan main</p>
-                </div>
-              </div>
-              {data.turnover_rule_enabled && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Kelipatan Main Bonus (TO)</Label>
-                    <SelectWithAddNew value={data.turnover_rule} onValueChange={(value) => onChange({ turnover_rule: value })} options={turnoverRuleOptions} onAddOption={(option) => setTurnoverRuleOptions([...turnoverRuleOptions, option])} onDeleteOption={handleDeleteTurnoverRule} placeholder="Pilih kelipatan" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Nilai Custom</Label>
-                    <Input value={data.turnover_rule_custom || ''} onChange={(e) => onChange({ turnover_rule_custom: e.target.value })} placeholder="Contoh: 3x, 10x" disabled={data.turnover_rule !== 'custom'} className={data.turnover_rule !== 'custom' ? 'opacity-50' : ''} />
-                  </div>
-                </div>
-              )}
-            </div>
-            </CollapsibleContent>
-          </Collapsible>
-          )}
-
-          {/* Section 2 - Permainan & Provider */}
+          {/* Section 1 - Permainan & Provider (tier_level numbering starts here) */}
           <Collapsible>
             <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
               <div className="flex items-center gap-3">
                 <Gamepad2 className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">2. Permainan & Provider {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
+                  <div className="text-sm font-semibold text-foreground">1. Permainan & Provider {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
                   <div className="text-xs text-muted-foreground">Target game dan provider</div>
                 </div>
               </div>
@@ -3310,13 +3197,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Section 3 - Hadiah dan Waktu */}
+          {/* Section 2 - Hadiah dan Waktu */}
           <Collapsible>
             <CollapsibleTrigger className="collapsible-trigger w-full">
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">3. Hadiah dan Waktu {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
+                  <div className="text-sm font-semibold text-foreground">2. Hadiah dan Waktu {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
                   <div className="text-xs text-muted-foreground">Jenis hadiah, waktu claim, dan periode pembagian</div>
                 </div>
               </div>
@@ -3617,13 +3504,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Section 4 - Syarat Khusus */}
+          {/* Section 3 - Syarat Khusus */}
           <Collapsible>
             <CollapsibleTrigger className="collapsible-trigger w-full">
               <div className="flex items-center gap-3">
                 <Zap className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">4. Syarat Khusus {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
+                  <div className="text-sm font-semibold text-foreground">3. Syarat Khusus {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
                   <div className="text-xs text-muted-foreground">Ketentuan tambahan</div>
                 </div>
               </div>
@@ -3650,11 +3537,11 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Section 5 - Kontak Official */}
+          {/* Section 4 - Kontak Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch checked={data.contact_channel_enabled || false} onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })} />
             <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">5. Tampilkan Kontak Official {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
+              <div className="font-medium text-sm text-button-hover">4. Tampilkan Kontak Official {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
               <p className="text-xs text-muted-foreground">Tampilkan info kontak resmi di respons AI</p>
             </div>
           </div>
