@@ -3106,21 +3106,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </Collapsible>
           )}
 
-          {/* Section 1-5: Global Settings - Always visible */}
-          {/* Info banner when subcategories are active */}
-          {data.has_subcategories && (
-            <div className="bg-muted/60 border border-border rounded-xl p-4 mb-4">
-              <div className="flex items-start gap-3">
-                <Layers className="h-5 w-5 text-button-hover mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-foreground">Mode Sub Kategori Aktif</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Settings di bawah ini adalah <strong>Global Default</strong>. Setiap sub-kategori di atas bisa menggunakan nilai yang sama atau override dengan nilai kustom.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {(() => {
             // Tier Archetype field visibility helpers (UI-gating only)
