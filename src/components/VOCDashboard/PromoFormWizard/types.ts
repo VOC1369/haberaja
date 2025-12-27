@@ -569,12 +569,12 @@ export async function getPromoById(id: string): Promise<PromoItem | undefined> {
 export const TIER_ARCHETYPE_OPTIONS = [
   { 
     value: 'tier_level' as const, 
-    label: 'Level/Milestone Tier',
+    label: 'Sistem Level / Tier',
     description: 'Event berbasis level atau milestone (NALEN, VIP Upgrade)'
   },
   { 
     value: 'tier_point_store' as const, 
-    label: 'Point Store (LP/EXP)',
+    label: 'Sistem Point (Loyalty / Experience)',
     description: 'Loyalty point atau experience redemption store'
   },
 ] as const;
