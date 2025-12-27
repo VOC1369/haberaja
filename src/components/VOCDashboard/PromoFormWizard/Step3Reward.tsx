@@ -2956,8 +2956,23 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           )}
 
-          {/* Section 1-5: Only show when NOT using subcategories */}
-          {!data.has_subcategories && (() => {
+          {/* Section 1-5: Global Settings - Always visible */}
+          {/* Info banner when subcategories are active */}
+          {data.has_subcategories && (
+            <div className="bg-muted/60 border border-border rounded-xl p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <Layers className="h-5 w-5 text-button-hover mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Mode Sub Kategori Aktif</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Settings di bawah ini adalah <strong>Global Default</strong>. Setiap sub-kategori di atas bisa menggunakan nilai yang sama atau override dengan nilai kustom.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(() => {
             // Tier Archetype field visibility helpers (UI-gating only)
             const tierArchetype = data.tier_archetype || 'tier_advanced';
             const showLevelFields = tierArchetype === 'tier_level' || tierArchetype === 'tier_advanced';
@@ -2966,13 +2981,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             
             return (
             <>
-          {/* Section 1 - Dasar Perhitungan Bonus */}
+          {/* Section 1 - Dasar Perhitungan Bonus (Global) */}
           <Collapsible>
             <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
               <div className="flex items-center gap-3">
                 <Calculator className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">1. Dasar Perhitungan Bonus</div>
+                  <div className="text-sm font-semibold text-foreground">1. Dasar Perhitungan Bonus {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
                   <div className="text-xs text-muted-foreground">Konfigurasi dasar kalkulasi reward</div>
                 </div>
               </div>
@@ -3108,7 +3123,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="flex items-center gap-3">
                 <Gamepad2 className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">2. Permainan & Provider</div>
+                  <div className="text-sm font-semibold text-foreground">2. Permainan & Provider {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
                   <div className="text-xs text-muted-foreground">Target game dan provider</div>
                 </div>
               </div>
@@ -3193,7 +3208,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">3. Hadiah dan Waktu</div>
+                  <div className="text-sm font-semibold text-foreground">3. Hadiah dan Waktu {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
                   <div className="text-xs text-muted-foreground">Jenis hadiah, waktu claim, dan periode pembagian</div>
                 </div>
               </div>
@@ -3500,7 +3515,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="flex items-center gap-3">
                 <Zap className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">4. Syarat Khusus</div>
+                  <div className="text-sm font-semibold text-foreground">4. Syarat Khusus {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
                   <div className="text-xs text-muted-foreground">Ketentuan tambahan</div>
                 </div>
               </div>
@@ -3531,7 +3546,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch checked={data.contact_channel_enabled || false} onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })} />
             <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">5. Tampilkan Kontak Official</div>
+              <div className="font-medium text-sm text-button-hover">5. Tampilkan Kontak Official {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
               <p className="text-xs text-muted-foreground">Tampilkan info kontak resmi di respons AI</p>
             </div>
           </div>
