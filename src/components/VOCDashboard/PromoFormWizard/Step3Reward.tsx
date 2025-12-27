@@ -3078,18 +3078,17 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       ))}
                     </div>
                     
-                    {/* Tombol Tambah Sub Kategori */}
+                    {/* Tombol Tambah Sub Kategori - Full width */}
                     <Button
                       type="button"
-                      variant="ghost"
-                      size="sm"
+                      variant="outline"
                       onClick={() => {
                         const currentCount = data.subcategories?.length || 0;
                         const newSubCategory = createInitialSubCategory(currentCount + 1);
                         onChange({ subcategories: [...(data.subcategories || []), newSubCategory] });
                         toast.success("Sub kategori baru ditambahkan");
                       }}
-                      className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
+                      className="w-full h-12 border-dashed border-2 border-muted-foreground/30 bg-muted/50 text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover transition-all"
                     >
                       <Plus className="h-4 w-4" />
                       Tambah Sub Kategori
