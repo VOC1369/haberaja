@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import {
   PromoFormData,
   PromoSubCategory,
+  RedeemItem,
   TierReward,
   FastExpMission,
   LevelUpReward,
@@ -50,6 +51,8 @@ import {
   TIER_ARCHETYPE_OPTIONS,
   TierArchetype,
 } from "./types";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { generateUUID } from "@/lib/supabase-client";
 import { SelectWithAddNew, SelectOption } from "./SelectWithAddNew";
 import { SubCategoryCard, createInitialSubCategory } from "./SubCategoryCard";
 
@@ -2855,11 +2858,109 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </p>
               </div>
 
-              {/* 2️⃣ Daftar Hadiah Penukaran (Redeem Rule) */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Daftar Hadiah Penukaran {getPointUnitLabel(data.promo_unit)}</Label>
+              {/* Daftar Hadiah Penukaran - Tabel Redeem */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Gift className="h-5 w-5 text-button-hover" />
+                    <span className="font-semibold text-sm">Tabel Redeem {getPointUnitLabel(data.promo_unit)}</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const newItem: RedeemItem = {
+                        id: generateUUID(),
+                        nama_hadiah: '',
+                        nilai_hadiah: 0,
+                        biaya_lp: 0,
+                        is_active: true,
+                      };
+                      onChange({ redeem_items: [...(data.redeem_items || []), newItem] });
+                    }}
+                    className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Row
+                  </Button>
+                </div>
+                
+                {/* Table */}
+                {(data.redeem_items || []).length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nama Hadiah</TableHead>
+                        <TableHead>Nilai Hadiah</TableHead>
+                        <TableHead>Biaya {getPointUnitShort(data.promo_unit)}</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(data.redeem_items || []).map((item, index) => (
+                        <TableRow key={item.id}>
+                          <TableCell>
+                            <Input
+                              value={item.nama_hadiah}
+                              onChange={(e) => {
+                                const updatedItems = [...(data.redeem_items || [])];
+                                updatedItems[index] = { ...updatedItems[index], nama_hadiah: e.target.value };
+                                onChange({ redeem_items: updatedItems });
+                              }}
+                              placeholder="Credit Game 10.000"
+                              className="bg-muted"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <FormattedNumberInput
+                              value={item.nilai_hadiah}
+                              onChange={(val) => {
+                                const updatedItems = [...(data.redeem_items || [])];
+                                updatedItems[index] = { ...updatedItems[index], nilai_hadiah: val };
+                                onChange({ redeem_items: updatedItems });
+                              }}
+                              className="bg-muted"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <FormattedNumberInput
+                              value={item.biaya_lp}
+                              onChange={(val) => {
+                                const updatedItems = [...(data.redeem_items || [])];
+                                updatedItems[index] = { ...updatedItems[index], biaya_lp: val };
+                                onChange({ redeem_items: updatedItems });
+                              }}
+                              className="bg-muted"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const updatedItems = (data.redeem_items || []).filter((_, i) => i !== index);
+                                onChange({ redeem_items: updatedItems });
+                              }}
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-lg">
+                    Belum ada hadiah. Klik "Add Row" untuk menambahkan.
+                  </div>
+                )}
+                
+                {/* Helper text */}
                 <p className="text-xs text-muted-foreground">
-                  💡 Penukaran dilakukan dengan memilih hadiah di bawah sesuai jumlah {getPointUnitLabel(data.promo_unit)} yang dimiliki.
+                  💡 User hanya bisa redeem hadiah dengan Biaya {getPointUnitShort(data.promo_unit)} ≤ {getPointUnitLabel(data.promo_unit)} yang dimiliki. Minimum redeem = row dengan biaya paling kecil.
                 </p>
               </div>
             </div>
@@ -2879,81 +2980,85 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           )}
 
-          {/* Sub Kategori (Combo Promo) - Toggle */}
-          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
-            <Switch
-              checked={data.has_subcategories || false}
-              onCheckedChange={(checked) => {
-                if (checked && (!data.subcategories || data.subcategories.length === 0)) {
-                  onChange({ 
-                    has_subcategories: checked,
-                    subcategories: [createInitialSubCategory(0)]
-                  });
-                } else {
-                  onChange({ has_subcategories: checked });
-                }
-              }}
-            />
-            <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">Sub Kategori (Combo Promo)</div>
-              <p className="text-xs text-muted-foreground">
-                Aktifkan jika promo punya sub-kategori berbeda.
-              </p>
-            </div>
-            {data.has_subcategories && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  const currentCount = data.subcategories?.length || 0;
-                  const newSubCategory = createInitialSubCategory(currentCount + 1);
-                  onChange({ subcategories: [...(data.subcategories || []), newSubCategory] });
-                  toast.success("Sub kategori baru ditambahkan");
-                }}
-                className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
-              >
-                <Plus className="h-4 w-4" />
-                Tambah Sub Kategori
-              </Button>
-            )}
-          </div>
-
-          {/* SubCategory Cards - Only show when has_subcategories is true */}
-          {data.has_subcategories && (
-            <div className="space-y-4">
-              {(data.subcategories || []).map((subCategory, index) => (
-                  <SubCategoryCard
-                    key={subCategory.id || index}
-                    index={index}
-                    subCategory={subCategory}
-                    globalJenisHadiahEnabled={data.global_jenis_hadiah_enabled}
-                    globalMaxBonusEnabled={data.global_max_bonus_enabled}
-                    globalPayoutDirectionEnabled={data.global_payout_direction_enabled}
-                    onInvertGlobalJenisHadiah={() => onChange({ global_jenis_hadiah_enabled: false })}
-                    onInvertGlobalMaxBonus={() => onChange({ global_max_bonus_enabled: false })}
-                    onInvertGlobalPayoutDirection={() => onChange({ global_payout_direction_enabled: false })}
-                    onChange={(updates) => {
-                      const updatedSubcategories = [...(data.subcategories || [])];
-                      updatedSubcategories[index] = { ...subCategory, ...updates };
-                      onChange({ subcategories: updatedSubcategories });
-                    }}
-                    onDelete={() => {
+          {/* Sub Kategori (Combo Promo) - Toggle - HIDDEN for tier_point_store */}
+          {data.tier_archetype !== 'tier_point_store' && (
+            <>
+              <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+                <Switch
+                  checked={data.has_subcategories || false}
+                  onCheckedChange={(checked) => {
+                    if (checked && (!data.subcategories || data.subcategories.length === 0)) {
+                      onChange({ 
+                        has_subcategories: checked,
+                        subcategories: [createInitialSubCategory(0)]
+                      });
+                    } else {
+                      onChange({ has_subcategories: checked });
+                    }
+                  }}
+                />
+                <div className="flex-1">
+                  <div className="font-medium text-sm text-button-hover">Sub Kategori (Combo Promo)</div>
+                  <p className="text-xs text-muted-foreground">
+                    Aktifkan jika promo punya sub-kategori berbeda.
+                  </p>
+                </div>
+                {data.has_subcategories && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
                       const currentCount = data.subcategories?.length || 0;
-                      if (currentCount <= 1) {
-                        toast.error("Minimal 1 sub kategori harus ada");
-                        return;
-                      }
-                      const updatedSubcategories = (data.subcategories || []).filter((_, i) => i !== index);
-                      onChange({ subcategories: updatedSubcategories });
-                      toast.success("Sub kategori dihapus");
+                      const newSubCategory = createInitialSubCategory(currentCount + 1);
+                      onChange({ subcategories: [...(data.subcategories || []), newSubCategory] });
+                      toast.success("Sub kategori baru ditambahkan");
                     }}
-                    onSave={() => {
-                      toast.success(`${subCategory.name || `Sub Kategori ${index + 1}`} disimpan`);
-                    }}
-                  />
-                ))}
-            </div>
+                    className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Tambah Sub Kategori
+                  </Button>
+                )}
+              </div>
+
+              {/* SubCategory Cards - Only show when has_subcategories is true */}
+              {data.has_subcategories && (
+                <div className="space-y-4">
+                  {(data.subcategories || []).map((subCategory, index) => (
+                      <SubCategoryCard
+                        key={subCategory.id || index}
+                        index={index}
+                        subCategory={subCategory}
+                        globalJenisHadiahEnabled={data.global_jenis_hadiah_enabled}
+                        globalMaxBonusEnabled={data.global_max_bonus_enabled}
+                        globalPayoutDirectionEnabled={data.global_payout_direction_enabled}
+                        onInvertGlobalJenisHadiah={() => onChange({ global_jenis_hadiah_enabled: false })}
+                        onInvertGlobalMaxBonus={() => onChange({ global_max_bonus_enabled: false })}
+                        onInvertGlobalPayoutDirection={() => onChange({ global_payout_direction_enabled: false })}
+                        onChange={(updates) => {
+                          const updatedSubcategories = [...(data.subcategories || [])];
+                          updatedSubcategories[index] = { ...subCategory, ...updates };
+                          onChange({ subcategories: updatedSubcategories });
+                        }}
+                        onDelete={() => {
+                          const currentCount = data.subcategories?.length || 0;
+                          if (currentCount <= 1) {
+                            toast.error("Minimal 1 sub kategori harus ada");
+                            return;
+                          }
+                          const updatedSubcategories = (data.subcategories || []).filter((_, i) => i !== index);
+                          onChange({ subcategories: updatedSubcategories });
+                          toast.success("Sub kategori dihapus");
+                        }}
+                        onSave={() => {
+                          toast.success(`${subCategory.name || `Sub Kategori ${index + 1}`} disimpan`);
+                        }}
+                      />
+                    ))}
+                </div>
+              )}
+            </>
           )}
 
           {/* Section 1-5: Global Settings - Always visible */}

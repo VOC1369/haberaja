@@ -73,6 +73,9 @@ export const PKB_FIELD_WHITELIST = [
   'has_subcategories',
   'subcategories',
   
+  // Point Store Redeem Table
+  'redeem_items',
+  
   // Batasan & Akses
   'platform_access',
   'game_restriction',
@@ -279,6 +282,9 @@ export interface PromoFormData {
   has_subcategories: boolean;
   subcategories: PromoSubCategory[];
 
+  // Point Store Redeem Table (untuk tier_point_store)
+  redeem_items: RedeemItem[];
+
   // Step 4 - Template Pesan AI (saved to PersonaBinding, not PKB)
   response_template_offer: string;
   response_template_requirement: string;
@@ -329,6 +335,16 @@ export interface VipTier {
   id: string;
   name: string;
   bonus_percent: number;
+}
+
+// Redeem Item untuk Point Store (tier_point_store)
+export interface RedeemItem {
+  id: string;
+  nama_hadiah: string;         // Contoh: "Credit Game 10.000"
+  nilai_hadiah: number;        // Contoh: 10000
+  biaya_lp: number;            // Contoh: 1000
+  is_active?: boolean;         // Optional: toggle aktif/tidak
+  note?: string;               // Optional: catatan internal
 }
 
 
@@ -898,6 +914,9 @@ export const initialPromoData: PromoFormData = {
   has_subcategories: false,
   subcategories: [],
   
+  // Point Store Redeem Table
+  redeem_items: [],
+  
   response_template_offer: '',
   response_template_requirement: '',
   response_template_instruction: '',
@@ -1147,6 +1166,9 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       dinamis_min_claim_enabled: false,
     },
   ],
+  
+  // Point Store Redeem Table
+  redeem_items: [],
   
   // AI Templates
   response_template_offer: '',
