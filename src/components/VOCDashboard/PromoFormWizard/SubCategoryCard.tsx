@@ -544,7 +544,7 @@ export function SubCategoryCard({
               <div className="flex items-center justify-between">
                 <Label>Jenis Perhitungan</Label>
                 <Switch 
-                  checked={subCategory.calculation_method_enabled !== false} 
+                  checked={subCategory.calculation_method_enabled === true} 
                   onCheckedChange={checked => onChange({
                     calculation_method_enabled: checked,
                     calculation_method: checked ? subCategory.calculation_method : ''
@@ -557,7 +557,7 @@ export function SubCategoryCard({
                 options={calcMethodOptions} 
                 onAddOption={option => setCalcMethodOptions([...calcMethodOptions, option])} 
                 onDeleteOption={value => setCalcMethodOptions(calcMethodOptions.filter(c => c.value !== value))} 
-                placeholder={subCategory.calculation_method_enabled !== false ? "Pilih jenis (%, Fixed)" : "-"}
+                placeholder={subCategory.calculation_method_enabled === true ? "Pilih jenis (%, Fixed)" : "-"}
                 disabled={subCategory.calculation_method_enabled === false}
               />
             </div>
@@ -615,7 +615,7 @@ export function SubCategoryCard({
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Aktifkan</span>
                   <Switch 
-                    checked={subCategory.minimum_base_enabled} 
+                    checked={subCategory.minimum_base_enabled === true} 
                     onCheckedChange={checked => onChange({
                       minimum_base_enabled: checked,
                       minimum_base: checked ? subCategory.minimum_base : 0
