@@ -2974,10 +2974,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
           {(() => {
             // Tier Archetype field visibility helpers (UI-gating only)
-            const tierArchetype = data.tier_archetype || 'tier_advanced';
-            const showLevelFields = tierArchetype === 'tier_level' || tierArchetype === 'tier_advanced';
-            const showPointStoreFields = tierArchetype === 'tier_point_store' || tierArchetype === 'tier_advanced';
-            const showFormulaFields = tierArchetype === 'tier_formula' || tierArchetype === 'tier_advanced';
+            const tierArchetype = data.tier_archetype || 'tier_level';
+            const showLevelFields = tierArchetype === 'tier_level';
+            const showPointStoreFields = tierArchetype === 'tier_point_store';
             
             return (
             <>
@@ -3038,33 +3037,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 <Input type="text" value={data.dinamis_max_claim_unlimited ? '' : (data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : '')} onChange={(e) => onChange({ dinamis_max_claim: Number(e.target.value.replace(/\D/g, '')) })} placeholder={data.dinamis_max_claim_unlimited ? "Unlimited" : "Contoh: 100.000"} disabled={data.dinamis_max_claim_unlimited} className={data.dinamis_max_claim_unlimited ? "opacity-50" : ""} />
               </div>
             </div>
-            {/* Payout Direction & Admin Fee - Only for Formula tier */}
-            {showFormulaFields && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <div className="space-y-2">
-                <Label>Payout Direction</Label>
-                <RadioGroup value={data.global_payout_direction || 'after'} onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })} className="flex gap-6 pt-2">
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="before" id="tier-payout-before" /><Label htmlFor="tier-payout-before" className="cursor-pointer font-normal text-sm">Didepan</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="after" id="tier-payout-after" /><Label htmlFor="tier-payout-after" className="cursor-pointer font-normal text-sm">Dibelakang</Label></div>
-                </RadioGroup>
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Admin Fee</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Aktifkan</span>
-                    <Switch checked={data.admin_fee_enabled ?? false} onCheckedChange={(checked) => onChange({ admin_fee_enabled: checked, admin_fee_percentage: checked ? (data.admin_fee_percentage ?? 0) : 0 })} />
-                  </div>
-                </div>
-                <div className="relative">
-                  <Input type="number" min={0} max={100} value={data.admin_fee_enabled ? (data.admin_fee_percentage ?? 0) : ''} onChange={(e) => onChange({ admin_fee_percentage: Number(e.target.value) || 0 })} placeholder={data.admin_fee_enabled ? "0" : "Tidak aktif"} disabled={!data.admin_fee_enabled} className={cn("pr-10", !data.admin_fee_enabled && "opacity-50")} />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-                </div>
-              </div>
-            </div>
-            )}
-            {/* Dasar Perhitungan - Only for Point Store and Formula tier */}
-            {(showPointStoreFields || showFormulaFields) && (
+            {/* Dasar Perhitungan - Only for Point Store tier */}
+            {showPointStoreFields && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Dasar Perhitungan</Label>
