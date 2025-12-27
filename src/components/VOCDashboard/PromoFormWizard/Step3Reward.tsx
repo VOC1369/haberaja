@@ -2776,7 +2776,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
               
               {/* Row 2: EXP Mode + Aturan Perolehan */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                 {/* Col 1: Point Mode */}
                 <div className="space-y-2">
                   <Label className="text-sm">{getPointUnitShort(data.promo_unit)} Mode</Label>
@@ -2803,13 +2803,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="grid grid-cols-2 gap-4">
                     {/* Kolom 4a - Turnover/Win/Loss/Deposit */}
                     <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">
-                        {data.lp_earn_basis === 'turnover' && 'Turnover'}
-                        {data.lp_earn_basis === 'win' && 'Kemenangan'}
-                        {data.lp_earn_basis === 'lose' && 'Kekalahan'}
-                        {data.lp_earn_basis === 'deposit' && 'Deposit'}
-                        {!data.lp_earn_basis && 'Turnover'}
-                      </Label>
+                      <Label className="text-xs text-muted-foreground">Jumlah</Label>
                       <FormattedNumberInput
                         value={data.lp_earn_amount || 0}
                         onChange={(val) => onChange({ lp_earn_amount: val })}
