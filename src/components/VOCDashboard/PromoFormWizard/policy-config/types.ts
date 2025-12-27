@@ -25,7 +25,8 @@ export interface ExchangeTier {
 }
 
 export interface LoyaltyProgramData {
-  earning_rule: string;
+  earning_to_amount: number;
+  earning_lp_amount: number;
   earning_period: 'daily' | 'weekly' | 'monthly';
   accumulation_time?: string;
   exchange_tiers: ExchangeTier[];
@@ -102,7 +103,8 @@ export const initialPolicyData: PolicyConfigData = {
     is_active: true,
   },
   loyalty: {
-    earning_rule: '',
+    earning_to_amount: 1000,
+    earning_lp_amount: 1,
     earning_period: 'daily',
     accumulation_time: '',
     exchange_tiers: [],
