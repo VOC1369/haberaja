@@ -1478,8 +1478,22 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   />
                 </div>
               </div>
-            </CollapsibleContent>
+          </CollapsibleContent>
           </Collapsible>
+
+          {/* Toggle - Wajib Download APK */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch
+              checked={data.require_apk || false}
+              onCheckedChange={(checked) => onChange({ require_apk: checked })}
+            />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover">Wajib Download APK untuk Promo Ini</div>
+              <p className="text-xs text-muted-foreground">
+                User wajib download APK terlebih dahulu untuk claim reward promo ini
+              </p>
+            </div>
+          </div>
 
           {/* Section 5 - Kontak Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
@@ -2633,6 +2647,20 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
+          {/* Toggle - Wajib Download APK */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch
+              checked={data.require_apk || false}
+              onCheckedChange={(checked) => onChange({ require_apk: checked })}
+            />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover">Wajib Download APK untuk Promo Ini</div>
+              <p className="text-xs text-muted-foreground">
+                User wajib download APK terlebih dahulu untuk claim reward promo ini
+              </p>
+            </div>
+          </div>
+
           {/* Section 5 - Kontak Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch
@@ -3539,6 +3567,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Toggle - Wajib Download APK */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch checked={data.require_apk || false} onCheckedChange={(checked) => onChange({ require_apk: checked })} />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover">Wajib Download APK untuk Promo Ini {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
+              <p className="text-xs text-muted-foreground">User wajib download APK terlebih dahulu untuk claim reward</p>
+            </div>
+          </div>
 
           {/* Section 5 - Kontak Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
