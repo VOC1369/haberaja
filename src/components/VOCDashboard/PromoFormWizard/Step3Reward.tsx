@@ -3007,85 +3007,104 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           )}
 
-          {/* Sub Kategori (Combo Promo) - Toggle - HIDDEN for tier_point_store */}
+          {/* Section 1 - Dasar Perhitungan Bonus (tier_level) - HIDDEN for tier_point_store */}
           {data.tier_archetype !== 'tier_point_store' && (
-            <>
-              <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
-                <Switch
-                  checked={data.has_subcategories || false}
-                  onCheckedChange={(checked) => {
-                    if (checked && (!data.subcategories || data.subcategories.length === 0)) {
-                      onChange({ 
-                        has_subcategories: checked,
-                        subcategories: [createInitialSubCategory(0)]
-                      });
-                    } else {
-                      onChange({ has_subcategories: checked });
-                    }
-                  }}
-                />
-                <div className="flex-1">
-                  <div className="font-medium text-sm text-button-hover">Sub Kategori (Combo Promo)</div>
-                  <p className="text-xs text-muted-foreground">
-                    Aktifkan jika promo punya sub-kategori berbeda.
-                  </p>
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <Calculator className="h-5 w-5 text-button-hover" />
+                  <div className="text-left">
+                    <span className="font-semibold text-sm text-foreground">1. Dasar Perhitungan Bonus</span>
+                    <p className="text-xs text-muted-foreground">Konfigurasi reward per level/tier</p>
+                  </div>
                 </div>
+                <div className="flex items-center gap-3">
+                  {/* Toggle Sub Kategori di kanan */}
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-xs text-muted-foreground">Sub Kategori</span>
+                    <Switch
+                      checked={data.has_subcategories || false}
+                      onCheckedChange={(checked) => {
+                        if (checked && (!data.subcategories || data.subcategories.length === 0)) {
+                          onChange({ 
+                            has_subcategories: checked,
+                            subcategories: [createInitialSubCategory(0)]
+                          });
+                        } else {
+                          onChange({ has_subcategories: checked });
+                        }
+                      }}
+                    />
+                  </div>
+                  <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                </div>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="space-y-4 mb-6">
+                {/* SubCategory Cards - Only show when has_subcategories is true */}
                 {data.has_subcategories && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const currentCount = data.subcategories?.length || 0;
-                      const newSubCategory = createInitialSubCategory(currentCount + 1);
-                      onChange({ subcategories: [...(data.subcategories || []), newSubCategory] });
-                      toast.success("Sub kategori baru ditambahkan");
-                    }}
-                    className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tambah Sub Kategori
-                  </Button>
+                  <>
+                    <div className="space-y-4">
+                      {(data.subcategories || []).map((subCategory, index) => (
+                        <SubCategoryCard
+                          key={subCategory.id || index}
+                          index={index}
+                          subCategory={subCategory}
+                          globalJenisHadiahEnabled={data.global_jenis_hadiah_enabled}
+                          globalMaxBonusEnabled={data.global_max_bonus_enabled}
+                          globalPayoutDirectionEnabled={data.global_payout_direction_enabled}
+                          onInvertGlobalJenisHadiah={() => onChange({ global_jenis_hadiah_enabled: false })}
+                          onInvertGlobalMaxBonus={() => onChange({ global_max_bonus_enabled: false })}
+                          onInvertGlobalPayoutDirection={() => onChange({ global_payout_direction_enabled: false })}
+                          onChange={(updates) => {
+                            const updatedSubcategories = [...(data.subcategories || [])];
+                            updatedSubcategories[index] = { ...subCategory, ...updates };
+                            onChange({ subcategories: updatedSubcategories });
+                          }}
+                          onDelete={() => {
+                            const currentCount = data.subcategories?.length || 0;
+                            if (currentCount <= 1) {
+                              toast.error("Minimal 1 sub kategori harus ada");
+                              return;
+                            }
+                            const updatedSubcategories = (data.subcategories || []).filter((_, i) => i !== index);
+                            onChange({ subcategories: updatedSubcategories });
+                            toast.success("Sub kategori dihapus");
+                          }}
+                          onSave={() => {
+                            toast.success(`${subCategory.name || `Sub Kategori ${index + 1}`} disimpan`);
+                          }}
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Tombol Tambah Sub Kategori */}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const currentCount = data.subcategories?.length || 0;
+                        const newSubCategory = createInitialSubCategory(currentCount + 1);
+                        onChange({ subcategories: [...(data.subcategories || []), newSubCategory] });
+                        toast.success("Sub kategori baru ditambahkan");
+                      }}
+                      className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Tambah Sub Kategori
+                    </Button>
+                  </>
                 )}
-              </div>
-
-              {/* SubCategory Cards - Only show when has_subcategories is true */}
-              {data.has_subcategories && (
-                <div className="space-y-4">
-                  {(data.subcategories || []).map((subCategory, index) => (
-                      <SubCategoryCard
-                        key={subCategory.id || index}
-                        index={index}
-                        subCategory={subCategory}
-                        globalJenisHadiahEnabled={data.global_jenis_hadiah_enabled}
-                        globalMaxBonusEnabled={data.global_max_bonus_enabled}
-                        globalPayoutDirectionEnabled={data.global_payout_direction_enabled}
-                        onInvertGlobalJenisHadiah={() => onChange({ global_jenis_hadiah_enabled: false })}
-                        onInvertGlobalMaxBonus={() => onChange({ global_max_bonus_enabled: false })}
-                        onInvertGlobalPayoutDirection={() => onChange({ global_payout_direction_enabled: false })}
-                        onChange={(updates) => {
-                          const updatedSubcategories = [...(data.subcategories || [])];
-                          updatedSubcategories[index] = { ...subCategory, ...updates };
-                          onChange({ subcategories: updatedSubcategories });
-                        }}
-                        onDelete={() => {
-                          const currentCount = data.subcategories?.length || 0;
-                          if (currentCount <= 1) {
-                            toast.error("Minimal 1 sub kategori harus ada");
-                            return;
-                          }
-                          const updatedSubcategories = (data.subcategories || []).filter((_, i) => i !== index);
-                          onChange({ subcategories: updatedSubcategories });
-                          toast.success("Sub kategori dihapus");
-                        }}
-                        onSave={() => {
-                          toast.success(`${subCategory.name || `Sub Kategori ${index + 1}`} disimpan`);
-                        }}
-                      />
-                    ))}
-                </div>
-              )}
-            </>
+                
+                {/* Empty state when subcategories disabled */}
+                {!data.has_subcategories && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">Aktifkan toggle "Sub Kategori" untuk menambahkan level/tier reward.</p>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {/* Section 1-5: Global Settings - Always visible */}
@@ -3112,13 +3131,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             
             return (
             <>
-          {/* Section 1 - Permainan & Provider (tier_level numbering starts here) */}
+          {/* Section 2 - Permainan & Provider */}
           <Collapsible>
             <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
               <div className="flex items-center gap-3">
                 <Gamepad2 className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">1. Permainan & Provider {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
+                  <div className="text-sm font-semibold text-foreground">2. Permainan & Provider {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
                   <div className="text-xs text-muted-foreground">Target game dan provider</div>
                 </div>
               </div>
@@ -3197,13 +3216,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Section 2 - Hadiah dan Waktu */}
+          {/* Section 3 - Hadiah dan Waktu */}
           <Collapsible>
             <CollapsibleTrigger className="collapsible-trigger w-full">
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">2. Hadiah dan Waktu {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
+                  <div className="text-sm font-semibold text-foreground">3. Hadiah dan Waktu {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
                   <div className="text-xs text-muted-foreground">Jenis hadiah, waktu claim, dan periode pembagian</div>
                 </div>
               </div>
@@ -3504,13 +3523,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Section 3 - Syarat Khusus */}
+          {/* Section 4 - Syarat Khusus */}
           <Collapsible>
             <CollapsibleTrigger className="collapsible-trigger w-full">
               <div className="flex items-center gap-3">
                 <Zap className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
-                  <div className="text-sm font-semibold text-foreground">3. Syarat Khusus {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
+                  <div className="text-sm font-semibold text-foreground">4. Syarat Khusus {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
                   <div className="text-xs text-muted-foreground">Ketentuan tambahan</div>
                 </div>
               </div>
@@ -3537,11 +3556,11 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Section 4 - Kontak Official */}
+          {/* Section 5 - Kontak Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch checked={data.contact_channel_enabled || false} onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })} />
             <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">4. Tampilkan Kontak Official {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
+              <div className="font-medium text-sm text-button-hover">5. Tampilkan Kontak Official {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
               <p className="text-xs text-muted-foreground">Tampilkan info kontak resmi di respons AI</p>
             </div>
           </div>
