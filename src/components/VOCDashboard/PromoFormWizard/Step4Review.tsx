@@ -1,4 +1,4 @@
-import { PromoFormData, GAME_RESTRICTIONS, GAME_PROVIDERS, GAME_NAMES, CONTACT_CHANNELS, GEO_RESTRICTIONS, PLATFORM_ACCESS, CALCULATION_BASES, CALCULATION_METHODS, CLAIM_FREQUENCIES, REWARD_DISTRIBUTIONS, DINAMIS_REWARD_TYPES, REWARD_TYPES, PROMO_RISK_LEVELS, buildPKBPayload } from "./types";
+import { PromoFormData, GAME_RESTRICTIONS, GAME_PROVIDERS, GAME_NAMES, CONTACT_CHANNELS, GEO_RESTRICTIONS, PLATFORM_ACCESS, CALCULATION_BASES, CALCULATION_METHODS, CLAIM_FREQUENCIES, REWARD_DISTRIBUTIONS, DINAMIS_REWARD_TYPES, REWARD_TYPES, PROMO_RISK_LEVELS, buildPKBPayload, TIER_ARCHETYPE_OPTIONS, LP_EARN_BASIS_OPTIONS } from "./types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -1149,30 +1149,117 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                 )}
                 {data.reward_mode === 'tier' && (
                   <>
-                    <ValueBox label="Satuan Poin" value={data.promo_unit} />
+                    {/* Tier Archetype - FIRST */}
+                    <ValueBox 
+                      label="Arsitektur Tier" 
+                      value={TIER_ARCHETYPE_OPTIONS.find(t => t.value === data.tier_archetype)?.label || 'Belum dipilih'} 
+                      isBadge
+                      badgeVariant="outline"
+                    />
+                    <ValueBox label="Satuan Poin" value={data.promo_unit?.toUpperCase() || 'LP'} />
                     <ValueBox label="Mode EXP" value={data.exp_mode} />
                     <ValueBox 
                       label={`Basis Perhitungan ${getPointUnitShort(data.promo_unit)}`}
-                      value={
-                        data.lp_earn_basis === 'turnover' ? 'Turnover' :
-                        data.lp_earn_basis === 'win' ? 'Kemenangan' :
-                        data.lp_earn_basis === 'lose' ? 'Kekalahan Bersih' :
-                        data.lp_earn_basis === 'deposit' ? 'Deposit' : 'Turnover'
-                      } 
+                      value={LP_EARN_BASIS_OPTIONS.find(b => b.value === data.lp_earn_basis)?.label || 'Turnover'} 
                     />
                     <ValueBox 
                       label="Earn Rule" 
                       value={data.lp_earn_amount && data.lp_earn_point_amount 
                         ? `${data.lp_earn_amount.toLocaleString('id-ID')} ${
-                            data.lp_earn_basis === 'turnover' ? 'TO' :
-                            data.lp_earn_basis === 'win' ? 'Win' :
-                            data.lp_earn_basis === 'lose' ? 'Loss' :
-                            data.lp_earn_basis === 'deposit' ? 'Deposit' : 'TO'
+                            LP_EARN_BASIS_OPTIONS.find(b => b.value === data.lp_earn_basis)?.unit || 'TO'
                           } → ${data.lp_earn_point_amount} ${getPointUnitShort(data.promo_unit)}` 
                         : '-'
                       } 
                     />
-                    <ValueBox label="Jumlah Tier" value={`${data.tiers.length} tier`} />
+                    <ValueBox label="Jumlah Tier" value={`${data.tiers?.length || 0} tier`} />
+                    
+                    {/* Level Up Rewards (jika ada) */}
+                    {data.level_up_rewards && data.level_up_rewards.length > 0 && (
+                      <ValueBox 
+                        label="Level Up Rewards" 
+                        value={`${data.level_up_rewards.length} reward`} 
+                      />
+                    )}
+                    
+                    {/* Fast EXP Missions (jika ada) */}
+                    {data.fast_exp_missions && data.fast_exp_missions.length > 0 && (
+                      <ValueBox 
+                        label="Fast EXP Missions" 
+                        value={`${data.fast_exp_missions.length} mission`} 
+                      />
+                    )}
+                    
+                    {/* Detail Tier Table - Untuk tier_level */}
+                    {data.tiers && data.tiers.length > 0 && data.tier_archetype === 'tier_level' && (
+                      <div className="col-span-full mt-2">
+                        <p className="text-muted-foreground text-xs mb-2">Detail Tier</p>
+                        <div className="bg-muted rounded-lg overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead className="bg-muted/50">
+                              <tr>
+                                <th className="text-left py-2 px-3 font-medium text-foreground">Level</th>
+                                <th className="text-left py-2 px-3 font-medium text-foreground">Min Point</th>
+                                <th className="text-left py-2 px-3 font-medium text-foreground">Reward</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {data.tiers.slice(0, 5).map((tier, idx) => (
+                                <tr key={tier.id || idx} className="border-t border-border">
+                                  <td className="py-2 px-3 text-foreground">{tier.type || `Tier ${idx + 1}`}</td>
+                                  <td className="py-2 px-3 text-foreground">{tier.minimal_point?.toLocaleString('id-ID') || 0}</td>
+                                  <td className="py-2 px-3 text-button-hover font-medium">
+                                    {tier.reward_type === 'percentage' 
+                                      ? `${tier.reward}%` 
+                                      : `Rp ${Number(tier.reward).toLocaleString('id-ID')}`}
+                                  </td>
+                                </tr>
+                              ))}
+                              {data.tiers.length > 5 && (
+                                <tr className="border-t border-border bg-muted/30">
+                                  <td colSpan={3} className="py-2 px-3 text-center text-muted-foreground">
+                                    +{data.tiers.length - 5} tier lainnya
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Redeem Items Table - Untuk tier_point_store */}
+                    {data.tier_archetype === 'tier_point_store' && data.redeem_items && data.redeem_items.length > 0 && (
+                      <div className="col-span-full mt-2">
+                        <p className="text-muted-foreground text-xs mb-2">Daftar Hadiah Redeem</p>
+                        <div className="bg-muted rounded-lg overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead className="bg-muted/50">
+                              <tr>
+                                <th className="text-left py-2 px-3 font-medium text-foreground">Nama Hadiah</th>
+                                <th className="text-left py-2 px-3 font-medium text-foreground">Nilai</th>
+                                <th className="text-left py-2 px-3 font-medium text-foreground">Biaya {getPointUnitShort(data.promo_unit)}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {data.redeem_items.slice(0, 5).map((item, idx) => (
+                                <tr key={item.id || idx} className="border-t border-border">
+                                  <td className="py-2 px-3 text-foreground">{item.nama_hadiah}</td>
+                                  <td className="py-2 px-3 text-foreground">Rp {item.nilai_hadiah?.toLocaleString('id-ID') || 0}</td>
+                                  <td className="py-2 px-3 text-button-hover font-medium">{item.biaya_lp?.toLocaleString('id-ID') || 0} {getPointUnitShort(data.promo_unit)}</td>
+                                </tr>
+                              ))}
+                              {data.redeem_items.length > 5 && (
+                                <tr className="border-t border-border bg-muted/30">
+                                  <td colSpan={3} className="py-2 px-3 text-center text-muted-foreground">
+                                    +{data.redeem_items.length - 5} hadiah lainnya
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
                 {data.vip_multiplier.enabled && (
