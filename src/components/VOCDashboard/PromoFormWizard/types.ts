@@ -75,6 +75,7 @@ export const PKB_FIELD_WHITELIST = [
   
   // Point Store Redeem Table
   'redeem_items',
+  'redeem_jenis_reward',  // Global jenis reward untuk semua redeem items
   
   // Batasan & Akses
   'platform_access',
@@ -284,6 +285,7 @@ export interface PromoFormData {
 
   // Point Store Redeem Table (untuk tier_point_store)
   redeem_items: RedeemItem[];
+  redeem_jenis_reward: string;  // Global jenis reward untuk semua redeem items
 
   // Step 4 - Template Pesan AI (saved to PersonaBinding, not PKB)
   response_template_offer: string;
@@ -916,6 +918,7 @@ export const initialPromoData: PromoFormData = {
   
   // Point Store Redeem Table
   redeem_items: [],
+  redeem_jenis_reward: '',
   
   response_template_offer: '',
   response_template_requirement: '',
@@ -1169,7 +1172,8 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   
   // Point Store Redeem Table
   redeem_items: [],
-  
+  redeem_jenis_reward: '',
+
   // AI Templates
   response_template_offer: '',
   response_template_requirement: '',
