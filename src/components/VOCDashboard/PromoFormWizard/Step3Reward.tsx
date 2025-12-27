@@ -3102,7 +3102,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             
             return (
             <>
-          {/* Section 1 - Dasar Perhitungan Bonus (Global) */}
+          {/* Section 1 - Dasar Perhitungan Bonus (Global) - Hidden for tier_point_store */}
+          {tierArchetype !== 'tier_point_store' && (
           <Collapsible>
             <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
               <div className="flex items-center gap-3">
@@ -3212,6 +3213,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
             </CollapsibleContent>
           </Collapsible>
+          )}
 
           {/* Section 2 - Permainan & Provider */}
           <Collapsible>
