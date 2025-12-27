@@ -2728,13 +2728,23 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           </div>
 
-          {/* Point Store Configuration - Only for tier_point_store */}
+          {/* 1. Tabel Perhitungan - Only for tier_point_store */}
           {data.tier_archetype === 'tier_point_store' && (
-            <div className="p-4 bg-card border border-border rounded-xl space-y-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Star className="h-5 w-5 text-button-hover" />
-                <span className="font-semibold text-sm text-foreground">Point Store Configuration</span>
-              </div>
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-button-hover to-button-hover/70 flex items-center justify-center">
+                    <Star className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <span className="font-semibold text-sm text-foreground">1. Tabel Perhitungan</span>
+                    <p className="text-xs text-muted-foreground">Konfigurasi point store dan tabel redeem</p>
+                  </div>
+                </div>
+                <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="p-4 bg-card/50 border border-border rounded-xl mb-4 space-y-4">
               
               {/* Row 1: Point Unit + Basis Perhitungan */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2980,7 +2990,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   💡 User hanya bisa redeem hadiah dengan Biaya {getPointUnitShort(data.promo_unit)} ≤ {getPointUnitLabel(data.promo_unit)} yang dimiliki. Minimum redeem = row dengan biaya paling kecil.
                 </p>
               </div>
-            </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {/* Info Box for tier_level - Direct to Sub Kategori */}
