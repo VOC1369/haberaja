@@ -2733,12 +2733,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <Collapsible defaultOpen>
               <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-button-hover to-button-hover/70 flex items-center justify-center">
-                    <Star className="h-4 w-4 text-white" />
-                  </div>
+                  <Star className="h-5 w-5 text-button-hover" />
                   <div className="text-left">
-                    <span className="font-semibold text-sm text-foreground">1. Tabel Perhitungan</span>
-                    <p className="text-xs text-muted-foreground">Konfigurasi point store dan tabel redeem</p>
+                    <div className="text-sm font-semibold text-foreground">1. Tabel Perhitungan</div>
+                    <div className="text-xs text-muted-foreground">Konfigurasi point store dan tabel redeem</div>
                   </div>
                 </div>
                 <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
