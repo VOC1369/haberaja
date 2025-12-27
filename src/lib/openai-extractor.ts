@@ -2460,6 +2460,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Subcategories
     has_subcategories: extracted.has_subcategories && subcategories.length > 1,
     subcategories: subcategories.length > 1 ? subcategories : [],
+    
+    // Point Store Redeem Table
+    redeem_items: [],
 
     // Step 4 - AI Templates (empty defaults)
     response_template_offer: '',
