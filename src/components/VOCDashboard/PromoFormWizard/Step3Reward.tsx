@@ -249,7 +249,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
       minimal_point: 0,
       reward: 0,
       reward_type: 'fixed',
-      type: 'credit_game',
+      type: '',
+      jenis_hadiah: 'credit_game',
     };
     onChange({ tiers: [...data.tiers, newTier] });
   };
@@ -3021,22 +3022,166 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </Collapsible>
           )}
 
-          {/* Info Box for tier_level - Direct to Sub Kategori */}
+          {/* Simplified Tier Level UI - Card 1: Aturan Progress Level */}
           {data.tier_archetype === 'tier_level' && (
-            <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-              <div className="flex items-center gap-2 mb-2">
-                <Trophy className="h-5 w-5 text-blue-400" />
-                <span className="font-semibold text-sm text-blue-200">Level/Milestone Configuration</span>
+            <>
+              {/* Card 1: Aturan Progress Level (Simple, not accordion) */}
+              <div className="p-4 bg-card border border-border rounded-xl space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Settings className="h-5 w-5 text-button-hover" />
+                  <span className="font-semibold text-sm">Aturan Progress Level</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* Basis Progress */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">Basis Progress</Label>
+                    <Select
+                      value={data.lp_earn_basis || 'turnover'}
+                      onValueChange={(val) => onChange({ lp_earn_basis: val as 'turnover' | 'win' | 'lose' | 'deposit' })}
+                    >
+                      <SelectTrigger className="bg-muted">
+                        <SelectValue placeholder="Pilih..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50">
+                        <SelectItem value="turnover">Turnover</SelectItem>
+                        <SelectItem value="win">Kemenangan (Win)</SelectItem>
+                        <SelectItem value="lose">Net Loss</SelectItem>
+                        <SelectItem value="deposit">Deposit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Rate Progress: [X] → [Y] LP */}
+                  <div className="space-y-1 col-span-2">
+                    <Label className="text-xs">Rate Progress</Label>
+                    <div className="flex items-center gap-2">
+                      <FormattedNumberInput
+                        value={data.lp_earn_amount || 0}
+                        onChange={(val) => onChange({ lp_earn_amount: val })}
+                        className="flex-1 bg-muted"
+                        min={1}
+                      />
+                      <span className="text-muted-foreground text-sm">→</span>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={data.lp_earn_point_amount || ''}
+                        onChange={(e) => onChange({ lp_earn_point_amount: parseInt(e.target.value) || 0 })}
+                        className="w-16 bg-muted"
+                      />
+                      <span className="text-muted-foreground text-sm">LP</span>
+                    </div>
+                  </div>
+                  {/* Mode Claim */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">Mode Claim</Label>
+                    <Select
+                      value={data.tier_claim_mode || 'otomatis'}
+                      onValueChange={(val) => onChange({ tier_claim_mode: val as 'otomatis' | 'manual' })}
+                    >
+                      <SelectTrigger className="bg-muted">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50">
+                        <SelectItem value="otomatis">Otomatis</SelectItem>
+                        <SelectItem value="manual">Manual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {/* Helper text */}
+                <p className="text-xs text-muted-foreground">
+                  💡 Setiap {formatRupiah(data.lp_earn_amount || 1000)} {data.lp_earn_basis || 'turnover'} → {data.lp_earn_point_amount || 1} LP. 
+                  Claim: {data.tier_claim_mode === 'manual' ? 'User harus klik claim' : 'Otomatis masuk saldo'}.
+                </p>
               </div>
-              <p className="text-sm text-blue-200/80">
-                💡 Gunakan <strong>Sub Kategori</strong> di bawah untuk membedakan reward per level (Bronze, Silver, Gold, dll). 
-                Setiap sub kategori bisa memiliki konfigurasi reward, syarat minimum, dan batasan game yang berbeda.
-              </p>
-            </div>
+
+              {/* Card 2: Tabel Level Reward */}
+              <div className="p-4 bg-card border border-border rounded-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-button-hover" />
+                    <span className="font-semibold text-sm">Tabel Level Reward</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={addTier}
+                    className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Level
+                  </Button>
+                </div>
+                
+                {(data.tiers || []).length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Level Name</TableHead>
+                        <TableHead>Jenis Hadiah</TableHead>
+                        <TableHead>Nilai Hadiah</TableHead>
+                        <TableHead className="w-[80px]">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(data.tiers || []).map((tier) => (
+                        <TableRow key={tier.id}>
+                          <TableCell>
+                            <Input
+                              value={tier.type || ''}
+                              onChange={(e) => updateTier(tier.id, { type: e.target.value })}
+                              placeholder="Silver, Gold..."
+                              className="bg-muted"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <SelectWithAddNew
+                              value={tier.jenis_hadiah || 'credit_game'}
+                              onValueChange={(val) => updateTier(tier.id, { jenis_hadiah: val })}
+                              options={hadiahTypeOptions}
+                              placeholder="Credit Game"
+                              onAddOption={(opt) => setHadiahTypeOptions([...hadiahTypeOptions, opt])}
+                              onDeleteOption={handleDeleteHadiahType}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <FormattedNumberInput
+                              value={typeof tier.reward === 'number' ? tier.reward : 0}
+                              onChange={(val) => updateTier(tier.id, { reward: val })}
+                              className="bg-muted"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeTier(tier.id)}
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-lg">
+                    Belum ada level. Klik "Add Level" untuk menambahkan.
+                  </div>
+                )}
+                
+                <p className="text-xs text-muted-foreground">
+                  💡 Reward diberikan saat user mencapai level terkait. Tidak ada rumus tambahan.
+                </p>
+              </div>
+            </>
           )}
 
-          {/* Section 1 - Dasar Perhitungan Bonus (tier_level) - HIDDEN for tier_point_store */}
-          {data.tier_archetype !== 'tier_point_store' && (
+          {/* Section 1 - Dasar Perhitungan Bonus - ONLY for tier_point_store (tier_level uses simplified Tabel Level Reward above) */}
+          {false && data.tier_archetype !== 'tier_point_store' && (
             <Collapsible defaultOpen>
               <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
                 <div className="flex items-center gap-3">

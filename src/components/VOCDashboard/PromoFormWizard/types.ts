@@ -161,6 +161,7 @@ export interface PromoFormData {
 
   // Tier mode
   tier_archetype?: 'tier_level' | 'tier_point_store';  // UI-gating only (optional for backward compat)
+  tier_claim_mode?: 'otomatis' | 'manual';  // Mode claim untuk tier rewards
   promo_unit: 'lp' | 'exp' | 'hybrid';
   exp_mode: 'level_up' | 'exp_store' | 'both';
   lp_calc_method: string;
@@ -312,7 +313,8 @@ export interface TierReward {
   minimal_point: number;
   reward: number | string;
   reward_type: 'fixed' | 'percentage';
-  type: string;
+  type: string;  // Level name: "Silver", "Gold", etc.
+  jenis_hadiah: string;  // "credit_game", "freechip", etc.
   physical_reward_name?: string;
   physical_reward_quantity?: number;  // Jumlah unit hadiah fisik
   cash_reward_amount?: number;  // Nominal uang tunai
