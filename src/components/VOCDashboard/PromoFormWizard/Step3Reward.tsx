@@ -2886,6 +2886,23 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </Button>
                 </div>
                 
+                {/* Jenis Reward - Global untuk semua redeem items */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Jenis Reward</Label>
+                  <SelectWithAddNew
+                    value={data.redeem_jenis_reward || ''}
+                    onValueChange={(val) => onChange({ redeem_jenis_reward: val })}
+                    placeholder="Pilih jenis reward..."
+                    options={dinamisRewardTypeOptions}
+                    onAddOption={(opt) => {
+                      setDinamisRewardTypeOptions(prev => [...prev, opt]);
+                    }}
+                    onDeleteOption={(val) => {
+                      setDinamisRewardTypeOptions(prev => prev.filter(opt => opt.value !== val));
+                    }}
+                  />
+                </div>
+                
                 {/* Table */}
                 {(data.redeem_items || []).length > 0 ? (
                   <Table>
