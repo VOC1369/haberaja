@@ -57,43 +57,53 @@ export function LoyaltyConfig({ data, onChange }: LoyaltyConfigProps) {
 
   return (
     <div className="space-y-6">
-      {/* Earning Rule & Period */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Aturan Perolehan LP - Grid 2 kolom */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Kolom 4a - Turnover */}
         <div className="space-y-2">
           <Label className="text-sm font-medium text-foreground">
-            Earning Rule <span className="text-destructive">*</span>
+            Turnover <span className="text-destructive">*</span>
           </Label>
-          <Input
+          <FormattedNumberInput
             className="bg-muted"
-            placeholder="Contoh: 1,000 TO = 1 LP"
-            value={data.earning_rule}
-            onChange={(e) => onChange({ earning_rule: e.target.value })}
+            value={data.earning_to_amount || 1000}
+            onChange={(val) => onChange({ earning_to_amount: val })}
           />
-          <p className="text-xs text-muted-foreground">
-            Format: [amount] TO = [amount] LP
-          </p>
         </div>
 
+        {/* Kolom 4b - Loyalty Point */}
         <div className="space-y-2">
           <Label className="text-sm font-medium text-foreground">
-            Periode Akumulasi
+            Loyalty Point <span className="text-destructive">*</span>
           </Label>
-          <Select
-            value={data.earning_period}
-            onValueChange={(v) => onChange({ earning_period: v as LoyaltyProgramData['earning_period'] })}
-          >
-            <SelectTrigger className="bg-muted">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {EARNING_PERIODS.map((period) => (
-                <SelectItem key={period.value} value={period.value}>
-                  {period.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <FormattedNumberInput
+            className="bg-muted"
+            value={data.earning_lp_amount || 1}
+            onChange={(val) => onChange({ earning_lp_amount: val })}
+          />
         </div>
+      </div>
+
+      {/* Periode Akumulasi */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-foreground">
+          Periode Akumulasi
+        </Label>
+        <Select
+          value={data.earning_period}
+          onValueChange={(v) => onChange({ earning_period: v as LoyaltyProgramData['earning_period'] })}
+        >
+          <SelectTrigger className="bg-muted">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {EARNING_PERIODS.map((period) => (
+              <SelectItem key={period.value} value={period.value}>
+                {period.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Accumulation Time */}
