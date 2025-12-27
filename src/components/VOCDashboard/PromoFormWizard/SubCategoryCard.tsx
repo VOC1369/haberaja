@@ -3,9 +3,10 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ChevronDown, Save, Trash2, AlertTriangle, Calculator, X, Plus } from "lucide-react";
+import { ChevronDown, Save, Trash2, AlertTriangle, Calculator, X, Plus, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PromoSubCategory, CALCULATION_BASES, CALCULATION_METHODS, DINAMIS_REWARD_TYPES, GAME_RESTRICTIONS, GAME_PROVIDERS, GAME_NAMES, TURNOVER_RULES } from "./types";
 import { SelectWithAddNew, SelectOption } from "./SelectWithAddNew";
@@ -202,6 +203,40 @@ export function SubCategoryCard({
     }
   }, [subCategory.calculation_method]);
 
+  // Get list of overridden fields for visual indicator
+  const getOverriddenFields = (): string[] => {
+    const overrides: string[] = [];
+    
+    if (!subCategory.jenis_hadiah_same_as_global && subCategory.jenis_hadiah) {
+      overrides.push('Hadiah');
+    }
+    if (!subCategory.max_bonus_same_as_global && !subCategory.max_bonus_unlimited && subCategory.max_bonus > 0) {
+      overrides.push('Max Bonus');
+    }
+    if (subCategory.max_bonus_unlimited) {
+      overrides.push('Unlimited');
+    }
+    if (!subCategory.payout_direction_same_as_global) {
+      overrides.push('Payout');
+    }
+    if (subCategory.admin_fee_enabled && subCategory.admin_fee_percentage > 0) {
+      overrides.push('Admin Fee');
+    }
+    if (subCategory.game_types?.length > 0) {
+      overrides.push('Games');
+    }
+    if (subCategory.game_providers?.length > 0) {
+      overrides.push('Providers');
+    }
+    if (subCategory.turnover_rule_enabled && subCategory.turnover_rule) {
+      overrides.push('TO');
+    }
+    
+    return overrides;
+  };
+
+  const overriddenFields = getOverriddenFields();
+
   // Generate summary for collapsed header
   const getSummary = (): string => {
     const parts: string[] = [];
@@ -245,16 +280,52 @@ export function SubCategoryCard({
           <div className="w-6 h-6 rounded-full bg-button-hover/20 flex items-center justify-center text-xs font-medium text-button-hover">
             {index + 1}
           </div>
-          <div className="text-left flex-1">
-            <div className="text-sm font-semibold text-foreground">
-              {subCategory.name || `Sub Kategori ${index + 1}`}
+          <div className="text-left flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold text-foreground">
+                {subCategory.name || `Sub Kategori ${index + 1}`}
+              </span>
+              {/* Override indicator badges */}
+              {overriddenFields.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <Pencil className="h-3 w-3 text-button-hover" />
+                  <span className="text-[10px] text-button-hover font-medium">
+                    {overriddenFields.length} override
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="text-xs text-muted-foreground truncate max-w-md">
-              {getSummary()}
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
+              {/* Show override badges when collapsed */}
+              {!isOpen && overriddenFields.length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {overriddenFields.slice(0, 4).map((field) => (
+                    <Badge 
+                      key={field} 
+                      variant="secondary" 
+                      className="text-[10px] px-1.5 py-0 h-4 bg-button-hover/15 text-button-hover border-button-hover/30"
+                    >
+                      {field}
+                    </Badge>
+                  ))}
+                  {overriddenFields.length > 4 && (
+                    <Badge 
+                      variant="secondary" 
+                      className="text-[10px] px-1.5 py-0 h-4 bg-muted text-muted-foreground"
+                    >
+                      +{overriddenFields.length - 4}
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground truncate max-w-md">
+                  {getSummary()}
+                </span>
+              )}
             </div>
           </div>
         </div>
-        <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
+        <ChevronDown className={cn("h-5 w-5 text-muted-foreground transition-transform duration-200 flex-shrink-0", isOpen && "rotate-180")} />
       </CollapsibleTrigger>
       <CollapsibleContent className="collapsible-content">
         {/* Header: Nama Sub Kategori */}
