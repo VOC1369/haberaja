@@ -3029,10 +3029,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="p-4 bg-card border border-border rounded-xl space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Settings className="h-5 w-5 text-button-hover" />
-                  <span className="font-semibold text-sm">Aturan Progress Level</span>
+                  <span className="font-semibold text-sm">Aturan Progress LP (Loyalty Point)</span>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {/* Basis Progress */}
+                <div className="grid grid-cols-4 gap-4">
+                  {/* Col 1: Basis Progress */}
                   <div className="space-y-1">
                     <Label className="text-xs">Basis Progress</Label>
                     <Select
@@ -3050,28 +3050,28 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* Rate Progress: [X] → [Y] LP */}
-                  <div className="space-y-1 col-span-2">
+                  {/* Col 2: Rate Progress */}
+                  <div className="space-y-1">
                     <Label className="text-xs">Rate Progress</Label>
-                    <div className="flex items-center gap-2">
-                      <FormattedNumberInput
-                        value={data.lp_earn_amount || 0}
-                        onChange={(val) => onChange({ lp_earn_amount: val })}
-                        className="flex-1 bg-muted"
-                        min={1}
-                      />
-                      <span className="text-muted-foreground text-sm">→</span>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={data.lp_earn_point_amount || ''}
-                        onChange={(e) => onChange({ lp_earn_point_amount: parseInt(e.target.value) || 0 })}
-                        className="w-16 bg-muted"
-                      />
-                      <span className="text-muted-foreground text-sm">LP</span>
-                    </div>
+                    <FormattedNumberInput
+                      value={data.lp_earn_amount || 0}
+                      onChange={(val) => onChange({ lp_earn_amount: val })}
+                      className="bg-muted"
+                      min={1}
+                    />
                   </div>
-                  {/* Mode Claim */}
+                  {/* Col 3: LP per Rate */}
+                  <div className="space-y-1">
+                    <Label className="text-xs">LP per Rate</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={data.lp_earn_point_amount || ''}
+                      onChange={(e) => onChange({ lp_earn_point_amount: parseInt(e.target.value) || 0 })}
+                      className="bg-muted"
+                    />
+                  </div>
+                  {/* Col 4: Mode Claim */}
                   <div className="space-y-1">
                     <Label className="text-xs">Mode Claim</Label>
                     <Select
