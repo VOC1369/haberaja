@@ -845,7 +845,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                         </p>
                         <p className="text-muted-foreground">-----------------------------------------------</p>
                         <p className="text-foreground">
-                          {formatNumber(viewTermsItem.minimum_base && viewTermsItem.minimum_base > 0 ? viewTermsItem.minimum_base : 1000000)} x {viewTermsItem.calculation_value}% = {formatNumber((viewTermsItem.minimum_base && viewTermsItem.minimum_base > 0 ? viewTermsItem.minimum_base : 1000000) * (viewTermsItem.calculation_value / 100))} (Bonus yang didapat)
+                          {formatNumber(viewTermsItem.min_calculation && viewTermsItem.min_calculation > 0 ? viewTermsItem.min_calculation : 1000000)} x {viewTermsItem.calculation_value}% = {formatNumber((viewTermsItem.min_calculation && viewTermsItem.min_calculation > 0 ? viewTermsItem.min_calculation : 1000000) * (viewTermsItem.calculation_value / 100))} (Bonus yang didapat)
                         </p>
                       </div>
                     )}
@@ -884,7 +884,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                       </p>
                       <p className="text-muted-foreground">-----------------------------------------------</p>
                       <p className="text-foreground">
-                        {formatNumber(viewTermsItem.minimum_base && viewTermsItem.minimum_base > 0 ? viewTermsItem.minimum_base : 1000000)} x {viewTermsItem.calculation_value}% = {formatNumber((viewTermsItem.minimum_base && viewTermsItem.minimum_base > 0 ? viewTermsItem.minimum_base : 1000000) * (viewTermsItem.calculation_value / 100))} (Bonus yang didapat)
+                        {formatNumber(viewTermsItem.min_calculation && viewTermsItem.min_calculation > 0 ? viewTermsItem.min_calculation : 1000000)} x {viewTermsItem.calculation_value}% = {formatNumber((viewTermsItem.min_calculation && viewTermsItem.min_calculation > 0 ? viewTermsItem.min_calculation : 1000000) * (viewTermsItem.calculation_value / 100))} (Bonus yang didapat)
                       </p>
                     </div>
                   )}

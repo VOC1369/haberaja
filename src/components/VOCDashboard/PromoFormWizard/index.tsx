@@ -106,7 +106,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
       result += `Contoh Perhitungan:\n`;
       result += `Total ${data.calculation_base || 'turnover'} x ${data.calculation_value}% = Nilai Bonus\n`;
       result += `-----------------------------------------------\n`;
-      const exampleBase = data.minimum_base && data.minimum_base > 0 ? data.minimum_base : 1000000;
+      const exampleBase = data.min_calculation && data.min_calculation > 0 ? data.min_calculation : 1000000;
       const exampleReward = exampleBase * (data.calculation_value / 100);
       result += `${formatNumber(exampleBase)} x ${data.calculation_value}% = ${formatNumber(exampleReward)} (Bonus yang didapat)\n\n`;
     }

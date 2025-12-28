@@ -506,10 +506,10 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
     terms.push(`Bonus ini berlaku untuk semua jenis permainan.`);
   }
   
-  // 🔒 ONTOLOGY FIX: Eligibility threshold (minimum_base) vs Payout threshold (dinamis_min_claim)
-  // ANTI-DUPLICATE: Jika minimum_base === dinamis_min_claim, ini LEGACY DATA salah mapping
+  // 🔒 ONTOLOGY FIX: Eligibility threshold (min_calculation) vs Payout threshold (dinamis_min_claim)
+  // ANTI-DUPLICATE: Jika min_calculation === dinamis_min_claim, ini LEGACY DATA salah mapping
   const singleMinClaim = data.dinamis_min_claim || 0;
-  const singleMinBase = data.minimum_base || 0;
+  const singleMinBase = data.min_calculation || 0;
   const singleIsDuplicate = singleMinBase > 0 && singleMinClaim > 0 && singleMinBase === singleMinClaim;
   
   // Payout threshold - RENDER FIRST (prioritas)
@@ -518,7 +518,7 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
   }
   
   // Eligibility threshold - ONLY show if EXPLICITLY declared AND NOT duplicate of payout
-  if (data.minimum_base_enabled && singleMinBase > 0 && !singleIsDuplicate) {
+  if (data.min_calculation_enabled && singleMinBase > 0 && !singleIsDuplicate) {
     const baseLabel = getBaseColumnLabel(data.calculation_base);
     terms.push(`Minimal ${baseLabel} untuk mendapatkan bonus ini adalah Rp ${formatNumber(singleMinBase)}.`);
   }
@@ -938,7 +938,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
       text += `\nContoh Perhitungan:\n`;
       text += `Total ${data.calculation_base || 'Turnover'} x ${data.calculation_value}% = Nilai Bonus\n`;
       text += `-----------------------------------------------\n`;
-      const exampleBase = data.minimum_base && data.minimum_base > 0 ? data.minimum_base : 5000000;
+      const exampleBase = data.min_calculation && data.min_calculation > 0 ? data.min_calculation : 5000000;
       const exampleReward = exampleBase * (data.calculation_value / 100);
       text += `${formatNumber(exampleBase)} x ${data.calculation_value}% = ${formatNumber(exampleReward)} (Bonus yang didapat)\n`;
     }
@@ -1046,7 +1046,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                   <>
                     <ValueBox label="Jenis Bonus" value={REWARD_TYPES.find(r => r.value === data.reward_type)?.label || data.reward_type} />
                     <ValueBox label="Nilai Bonus" value={data.reward_amount ? `Rp ${data.reward_amount.toLocaleString('id-ID')}` : undefined} />
-                    <ValueBox label={`Minimal Perhitungan ${CALCULATION_BASES.find(b => b.value === data.calculation_base)?.label || ''}`} value={data.min_requirement ? `Rp ${data.min_requirement.toLocaleString('id-ID')}` : undefined} />
+                    <ValueBox label="Minimal Deposit" value={data.min_deposit ? `Rp ${data.min_deposit.toLocaleString('id-ID')}` : undefined} />
                     <ValueBox label="Batas Maksimal Bonus" value={data.max_claim ? `Rp ${data.max_claim.toLocaleString('id-ID')}` : undefined} />
                     <ValueBox label="Periode Klaim" value={CLAIM_FREQUENCIES.find(c => c.value === data.claim_frequency)?.label || data.claim_frequency} />
                   </>
@@ -1141,7 +1141,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     <ValueBox label="Nilai Bonus" value={data.calculation_value ? `${data.calculation_value}${data.calculation_method === 'percentage' ? '%' : ''}` : undefined} />
                     <ValueBox label="Jenis Bonus" value={DINAMIS_REWARD_TYPES.find(r => r.value === data.dinamis_reward_type)?.label || data.dinamis_reward_type} />
                     <ValueBox label="Batas Maksimal Bonus" value={data.dinamis_max_claim_unlimited ? 'Unlimited' : (data.dinamis_max_claim ? `Rp ${data.dinamis_max_claim.toLocaleString('id-ID')}` : undefined)} />
-                    <ValueBox label={`Minimal Perhitungan ${CALCULATION_BASES.find(b => b.value === data.calculation_base)?.label || ''}`} value={data.minimum_base_enabled ? (data.minimum_base ? `Rp ${data.minimum_base.toLocaleString('id-ID')}` : undefined) : 'Tidak ada batas minimal'} />
+                    <ValueBox label={`Minimal Perhitungan ${CALCULATION_BASES.find(b => b.value === data.calculation_base)?.label || ''}`} value={data.min_calculation_enabled ? (data.min_calculation ? `Rp ${data.min_calculation.toLocaleString('id-ID')}` : undefined) : 'Tidak ada batas minimal'} />
                     <ValueBox label="Periode Klaim" value={CLAIM_FREQUENCIES.find(c => c.value === data.claim_frequency)?.label || data.claim_frequency} />
                     <ValueBox label="Waktu Pembagian Bonus" value={REWARD_DISTRIBUTIONS.find(r => r.value === data.reward_distribution)?.label || data.reward_distribution} />
                     {/* Syarat Main Sebelum WD */}
@@ -1603,8 +1603,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         </thead>
                         <tbody>
                         {(() => {
-                            // 🔧 FIX: Use dynamic values based on minimum_base (sama dengan Step3Reward)
-                            const minBase = data.minimum_base || 1_000_000;
+                            // 🔧 FIX: Use dynamic values based on min_calculation (sama dengan Step3Reward)
+                            const minBase = data.min_calculation || 1_000_000;
                             const illustrationAmounts = [minBase, minBase * 2, minBase * 5];
                             return illustrationAmounts.map((amount, index) => {
                               const rawBonus = amount * (data.calculation_value / 100);
