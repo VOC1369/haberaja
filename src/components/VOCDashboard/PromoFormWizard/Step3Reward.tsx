@@ -3313,7 +3313,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     ))}
                   </div>
                 )}
-                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_types?.includes(value)) { onChange({ game_types: [...(data.game_types || []), value] }); } }} options={gameTypeOptions} onAddOption={(option) => setGameTypeOptions([...gameTypeOptions, option])} onDeleteOption={handleDeleteGameType} placeholder="Pilih jenis game" />
+                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_types?.includes(value)) { onChange({ game_types: [...(data.game_types || []), value] }); } }} options={gameTypeOptions.filter(opt => !data.game_types_blacklist?.includes(opt.value))} onAddOption={(option) => setGameTypeOptions([...gameTypeOptions, option])} onDeleteOption={handleDeleteGameType} placeholder="Pilih jenis game" />
               </div>
               <div className="space-y-2 mb-4">
                 <Label>Provider Game</Label>
@@ -3327,7 +3327,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     ))}
                   </div>
                 )}
-                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_providers?.includes(value)) { onChange({ game_providers: [...(data.game_providers || []), value] }); } }} options={gameProviderOptions} onAddOption={(option) => setGameProviderOptions([...gameProviderOptions, option])} onDeleteOption={handleDeleteGameProvider} placeholder="Pilih provider" />
+                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_providers?.includes(value)) { onChange({ game_providers: [...(data.game_providers || []), value] }); } }} options={gameProviderOptions.filter(opt => !data.game_providers_blacklist?.includes(opt.value))} onAddOption={(option) => setGameProviderOptions([...gameProviderOptions, option])} onDeleteOption={handleDeleteGameProvider} placeholder="Pilih provider" />
               </div>
               <div className="space-y-2">
                 <Label>Nama Game</Label>
@@ -3341,7 +3341,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     ))}
                   </div>
                 )}
-                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_names?.includes(value)) { onChange({ game_names: [...(data.game_names || []), value] }); } }} options={gameNameOptions} onAddOption={(option) => setGameNameOptions([...gameNameOptions, option])} onDeleteOption={handleDeleteGameName} placeholder="Pilih nama game" />
+                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_names?.includes(value)) { onChange({ game_names: [...(data.game_names || []), value] }); } }} options={gameNameOptions.filter(opt => !data.game_names_blacklist?.includes(opt.value))} onAddOption={(option) => setGameNameOptions([...gameNameOptions, option])} onDeleteOption={handleDeleteGameName} placeholder="Pilih nama game" />
               </div>
               <div className="mt-6 pt-4 border-t border-border">
                 <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-4">
@@ -3371,7 +3371,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                           ))}
                         </div>
                       )}
-                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_types_blacklist?.includes(value)) { onChange({ game_types_blacklist: [...(data.game_types_blacklist || []), value] }); } }} options={gameTypeBlacklistOptions} onAddOption={(option) => setGameTypeBlacklistOptions([...gameTypeBlacklistOptions, option])} onDeleteOption={handleDeleteGameTypeBlacklist} placeholder="Pilih jenis game" />
+                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_types_blacklist?.includes(value)) { onChange({ game_types_blacklist: [...(data.game_types_blacklist || []), value] }); } }} options={gameTypeBlacklistOptions.filter(opt => !data.game_types?.includes(opt.value))} onAddOption={(option) => setGameTypeBlacklistOptions([...gameTypeBlacklistOptions, option])} onDeleteOption={handleDeleteGameTypeBlacklist} placeholder="Pilih jenis game" />
                     </div>
                     {/* Provider Dilarang */}
                     <div className="space-y-2">
@@ -3388,7 +3388,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                           ))}
                         </div>
                       )}
-                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_providers_blacklist?.includes(value)) { onChange({ game_providers_blacklist: [...(data.game_providers_blacklist || []), value] }); } }} options={gameProviderBlacklistOptions} onAddOption={(option) => setGameProviderBlacklistOptions([...gameProviderBlacklistOptions, option])} onDeleteOption={handleDeleteGameProviderBlacklist} placeholder="Pilih provider yang dilarang" />
+                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_providers_blacklist?.includes(value)) { onChange({ game_providers_blacklist: [...(data.game_providers_blacklist || []), value] }); } }} options={gameProviderBlacklistOptions.filter(opt => !data.game_providers?.includes(opt.value))} onAddOption={(option) => setGameProviderBlacklistOptions([...gameProviderBlacklistOptions, option])} onDeleteOption={handleDeleteGameProviderBlacklist} placeholder="Pilih provider yang dilarang" />
                     </div>
                     {/* Nama Game Dilarang */}
                     <div className="space-y-2">
@@ -3405,7 +3405,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                           ))}
                         </div>
                       )}
-                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_names_blacklist?.includes(value)) { onChange({ game_names_blacklist: [...(data.game_names_blacklist || []), value] }); } }} options={gameNameBlacklistOptions} onAddOption={(option) => setGameNameBlacklistOptions([...gameNameBlacklistOptions, option])} onDeleteOption={handleDeleteGameNameBlacklist} placeholder="Pilih nama game yang dilarang" />
+                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_names_blacklist?.includes(value)) { onChange({ game_names_blacklist: [...(data.game_names_blacklist || []), value] }); } }} options={gameNameBlacklistOptions.filter(opt => !data.game_names?.includes(opt.value))} onAddOption={(option) => setGameNameBlacklistOptions([...gameNameBlacklistOptions, option])} onDeleteOption={handleDeleteGameNameBlacklist} placeholder="Pilih nama game yang dilarang" />
                     </div>
                   </div>
                 )}
