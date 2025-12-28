@@ -183,10 +183,16 @@ export const mapHeaderToField = (header: string): string | null => {
     'max bonus (rp)': 'max_bonus',
     'max. bonus': 'max_bonus',
     
-    // Turnover variations
+    // Turnover variations (CRITICAL for Rollingan/Cashback)
     'turnover': 'turnover_rule',
     'to': 'turnover_rule',
     'syarat to': 'turnover_rule',
+    'minimal turnover': 'turnover_rule',
+    'min turnover': 'turnover_rule',
+    'minimum turnover': 'turnover_rule',
+    'syarat turnover': 'turnover_rule',
+    'min to': 'turnover_rule',
+    'minimal to': 'turnover_rule',
     
     // Game type variations
     'kategori': 'game_types',

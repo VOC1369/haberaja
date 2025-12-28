@@ -73,6 +73,18 @@ RULES:
 - Jika tidak ada provider spesifik → eligible_providers: []
 - Extract SEMUA provider dalam kurung atau list
 
+⚠️ CRITICAL: ROLLINGAN/CASHBACK FIELD MAPPING:
+Untuk promo tipe "cashback" atau "rebate" (Rollingan):
+- "Minimal turnover 1.000.000" → turnover_rule: "min 1000000" (BUKAN minimum_base!)
+- "Min TO 500rb" → turnover_rule: "min 500000" (BUKAN minimum_base!)
+- minimum_base = syarat DEPOSIT, turnover_rule = syarat TURNOVER/LOSE
+- Rollingan/Cashback biasanya TIDAK PUNYA min deposit, hanya min turnover!
+
+JANGAN BINGUNG:
+- "Minimal deposit" → minimum_base ✅
+- "Minimal turnover" → turnover_rule ✅ (BUKAN minimum_base!)
+- "Syarat TO" → turnover_rule ✅
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama promo",
@@ -86,7 +98,7 @@ RULES:
   
   "minimum_base": number | null,
   "max_bonus": number | null,
-  "turnover_rule": "format: NxBO atau NxDP" | null,
+  "turnover_rule": "format: NxBO/NxDP atau 'min [angka]' untuk minimal turnover" | null,
   "payout_direction": "balance" | "withdrawable" | null,
   
   "game_types": ["sabung_ayam", "slots", "casino", "sportsbook", ...] | null,
