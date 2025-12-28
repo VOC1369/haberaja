@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, parse } from "date-fns";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -121,6 +121,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
       ? String(data.calculation_value).replace('.', ',') 
       : ''
   );
+  
+  // Sync calcValueInput when data.calculation_value changes (e.g., mode switch reset)
+  useEffect(() => {
+    if (data.calculation_value === undefined || data.calculation_value === null) {
+      setCalcValueInput('');
+    } else {
+      setCalcValueInput(String(data.calculation_value).replace('.', ','));
+    }
+  }, [data.calculation_value]);
   
   // All options are now editable - initialized from defaults
   const [promoUnitOptions, setPromoUnitOptions] = useState<SelectOption[]>([...DEFAULT_PROMO_UNITS]);
