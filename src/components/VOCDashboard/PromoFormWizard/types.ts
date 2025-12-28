@@ -565,6 +565,72 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     delete pkbData.game_names_blacklist;
   }
   
+  // ============================================
+  // PATCH 5: Normalize distribution_day → English enum
+  // ============================================
+  const dayMap: Record<string, string> = {
+    'senin': 'monday',
+    'selasa': 'tuesday',
+    'rabu': 'wednesday',
+    'kamis': 'thursday',
+    'jumat': 'friday',
+    'sabtu': 'saturday',
+    'minggu': 'sunday',
+    'setiap_hari': 'daily',
+  };
+  if (data.distribution_day) {
+    pkbData.distribution_day = dayMap[data.distribution_day.toLowerCase()] || data.distribution_day;
+  }
+  
+  // ============================================
+  // PATCH 6: Normalize reward_distribution → English enum
+  // ============================================
+  const distributionMap: Record<string, string> = {
+    'langsung': 'instant',
+    'otomatis': 'automatic',
+    'hari_tertentu': 'scheduled',
+    'manual': 'manual',
+  };
+  if (data.reward_distribution) {
+    pkbData.reward_distribution = distributionMap[data.reward_distribution] || data.reward_distribution;
+  }
+  
+  // ============================================
+  // PATCH 7: Normalize geo_restriction → lowercase
+  // ============================================
+  if (data.geo_restriction) {
+    pkbData.geo_restriction = data.geo_restriction.toLowerCase();
+  }
+  
+  // ============================================
+  // PATCH 8: Remove legacy game_restriction if game_types[] has data
+  // ============================================
+  if (Array.isArray(pkbData.game_types) && (pkbData.game_types as string[]).length > 0) {
+    delete pkbData.game_restriction;
+  }
+  
+  // ============================================
+  // PATCH 9: Remove tier-only fields from non-tier modes
+  // ============================================
+  if (data.reward_mode !== 'tier') {
+    delete pkbData.promo_unit;
+    delete pkbData.exp_mode;
+    delete pkbData.lp_calc_method;
+    delete pkbData.exp_calc_method;
+    delete pkbData.lp_earn_basis;
+    delete pkbData.lp_earn_amount;
+    delete pkbData.lp_earn_point_amount;
+    delete pkbData.exp_formula;
+    delete pkbData.lp_value;
+    delete pkbData.exp_value;
+    delete pkbData.tiers;
+    delete pkbData.fast_exp_missions;
+    delete pkbData.level_up_rewards;
+    delete pkbData.vip_multiplier;
+    delete pkbData.redeem_items;
+    delete pkbData.redeem_jenis_reward;
+  }
+  
   return pkbData as Partial<PromoFormData>;
 }
 
