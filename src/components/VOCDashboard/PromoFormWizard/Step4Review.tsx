@@ -1603,8 +1603,9 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         </thead>
                         <tbody>
                         {(() => {
-                            // 🔧 FIX: Fixed illustration values (minimum_base = min REWARD threshold, bukan base amount!)
-                            const illustrationAmounts = [1_000_000, 2_000_000, 5_000_000];
+                            // 🔧 FIX: Use dynamic values based on minimum_base (sama dengan Step3Reward)
+                            const minBase = data.minimum_base || 1_000_000;
+                            const illustrationAmounts = [minBase, minBase * 2, minBase * 5];
                             return illustrationAmounts.map((amount, index) => {
                               const rawBonus = amount * (data.calculation_value / 100);
                               // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
