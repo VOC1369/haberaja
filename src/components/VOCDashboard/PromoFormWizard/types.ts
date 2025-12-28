@@ -768,7 +768,8 @@ export const STATUS_OPTIONS = [
 export const CALCULATION_BASES = [
   { value: 'turnover', label: 'Turnover (TO)' },
   { value: 'deposit', label: 'Deposit' },
-  { value: 'win_loss', label: 'Win/Loss' },
+  { value: 'win', label: 'Win' },
+  { value: 'loss', label: 'Loss' },
   { value: 'bet_amount', label: 'Bet Amount' },
   { value: 'loyalty_point', label: 'Loyalty Point' },
   { value: 'experience_point', label: 'Experience Point' },
