@@ -187,30 +187,56 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   };
 
   // ============================================
-  // REGENERATE S&K HANDLERS
+  // CONTRACT PATCH S&K HANDLERS
+  // Strategi: Patch kalimat spesifik, bukan regenerate full
   // ============================================
+  
+  // Kalimat lama yang melanggar kontrak (hardcoded manual claim)
+  const OLD_MANUAL_SENTENCE = "Bonus HARUS diklaim secara manual melalui CS.";
+  // Kalimat netral pengganti (sesuai kontrak epistemik)
+  const NEUTRAL_SENTENCE = "Bonus diproses sesuai mekanisme klaim yang berlaku.";
+  
+  // Regex untuk menangkap variasi (spasi, titik, case-insensitive)
+  const OLD_SENTENCE_REGEX = /Bonus\s+HARUS\s+diklaim\s+secara\s+manual\s+melalui\s+CS\.?/gi;
+  
+  const patchCustomTerms = (customTerms: string | undefined): { patched: string; wasChanged: boolean } => {
+    if (!customTerms) return { patched: '', wasChanged: false };
+    
+    // Check if contains old sentence
+    if (OLD_SENTENCE_REGEX.test(customTerms)) {
+      // Reset regex lastIndex for replace
+      OLD_SENTENCE_REGEX.lastIndex = 0;
+      const patched = customTerms.replace(OLD_SENTENCE_REGEX, NEUTRAL_SENTENCE);
+      return { patched, wasChanged: true };
+    }
+    
+    return { patched: customTerms, wasChanged: false };
+  };
   
   const handleRegenerateSK = async (promo: PromoItem) => {
     setRegeneratingIds(prev => new Set(prev).add(promo.id));
     
     try {
-      // Generate new custom_terms using current template
-      const newTerms = generateTermsList(promo as any);
-      const newCustomTerms = newTerms.join('\n');
+      const { patched, wasChanged } = patchCustomTerms(promo.custom_terms);
+      
+      if (!wasChanged) {
+        toast.info(`"${promo.promo_name}" sudah netral, tidak perlu patch`);
+        return;
+      }
       
       const success = await promoKB.update(promo.id, {
-        custom_terms: newCustomTerms,
+        custom_terms: patched,
       } as Partial<PromoItem>);
       
       if (success) {
-        toast.success(`S&K "${promo.promo_name}" berhasil diperbarui`);
+        toast.success(`S&K "${promo.promo_name}" berhasil dipatch ke netral`);
         loadPromos();
       } else {
-        toast.error(`Gagal regenerate S&K untuk "${promo.promo_name}"`);
+        toast.error(`Gagal patch S&K untuk "${promo.promo_name}"`);
       }
     } catch (error) {
-      console.error('[RegenerateSK] Failed:', error);
-      toast.error(`Gagal regenerate S&K untuk "${promo.promo_name}"`);
+      console.error('[PatchSK] Failed:', error);
+      toast.error(`Gagal patch S&K untuk "${promo.promo_name}"`);
     } finally {
       setRegeneratingIds(prev => {
         const next = new Set(prev);
@@ -222,36 +248,50 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
 
   const handleRegenerateAllSK = async () => {
     setIsRegeneratingAll(true);
-    let successCount = 0;
+    let patchedCount = 0;
+    let skippedCount = 0;
     let failCount = 0;
     
     try {
       for (const promo of items) {
         try {
-          const newTerms = generateTermsList(promo as any);
-          const newCustomTerms = newTerms.join('\n');
+          const { patched, wasChanged } = patchCustomTerms(promo.custom_terms);
+          
+          if (!wasChanged) {
+            skippedCount++;
+            continue;
+          }
           
           const success = await promoKB.update(promo.id, {
-            custom_terms: newCustomTerms,
+            custom_terms: patched,
           } as Partial<PromoItem>);
           
           if (success) {
-            successCount++;
+            patchedCount++;
           } else {
             failCount++;
           }
         } catch (error) {
-          console.error('[RegenerateAllSK] Failed for promo:', promo.id, error);
+          console.error('[PatchAllSK] Failed for promo:', promo.id, error);
           failCount++;
         }
       }
       
       await loadPromos();
       
-      if (failCount === 0) {
-        toast.success(`${successCount} promo berhasil diperbarui S&K-nya`);
+      // Post-patch verification
+      const updatedPromos = await promoKB.getAll();
+      const stillContainsOld = updatedPromos.filter(p => 
+        p.custom_terms && OLD_SENTENCE_REGEX.test(p.custom_terms)
+      ).length;
+      OLD_SENTENCE_REGEX.lastIndex = 0; // Reset regex
+      
+      if (failCount === 0 && stillContainsOld === 0) {
+        toast.success(`✅ ${patchedCount} promo dipatch. ${skippedCount} sudah netral. 0 promo masih manual.`);
+      } else if (stillContainsOld > 0) {
+        toast.warning(`⚠️ ${patchedCount} dipatch, tapi ${stillContainsOld} promo MASIH mengandung kalimat manual!`);
       } else {
-        toast.warning(`${successCount} berhasil, ${failCount} gagal diperbarui`);
+        toast.warning(`${patchedCount} dipatch, ${skippedCount} skip, ${failCount} gagal`);
       }
     } finally {
       setIsRegeneratingAll(false);
