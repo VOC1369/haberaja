@@ -849,7 +849,12 @@ Varian 2: "minimum_base": 15000000, "max_bonus": null ← SWAP ERROR!
 PETUNJUK KOLOM minimum_base (umum di situs ID):
 - DEPOSIT: "Min Deposit", "Min. DP", "Minimal Deposit", "Min Depo", "Syarat Deposit", "Minimal DP"
 - CASHBACK/REBATE: "Minimal Kekalahan", "Min Loss", "Minimal WL", "Win/Loss Minimum", "Syarat Kekalahan"
-- TURNOVER: "Minimal Turnover", "Min TO", "Syarat TO", "Minimal Bet"
+⚠️ JANGAN MASUKKAN "Minimal Turnover" di sini! Itu untuk turnover_rule!
+
+PETUNJUK KOLOM turnover_rule (KHUSUS ROLLINGAN/REBATE):
+- "Minimal Turnover", "Min TO", "Syarat TO", "Minimal Bet"
+- "Minimal turnover 1.000.000" → turnover_rule: "min 1000000"
+- "Min TO 500rb" → turnover_rule: "min 500000"
 
 URUTAN PRIORITAS:
 1) Jika TABEL menampilkan kolom Min Deposit dengan nilai → extract nilai tersebut
@@ -1077,11 +1082,22 @@ Jika S&K menyebut:
 ❌ Jangan override dengan daftar provider visual.
 ❌ Jangan list provider satu-satu jika S&K bilang "semua"
 
-🔹 Rollingan Promo
+🔹 Rollingan Promo (⚠️ CRITICAL FIELD MAPPING!)
 Ciri-ciri rollingan:
 - calculation_base = "turnover"
 - payout_direction = "belakang"
-- turnover_rule = 1 (kecuali disebut lain)
+- turnover_rule = "min [angka]" JIKA ada syarat "Minimal turnover"
+
+⚠️⚠️⚠️ KHUSUS ROLLINGAN — MAPPING FIELD KRITIS:
+- "Minimal turnover 1.000.000" → turnover_rule: "min 1000000" (BUKAN minimum_base!)
+- "Min TO 500rb" → turnover_rule: "min 500000" (BUKAN minimum_base!)
+- Rollingan biasanya TIDAK PUNYA min deposit! (minimum_base = null)
+- minimum_base untuk Rollingan HANYA jika ada "Minimal DEPOSIT" explicit
+
+JANGAN BINGUNG (ROLLINGAN):
+- "Minimal deposit untuk ikut" → minimum_base ✅
+- "Minimal turnover untuk ikut" → turnover_rule: "min X" ✅ (BUKAN minimum_base!)
+- "Syarat TO 1jt" → turnover_rule: "min 1000000" ✅
 
 🔹 Welcome Bonus / Deposit Bonus
 Ciri-ciri:
@@ -1901,18 +1917,37 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     if (isRollinganPromo) {
       console.log('[Extractor] ROLLINGAN detected → forcing calculation_base = "turnover"');
       parsed.subcategories = parsed.subcategories?.map((sub: any) => {
+        let updatedSub = { ...sub };
+        
+        // Fix calculation_base
         if (sub.calculation_base !== 'turnover') {
           console.log(`[Extractor] Fixing ${sub.sub_name}: ${sub.calculation_base} → turnover`);
-          return {
-            ...sub,
-            calculation_base: 'turnover',
-            confidence: {
-              ...sub.confidence,
-              calculation_base: 'derived'  // Mark as auto-fixed
-            }
+          updatedSub.calculation_base = 'turnover';
+          updatedSub.confidence = {
+            ...updatedSub.confidence,
+            calculation_base: 'derived'
           };
         }
-        return sub;
+        
+        // ⚠️ FIX ROLLINGAN FIELD CONFUSION: minimum_base filled but turnover_rule empty
+        // "Minimal turnover X" was likely misassigned to minimum_base
+        const hasMinTurnoverPattern = /minimal\s+turnover|min\s*to\b|syarat\s+to\b/i.test(rawText);
+        const hasMinDepositPattern = /minimal\s+deposit|min\s+deposit|min\s*dp\b/i.test(rawText);
+        
+        if (hasMinTurnoverPattern && !hasMinDepositPattern && 
+            sub.minimum_base !== null && sub.minimum_base > 0 && 
+            (!sub.turnover_rule || sub.turnover_rule === null)) {
+          console.warn(`⚠️ ROLLINGAN MISMAP DETECTED "${sub.sub_name}": minimum_base=${sub.minimum_base} but turnover_rule empty. Swapping...`);
+          updatedSub.turnover_rule = `min ${sub.minimum_base}`;
+          updatedSub.minimum_base = null;
+          updatedSub.confidence = {
+            ...updatedSub.confidence,
+            minimum_base: 'not_applicable',
+            turnover_rule: 'derived'
+          };
+        }
+        
+        return updatedSub;
       }) || [];
     }
     
