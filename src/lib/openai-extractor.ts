@@ -2356,6 +2356,25 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     claim_date_from: '',
     claim_date_until: '',
 
+    // Fixed Mode - SEPARATE fields (prefix: fixed_)
+    fixed_reward_type: '',
+    fixed_calculation_base: '',
+    fixed_calculation_method: '',
+    fixed_calculation_value: undefined,
+    fixed_max_claim: undefined,
+    fixed_max_claim_unlimited: false,
+    fixed_payout_direction: 'after',
+    fixed_admin_fee_enabled: false,
+    fixed_admin_fee_percentage: undefined,
+    fixed_min_calculation_enabled: false,
+    fixed_min_calculation: undefined,
+    fixed_physical_reward_name: '',
+    fixed_physical_reward_quantity: 1,
+    fixed_cash_reward_amount: undefined,
+    fixed_turnover_rule_enabled: false,
+    fixed_turnover_rule: '',
+    fixed_turnover_rule_custom: '',
+
     // Tier mode defaults
     promo_unit: 'lp',
     exp_mode: 'level_up',

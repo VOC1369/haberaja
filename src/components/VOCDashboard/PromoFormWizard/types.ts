@@ -213,18 +213,41 @@ export interface PromoFormData {
   custom_terms: string;
   special_requirements: string[];
 
+  // =============================================
+  // Fixed Mode - SEPARATE fields (prefix: fixed_)
+  // =============================================
+  fixed_reward_type: string;
+  fixed_calculation_base: string;
+  fixed_calculation_method: string;
+  fixed_calculation_value?: number;
+  fixed_max_claim?: number;
+  fixed_max_claim_unlimited: boolean;
+  fixed_payout_direction: 'before' | 'after';
+  fixed_admin_fee_enabled: boolean;
+  fixed_admin_fee_percentage?: number;
+  fixed_min_calculation_enabled: boolean;
+  fixed_min_calculation?: number;
+  fixed_physical_reward_name?: string;
+  fixed_physical_reward_quantity?: number;
+  fixed_cash_reward_amount?: number;
+  fixed_turnover_rule_enabled: boolean;
+  fixed_turnover_rule: string;
+  fixed_turnover_rule_custom?: string;
+
+  // =============================================
   // Dinamis mode - UI helper fields (NOT saved to PKB directly)
   // These are used by form UI, then wrapped into formula_metadata for PKB
+  // =============================================
   calculation_base: string;
   calculation_method: string;
-  calculation_value: number;
+  calculation_value?: number;
   min_calculation: number;       // Dinamis mode: Min basis perhitungan (Loss/TO/dll) (formerly minimum_base)
   min_calculation_enabled: boolean;
   
   // Dinamis mode - Reward (UI helper)
   dinamis_reward_type: string;
   dinamis_reward_amount: number;
-  dinamis_max_claim: number;
+  dinamis_max_claim?: number;
   dinamis_max_claim_unlimited: boolean;
   dinamis_min_claim: number;
   dinamis_min_claim_enabled: boolean;
@@ -1065,15 +1088,38 @@ export const initialPromoData: PromoFormData = {
   custom_terms: '',
   special_requirements: [],
   
+  // =============================================
+  // Fixed Mode - SEPARATE fields (prefix: fixed_)
+  // =============================================
+  fixed_reward_type: '',
+  fixed_calculation_base: '',
+  fixed_calculation_method: '',
+  fixed_calculation_value: undefined,
+  fixed_max_claim: undefined,
+  fixed_max_claim_unlimited: false,
+  fixed_payout_direction: 'after',
+  fixed_admin_fee_enabled: false,
+  fixed_admin_fee_percentage: undefined,
+  fixed_min_calculation_enabled: false,
+  fixed_min_calculation: undefined,
+  fixed_physical_reward_name: '',
+  fixed_physical_reward_quantity: 1,
+  fixed_cash_reward_amount: undefined,
+  fixed_turnover_rule_enabled: false,
+  fixed_turnover_rule: '',
+  fixed_turnover_rule_custom: '',
+
+  // =============================================
   // Dinamis mode - UI helper fields
+  // =============================================
   calculation_base: '',
   calculation_method: '',
-  calculation_value: 0,
+  calculation_value: undefined,
   min_calculation: 0,       // Dinamis mode: Min Calculation (formerly minimum_base)
   min_calculation_enabled: true,
   dinamis_reward_type: '',
   dinamis_reward_amount: 0,
-  dinamis_max_claim: 0,
+  dinamis_max_claim: undefined,
   dinamis_max_claim_unlimited: false,
   dinamis_min_claim: 0,
   dinamis_min_claim_enabled: false,
@@ -1210,6 +1256,25 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   distribution_day_time_enabled: false,
   custom_terms: 'Bonus hanya berlaku untuk member baru; Minimal deposit Rp 50.000; Wajib klaim melalui Live Chat sebelum bermain',
   special_requirements: [],
+  
+  // Fixed Mode - SEPARATE fields (prefix: fixed_)
+  fixed_reward_type: '',
+  fixed_calculation_base: '',
+  fixed_calculation_method: '',
+  fixed_calculation_value: undefined,
+  fixed_max_claim: undefined,
+  fixed_max_claim_unlimited: false,
+  fixed_payout_direction: 'after',
+  fixed_admin_fee_enabled: false,
+  fixed_admin_fee_percentage: undefined,
+  fixed_min_calculation_enabled: false,
+  fixed_min_calculation: undefined,
+  fixed_physical_reward_name: '',
+  fixed_physical_reward_quantity: 1,
+  fixed_cash_reward_amount: undefined,
+  fixed_turnover_rule_enabled: false,
+  fixed_turnover_rule: '',
+  fixed_turnover_rule_custom: '',
   
   // Dinamis mode - UI helper fields
   calculation_base: 'deposit',
