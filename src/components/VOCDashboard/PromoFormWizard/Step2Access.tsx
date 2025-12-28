@@ -216,25 +216,13 @@ export function Step2Access({ data, onChange, isEditingFromReview, onSaveAndRetu
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Wajib APK Toggle */}
-      <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
-        <Switch
-          checked={data.require_apk}
-          onCheckedChange={(checked) => onChange({ require_apk: checked })}
-        />
-        <div>
-          <div className="font-medium text-sm text-button-hover">3. Wajib APK</div>
-          <p className="text-xs text-muted-foreground">Wajib download APK dahulu untuk claim reward ini</p>
-        </div>
-      </div>
-
       {/* Section: Promo Risk Level */}
       <Collapsible open={riskOpen} onOpenChange={setRiskOpen}>
         <CollapsibleTrigger className="collapsible-trigger w-full">
           <div className="flex items-center gap-3">
             <ShieldAlert className="h-5 w-5 text-button-hover" />
             <div className="text-left">
-              <div className="text-sm font-semibold text-button-hover">4. Tingkat Risiko Promo</div>
+              <div className="text-sm font-semibold text-button-hover">3. Tingkat Risiko Promo</div>
               <div className="text-xs text-muted-foreground">Atur level kehati-hatian AI</div>
             </div>
             <Badge variant="outline" size="sm" className="ml-auto">Opsional</Badge>
