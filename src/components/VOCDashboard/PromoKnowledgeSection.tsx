@@ -478,7 +478,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
       switch (classification) {
         case 'A': return { icon: Zap, text: 'Bonus Instan', className: 'bg-warning/20 text-warning border border-warning/30' };
         case 'B': return { icon: Trophy, text: 'Event/Kompetisi', className: 'bg-blue-500/20 text-blue-400 border border-blue-500/30' };
-        case 'C': return { icon: Cog, text: 'Program Sistem', className: 'bg-pink-500/20 text-pink-400 border border-pink-500/30' };
+        case 'C': return { icon: Cog, text: 'System Rule', className: 'bg-pink-500/20 text-pink-400 border border-pink-500/30' };
         default: return null;
       }
     };
@@ -553,7 +553,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                 <SelectContent>
                   <SelectItem value="A">A - Bonus Instan (Welcome, Cashback, dll)</SelectItem>
                   <SelectItem value="B">B - Event/Kompetisi (Tournament, Race, dll)</SelectItem>
-                  <SelectItem value="C">C - Program Sistem (Loyalty, Rollingan, dll)</SelectItem>
+                  {/* C is System Rule - should not be selectable as override target */}
                 </SelectContent>
               </Select>
             </div>

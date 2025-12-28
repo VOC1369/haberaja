@@ -32,7 +32,7 @@ const programToClassification = (program: ProgramType): 'A' | 'B' | 'C' | undefi
   switch (program) {
     case 'reward': return 'A';  // Bonus Instan
     case 'event': return 'B';   // Event/Kompetisi
-    case 'policy': return 'C';  // Program Sistem
+    case 'policy': return 'C';  // System Rule (NOT a promo)
     default: return undefined;
   }
 };

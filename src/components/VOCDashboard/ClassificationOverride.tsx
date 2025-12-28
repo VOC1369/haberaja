@@ -183,9 +183,14 @@ export function ClassificationOverride({
                   <SelectContent>
                     <SelectItem value="A">A - Reward Program</SelectItem>
                     <SelectItem value="B">B - Event Program</SelectItem>
-                    <SelectItem value="C">C - Policy Program</SelectItem>
+                    {/* C is System Rule - only available if currently C, not selectable as override target */}
                   </SelectContent>
                 </Select>
+                {currentCategory === 'C' && (
+                  <p className="text-xs text-amber-500 mt-2">
+                    ⚠️ System Rule terdeteksi. Jika ini sebenarnya promo, override ke A atau B.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

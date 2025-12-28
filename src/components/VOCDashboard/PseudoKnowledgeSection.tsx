@@ -490,6 +490,18 @@ export function PseudoKnowledgeSection() {
     }
     
     // ============================================
+    // SYSTEM RULE GATE: C is NOT a promo - cannot be saved to KB
+    // Show informational message instead of commit
+    // ============================================
+    if (extractedPromo.program_classification === 'C') {
+      toast.info("Ini adalah System Rule, bukan promo", {
+        description: "Aturan sistem tidak disimpan ke Promo KB. Gunakan Copy JSON jika perlu referensi.",
+        duration: 5000
+      });
+      return;
+    }
+    
+    // ============================================
     // CONFIDENCE GATE: Block commit if LOW confidence
     // Human must acknowledge before proceeding
     // ============================================
@@ -1258,7 +1270,7 @@ export function PseudoKnowledgeSection() {
                     
                     console.log('[ClassificationOverride] Override applied:', override);
                     
-                    const categoryNames = { A: 'Reward Program', B: 'Event Program', C: 'Policy Program' };
+                    const categoryNames = { A: 'Reward Program', B: 'Event Program', C: 'System Rule' };
                     setExtractedPromo({
                       ...extractedPromo,
                       program_classification: newCategory,
@@ -1269,6 +1281,23 @@ export function PseudoKnowledgeSection() {
                     toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
                   }}
                 />
+              )}
+              
+              {/* SYSTEM RULE WARNING BANNER */}
+              {extractedPromo.program_classification === 'C' && (
+                <div className="flex items-start gap-3 p-4 bg-pink-500/10 border border-pink-500/30 rounded-xl">
+                  <Info className="w-5 h-5 text-pink-400 flex-shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-pink-400">System Rule Terdeteksi</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Ini adalah <strong>aturan sistem</strong>, bukan promo yang bisa diklaim.
+                      System Rule tidak akan disimpan ke Promo KB.
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 mt-2">
+                      Jika ini sebenarnya promo (bonus/cashback/event), klik "Override" di atas untuk mengubah klasifikasi ke A atau B.
+                    </p>
+                  </div>
+                </div>
               )}
               
               {renderExtractedData()}
@@ -1370,14 +1399,35 @@ export function PseudoKnowledgeSection() {
                     Copy JSON
                   </Button>
                   
-                  <Button 
-                    onClick={handleCommitPromo}
-                    variant="golden"
-                    className="gap-2 rounded-full"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Gunakan Promo
-                  </Button>
+                  {/* System Rule (C) cannot be saved to promo KB */}
+                  {extractedPromo.program_classification === 'C' ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            variant="outline"
+                            disabled
+                            className="gap-2 rounded-full opacity-50 cursor-not-allowed"
+                          >
+                            <Ban className="w-4 h-4" />
+                            Bukan Promo
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>System Rule tidak dapat disimpan ke Promo KB. Ini adalah aturan sistem, bukan promo yang bisa diklaim.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Button 
+                      onClick={handleCommitPromo}
+                      variant="golden"
+                      className="gap-2 rounded-full"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      Gunakan Promo
+                    </Button>
+                  )}
                 </div>
               </div>
             </>
