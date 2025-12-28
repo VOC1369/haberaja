@@ -353,13 +353,21 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               onClick={() => {
                 const newMode = mode.value as 'fixed' | 'tier' | 'formula';
                 if (newMode !== data.reward_mode) {
-                  if (data.has_subcategories && data.subcategories?.length > 0) {
-                    toast.warning("Mode reward berubah - sub kategori di-reset");
-                  }
+                  toast.warning("Mode reward berubah - konfigurasi sebelumnya di-reset");
+                  // Reset ALL calculation-related fields when switching modes
                   onChange({ 
                     reward_mode: newMode,
                     has_subcategories: false,
-                    subcategories: []
+                    subcategories: [],
+                    // Reset calculation fields to prevent data "bleeding" between modes
+                    calculation_base: '',
+                    calculation_method: '',
+                    calculation_value: undefined,
+                    dinamis_reward_type: '',
+                    dinamis_max_claim: undefined,
+                    dinamis_max_claim_unlimited: false,
+                    admin_fee_enabled: false,
+                    admin_fee_percentage: 0,
                   });
                 }
               }}
