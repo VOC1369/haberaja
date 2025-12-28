@@ -63,7 +63,7 @@ export const PKB_FIELD_WHITELIST = [
   'vip_multiplier',
   
   // Distribution
-  'reward_distribution',
+  // 'reward_distribution',  // ❌ REMOVED - Runtime decision by toggle, NOT promo data!
   'distribution_day',
   'distribution_time',
   'distribution_date_from',
@@ -621,17 +621,12 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   }
   
   // ============================================
-  // PATCH 6: Normalize reward_distribution → English enum
+  // PATCH 6: reward_distribution REMOVED from PKB output
   // ============================================
-  const distributionMap: Record<string, string> = {
-    'langsung': 'instant',
-    'otomatis': 'automatic',
-    'hari_tertentu': 'scheduled',
-    'manual': 'manual',
-  };
-  if (data.reward_distribution) {
-    pkbData.reward_distribution = distributionMap[data.reward_distribution] || data.reward_distribution;
-  }
+  // Claim mechanism (manual vs auto) is a RUNTIME decision controlled by UI toggle,
+  // NOT part of promo data. This prevents "toggle ditabrak data" conflict.
+  // If reward_distribution was copied from whitelist, remove it now.
+  delete pkbData.reward_distribution;
   
   // ============================================
   // PATCH 7: Normalize geo_restriction → lowercase

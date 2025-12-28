@@ -276,19 +276,19 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
     terms.push(`Frekuensi klaim: ${effectiveFrequency}.`);
   }
   
-  // Dynamic distribution day - SKIP if manual claim mode!
-  // FIX: Konflik Manual vs Auto - jangan bilang "otomatis" jika reward_distribution = manual_cs
-  if (data.distribution_day && data.reward_distribution !== 'manual_cs') {
+  // ============================================
+  // NEUTRALIZED: Claim mechanism is runtime decision, not promo data!
+  // ============================================
+  // Distribution day for PROCESSING (not auto-credit language)
+  if (data.distribution_day) {
     const dayLabel = data.distribution_day === 'setiap_hari' 
       ? 'setiap hari' 
-      : `setiap hari ${capitalizeFirst(data.distribution_day)}`;
-    terms.push(`Bonus akan dibagikan secara otomatis ${dayLabel}.`);
+      : `hari ${capitalizeFirst(data.distribution_day)}`;
+    terms.push(`Pemrosesan bonus dilakukan ${dayLabel}.`);
   }
   
-  // Manual claim explicit term - HARUS ada jika manual_cs
-  if (data.reward_distribution === 'manual_cs') {
-    terms.push(`Bonus HARUS diklaim secara manual melalui CS.`);
-  }
+  // NEUTRAL claim term - lets toggle & Livechat decide actual mechanism
+  terms.push(`Bonus diproses sesuai mekanisme klaim yang berlaku.`);
   
   // Distribution time (untuk Hari Tertentu - legacy support)
   if (data.reward_distribution === 'hari_tertentu' && data.distribution_day && data.distribution_time_from && data.distribution_time_until) {
