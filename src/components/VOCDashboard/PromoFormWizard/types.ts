@@ -30,7 +30,9 @@ export const PKB_FIELD_WHITELIST = [
   'reward_mode',
   'reward_type',
   'reward_amount',
-  'min_requirement',
+  'min_deposit',        // Fixed mode: Minimal deposit untuk klaim
+  'min_calculation',    // Dinamis mode: Minimal basis perhitungan (Loss/TO/dll)  
+  'min_claim',          // Minimal bonus yang bisa diambil (diklaim)
   'max_claim',
   'max_claim_unlimited',
   'turnover_rule',
@@ -155,7 +157,7 @@ export interface PromoFormData {
   // Fixed mode
   reward_type: string;
   reward_amount: number;
-  min_requirement: number;
+  min_deposit: number;  // Fixed mode: Minimal deposit untuk klaim (formerly min_requirement)
   max_claim: number | null;  // null jika unlimited (canonical form)
   turnover_rule: string;
   turnover_rule_enabled: boolean;
@@ -210,8 +212,8 @@ export interface PromoFormData {
   calculation_base: string;
   calculation_method: string;
   calculation_value: number;
-  minimum_base: number;
-  minimum_base_enabled: boolean;
+  min_calculation: number;       // Dinamis mode: Min basis perhitungan (Loss/TO/dll) (formerly minimum_base)
+  min_calculation_enabled: boolean;
   
   // Dinamis mode - Reward (UI helper)
   dinamis_reward_type: string;
@@ -531,24 +533,44 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     };
     pkbData.trigger_event = baseToTrigger[data.calculation_base] || data.calculation_base || data.trigger_event || 'turnover';
     
-    // 2. Use min_requirement from minimum_base
-    if (data.minimum_base && data.minimum_base_enabled) {
-      pkbData.min_requirement = data.minimum_base;
+    // 2. Min Calculation (Loss/TO/dll) - context dari calculation_base
+    if (data.min_calculation && data.min_calculation_enabled) {
+      pkbData.min_calculation = data.min_calculation;
     }
     
-    // 3. Normalize max_claim: null jika unlimited (canonical form)
+    // 3. Min Claim (bonus minimal yang bisa diklaim)
+    if (data.dinamis_min_claim && data.dinamis_min_claim_enabled) {
+      pkbData.min_claim = data.dinamis_min_claim;
+    }
+    
+    // 4. Normalize max_claim: null jika unlimited (canonical form)
     pkbData.max_claim = data.dinamis_max_claim_unlimited ? null : (data.dinamis_max_claim || null);
     pkbData.max_claim_unlimited = data.dinamis_max_claim_unlimited;
     
-    // 4. Use reward_type (bukan dinamis_reward_type duplikat)
+    // 5. Use reward_type (bukan dinamis_reward_type duplikat)
     if (data.dinamis_reward_type) {
       pkbData.reward_type = data.dinamis_reward_type;
     }
   } else {
+    // Fixed mode: use min_deposit
+    if (data.min_deposit && data.min_deposit > 0) {
+      pkbData.min_deposit = data.min_deposit;
+    }
+    
     // Non-formula modes: normalize max_claim jika unlimited
     if (data.max_claim === 0 && dataRecord.max_claim_unlimited) {
       pkbData.max_claim = null;
     }
+  }
+  
+  // ============================================
+  // LEGACY MIGRATION: Handle old field names for backward compatibility
+  // ============================================
+  if ((dataRecord as Record<string, unknown>).min_requirement && !pkbData.min_deposit) {
+    pkbData.min_deposit = (dataRecord as Record<string, unknown>).min_requirement as number;
+  }
+  if ((dataRecord as Record<string, unknown>).minimum_base && !pkbData.min_calculation) {
+    pkbData.min_calculation = (dataRecord as Record<string, unknown>).minimum_base as number;
   }
   
   // ============================================
@@ -933,7 +955,7 @@ export const initialPromoData: PromoFormData = {
   reward_mode: 'fixed',
   reward_type: '',
   reward_amount: 0,
-  min_requirement: 0,
+  min_deposit: 0,  // Fixed mode: Min Deposit (formerly min_requirement)
   max_claim: 0,  // UI default (akan jadi null di PKB jika unlimited)
   turnover_rule: '',
   turnover_rule_enabled: false,
@@ -984,8 +1006,8 @@ export const initialPromoData: PromoFormData = {
   calculation_base: '',
   calculation_method: '',
   calculation_value: 0,
-  minimum_base: 0,
-  minimum_base_enabled: true,
+  min_calculation: 0,       // Dinamis mode: Min Calculation (formerly minimum_base)
+  min_calculation_enabled: true,
   dinamis_reward_type: '',
   dinamis_reward_amount: 0,
   dinamis_max_claim: 0,
@@ -1085,7 +1107,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   // Fixed mode fields (not used but required by interface)
   reward_type: '',
   reward_amount: 0,
-  min_requirement: 50000,
+  min_deposit: 50000,  // Fixed mode: Min Deposit
   max_claim: null,
   turnover_rule: '8x',
   turnover_rule_enabled: true,
@@ -1129,8 +1151,8 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   calculation_base: 'deposit',
   calculation_method: 'percentage',
   calculation_value: 100,
-  minimum_base: 50000,
-  minimum_base_enabled: true,
+  min_calculation: 50000,  // Dinamis mode: Min Calculation (formerly minimum_base)
+  min_calculation_enabled: true,
   dinamis_reward_type: 'saldo',
   dinamis_reward_amount: 0,
   dinamis_max_claim: 2000000,

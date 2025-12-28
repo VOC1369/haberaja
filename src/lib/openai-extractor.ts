@@ -2343,7 +2343,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Fixed mode defaults
     reward_type: 'Freechip',
     reward_amount: 0,
-    min_requirement: 0,
+    min_deposit: 0,
     max_claim: null,
     turnover_rule: '0x',
     turnover_rule_enabled: false,
@@ -2397,8 +2397,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     calculation_base: subcategories[0]?.calculation_base || 'deposit',
     calculation_method: subcategories[0]?.calculation_method || 'percentage',
     calculation_value: subcategories[0]?.calculation_value || 0,
-    minimum_base: subcategories[0]?.minimum_base || 0,
-    minimum_base_enabled: (subcategories[0]?.minimum_base || 0) > 0,
+    min_calculation: subcategories[0]?.minimum_base || 0,  // Renamed from minimum_base
+    min_calculation_enabled: (subcategories[0]?.minimum_base || 0) > 0,
     
     dinamis_reward_type: 'Freechip',
     dinamis_reward_amount: 0,

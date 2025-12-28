@@ -600,21 +600,21 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Aktifkan</span>
                     <Switch
-                      checked={data.minimum_base_enabled}
+                      checked={data.min_calculation_enabled}
                       onCheckedChange={(checked) => onChange({ 
-                        minimum_base_enabled: checked,
-                        minimum_base: checked ? data.minimum_base : 0
+                        min_calculation_enabled: checked,
+                        min_calculation: checked ? data.min_calculation : 0
                       })}
                     />
                   </div>
                 </div>
                 <Input
                   type="text"
-                  value={data.minimum_base_enabled && data.minimum_base ? data.minimum_base.toLocaleString('id-ID') : ''}
-                  onChange={(e) => onChange({ minimum_base: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={data.minimum_base_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
-                  disabled={!data.minimum_base_enabled}
-                  className={!data.minimum_base_enabled ? "opacity-50" : ""}
+                  value={data.min_calculation_enabled && data.min_calculation ? data.min_calculation.toLocaleString('id-ID') : ''}
+                  onChange={(e) => onChange({ min_calculation: Number(e.target.value.replace(/\D/g, '')) })}
+                  placeholder={data.min_calculation_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
+                  disabled={!data.min_calculation_enabled}
+                  className={!data.min_calculation_enabled ? "opacity-50" : ""}
                 />
               </div>
             </div>
@@ -639,7 +639,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       </div>
                       {(() => {
                         const percentage = data.calculation_value;
-                        const minBase = data.minimum_base || 1000000;
+                        const minBase = data.min_calculation || 1000000;
                         const maxClaim = data.dinamis_max_claim_unlimited ? Infinity : (data.dinamis_max_claim || Infinity);
                         const sampleLevels = [minBase, minBase * 2, minBase * 5];
                         return sampleLevels.map((to, idx) => {
@@ -1512,21 +1512,21 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Aktifkan</span>
                     <Switch
-                      checked={data.minimum_base_enabled}
+                      checked={data.min_calculation_enabled}
                       onCheckedChange={(checked) => onChange({ 
-                        minimum_base_enabled: checked,
-                        minimum_base: checked ? data.minimum_base : 0
+                        min_calculation_enabled: checked,
+                        min_calculation: checked ? data.min_calculation : 0
                       })}
                     />
                   </div>
                 </div>
                 <Input
                   type="text"
-                  value={data.minimum_base_enabled && data.minimum_base ? data.minimum_base.toLocaleString('id-ID') : ''}
-                  onChange={(e) => onChange({ minimum_base: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={data.minimum_base_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
-                  disabled={!data.minimum_base_enabled}
-                  className={!data.minimum_base_enabled ? "opacity-50" : ""}
+                  value={data.min_calculation_enabled && data.min_calculation ? data.min_calculation.toLocaleString('id-ID') : ''}
+                  onChange={(e) => onChange({ min_calculation: Number(e.target.value.replace(/\D/g, '')) })}
+                  placeholder={data.min_calculation_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
+                  disabled={!data.min_calculation_enabled}
+                  className={!data.min_calculation_enabled ? "opacity-50" : ""}
                 />
               </div>
             </div>
@@ -1551,7 +1551,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       </div>
                       {(() => {
                         const percentage = data.calculation_value;
-                        const minBase = data.minimum_base || 1000000;
+                        const minBase = data.min_calculation || 1000000;
                         const maxClaim = data.dinamis_max_claim_unlimited ? Infinity : (data.dinamis_max_claim || Infinity);
                         const sampleLevels = [minBase, minBase * 2, minBase * 5];
                         return sampleLevels.map((to, idx) => {
