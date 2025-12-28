@@ -520,7 +520,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <RadioGroup
                     value={data.fixed_payout_direction || 'after'}
                     onValueChange={(value: 'before' | 'after') => onChange({ fixed_payout_direction: value })}
-                    className="flex flex-col gap-2 pt-1"
+                    className="flex flex-row items-center gap-4 pt-1"
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="before" id="fixed-payout-before-global" />
