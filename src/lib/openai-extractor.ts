@@ -485,6 +485,24 @@ export interface ExtractedPromo {
   // These are NOT min_deposit! They are tier progression conditions
   unlock_conditions?: UnlockCondition[];
   
+  // Loyalty Mechanism (Category C - Policy)
+  loyalty_mechanism?: {
+    point_name?: string;        // "LP", "EXP", "XP"
+    earning_rule?: string;      // e.g., "1000 TO = 1 LP"
+    exchange_table?: Array<{
+      points: number;
+      reward: string;
+      reward_type?: 'hadiah_fisik' | 'uang_tunai' | 'credit_game';
+      physical_reward_name?: string;
+      physical_reward_quantity?: number;
+      cash_reward_amount?: number;
+    }>;
+    tier_system?: Array<{
+      tier_name: string;
+      requirement: string;
+    }>;
+  };
+  
   // Eligible providers (extracted from "KATEGORI (PROVIDER1 & PROVIDER2)" pattern)
   eligible_providers?: string[];  // e.g., ["SV388", "WS168"]
   
@@ -2327,6 +2345,62 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   // Check if any subcategory has unlimited max_bonus
   const hasUnlimitedMaxBonus = extracted.subcategories.some(sub => sub.max_bonus === null);
 
+  // ============================================
+  // PHASE 1A: SMART MODE DETECTION
+  // Logika: Single-variant + stateless = Fixed
+  // Stateless = tidak ada time-window berbeda, tidak ada kondisi kompleks
+  // ============================================
+  
+  type DetectedRewardMode = 'formula' | 'fixed' | 'tier';
+  
+  const detectRewardMode = (): { mode: DetectedRewardMode; auto_detected: boolean; reason: string } => {
+    // Case 1: Tier mode (Category C Loyalty - Phase 2, skip for now)
+    // if (extracted.program_classification === 'C' && extracted.loyalty_mechanism?.exchange_table) {
+    //   return { mode: 'tier', auto_detected: true, reason: 'Category C dengan exchange table' };
+    // }
+    
+    // Case 2: Fixed mode detection
+    // Kriteria: Single subcategory + stateless (scalar, no complex conditions)
+    if (subcategories.length === 1) {
+      const sub = extracted.subcategories[0];
+      
+      // Check for statelessness:
+      // - calculation_method must be scalar (percentage/fixed, not threshold)
+      // - turnover_rule exists (scalar multiplier)
+      // - no time-window variations (single variant implies this)
+      // - high confidence on key fields
+      const isStateless = 
+        sub.calculation_method !== 'threshold' && // threshold = conditional, not scalar
+        (sub.calculation_value != null) &&        // has a value
+        (sub.turnover_rule != null) &&            // has TO rule (can be 0)
+        !extracted.unlock_conditions?.length;     // no complex unlock gates
+      
+      // Confidence check: only auto-detect if key fields have good confidence
+      const hasHighConfidence = 
+        sub.confidence?.calculation_value && 
+        ['explicit', 'derived'].includes(sub.confidence.calculation_value);
+      
+      if (isStateless && hasHighConfidence) {
+        return { 
+          mode: 'fixed', 
+          auto_detected: true, 
+          reason: 'Single-variant promo dengan nilai stateless dan confidence tinggi'
+        };
+      }
+    }
+    
+    // Default: Formula (dinamis) mode
+    return { 
+      mode: 'formula', 
+      auto_detected: subcategories.length > 1, 
+      reason: subcategories.length > 1 
+        ? 'Multi-variant promo dengan subcategories' 
+        : 'Default mode atau kondisi tidak memenuhi Fixed'
+    };
+  };
+  
+  const modeDetection = detectRewardMode();
+  
   // Build base PromoFormData
   const promoData: PromoFormData = {
     // Step 1 - Identitas
@@ -2337,8 +2411,15 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     target_segment: targetUserMap[extracted.target_user] || 'all_users',
     trigger_event: 'user_request',
 
-    // Step 2 - Reward Mode
-    reward_mode: 'formula', // Dinamis mode for extracted promos
+    // Step 2 - Reward Mode (NOW WITH AUTO-DETECTION)
+    reward_mode: modeDetection.mode,
+    
+    // Metadata for UI to show auto-detection badge
+    _mode_auto_detected: modeDetection.auto_detected,
+    _mode_detection_reason: modeDetection.reason,
+    
+    // Keep raw subcategories for audit/debug (hidden from UI)
+    _raw_subcategories: extracted.subcategories,
     
     // Fixed mode defaults
     reward_type: 'Freechip',
@@ -2357,22 +2438,51 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     claim_date_until: '',
 
     // Fixed Mode - SEPARATE fields (prefix: fixed_)
-    fixed_reward_type: '',
-    fixed_calculation_base: '',
-    fixed_calculation_method: '',
-    fixed_calculation_value: undefined,
-    fixed_max_claim: undefined,
-    fixed_max_claim_unlimited: false,
-    fixed_payout_direction: 'after',
+    // Phase 1B: Map from subcategories[0] when mode is 'fixed'
+    fixed_reward_type: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].reward_type || 'credit_game')
+      : '',
+    fixed_calculation_base: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].calculation_base || 'deposit')
+      : '',
+    fixed_calculation_method: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].calculation_method || 'percentage')
+      : '',
+    fixed_calculation_value: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? extracted.subcategories[0].calculation_value
+      : undefined,
+    fixed_max_claim: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].max_bonus ?? undefined)
+      : undefined,
+    fixed_max_claim_unlimited: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? extracted.subcategories[0].max_bonus === null
+      : false,
+    fixed_payout_direction: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].payout_direction === 'depan' ? 'before' : 'after')
+      : 'after',
     fixed_admin_fee_enabled: false,
     fixed_admin_fee_percentage: undefined,
-    fixed_min_calculation_enabled: false,
-    fixed_min_calculation: undefined,
-    fixed_physical_reward_name: '',
-    fixed_physical_reward_quantity: 1,
-    fixed_cash_reward_amount: undefined,
-    fixed_turnover_rule_enabled: false,
-    fixed_turnover_rule: '',
+    fixed_min_calculation_enabled: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].minimum_base || 0) > 0
+      : false,
+    fixed_min_calculation: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? extracted.subcategories[0].minimum_base
+      : undefined,
+    fixed_physical_reward_name: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].physical_reward_name || '')
+      : '',
+    fixed_physical_reward_quantity: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].physical_reward_quantity || 1)
+      : 1,
+    fixed_cash_reward_amount: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? extracted.subcategories[0].cash_reward_amount
+      : undefined,
+    fixed_turnover_rule_enabled: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].turnover_rule || 0) > 0
+      : false,
+    fixed_turnover_rule: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? `${extracted.subcategories[0].turnover_rule || 0}x`
+      : '',
     fixed_turnover_rule_custom: '',
 
     // Tier mode defaults

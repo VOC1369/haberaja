@@ -906,6 +906,141 @@ export function PseudoKnowledgeSection() {
             return null;
           })()}
 
+          {/* ============================================ */}
+          {/* PHASE 1C: Event Prizes Summary (Read-Only) */}
+          {/* Untuk Category B - Tournament/Leaderboard */}
+          {/* ============================================ */}
+          {extractedPromo.prizes && extractedPromo.prizes.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <h4 className="text-base font-semibold text-button-hover">
+                  Tabel Hadiah Event
+                </h4>
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/30 text-xs">
+                  Read-Only
+                </Badge>
+              </div>
+              <div className="bg-muted rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-card">
+                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Peringkat</th>
+                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Hadiah</th>
+                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Jenis</th>
+                      <th className="text-right py-2 px-4 text-muted-foreground font-medium">Nilai</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {extractedPromo.prizes.map((prize, i) => (
+                      <tr key={i} className="border-b border-border/50 last:border-0">
+                        <td className="py-2 px-4 text-foreground font-medium">
+                          {prize.rank || `#${i + 1}`}
+                        </td>
+                        <td className="py-2 px-4 text-foreground">
+                          {prize.prize || prize.physical_reward_name || '-'}
+                        </td>
+                        <td className="py-2 px-4">
+                          <Badge variant="outline" className={`text-xs ${
+                            prize.reward_type === 'hadiah_fisik' 
+                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' 
+                              : prize.reward_type === 'uang_tunai'
+                                ? 'bg-green-500/20 text-green-400 border-green-500/40'
+                                : 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                          }`}>
+                            {prize.reward_type === 'hadiah_fisik' ? 'Fisik' 
+                              : prize.reward_type === 'uang_tunai' ? 'Tunai' 
+                              : 'Credit'}
+                          </Badge>
+                        </td>
+                        <td className="py-2 px-4 text-right font-semibold text-amber-400">
+                          {prize.value 
+                            ? `Rp ${prize.value.toLocaleString('id-ID')}`
+                            : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-muted-foreground/60 mt-2 italic">
+                Data hadiah event diekstrak dari sumber. Editing belum tersedia di versi ini.
+              </p>
+            </div>
+          )}
+
+          {/* ============================================ */}
+          {/* PHASE 1D: Exchange Table Summary (Read-Only) */}
+          {/* Untuk Category C - Loyalty Point Redemption */}
+          {/* ============================================ */}
+          {extractedPromo.loyalty_mechanism?.exchange_table && 
+           extractedPromo.loyalty_mechanism.exchange_table.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <h4 className="text-base font-semibold text-button-hover">
+                  Tabel Penukaran {extractedPromo.loyalty_mechanism.point_name || 'Point'}
+                </h4>
+                <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/30 text-xs">
+                  Read-Only
+                </Badge>
+              </div>
+              {extractedPromo.loyalty_mechanism.earning_rule && (
+                <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                  <span>Aturan Perolehan:</span>
+                  <Badge variant="outline" className="bg-muted text-foreground">
+                    {extractedPromo.loyalty_mechanism.earning_rule}
+                  </Badge>
+                </div>
+              )}
+              <div className="bg-muted rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-card">
+                      <th className="text-right py-2 px-4 text-muted-foreground font-medium">
+                        {extractedPromo.loyalty_mechanism.point_name || 'Point'}
+                      </th>
+                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Hadiah</th>
+                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Jenis</th>
+                      <th className="text-right py-2 px-4 text-muted-foreground font-medium">Nilai</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {extractedPromo.loyalty_mechanism.exchange_table.map((item, i) => (
+                      <tr key={i} className="border-b border-border/50 last:border-0">
+                        <td className="py-2 px-4 text-right font-semibold text-purple-400">
+                          {item.points?.toLocaleString('id-ID') || '-'}
+                        </td>
+                        <td className="py-2 px-4 text-foreground">
+                          {item.reward || item.physical_reward_name || '-'}
+                        </td>
+                        <td className="py-2 px-4">
+                          <Badge variant="outline" className={`text-xs ${
+                            item.reward_type === 'hadiah_fisik' 
+                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' 
+                              : item.reward_type === 'uang_tunai'
+                                ? 'bg-green-500/20 text-green-400 border-green-500/40'
+                                : 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                          }`}>
+                            {item.reward_type === 'hadiah_fisik' ? 'Fisik' 
+                              : item.reward_type === 'uang_tunai' ? 'Tunai' 
+                              : 'Credit'}
+                          </Badge>
+                        </td>
+                        <td className="py-2 px-4 text-right font-semibold text-green-400">
+                          {item.cash_reward_amount 
+                            ? `Rp ${item.cash_reward_amount.toLocaleString('id-ID')}`
+                            : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-xs text-muted-foreground/60 mt-2 italic">
+                Tabel penukaran point diekstrak dari sumber. Editing tier tersedia di Phase 2.
+              </p>
+            </div>
+          )}
+
           {/* Terms */}
           {extractedPromo.terms_conditions && extractedPromo.terms_conditions.length > 0 && (
             <div>
