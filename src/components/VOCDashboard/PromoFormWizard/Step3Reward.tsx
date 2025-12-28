@@ -1443,54 +1443,90 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
             </div>
             
-            {/* Row 2: Payout Direction & Admin Fee (2 kolom) */}
+            {/* Row 2: 2 kolom utama - Kolom 1 (Payout + Admin Fee), Kolom 2 (Minimum Depo) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {/* Payout Direction */}
-              <div className="space-y-2">
-                <Label>Payout Direction</Label>
-                <RadioGroup
-                  value={data.global_payout_direction || 'after'}
-                  onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })}
-                  className="flex gap-6 pt-2"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="before" id="payout-before-global" />
-                    <Label htmlFor="payout-before-global" className="cursor-pointer font-normal text-sm">Didepan</Label>
+              
+              {/* KOLOM 1: Dibagi 2 sub-kolom (Payout Direction + Admin Fee) */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* 1a: Payout Direction */}
+                <div className="space-y-2">
+                  <Label>Payout Direction</Label>
+                  <RadioGroup
+                    value={data.global_payout_direction || 'after'}
+                    onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })}
+                    className="flex flex-row items-center gap-4 pt-1"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="before" id="payout-before-global" />
+                      <Label htmlFor="payout-before-global" className="cursor-pointer font-normal text-sm">Didepan</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="after" id="payout-after-global" />
+                      <Label htmlFor="payout-after-global" className="cursor-pointer font-normal text-sm">Dibelakang</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                {/* 1b: Admin Fee */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Admin Fee</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Aktifkan</span>
+                      <Switch
+                        checked={data.admin_fee_enabled ?? false}
+                        onCheckedChange={(checked) => onChange({ 
+                          admin_fee_enabled: checked,
+                          admin_fee_percentage: checked ? (data.admin_fee_percentage ?? 0) : 0
+                        })}
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="after" id="payout-after-global" />
-                    <Label htmlFor="payout-after-global" className="cursor-pointer font-normal text-sm">Dibelakang</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={data.admin_fee_enabled ? (data.admin_fee_percentage ?? 0) : ''}
+                      onChange={(e) => onChange({ admin_fee_percentage: Number(e.target.value) || 0 })}
+                      placeholder={data.admin_fee_enabled ? "0" : "Tidak aktif"}
+                      disabled={!data.admin_fee_enabled}
+                      className={cn("pr-10", !data.admin_fee_enabled && "opacity-50")}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                   </div>
-                </RadioGroup>
+                </div>
               </div>
               
-              {/* Admin Fee with Toggle */}
+              {/* KOLOM 2: Minimum Depo */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Admin Fee</Label>
+                  <Label>Minimum Depo</Label>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Aktifkan</span>
+                    <span className="text-xs text-muted-foreground">Aktifkan</span>
                     <Switch
-                      checked={data.admin_fee_enabled ?? false}
+                      checked={data.min_calculation_enabled ?? false}
                       onCheckedChange={(checked) => onChange({ 
-                        admin_fee_enabled: checked,
-                        admin_fee_percentage: checked ? (data.admin_fee_percentage ?? 0) : 0
+                        min_calculation_enabled: checked,
+                        min_calculation: checked ? (data.min_calculation ?? 0) : 0
                       })}
                     />
                   </div>
                 </div>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={data.admin_fee_enabled ? (data.admin_fee_percentage ?? 0) : ''}
-                    onChange={(e) => onChange({ admin_fee_percentage: Number(e.target.value) || 0 })}
-                    placeholder={data.admin_fee_enabled ? "0" : "Tidak aktif"}
-                    disabled={!data.admin_fee_enabled}
-                    className={cn("pr-10", !data.admin_fee_enabled && "opacity-50")}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                <div className={!data.min_calculation_enabled ? "opacity-50 pointer-events-none" : ""}>
+                  {data.min_calculation_enabled ? (
+                    <FormattedNumberInput
+                      value={data.min_calculation ?? 0}
+                      onChange={(value) => onChange({ min_calculation: value })}
+                      placeholder="Contoh: 50.000"
+                    />
+                  ) : (
+                    <Input
+                      value=""
+                      placeholder="Tidak aktif"
+                      disabled
+                    />
+                  )}
                 </div>
               </div>
             </div>
