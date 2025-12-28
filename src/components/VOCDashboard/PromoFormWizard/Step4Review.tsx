@@ -111,6 +111,43 @@ export const validatePercentageConsistency = (data: PromoFormData): string | nul
 // Helper: capitalize first letter
 const capitalizeFirst = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
+// Helper: Get detailed reward distribution display with day/time specifics
+const getRewardDistributionDisplay = (data: PromoFormData): string => {
+  const baseLabel = REWARD_DISTRIBUTIONS.find(r => r.value === data.reward_distribution)?.label 
+    || data.reward_distribution || '';
+  
+  // Jika "hari_tertentu" dan ada detail hari/jam
+  if (data.reward_distribution === 'hari_tertentu') {
+    const day = data.distribution_day 
+      ? capitalizeFirst(data.distribution_day) 
+      : '';
+    
+    // Dengan jam
+    if (data.distribution_day_time_enabled && data.distribution_time_from) {
+      const timeFrom = data.distribution_time_from;
+      const timeUntil = data.distribution_time_until || timeFrom;
+      return `Hari ${day}, ${timeFrom} - ${timeUntil} WIB`;
+    }
+    
+    // Tanpa jam, hanya hari
+    if (day) {
+      return `Hari ${day}`;
+    }
+  }
+  
+  // Jika "tanggal_tertentu" dan ada detail tanggal
+  if (data.reward_distribution === 'tanggal_tertentu') {
+    if (data.distribution_date_from && data.distribution_date_until) {
+      return `${data.distribution_date_from} - ${data.distribution_date_until}`;
+    }
+    if (data.distribution_date_from) {
+      return data.distribution_date_from;
+    }
+  }
+  
+  return baseLabel;
+};
+
 // Helper: Dynamic Point Unit labels based on promo_unit selection
 const getPointUnitLabel = (promoUnit: string | undefined) => {
   switch (promoUnit) {
@@ -1183,7 +1220,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     <ValueBox label="Batas Maksimal Bonus" value={data.dinamis_max_claim_unlimited ? 'Unlimited' : (data.dinamis_max_claim ? `Rp ${data.dinamis_max_claim.toLocaleString('id-ID')}` : undefined)} />
                     <ValueBox label={`Minimal Perhitungan ${CALCULATION_BASES.find(b => b.value === data.calculation_base)?.label || ''}`} value={data.min_calculation_enabled ? (data.min_calculation ? `Rp ${data.min_calculation.toLocaleString('id-ID')}` : undefined) : 'Tidak ada batas minimal'} />
                     <ValueBox label="Periode Klaim" value={CLAIM_FREQUENCIES.find(c => c.value === data.claim_frequency)?.label || data.claim_frequency} />
-                    <ValueBox label="Waktu Pembagian Bonus" value={REWARD_DISTRIBUTIONS.find(r => r.value === data.reward_distribution)?.label || data.reward_distribution} />
+                    <ValueBox label="Waktu Pembagian Bonus" value={getRewardDistributionDisplay(data)} />
                     {/* Syarat Main Sebelum WD */}
                     <ValueBox 
                       label="Syarat Main Sebelum WD" 
