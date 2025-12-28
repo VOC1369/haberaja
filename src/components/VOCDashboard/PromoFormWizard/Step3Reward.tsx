@@ -509,8 +509,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
             </div>
             
-            {/* Row 2: Payout Direction & Admin Fee (2 kolom) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            {/* Row 2: Payout Direction, Admin Fee & Minimum Depo (3 kolom) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               {/* Payout Direction */}
               <div className="space-y-2">
                 <Label>Payout Direction</Label>
@@ -558,6 +558,29 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                 </div>
+              </div>
+              
+              {/* Minimum Depo with Toggle */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Minimum Depo</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Aktifkan</span>
+                    <Switch
+                      checked={data.fixed_min_depo_enabled ?? false}
+                      onCheckedChange={(checked) => onChange({ 
+                        fixed_min_depo_enabled: checked,
+                        fixed_min_depo: checked ? (data.fixed_min_depo ?? 0) : undefined
+                      })}
+                    />
+                  </div>
+                </div>
+                <FormattedNumberInput
+                  value={data.fixed_min_depo_enabled ? (data.fixed_min_depo ?? 0) : 0}
+                  onChange={(value) => onChange({ fixed_min_depo: value })}
+                  placeholder={data.fixed_min_depo_enabled ? "Contoh: 50.000" : "Tidak aktif"}
+                  className={!data.fixed_min_depo_enabled ? "opacity-50 pointer-events-none" : ""}
+                />
               </div>
             </div>
             
