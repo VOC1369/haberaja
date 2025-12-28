@@ -3147,8 +3147,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           </div>
 
           {/* Section 5 - Manual Claim & Contact Official */}
+          {/* NOTE: Toggle ONLY controls contact_channel_enabled, NOT reward_distribution! */}
+          {/* Claim mechanism (manual vs auto) is a RUNTIME decision, not stored in promo data */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
-            <Switch checked={data.contact_channel_enabled || false} onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked, ...(checked && { reward_distribution: 'manual_cs' }) })} />
+            <Switch checked={data.contact_channel_enabled || false} onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })} />
             <div className="flex-1">
               <div className="font-medium text-sm text-button-hover">5. Manual Claim & Contact Official {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
               <p className="text-xs text-muted-foreground">Bonus diklaim manual via CS. Info kontak ditampilkan di respons AI.</p>
