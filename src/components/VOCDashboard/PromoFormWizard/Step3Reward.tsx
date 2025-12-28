@@ -1222,16 +1222,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           </div>
 
-          {/* Section 5 - Kontak Official */}
+          {/* Section 5 - Manual Claim & Contact Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch
               checked={data.contact_channel_enabled || false}
-              onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })}
+              onCheckedChange={(checked) => onChange({ 
+                contact_channel_enabled: checked,
+                ...(checked && { reward_distribution: 'manual_cs' })
+              })}
             />
             <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">5. Tampilkan Kontak Official</div>
+              <div className="font-medium text-sm text-button-hover">5. Manual Claim & Contact Official</div>
               <p className="text-xs text-muted-foreground">
-                Tampilkan info kontak resmi di respons AI untuk promo ini
+                Bonus diklaim manual via CS. Info kontak akan ditampilkan di respons AI.
               </p>
             </div>
           </div>
@@ -2113,16 +2116,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           </div>
 
-          {/* Section 5 - Kontak Official */}
+          {/* Section 5 - Manual Claim & Contact Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch
               checked={data.contact_channel_enabled || false}
-              onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })}
+              onCheckedChange={(checked) => onChange({ 
+                contact_channel_enabled: checked,
+                ...(checked && { reward_distribution: 'manual_cs' })
+              })}
             />
             <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">5. Tampilkan Kontak Official</div>
+              <div className="font-medium text-sm text-button-hover">5. Manual Claim & Contact Official</div>
               <p className="text-xs text-muted-foreground">
-                Tampilkan info kontak resmi di respons AI untuk promo ini
+                Bonus diklaim manual via CS. Info kontak akan ditampilkan di respons AI.
               </p>
             </div>
           </div>
@@ -3140,12 +3146,12 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           </div>
 
-          {/* Section 5 - Kontak Official */}
+          {/* Section 5 - Manual Claim & Contact Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
-            <Switch checked={data.contact_channel_enabled || false} onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })} />
+            <Switch checked={data.contact_channel_enabled || false} onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked, ...(checked && { reward_distribution: 'manual_cs' }) })} />
             <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">5. Tampilkan Kontak Official {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
-              <p className="text-xs text-muted-foreground">Tampilkan info kontak resmi di respons AI</p>
+              <div className="font-medium text-sm text-button-hover">5. Manual Claim & Contact Official {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
+              <p className="text-xs text-muted-foreground">Bonus diklaim manual via CS. Info kontak ditampilkan di respons AI.</p>
             </div>
           </div>
 
