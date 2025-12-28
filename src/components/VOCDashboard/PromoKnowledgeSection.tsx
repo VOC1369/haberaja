@@ -46,7 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2, Zap, Trophy, Cog } from "lucide-react";
+import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2, Zap, Trophy, Cog, RefreshCw } from "lucide-react";
 import { classifyContent, type ProgramCategory } from "@/lib/extractors/category-classifier";
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
@@ -72,6 +72,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   
   // Auto-classification states
   const [classifyingIds, setClassifyingIds] = useState<Set<string>>(new Set());
+  
+  // Regenerate S&K states
+  const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set());
+  const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
   const classifyQueueRef = useRef<Set<string>>(new Set()); // To prevent duplicate calls
 
   const toggleExpanded = (promoId: string) => {
@@ -179,6 +183,78 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     } catch (error) {
       console.error('[PromoKnowledgeSection] Duplicate failed:', error);
       toast.error("Gagal menduplikasi promo");
+    }
+  };
+
+  // ============================================
+  // REGENERATE S&K HANDLERS
+  // ============================================
+  
+  const handleRegenerateSK = async (promo: PromoItem) => {
+    setRegeneratingIds(prev => new Set(prev).add(promo.id));
+    
+    try {
+      // Generate new custom_terms using current template
+      const newTerms = generateTermsList(promo as any);
+      const newCustomTerms = newTerms.join('\n');
+      
+      const success = await promoKB.update(promo.id, {
+        custom_terms: newCustomTerms,
+      } as Partial<PromoItem>);
+      
+      if (success) {
+        toast.success(`S&K "${promo.promo_name}" berhasil diperbarui`);
+        loadPromos();
+      } else {
+        toast.error(`Gagal regenerate S&K untuk "${promo.promo_name}"`);
+      }
+    } catch (error) {
+      console.error('[RegenerateSK] Failed:', error);
+      toast.error(`Gagal regenerate S&K untuk "${promo.promo_name}"`);
+    } finally {
+      setRegeneratingIds(prev => {
+        const next = new Set(prev);
+        next.delete(promo.id);
+        return next;
+      });
+    }
+  };
+
+  const handleRegenerateAllSK = async () => {
+    setIsRegeneratingAll(true);
+    let successCount = 0;
+    let failCount = 0;
+    
+    try {
+      for (const promo of items) {
+        try {
+          const newTerms = generateTermsList(promo as any);
+          const newCustomTerms = newTerms.join('\n');
+          
+          const success = await promoKB.update(promo.id, {
+            custom_terms: newCustomTerms,
+          } as Partial<PromoItem>);
+          
+          if (success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          console.error('[RegenerateAllSK] Failed for promo:', promo.id, error);
+          failCount++;
+        }
+      }
+      
+      await loadPromos();
+      
+      if (failCount === 0) {
+        toast.success(`${successCount} promo berhasil diperbarui S&K-nya`);
+      } else {
+        toast.warning(`${successCount} berhasil, ${failCount} gagal diperbarui`);
+      }
+    } finally {
+      setIsRegeneratingAll(false);
     }
   };
 
@@ -550,6 +626,19 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           <Button 
             variant="outline"
             className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+            onClick={handleRegenerateAllSK}
+            disabled={isRegeneratingAll || items.length === 0}
+          >
+            {isRegeneratingAll ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            {isRegeneratingAll ? 'Regenerating...' : 'Regenerate All S&K'}
+          </Button>
+          <Button 
+            variant="outline"
+            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
             onClick={() => setViewMode("upload")}
           >
             <Upload className="h-4 w-4 mr-2" />
@@ -693,6 +782,20 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                                 <Copy className="h-4 w-4 text-purple-500" />
                               </div>
                               <span>Duplicate Promo</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleRegenerateSK(item)}
+                              disabled={regeneratingIds.has(item.id)}
+                              className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
+                            >
+                              <div className="h-7 w-7 rounded-full bg-amber-500/20 flex items-center justify-center mr-3">
+                                {regeneratingIds.has(item.id) ? (
+                                  <Loader2 className="h-4 w-4 text-amber-500 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4 text-amber-500" />
+                                )}
+                              </div>
+                              <span>{regeneratingIds.has(item.id) ? 'Regenerating...' : 'Regenerate S&K'}</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-border" />
                             <DropdownMenuItem 
