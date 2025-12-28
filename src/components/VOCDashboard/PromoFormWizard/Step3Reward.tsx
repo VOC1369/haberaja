@@ -362,13 +362,36 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               onClick={() => {
                 const newMode = mode.value as 'fixed' | 'tier' | 'formula';
                 if (newMode !== data.reward_mode) {
-                  toast.warning("Mode reward berubah - konfigurasi sebelumnya di-reset");
+                  // Check if current mode has data that would be lost
+                  const hasFixedData = data.reward_mode === 'fixed' && (
+                    data.fixed_calculation_value || 
+                    data.fixed_reward_type ||
+                    data.fixed_max_claim
+                  );
+                  const hasDinamisData = data.reward_mode === 'formula' && (
+                    data.calculation_value || 
+                    data.dinamis_reward_type ||
+                    data.dinamis_max_claim ||
+                    (data.subcategories && data.subcategories.length > 0)
+                  );
+                  const hasTierData = data.reward_mode === 'tier' && (
+                    data.tiers && data.tiers.length > 0
+                  );
+                  
+                  if (hasFixedData || hasDinamisData || hasTierData) {
+                    toast.warning("Mode reward berubah - konfigurasi sebelumnya di-reset", {
+                      description: `Data mode ${data.reward_mode === 'fixed' ? 'Fixed' : data.reward_mode === 'formula' ? 'Dinamis' : 'Tier'} akan direset.`
+                    });
+                  }
+                  
                   // Reset ALL calculation-related fields when switching modes
+                  // This ensures NO data bleeding between modes
                   onChange({ 
                     reward_mode: newMode,
                     has_subcategories: false,
                     subcategories: [],
-                    // Reset calculation fields to prevent data "bleeding" between modes
+                    
+                    // ============ RESET DINAMIS (formula) FIELDS ============
                     calculation_base: '',
                     calculation_method: '',
                     calculation_value: undefined,
@@ -377,13 +400,38 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     dinamis_max_claim_unlimited: false,
                     admin_fee_enabled: false,
                     admin_fee_percentage: 0,
-                    // Additional fields that were missing
                     global_payout_direction: 'after',
                     min_calculation_enabled: false,
                     min_calculation: 0,
                     physical_reward_name: '',
                     physical_reward_quantity: 1,
                     cash_reward_amount: undefined,
+                    
+                    // ============ RESET FIXED FIELDS ============
+                    fixed_calculation_base: '',
+                    fixed_calculation_method: '',
+                    fixed_calculation_value: undefined,
+                    fixed_reward_type: '',
+                    fixed_max_claim: undefined,
+                    fixed_max_claim_unlimited: false,
+                    fixed_payout_direction: 'after',
+                    fixed_admin_fee_enabled: false,
+                    fixed_admin_fee_percentage: 0,
+                    fixed_min_depo_enabled: false,
+                    fixed_min_depo: undefined,
+                    fixed_min_calculation_enabled: false,
+                    fixed_min_calculation: undefined,
+                    fixed_turnover_rule_enabled: false,
+                    fixed_turnover_rule: '',
+                    
+                    // ============ RESET TIER FIELDS ============
+                    // Note: tier-specific fields reset to valid defaults
+                    tier_archetype: undefined,
+                    promo_unit: 'lp',
+                    exp_mode: 'level_up',
+                    lp_earn_basis: 'turnover',
+                    lp_earn_amount: undefined,
+                    lp_earn_point_amount: undefined,
                   });
                 }
               }}
