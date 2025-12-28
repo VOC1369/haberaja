@@ -1883,8 +1883,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         </div>
                       </CollapsibleTrigger>
                       
-                      <CollapsibleContent className="mt-2 border border-border rounded-xl overflow-hidden">
-                        <pre className="text-xs p-4 max-h-[200px] overflow-y-auto font-mono whitespace-pre-wrap break-all bg-background">
+                      <CollapsibleContent className="mt-2 border border-border rounded-xl overflow-hidden bg-[#1E1E1E]">
+                        <pre className="font-mono text-[12px] leading-[1.6] text-foreground whitespace-pre-wrap break-words p-4 max-h-[200px] overflow-y-auto">
                           {JSON.stringify({
                             ...pkbPayload,
                             subcategories: `[${data.subcategories.length} varian - lihat di bawah]`
@@ -1911,8 +1911,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           </span>
                         </CollapsibleTrigger>
                         
-                        <CollapsibleContent className="mt-2 border border-border rounded-xl overflow-hidden">
-                          <pre className="text-xs p-4 max-h-[200px] overflow-y-auto font-mono whitespace-pre-wrap break-all bg-background">
+                        <CollapsibleContent className="mt-2 border border-border rounded-xl overflow-hidden bg-[#1E1E1E]">
+                          <pre className="font-mono text-[12px] leading-[1.6] text-foreground whitespace-pre-wrap break-words p-4 max-h-[200px] overflow-y-auto">
                             {JSON.stringify(sub, null, 2)}
                           </pre>
                         </CollapsibleContent>
@@ -1921,9 +1921,11 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                   </>
                 ) : (
                   /* Single promo mode - show full JSON */
-                  <pre className="text-xs max-h-[300px] overflow-y-auto font-mono whitespace-pre-wrap break-all">
-                    {JSON.stringify(pkbPayload, null, 2)}
-                  </pre>
+                  <div className="rounded-xl overflow-hidden bg-[#1E1E1E] border border-border">
+                    <pre className="font-mono text-[12px] leading-[1.6] text-foreground whitespace-pre-wrap break-words p-4 max-h-[300px] overflow-y-auto">
+                      {JSON.stringify(pkbPayload, null, 2)}
+                    </pre>
+                  </div>
                 )}
               </div>
             </CollapsibleContent>
