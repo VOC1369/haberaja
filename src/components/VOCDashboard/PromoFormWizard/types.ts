@@ -832,7 +832,6 @@ export const EXP_CALC_METHODS = [
   { value: 'custom', label: 'Custom' },
 ];
 export const REWARD_DISTRIBUTIONS = [
-  { value: 'manual_cs', label: 'Manual Claim by CS', helper: 'Bonus harus diklaim secara manual melalui Customer Service.' },
   { value: 'setelah_syarat', label: 'Setelah Memenuhi Semua Syarat', helper: 'Bonus dikirim setelah semua syarat promo terpenuhi.' },
   { value: 'otomatis_setelah_periode', label: 'Otomatis Setelah Periode', helper: 'Bonus dikirim otomatis setelah periode perhitungan berakhir.' },
   { value: 'hari_tertentu', label: 'Hari & Jam Tertentu', helper: 'Bonus dikirim pada hari dan jam tertentu (contoh: Senin 00:00 WIB).' },
