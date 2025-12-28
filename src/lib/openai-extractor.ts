@@ -853,8 +853,8 @@ PETUNJUK KOLOM minimum_base (umum di situs ID):
 
 PETUNJUK KOLOM turnover_rule (KHUSUS ROLLINGAN/REBATE):
 - "Minimal Turnover", "Min TO", "Syarat TO", "Minimal Bet"
-- "Minimal turnover 1.000.000" → turnover_rule: "min 1000000"
-- "Min TO 500rb" → turnover_rule: "min 500000"
+- "Minimal turnover 1.000.000" → turnover_rule: "1000000" (LANGSUNG ANGKA!)
+- "Min TO 500rb" → turnover_rule: "500000" (LANGSUNG ANGKA!)
 
 URUTAN PRIORITAS:
 1) Jika TABEL menampilkan kolom Min Deposit dengan nilai → extract nilai tersebut
@@ -1086,18 +1086,18 @@ Jika S&K menyebut:
 Ciri-ciri rollingan:
 - calculation_base = "turnover"
 - payout_direction = "belakang"
-- turnover_rule = "min [angka]" JIKA ada syarat "Minimal turnover"
+- turnover_rule = "[angka]" JIKA ada syarat "Minimal turnover" (LANGSUNG ANGKA, TANPA PREFIX!)
 
 ⚠️⚠️⚠️ KHUSUS ROLLINGAN — MAPPING FIELD KRITIS:
-- "Minimal turnover 1.000.000" → turnover_rule: "min 1000000" (BUKAN minimum_base!)
-- "Min TO 500rb" → turnover_rule: "min 500000" (BUKAN minimum_base!)
+- "Minimal turnover 1.000.000" → turnover_rule: "1000000" (BUKAN minimum_base!)
+- "Min TO 500rb" → turnover_rule: "500000" (BUKAN minimum_base!)
 - Rollingan biasanya TIDAK PUNYA min deposit! (minimum_base = null)
 - minimum_base untuk Rollingan HANYA jika ada "Minimal DEPOSIT" explicit
 
 JANGAN BINGUNG (ROLLINGAN):
 - "Minimal deposit untuk ikut" → minimum_base ✅
-- "Minimal turnover untuk ikut" → turnover_rule: "min X" ✅ (BUKAN minimum_base!)
-- "Syarat TO 1jt" → turnover_rule: "min 1000000" ✅
+- "Minimal turnover untuk ikut" → turnover_rule: "1000000" ✅ (BUKAN minimum_base!)
+- "Syarat TO 1jt" → turnover_rule: "1000000" ✅ (LANGSUNG ANGKA!)
 
 🔹 Welcome Bonus / Deposit Bonus
 Ciri-ciri:
@@ -1938,13 +1938,21 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
             sub.minimum_base !== null && sub.minimum_base > 0 && 
             (!sub.turnover_rule || sub.turnover_rule === null)) {
           console.warn(`⚠️ ROLLINGAN MISMAP DETECTED "${sub.sub_name}": minimum_base=${sub.minimum_base} but turnover_rule empty. Swapping...`);
-          updatedSub.turnover_rule = `min ${sub.minimum_base}`;
+          // Langsung angka, tanpa prefix "min"
+          updatedSub.turnover_rule = String(sub.minimum_base).replace(/x$/i, '');
           updatedSub.minimum_base = null;
           updatedSub.confidence = {
             ...updatedSub.confidence,
             minimum_base: 'not_applicable',
             turnover_rule: 'derived'
           };
+        }
+        
+        // Sanitize turnover_rule: hapus "x" dan "min " prefix jika ada
+        if (updatedSub.turnover_rule && typeof updatedSub.turnover_rule === 'string') {
+          updatedSub.turnover_rule = updatedSub.turnover_rule
+            .replace(/^min\s+/i, '')  // Hapus "min " prefix
+            .replace(/x$/i, '');       // Hapus trailing "x"
         }
         
         return updatedSub;
