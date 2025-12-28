@@ -368,6 +368,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     dinamis_max_claim_unlimited: false,
                     admin_fee_enabled: false,
                     admin_fee_percentage: 0,
+                    // Additional fields that were missing
+                    global_payout_direction: 'after',
+                    min_calculation_enabled: false,
+                    min_calculation: 0,
+                    physical_reward_name: '',
+                    physical_reward_quantity: 1,
+                    cash_reward_amount: undefined,
                   });
                 }
               }}
