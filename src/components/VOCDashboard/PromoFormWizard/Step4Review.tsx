@@ -28,9 +28,12 @@ export const formatNumber = (num: number): string => {
 export const getBaseColumnLabel = (calculationBase: string | undefined): string => {
   const base = calculationBase?.toLowerCase() || '';
   switch (base) {
+    case 'loss':
+      return 'Kekalahan Bersih';
+    case 'win':
+      return 'Kemenangan';
     case 'winloss':
     case 'win_loss':
-    case 'loss':
       return 'Win/Loss';
     case 'turnover':
     case 'to':
