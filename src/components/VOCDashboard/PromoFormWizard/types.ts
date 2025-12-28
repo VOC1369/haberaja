@@ -41,6 +41,11 @@ export const PKB_FIELD_WHITELIST = [
   'claim_date_from',
   'claim_date_until',
   
+  // Periode Perhitungan (untuk weekly/daily promo) - EKSPLISIT
+  'calculation_period_start',   // 'senin', 'selasa', etc.
+  'calculation_period_end',     // 'senin', 'selasa', etc.
+  'calculation_period_note',    // Catatan periode untuk AI (e.g., "7 hari rolling, proses Selasa")
+  
   // Tier mode
   'promo_unit',
   'exp_mode',
@@ -195,9 +200,10 @@ export interface PromoFormData {
   distribution_day: string;
   distribution_time: string;
   
-  // Periode Hitungan (untuk weekly/daily promo)
+  // Periode Hitungan (untuk weekly/daily promo) - EKSPLISIT
   calculation_period_start: string;  // 'senin', 'selasa', etc. atau '' (not extracted)
   calculation_period_end: string;    // 'senin', 'selasa', etc. atau '' (not extracted)
+  calculation_period_note: string;   // Catatan periode untuk AI (e.g., "7 hari rolling, proses Selasa")
   distribution_date_from: string;
   distribution_date_until: string;
   distribution_time_enabled: boolean;
@@ -573,6 +579,16 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.min_calculation = (dataRecord as Record<string, unknown>).minimum_base as number;
   }
   
+  // Legacy: split ambiguous "Rollingan / Cashback" into correct type
+  if (pkbData.promo_type === 'Rollingan / Cashback') {
+    const formulaBase = (pkbData.formula_metadata as FormulaMetadata)?.base || data.calculation_base;
+    if (formulaBase === 'loss') {
+      pkbData.promo_type = 'Cashback (Loss-based)';
+    } else {
+      pkbData.promo_type = 'Rollingan (Turnover-based)';
+    }
+  }
+  
   // ============================================
   // PATCH 4: Clean up - remove empty blacklist arrays & UI-only remnants
   // ============================================
@@ -742,8 +758,12 @@ export const LP_EARN_BASIS_OPTIONS = [
 
 export type LpEarnBasis = typeof LP_EARN_BASIS_OPTIONS[number]['value'];
 
+// FIX: Pisahkan Rollingan dan Cashback - ini adalah promo yang BERBEDA secara ontologi!
+// - Cashback = kompensasi kekalahan (loss-based)
+// - Rollingan = akumulasi turnover (turnover-based)
 export const PROMO_TYPES = [
-  'Rollingan / Cashback',
+  'Cashback (Loss-based)',        // Kompensasi kekalahan
+  'Rollingan (Turnover-based)',   // Akumulasi turnover
   'Welcome Bonus',
   'Deposit Bonus',
   'Freechip',
@@ -993,6 +1013,7 @@ export const initialPromoData: PromoFormData = {
   distribution_time: '',
   calculation_period_start: '',
   calculation_period_end: '',
+  calculation_period_note: '',   // Catatan periode untuk AI
   distribution_date_from: '',
   distribution_date_until: '',
   distribution_time_enabled: false,
@@ -1138,6 +1159,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   distribution_time: '',
   calculation_period_start: '',
   calculation_period_end: '',
+  calculation_period_note: '',
   distribution_date_from: '',
   distribution_date_until: '',
   distribution_time_enabled: false,
