@@ -233,6 +233,8 @@ export interface PromoFormData {
   fixed_turnover_rule_enabled: boolean;
   fixed_turnover_rule: string;
   fixed_turnover_rule_custom?: string;
+  fixed_min_depo_enabled?: boolean;
+  fixed_min_depo?: number;
 
   // =============================================
   // Dinamis mode - UI helper fields (NOT saved to PKB directly)
@@ -1108,6 +1110,8 @@ export const initialPromoData: PromoFormData = {
   fixed_turnover_rule_enabled: false,
   fixed_turnover_rule: '',
   fixed_turnover_rule_custom: '',
+  fixed_min_depo_enabled: false,
+  fixed_min_depo: undefined,
 
   // =============================================
   // Dinamis mode - UI helper fields
