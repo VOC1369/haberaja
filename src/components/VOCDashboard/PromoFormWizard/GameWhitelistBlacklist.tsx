@@ -231,7 +231,10 @@ export function GameWhitelistBlacklist({
             <div className="flex items-center gap-2">
               <Switch
                 checked={gameBlacklistEnabled}
-                onCheckedChange={onBlacklistEnabledChange}
+                onCheckedChange={(checked) => {
+                  onBlacklistEnabledChange(checked);
+                  if (checked) setBlacklistOpen(true);
+                }}
                 onClick={(e) => e.stopPropagation()}
               />
               <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
