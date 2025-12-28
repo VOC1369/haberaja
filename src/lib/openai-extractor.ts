@@ -2384,6 +2384,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Periode Hitungan (untuk weekly/daily promo) - from extracted
     calculation_period_start: extracted.calculation_period_start || '',
     calculation_period_end: extracted.calculation_period_end || '',
+    calculation_period_note: '',  // Generated at runtime if needed
     distribution_date_from: '',
     distribution_date_until: '',
     distribution_time_enabled: false,

@@ -74,6 +74,40 @@ export const getExplicitMaxBonus = (sub: any): number => {
   return Infinity; // Default: unlimited if not explicit
 };
 
+/**
+ * Validate percentage consistency between promo_name and formula value
+ * Returns warning message if mismatch detected
+ * 
+ * Example:
+ * - promo_name: "ROLLINGAN SLOT MINGGUAN 0.5%"
+ * - formula_value: 5
+ * → WARNING: Nama promo menunjukkan 0.5%, tapi formula value = 5%
+ */
+export const validatePercentageConsistency = (data: PromoFormData): string | null => {
+  const promoName = data.promo_name || '';
+  const formulaValue = data.formula_metadata?.value || 
+    data.calculation_value ||
+    data.subcategories?.[0]?.calculation_value;
+  
+  if (!formulaValue) return null;
+  
+  // Extract percentage from promo_name using regex
+  // Matches: "0.5%", "5%", "100%", "0.8 %"
+  const percentMatch = promoName.match(/(\d+(?:[.,]\d+)?)\s*%/);
+  if (!percentMatch) return null;
+  
+  // Parse with comma support (Indonesian decimals)
+  const namePercent = parseFloat(percentMatch[1].replace(',', '.'));
+  const formulaPercent = typeof formulaValue === 'number' ? formulaValue : parseFloat(formulaValue);
+  
+  // Check mismatch (allowing small float tolerance)
+  if (Math.abs(namePercent - formulaPercent) > 0.01) {
+    return `⚠️ KONFLIK PERSENTASE: Nama promo menunjukkan ${namePercent}%, tapi formula value = ${formulaPercent}%. Pastikan salah satu dikoreksi!`;
+  }
+  
+  return null;
+};
+
 // Helper: capitalize first letter
 const capitalizeFirst = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
@@ -242,12 +276,18 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
     terms.push(`Frekuensi klaim: ${effectiveFrequency}.`);
   }
   
-  // Dynamic distribution day - ONLY show if extracted
-  if (data.distribution_day) {
+  // Dynamic distribution day - SKIP if manual claim mode!
+  // FIX: Konflik Manual vs Auto - jangan bilang "otomatis" jika reward_distribution = manual_cs
+  if (data.distribution_day && data.reward_distribution !== 'manual_cs') {
     const dayLabel = data.distribution_day === 'setiap_hari' 
       ? 'setiap hari' 
       : `setiap hari ${capitalizeFirst(data.distribution_day)}`;
     terms.push(`Bonus akan dibagikan secara otomatis ${dayLabel}.`);
+  }
+  
+  // Manual claim explicit term - HARUS ada jika manual_cs
+  if (data.reward_distribution === 'manual_cs') {
+    terms.push(`Bonus HARUS diklaim secara manual melalui CS.`);
   }
   
   // Distribution time (untuk Hari Tertentu - legacy support)
@@ -1461,6 +1501,24 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                   {data.promo_name?.toUpperCase() || 'NAMA PROMO'}
                 </div>
                 
+                {/* FIX 3: Percentage Consistency Warning */}
+                {(() => {
+                  const percentWarning = validatePercentageConsistency(data);
+                  if (percentWarning) {
+                    return (
+                      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-amber-500">{percentWarning}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Perhatikan konsistensi antara nama promo dan nilai formula. Inkonsistensi dapat menyebabkan Livechat memberikan jawaban yang salah.
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 {/* Detail per Varian - Combined Ilustrasi + S&K */}
                 {data.has_subcategories && data.subcategories && data.subcategories.length > 0 ? (
                   <div className="space-y-4">
