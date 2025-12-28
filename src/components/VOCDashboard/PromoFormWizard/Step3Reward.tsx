@@ -25,7 +25,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, X, ChevronDown, Settings, Zap, Trophy, Star, Target, Trash2, CalendarIcon, Calculator, AlertTriangle, Clock, Save, Phone, Gamepad2, Layers, Gift } from "lucide-react";
+import { Plus, X, ChevronDown, Settings, Zap, Trophy, Star, Target, Trash2, CalendarIcon, Calculator, AlertTriangle, Clock, Save, Phone, Gamepad2, Layers, Gift, CheckCircle2, XCircle } from "lucide-react";
+import { GameWhitelistBlacklist } from "./GameWhitelistBlacklist";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -726,317 +727,42 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 mb-6">
-              {/* Jenis Game - Multi-select dengan Badges */}
-              <div className="space-y-2 mb-4">
-                <Label>Jenis Game</Label>
-                {(data.game_types?.length > 0 || data.game_restriction) && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {(data.game_types || []).map((type, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
-                        {gameTypeOptions.find(g => g.value === type)?.label || type}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = [...(data.game_types || [])];
-                            updated.splice(idx, 1);
-                            onChange({ game_types: updated });
-                          }}
-                          className="hover:text-destructive transition-colors"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <SelectWithAddNew
-                  value=""
-                  onValueChange={(value) => {
-                    if (value && !data.game_types?.includes(value)) {
-                      onChange({ game_types: [...(data.game_types || []), value], game_restriction: value });
-                    }
-                  }}
-                  options={gameTypeOptions}
-                  onAddOption={(option) => setGameTypeOptions([...gameTypeOptions, option])}
-                  onDeleteOption={handleDeleteGameType}
-                  placeholder="Pilih jenis game"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Kategori game yang berlaku untuk promo ini
-                </p>
-              </div>
-              
-              {/* Provider Game - Multi-select dengan Badges */}
-              <div className="space-y-2 mb-4">
-                <Label>Provider Game</Label>
-                {data.game_providers?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {data.game_providers.map((provider, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
-                        {gameProviderOptions.find(p => p.value === provider)?.label || provider}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = [...data.game_providers];
-                            updated.splice(idx, 1);
-                            onChange({ game_providers: updated });
-                          }}
-                          className="hover:text-destructive transition-colors"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <SelectWithAddNew
-                  value=""
-                  onValueChange={(value) => {
-                    if (value && !data.game_providers?.includes(value)) {
-                      onChange({ game_providers: [...(data.game_providers || []), value] });
-                    }
-                  }}
-                  options={gameProviderOptions}
-                  onAddOption={(option) => setGameProviderOptions([...gameProviderOptions, option])}
-                  onDeleteOption={handleDeleteGameProvider}
-                  placeholder="Pilih provider"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Provider/vendor game (PG SOFT, Pragmatic, dll)
-                </p>
-              </div>
-              
-              {/* Nama Game - Multi-select dengan Badges */}
-              <div className="space-y-2">
-                <Label>Nama Game</Label>
-                {data.game_names?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {data.game_names.map((name, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
-                        {gameNameOptions.find(n => n.value === name)?.label || name}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = [...data.game_names];
-                            updated.splice(idx, 1);
-                            onChange({ game_names: updated });
-                          }}
-                          className="hover:text-destructive transition-colors"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <SelectWithAddNew
-                  value=""
-                  onValueChange={(value) => {
-                    if (value && !data.game_names?.includes(value)) {
-                      onChange({ game_names: [...(data.game_names || []), value] });
-                    }
-                  }}
-                  options={gameNameOptions}
-                  onAddOption={(option) => setGameNameOptions([...gameNameOptions, option])}
-                  onDeleteOption={handleDeleteGameName}
-                  placeholder="Pilih nama game"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Nama spesifik game (Mahjong Wins, Spaceman, dll)
-                </p>
-              </div>
-              
-              {/* Blok 2B - Game Dilarang (Blacklist) */}
-              <div className="mt-6 pt-4 border-t border-border">
-                <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-4">
-                  <Switch
-                    checked={data.game_blacklist_enabled ?? false}
-                    onCheckedChange={(checked) => onChange({ game_blacklist_enabled: checked })}
-                  />
-                  <div>
-                    <div className="font-medium text-sm text-button-hover">Game Dilarang (Blacklist)</div>
-                    <p className="text-xs text-muted-foreground">
-                      Aktifkan untuk kecualikan game tertentu dari promo ini
-                    </p>
-                  </div>
-                </div>
-                
-                {data.game_blacklist_enabled && (
-                  <div className="space-y-4">
-                    {/* Helper text */}
-                    <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
-                      <p className="text-xs text-warning">
-                        ⚠️ Jika diaktifkan, promo TIDAK berlaku untuk kombinasi jenis game / provider / nama game yang dipilih di sini, walaupun termasuk di daftar game diizinkan di atas.
-                      </p>
-                    </div>
-                    
-                    {/* Jenis Game Blacklist - Multi-select dengan Badges */}
-                    <div className="space-y-2">
-                      <Label>Jenis Game Dilarang</Label>
-                      {data.game_types_blacklist?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {data.game_types_blacklist.map((type, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
-                              {gameTypeBlacklistOptions.find(g => g.value === type)?.label || type}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...data.game_types_blacklist];
-                                  updated.splice(idx, 1);
-                                  onChange({ game_types_blacklist: updated });
-                                }}
-                                className="hover:text-destructive transition-colors"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <SelectWithAddNew
-                        value=""
-                        onValueChange={(value) => {
-                          if (value && !data.game_types_blacklist?.includes(value)) {
-                            onChange({ game_types_blacklist: [...(data.game_types_blacklist || []), value] });
-                          }
-                        }}
-                        options={gameTypeBlacklistOptions}
-                        onAddOption={(option) => setGameTypeBlacklistOptions([...gameTypeBlacklistOptions, option])}
-                        onDeleteOption={handleDeleteGameTypeBlacklist}
-                        placeholder="Pilih jenis game"
-                      />
-                    </div>
-                    
-                    {/* Provider Blacklist - Multi-select dengan Badges */}
-                    <div className="space-y-2">
-                      <Label>Provider Game Dilarang</Label>
-                      {data.game_providers_blacklist?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {data.game_providers_blacklist.map((provider, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
-                              {gameProviderBlacklistOptions.find(p => p.value === provider)?.label || provider}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...data.game_providers_blacklist];
-                                  updated.splice(idx, 1);
-                                  onChange({ game_providers_blacklist: updated });
-                                }}
-                                className="hover:text-destructive transition-colors"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <SelectWithAddNew
-                        value=""
-                        onValueChange={(value) => {
-                          if (value && !data.game_providers_blacklist?.includes(value)) {
-                            onChange({ game_providers_blacklist: [...(data.game_providers_blacklist || []), value] });
-                          }
-                        }}
-                        options={gameProviderBlacklistOptions}
-                        onAddOption={(option) => setGameProviderBlacklistOptions([...gameProviderBlacklistOptions, option])}
-                        onDeleteOption={handleDeleteGameProviderBlacklist}
-                        placeholder="Pilih provider"
-                      />
-                    </div>
-                    
-                    {/* Nama Game Blacklist - Multi-select dengan Badges */}
-                    <div className="space-y-2">
-                      <Label>Nama Game Dilarang</Label>
-                      {data.game_names_blacklist?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {data.game_names_blacklist.map((name, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
-                              {gameNameBlacklistOptions.find(n => n.value === name)?.label || name}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...data.game_names_blacklist];
-                                  updated.splice(idx, 1);
-                                  onChange({ game_names_blacklist: updated });
-                                }}
-                                className="hover:text-destructive transition-colors"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <SelectWithAddNew
-                        value=""
-                        onValueChange={(value) => {
-                          if (value && !data.game_names_blacklist?.includes(value)) {
-                            onChange({ game_names_blacklist: [...(data.game_names_blacklist || []), value] });
-                          }
-                        }}
-                        options={gameNameBlacklistOptions}
-                        onAddOption={(option) => setGameNameBlacklistOptions([...gameNameBlacklistOptions, option])}
-                        onDeleteOption={handleDeleteGameNameBlacklist}
-                        placeholder="Pilih nama game"
-                      />
-                    </div>
-                    
-                    {/* Badge-based - Aturan Pengecualian Khusus */}
-                    <div className="space-y-3">
-                      <Label>Aturan Pengecualian Khusus</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {(data.game_exclusion_rules || []).map((rule, idx) => (
-                          <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-sm text-foreground">
-                            {rule}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = [...(data.game_exclusion_rules || [])];
-                                updated.splice(idx, 1);
-                                onChange({ game_exclusion_rules: updated });
-                              }}
-                              className="hover:text-destructive transition-colors"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          value={newExclusionRule}
-                          onChange={(e) => setNewExclusionRule(e.target.value)}
-                          placeholder="Contoh: Semua slot 3 line, old game slot"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && newExclusionRule.trim()) {
-                              e.preventDefault();
-                              onChange({ game_exclusion_rules: [...(data.game_exclusion_rules || []), newExclusionRule.trim()] });
-                              setNewExclusionRule('');
-                            }
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => {
-                            if (newExclusionRule.trim()) {
-                              onChange({ game_exclusion_rules: [...(data.game_exclusion_rules || []), newExclusionRule.trim()] });
-                              setNewExclusionRule('');
-                            }
-                          }}
-                          className="bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Tambah
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Untuk kasus khusus yang tidak tercakup dropdown (HEROES, game 3 line, dll)
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <GameWhitelistBlacklist
+                gameTypes={data.game_types || []}
+                gameProviders={data.game_providers || []}
+                gameNames={data.game_names || []}
+                gameTypesBlacklist={data.game_types_blacklist || []}
+                gameProvidersBlacklist={data.game_providers_blacklist || []}
+                gameNamesBlacklist={data.game_names_blacklist || []}
+                gameBlacklistEnabled={data.game_blacklist_enabled ?? false}
+                gameExclusionRules={data.game_exclusion_rules || []}
+                gameTypeOptions={gameTypeOptions}
+                gameProviderOptions={gameProviderOptions}
+                gameNameOptions={gameNameOptions}
+                gameTypeBlacklistOptions={gameTypeBlacklistOptions}
+                gameProviderBlacklistOptions={gameProviderBlacklistOptions}
+                gameNameBlacklistOptions={gameNameBlacklistOptions}
+                onGameTypesChange={(types) => onChange({ game_types: types })}
+                onGameProvidersChange={(providers) => onChange({ game_providers: providers })}
+                onGameNamesChange={(names) => onChange({ game_names: names })}
+                onGameTypesBlacklistChange={(types) => onChange({ game_types_blacklist: types })}
+                onGameProvidersBlacklistChange={(providers) => onChange({ game_providers_blacklist: providers })}
+                onGameNamesBlacklistChange={(names) => onChange({ game_names_blacklist: names })}
+                onBlacklistEnabledChange={(enabled) => onChange({ game_blacklist_enabled: enabled })}
+                onExclusionRulesChange={(rules) => onChange({ game_exclusion_rules: rules })}
+                onAddGameTypeOption={(option) => setGameTypeOptions([...gameTypeOptions, option])}
+                onDeleteGameTypeOption={handleDeleteGameType}
+                onAddGameProviderOption={(option) => setGameProviderOptions([...gameProviderOptions, option])}
+                onDeleteGameProviderOption={handleDeleteGameProvider}
+                onAddGameNameOption={(option) => setGameNameOptions([...gameNameOptions, option])}
+                onDeleteGameNameOption={handleDeleteGameName}
+                onAddGameTypeBlacklistOption={(option) => setGameTypeBlacklistOptions([...gameTypeBlacklistOptions, option])}
+                onDeleteGameTypeBlacklistOption={handleDeleteGameTypeBlacklist}
+                onAddGameProviderBlacklistOption={(option) => setGameProviderBlacklistOptions([...gameProviderBlacklistOptions, option])}
+                onDeleteGameProviderBlacklistOption={handleDeleteGameProviderBlacklist}
+                onAddGameNameBlacklistOption={(option) => setGameNameBlacklistOptions([...gameNameBlacklistOptions, option])}
+                onDeleteGameNameBlacklistOption={handleDeleteGameNameBlacklist}
+              />
             </CollapsibleContent>
           </Collapsible>
 
@@ -1910,317 +1636,42 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 mb-6">
-              {/* Jenis Game - Multi-select dengan Badges */}
-              <div className="space-y-2 mb-4">
-                <Label>Jenis Game</Label>
-                {(data.game_types?.length > 0 || data.game_restriction) && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {(data.game_types || []).map((type, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
-                        {gameTypeOptions.find(g => g.value === type)?.label || type}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = [...(data.game_types || [])];
-                            updated.splice(idx, 1);
-                            onChange({ game_types: updated });
-                          }}
-                          className="hover:text-destructive transition-colors"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <SelectWithAddNew
-                  value=""
-                  onValueChange={(value) => {
-                    if (value && !data.game_types?.includes(value)) {
-                      onChange({ game_types: [...(data.game_types || []), value], game_restriction: value });
-                    }
-                  }}
-                  options={gameTypeOptions}
-                  onAddOption={(option) => setGameTypeOptions([...gameTypeOptions, option])}
-                  onDeleteOption={handleDeleteGameType}
-                  placeholder="Pilih jenis game"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Kategori game yang berlaku untuk promo ini
-                </p>
-              </div>
-              
-              {/* Provider Game - Multi-select dengan Badges */}
-              <div className="space-y-2 mb-4">
-                <Label>Provider Game</Label>
-                {data.game_providers?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {data.game_providers.map((provider, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
-                        {gameProviderOptions.find(p => p.value === provider)?.label || provider}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = [...data.game_providers];
-                            updated.splice(idx, 1);
-                            onChange({ game_providers: updated });
-                          }}
-                          className="hover:text-destructive transition-colors"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <SelectWithAddNew
-                  value=""
-                  onValueChange={(value) => {
-                    if (value && !data.game_providers?.includes(value)) {
-                      onChange({ game_providers: [...(data.game_providers || []), value] });
-                    }
-                  }}
-                  options={gameProviderOptions}
-                  onAddOption={(option) => setGameProviderOptions([...gameProviderOptions, option])}
-                  onDeleteOption={handleDeleteGameProvider}
-                  placeholder="Pilih provider"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Provider/vendor game (PG SOFT, Pragmatic, dll)
-                </p>
-              </div>
-              
-              {/* Nama Game - Multi-select dengan Badges */}
-              <div className="space-y-2">
-                <Label>Nama Game</Label>
-                {data.game_names?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {data.game_names.map((name, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
-                        {gameNameOptions.find(n => n.value === name)?.label || name}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = [...data.game_names];
-                            updated.splice(idx, 1);
-                            onChange({ game_names: updated });
-                          }}
-                          className="hover:text-destructive transition-colors"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <SelectWithAddNew
-                  value=""
-                  onValueChange={(value) => {
-                    if (value && !data.game_names?.includes(value)) {
-                      onChange({ game_names: [...(data.game_names || []), value] });
-                    }
-                  }}
-                  options={gameNameOptions}
-                  onAddOption={(option) => setGameNameOptions([...gameNameOptions, option])}
-                  onDeleteOption={handleDeleteGameName}
-                  placeholder="Pilih nama game"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Nama spesifik game (Mahjong Wins, Spaceman, dll)
-                </p>
-              </div>
-              
-              {/* Blok 2B - Game Dilarang (Blacklist) - Styled like SubCategoryCard */}
-              <div className="mt-6 pt-4 border-t border-border">
-                <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-4">
-                  <Switch
-                    checked={data.game_blacklist_enabled ?? false}
-                    onCheckedChange={(checked) => onChange({ game_blacklist_enabled: checked })}
-                  />
-                  <div>
-                    <div className="font-medium text-sm text-button-hover">Game Dilarang (Blacklist)</div>
-                    <p className="text-xs text-muted-foreground">
-                      Aktifkan untuk kecualikan game tertentu dari promo ini
-                    </p>
-                  </div>
-                </div>
-                
-                {data.game_blacklist_enabled && (
-                  <div className="space-y-4">
-                    {/* Helper text */}
-                    <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
-                      <p className="text-xs text-warning">
-                        ⚠️ Jika diaktifkan, promo TIDAK berlaku untuk kombinasi jenis game / provider / nama game yang dipilih di sini, walaupun termasuk di daftar game diizinkan di atas.
-                      </p>
-                    </div>
-                    
-                    {/* Jenis Game Blacklist - Multi-select dengan Badges */}
-                    <div className="space-y-2">
-                      <Label>Jenis Game Dilarang</Label>
-                      {data.game_types_blacklist?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {data.game_types_blacklist.map((type, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
-                              {gameTypeBlacklistOptions.find(g => g.value === type)?.label || type}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...data.game_types_blacklist];
-                                  updated.splice(idx, 1);
-                                  onChange({ game_types_blacklist: updated });
-                                }}
-                                className="hover:text-destructive transition-colors"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <SelectWithAddNew
-                        value=""
-                        onValueChange={(value) => {
-                          if (value && !data.game_types_blacklist?.includes(value)) {
-                            onChange({ game_types_blacklist: [...(data.game_types_blacklist || []), value] });
-                          }
-                        }}
-                        options={gameTypeBlacklistOptions}
-                        onAddOption={(option) => setGameTypeBlacklistOptions([...gameTypeBlacklistOptions, option])}
-                        onDeleteOption={handleDeleteGameTypeBlacklist}
-                        placeholder="Pilih jenis game"
-                      />
-                    </div>
-                    
-                    {/* Provider Blacklist - Multi-select dengan Badges */}
-                    <div className="space-y-2">
-                      <Label>Provider Game Dilarang</Label>
-                      {data.game_providers_blacklist?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {data.game_providers_blacklist.map((provider, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
-                              {gameProviderBlacklistOptions.find(p => p.value === provider)?.label || provider}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...data.game_providers_blacklist];
-                                  updated.splice(idx, 1);
-                                  onChange({ game_providers_blacklist: updated });
-                                }}
-                                className="hover:text-destructive transition-colors"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <SelectWithAddNew
-                        value=""
-                        onValueChange={(value) => {
-                          if (value && !data.game_providers_blacklist?.includes(value)) {
-                            onChange({ game_providers_blacklist: [...(data.game_providers_blacklist || []), value] });
-                          }
-                        }}
-                        options={gameProviderBlacklistOptions}
-                        onAddOption={(option) => setGameProviderBlacklistOptions([...gameProviderBlacklistOptions, option])}
-                        onDeleteOption={handleDeleteGameProviderBlacklist}
-                        placeholder="Pilih provider"
-                      />
-                    </div>
-                    
-                    {/* Nama Game Blacklist - Multi-select dengan Badges */}
-                    <div className="space-y-2">
-                      <Label>Nama Game Dilarang</Label>
-                      {data.game_names_blacklist?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {data.game_names_blacklist.map((name, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
-                              {gameNameBlacklistOptions.find(n => n.value === name)?.label || name}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = [...data.game_names_blacklist];
-                                  updated.splice(idx, 1);
-                                  onChange({ game_names_blacklist: updated });
-                                }}
-                                className="hover:text-destructive transition-colors"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <SelectWithAddNew
-                        value=""
-                        onValueChange={(value) => {
-                          if (value && !data.game_names_blacklist?.includes(value)) {
-                            onChange({ game_names_blacklist: [...(data.game_names_blacklist || []), value] });
-                          }
-                        }}
-                        options={gameNameBlacklistOptions}
-                        onAddOption={(option) => setGameNameBlacklistOptions([...gameNameBlacklistOptions, option])}
-                        onDeleteOption={handleDeleteGameNameBlacklist}
-                        placeholder="Pilih nama game"
-                      />
-                    </div>
-                    
-                    {/* Badge-based - Aturan Pengecualian Khusus */}
-                    <div className="space-y-3">
-                      <Label>Aturan Pengecualian Khusus</Label>
-                      <div className="flex flex-wrap gap-2">
-                        {(data.game_exclusion_rules || []).map((rule, idx) => (
-                          <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted rounded-full text-sm text-foreground">
-                            {rule}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = [...(data.game_exclusion_rules || [])];
-                                updated.splice(idx, 1);
-                                onChange({ game_exclusion_rules: updated });
-                              }}
-                              className="hover:text-destructive transition-colors"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                      <div className="flex gap-2">
-                        <Input
-                          value={newExclusionRule}
-                          onChange={(e) => setNewExclusionRule(e.target.value)}
-                          placeholder="Contoh: Semua slot 3 line, old game slot"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && newExclusionRule.trim()) {
-                              e.preventDefault();
-                              onChange({ game_exclusion_rules: [...(data.game_exclusion_rules || []), newExclusionRule.trim()] });
-                              setNewExclusionRule('');
-                            }
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => {
-                            if (newExclusionRule.trim()) {
-                              onChange({ game_exclusion_rules: [...(data.game_exclusion_rules || []), newExclusionRule.trim()] });
-                              setNewExclusionRule('');
-                            }
-                          }}
-                          className="bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Tambah
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Untuk kasus khusus yang tidak tercakup dropdown (HEROES, game 3 line, dll)
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <GameWhitelistBlacklist
+                gameTypes={data.game_types || []}
+                gameProviders={data.game_providers || []}
+                gameNames={data.game_names || []}
+                gameTypesBlacklist={data.game_types_blacklist || []}
+                gameProvidersBlacklist={data.game_providers_blacklist || []}
+                gameNamesBlacklist={data.game_names_blacklist || []}
+                gameBlacklistEnabled={data.game_blacklist_enabled ?? false}
+                gameExclusionRules={data.game_exclusion_rules || []}
+                gameTypeOptions={gameTypeOptions}
+                gameProviderOptions={gameProviderOptions}
+                gameNameOptions={gameNameOptions}
+                gameTypeBlacklistOptions={gameTypeBlacklistOptions}
+                gameProviderBlacklistOptions={gameProviderBlacklistOptions}
+                gameNameBlacklistOptions={gameNameBlacklistOptions}
+                onGameTypesChange={(types) => onChange({ game_types: types })}
+                onGameProvidersChange={(providers) => onChange({ game_providers: providers })}
+                onGameNamesChange={(names) => onChange({ game_names: names })}
+                onGameTypesBlacklistChange={(types) => onChange({ game_types_blacklist: types })}
+                onGameProvidersBlacklistChange={(providers) => onChange({ game_providers_blacklist: providers })}
+                onGameNamesBlacklistChange={(names) => onChange({ game_names_blacklist: names })}
+                onBlacklistEnabledChange={(enabled) => onChange({ game_blacklist_enabled: enabled })}
+                onExclusionRulesChange={(rules) => onChange({ game_exclusion_rules: rules })}
+                onAddGameTypeOption={(option) => setGameTypeOptions([...gameTypeOptions, option])}
+                onDeleteGameTypeOption={handleDeleteGameType}
+                onAddGameProviderOption={(option) => setGameProviderOptions([...gameProviderOptions, option])}
+                onDeleteGameProviderOption={handleDeleteGameProvider}
+                onAddGameNameOption={(option) => setGameNameOptions([...gameNameOptions, option])}
+                onDeleteGameNameOption={handleDeleteGameName}
+                onAddGameTypeBlacklistOption={(option) => setGameTypeBlacklistOptions([...gameTypeBlacklistOptions, option])}
+                onDeleteGameTypeBlacklistOption={handleDeleteGameTypeBlacklist}
+                onAddGameProviderBlacklistOption={(option) => setGameProviderBlacklistOptions([...gameProviderBlacklistOptions, option])}
+                onDeleteGameProviderBlacklistOption={handleDeleteGameProviderBlacklist}
+                onAddGameNameBlacklistOption={(option) => setGameNameBlacklistOptions([...gameNameBlacklistOptions, option])}
+                onDeleteGameNameBlacklistOption={handleDeleteGameNameBlacklist}
+              />
             </CollapsibleContent>
           </Collapsible>
             </>
@@ -3301,115 +2752,42 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 mb-6">
-              <div className="space-y-2 mb-4">
-                <Label>Jenis Game</Label>
-                {(data.game_types?.length > 0) && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {(data.game_types || []).map((type, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
-                        {gameTypeOptions.find(g => g.value === type)?.label || type}
-                        <button type="button" onClick={() => { const updated = [...(data.game_types || [])]; updated.splice(idx, 1); onChange({ game_types: updated }); }} className="hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_types?.includes(value)) { onChange({ game_types: [...(data.game_types || []), value] }); } }} options={gameTypeOptions.filter(opt => !data.game_types_blacklist?.includes(opt.value))} onAddOption={(option) => setGameTypeOptions([...gameTypeOptions, option])} onDeleteOption={handleDeleteGameType} placeholder="Pilih jenis game" />
-              </div>
-              <div className="space-y-2 mb-4">
-                <Label>Provider Game</Label>
-                {data.game_providers?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {data.game_providers.map((provider, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
-                        {gameProviderOptions.find(p => p.value === provider)?.label || provider}
-                        <button type="button" onClick={() => { const updated = [...data.game_providers]; updated.splice(idx, 1); onChange({ game_providers: updated }); }} className="hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_providers?.includes(value)) { onChange({ game_providers: [...(data.game_providers || []), value] }); } }} options={gameProviderOptions.filter(opt => !data.game_providers_blacklist?.includes(opt.value))} onAddOption={(option) => setGameProviderOptions([...gameProviderOptions, option])} onDeleteOption={handleDeleteGameProvider} placeholder="Pilih provider" />
-              </div>
-              <div className="space-y-2">
-                <Label>Nama Game</Label>
-                {data.game_names?.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {data.game_names.map((name, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-button-hover/20 rounded-full text-sm text-button-hover border border-button-hover/40">
-                        {gameNameOptions.find(n => n.value === name)?.label || name}
-                        <button type="button" onClick={() => { const updated = [...data.game_names]; updated.splice(idx, 1); onChange({ game_names: updated }); }} className="hover:text-destructive"><X className="h-3.5 w-3.5" /></button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_names?.includes(value)) { onChange({ game_names: [...(data.game_names || []), value] }); } }} options={gameNameOptions.filter(opt => !data.game_names_blacklist?.includes(opt.value))} onAddOption={(option) => setGameNameOptions([...gameNameOptions, option])} onDeleteOption={handleDeleteGameName} placeholder="Pilih nama game" />
-              </div>
-              <div className="mt-6 pt-4 border-t border-border">
-                <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-4">
-                  <Switch checked={data.game_blacklist_enabled ?? false} onCheckedChange={(checked) => onChange({ game_blacklist_enabled: checked })} />
-                  <div>
-                    <div className="font-medium text-sm text-button-hover">Game Dilarang (Blacklist)</div>
-                    <p className="text-xs text-muted-foreground">Kecualikan game tertentu dari promo</p>
-                  </div>
-                </div>
-                {data.game_blacklist_enabled && (
-                  <div className="space-y-4">
-                    <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
-                      <p className="text-xs text-warning">⚠️ Promo TIDAK berlaku untuk game yang dipilih di sini.</p>
-                    </div>
-                    {/* Jenis Game Dilarang */}
-                    <div className="space-y-2">
-                      <Label>Jenis Game Dilarang</Label>
-                      {data.game_types_blacklist?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {data.game_types_blacklist.map((type, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
-                              {type}
-                              <button type="button" onClick={() => { const updated = [...data.game_types_blacklist]; updated.splice(idx, 1); onChange({ game_types_blacklist: updated }); }} className="hover:text-destructive">
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_types_blacklist?.includes(value)) { onChange({ game_types_blacklist: [...(data.game_types_blacklist || []), value] }); } }} options={gameTypeBlacklistOptions.filter(opt => !data.game_types?.includes(opt.value))} onAddOption={(option) => setGameTypeBlacklistOptions([...gameTypeBlacklistOptions, option])} onDeleteOption={handleDeleteGameTypeBlacklist} placeholder="Pilih jenis game" />
-                    </div>
-                    {/* Provider Dilarang */}
-                    <div className="space-y-2">
-                      <Label>Provider Dilarang</Label>
-                      {data.game_providers_blacklist?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {data.game_providers_blacklist.map((provider, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
-                              {gameProviderBlacklistOptions.find(p => p.value === provider)?.label || provider}
-                              <button type="button" onClick={() => { const updated = [...data.game_providers_blacklist]; updated.splice(idx, 1); onChange({ game_providers_blacklist: updated }); }} className="hover:text-destructive">
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_providers_blacklist?.includes(value)) { onChange({ game_providers_blacklist: [...(data.game_providers_blacklist || []), value] }); } }} options={gameProviderBlacklistOptions.filter(opt => !data.game_providers?.includes(opt.value))} onAddOption={(option) => setGameProviderBlacklistOptions([...gameProviderBlacklistOptions, option])} onDeleteOption={handleDeleteGameProviderBlacklist} placeholder="Pilih provider yang dilarang" />
-                    </div>
-                    {/* Nama Game Dilarang */}
-                    <div className="space-y-2">
-                      <Label>Nama Game Dilarang</Label>
-                      {data.game_names_blacklist?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {data.game_names_blacklist.map((name, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
-                              {gameNameBlacklistOptions.find(n => n.value === name)?.label || name}
-                              <button type="button" onClick={() => { const updated = [...data.game_names_blacklist]; updated.splice(idx, 1); onChange({ game_names_blacklist: updated }); }} className="hover:text-destructive">
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_names_blacklist?.includes(value)) { onChange({ game_names_blacklist: [...(data.game_names_blacklist || []), value] }); } }} options={gameNameBlacklistOptions.filter(opt => !data.game_names?.includes(opt.value))} onAddOption={(option) => setGameNameBlacklistOptions([...gameNameBlacklistOptions, option])} onDeleteOption={handleDeleteGameNameBlacklist} placeholder="Pilih nama game yang dilarang" />
-                    </div>
-                  </div>
-                )}
-              </div>
+              <GameWhitelistBlacklist
+                gameTypes={data.game_types || []}
+                gameProviders={data.game_providers || []}
+                gameNames={data.game_names || []}
+                gameTypesBlacklist={data.game_types_blacklist || []}
+                gameProvidersBlacklist={data.game_providers_blacklist || []}
+                gameNamesBlacklist={data.game_names_blacklist || []}
+                gameBlacklistEnabled={data.game_blacklist_enabled ?? false}
+                gameExclusionRules={data.game_exclusion_rules || []}
+                gameTypeOptions={gameTypeOptions}
+                gameProviderOptions={gameProviderOptions}
+                gameNameOptions={gameNameOptions}
+                gameTypeBlacklistOptions={gameTypeBlacklistOptions}
+                gameProviderBlacklistOptions={gameProviderBlacklistOptions}
+                gameNameBlacklistOptions={gameNameBlacklistOptions}
+                onGameTypesChange={(types) => onChange({ game_types: types })}
+                onGameProvidersChange={(providers) => onChange({ game_providers: providers })}
+                onGameNamesChange={(names) => onChange({ game_names: names })}
+                onGameTypesBlacklistChange={(types) => onChange({ game_types_blacklist: types })}
+                onGameProvidersBlacklistChange={(providers) => onChange({ game_providers_blacklist: providers })}
+                onGameNamesBlacklistChange={(names) => onChange({ game_names_blacklist: names })}
+                onBlacklistEnabledChange={(enabled) => onChange({ game_blacklist_enabled: enabled })}
+                onExclusionRulesChange={(rules) => onChange({ game_exclusion_rules: rules })}
+                onAddGameTypeOption={(option) => setGameTypeOptions([...gameTypeOptions, option])}
+                onDeleteGameTypeOption={handleDeleteGameType}
+                onAddGameProviderOption={(option) => setGameProviderOptions([...gameProviderOptions, option])}
+                onDeleteGameProviderOption={handleDeleteGameProvider}
+                onAddGameNameOption={(option) => setGameNameOptions([...gameNameOptions, option])}
+                onDeleteGameNameOption={handleDeleteGameName}
+                onAddGameTypeBlacklistOption={(option) => setGameTypeBlacklistOptions([...gameTypeBlacklistOptions, option])}
+                onDeleteGameTypeBlacklistOption={handleDeleteGameTypeBlacklist}
+                onAddGameProviderBlacklistOption={(option) => setGameProviderBlacklistOptions([...gameProviderBlacklistOptions, option])}
+                onDeleteGameProviderBlacklistOption={handleDeleteGameProviderBlacklist}
+                onAddGameNameBlacklistOption={(option) => setGameNameBlacklistOptions([...gameNameBlacklistOptions, option])}
+                onDeleteGameNameBlacklistOption={handleDeleteGameNameBlacklist}
+              />
             </CollapsibleContent>
           </Collapsible>
 
