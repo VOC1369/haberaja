@@ -509,63 +509,67 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
             </div>
             
-            {/* Row 2: Payout Direction, Admin Fee & Minimum Depo (3 kolom) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              {/* Payout Direction */}
-              <div className="space-y-2">
-                <Label>Payout Direction</Label>
-                <RadioGroup
-                  value={data.fixed_payout_direction || 'after'}
-                  onValueChange={(value: 'before' | 'after') => onChange({ fixed_payout_direction: value })}
-                  className="flex gap-6 pt-2"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="before" id="fixed-payout-before-global" />
-                    <Label htmlFor="fixed-payout-before-global" className="cursor-pointer font-normal text-sm">Didepan</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="after" id="fixed-payout-after-global" />
-                    <Label htmlFor="fixed-payout-after-global" className="cursor-pointer font-normal text-sm">Dibelakang</Label>
-                  </div>
-                </RadioGroup>
-              </div>
+            {/* Row 2: 2 kolom utama - Kolom 1 (Payout + Admin Fee), Kolom 2 (Minimum Depo) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               
-              {/* Admin Fee with Toggle */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Admin Fee</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Aktifkan</span>
-                    <Switch
-                      checked={data.fixed_admin_fee_enabled ?? false}
-                      onCheckedChange={(checked) => onChange({ 
-                        fixed_admin_fee_enabled: checked,
-                        fixed_admin_fee_percentage: checked ? (data.fixed_admin_fee_percentage ?? 0) : undefined
-                      })}
+              {/* KOLOM 1: Dibagi 2 sub-kolom (Payout Direction + Admin Fee) */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* 1a: Payout Direction */}
+                <div className="space-y-2">
+                  <Label>Payout Direction</Label>
+                  <RadioGroup
+                    value={data.fixed_payout_direction || 'after'}
+                    onValueChange={(value: 'before' | 'after') => onChange({ fixed_payout_direction: value })}
+                    className="flex flex-col gap-2 pt-1"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="before" id="fixed-payout-before-global" />
+                      <Label htmlFor="fixed-payout-before-global" className="cursor-pointer font-normal text-sm">Didepan</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="after" id="fixed-payout-after-global" />
+                      <Label htmlFor="fixed-payout-after-global" className="cursor-pointer font-normal text-sm">Dibelakang</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
+                {/* 1b: Admin Fee */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Admin Fee</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Aktifkan</span>
+                      <Switch
+                        checked={data.fixed_admin_fee_enabled ?? false}
+                        onCheckedChange={(checked) => onChange({ 
+                          fixed_admin_fee_enabled: checked,
+                          fixed_admin_fee_percentage: checked ? (data.fixed_admin_fee_percentage ?? 0) : undefined
+                        })}
+                      />
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={data.fixed_admin_fee_enabled ? (data.fixed_admin_fee_percentage ?? 0) : ''}
+                      onChange={(e) => onChange({ fixed_admin_fee_percentage: Number(e.target.value) || 0 })}
+                      placeholder={data.fixed_admin_fee_enabled ? "0" : "Tidak aktif"}
+                      disabled={!data.fixed_admin_fee_enabled}
+                      className={cn("pr-8", !data.fixed_admin_fee_enabled && "opacity-50")}
                     />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                   </div>
-                </div>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={data.fixed_admin_fee_enabled ? (data.fixed_admin_fee_percentage ?? 0) : ''}
-                    onChange={(e) => onChange({ fixed_admin_fee_percentage: Number(e.target.value) || 0 })}
-                    placeholder={data.fixed_admin_fee_enabled ? "0" : "Tidak aktif"}
-                    disabled={!data.fixed_admin_fee_enabled}
-                    className={cn("pr-10", !data.fixed_admin_fee_enabled && "opacity-50")}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                 </div>
               </div>
               
-              {/* Minimum Depo with Toggle */}
+              {/* KOLOM 2: Minimum Depo */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Minimum Depo</Label>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Aktifkan</span>
+                    <span className="text-xs text-muted-foreground">Aktifkan</span>
                     <Switch
                       checked={data.fixed_min_depo_enabled ?? false}
                       onCheckedChange={(checked) => onChange({ 
