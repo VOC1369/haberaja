@@ -2,7 +2,7 @@ import { PromoFormData, GAME_RESTRICTIONS, GAME_PROVIDERS, GAME_NAMES, CONTACT_C
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, AlertCircle, ChevronDown, Edit2, FileText, Copy, ClipboardCheck, Sparkles, XCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, ChevronDown, Edit2, FileText, Copy, ClipboardCheck, Sparkles, XCircle, Download } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -16,6 +16,72 @@ import { Progress } from "@/components/ui/progress";
 // Helper: format number with thousand separator
 export const formatNumber = (num: number): string => {
   return num.toLocaleString('id-ID');
+};
+
+// Helper: Convert promo data to CSV format
+export const convertPromoToCSV = (pkbPayload: any, subcategories?: any[]): string => {
+  // Define columns for CSV
+  const columns = [
+    'id', 'name', 'promo_type', 'category', 'calculation_base', 'calculation_method', 
+    'calculation_value', 'min_deposit', 'min_calculation', 'max_claim', 'max_claim_unlimited',
+    'claim_frequency', 'reward_type', 'game_types', 'game_names', 'valid_from', 'valid_until', 
+    'is_active', 'row_type'
+  ];
+
+  // Helper to flatten a row
+  const buildCSVRow = (obj: Record<string, any>, rowType: string): string => {
+    return columns.map(col => {
+      let value: any;
+
+      if (col === 'row_type') {
+        value = rowType;
+      } else if (col === 'calculation_base' && obj.formula_metadata?.base) {
+        value = obj.formula_metadata.base;
+      } else if (col === 'calculation_method' && obj.formula_metadata?.method) {
+        value = obj.formula_metadata.method;
+      } else if (col === 'calculation_value' && obj.formula_metadata?.value) {
+        value = obj.formula_metadata.value;
+      } else {
+        value = obj[col];
+      }
+
+      // Handle arrays
+      if (Array.isArray(value)) {
+        value = value.join('; ');
+      }
+
+      // Handle null/undefined/boolean
+      if (value === null || value === undefined) value = '';
+      if (value === true) value = 'TRUE';
+      if (value === false) value = 'FALSE';
+
+      // Convert to string and escape for CSV
+      value = String(value);
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        value = `"${value.replace(/"/g, '""')}"`;
+      }
+
+      return value;
+    }).join(',');
+  };
+
+  // Build rows
+  const rows: string[] = [];
+
+  // Header row
+  rows.push(columns.join(','));
+
+  // Parent/Main row
+  rows.push(buildCSVRow(pkbPayload, subcategories && subcategories.length > 0 ? 'PARENT' : 'SINGLE'));
+
+  // Subcategory rows
+  if (subcategories && subcategories.length > 0) {
+    subcategories.forEach((sub, idx) => {
+      rows.push(buildCSVRow(sub, `VARIAN_${idx + 1}`));
+    });
+  }
+
+  return rows.join('\n');
 };
 
 // ============= EPISTEMIC AUTHORITY HELPERS =============
@@ -1849,22 +1915,52 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                 )} />
                 <span>JSON Output Preview</span>
               </CollapsibleTrigger>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigator.clipboard.writeText(JSON.stringify(pkbPayload, null, 2));
-                  toast({
-                    title: "Berhasil disalin!",
-                    description: "PKB JSON telah disalin ke clipboard"
-                  });
-                }}
-                className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-              >
-                <Copy className="h-4 w-4" />
-                Salin JSON
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const csvContent = convertPromoToCSV(
+                      pkbPayload, 
+                      data.has_subcategories ? data.subcategories : undefined
+                    );
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `promo_${data.promo_name?.replace(/\s+/g, '_') || 'export'}_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                    toast({
+                      title: "Berhasil!",
+                      description: "CSV telah didownload"
+                    });
+                  }}
+                  className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+                >
+                  <Download className="h-4 w-4" />
+                  Download CSV
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(JSON.stringify(pkbPayload, null, 2));
+                    toast({
+                      title: "Berhasil disalin!",
+                      description: "PKB JSON telah disalin ke clipboard"
+                    });
+                  }}
+                  className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+                >
+                  <Copy className="h-4 w-4" />
+                  Salin JSON
+                </Button>
+              </div>
             </div>
             <CollapsibleContent>
               <div className="bg-card border border-t-0 border-border rounded-b-xl p-6 space-y-4">
