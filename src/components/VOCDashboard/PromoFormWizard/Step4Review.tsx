@@ -531,10 +531,10 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
   }
   // ⚠️ If no explicit max_claim, DON'T add any "maksimum bonus" text!
   
-  // Turnover rule (only for deposit-based promos)
-  if (data.turnover_rule && !['turnover', 'win_loss', 'winloss', 'bet_amount'].includes(data.calculation_base?.toLowerCase() || '')) {
-    terms.push(`Syarat turnover: ${data.turnover_rule}.`);
-  }
+    // Turnover rule - 🔧 FIX: Check toggle FIRST like generateSinglePromoTerms
+    if (data.turnover_rule_enabled && data.turnover_rule && !['turnover', 'win_loss', 'winloss', 'bet_amount'].includes(data.calculation_base?.toLowerCase() || '')) {
+      terms.push(`Syarat turnover: ${data.turnover_rule}.`);
+    }
   
   return terms;
 };
