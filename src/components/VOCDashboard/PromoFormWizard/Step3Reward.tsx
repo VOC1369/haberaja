@@ -1227,8 +1227,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <Switch
               checked={data.contact_channel_enabled || false}
               onCheckedChange={(checked) => onChange({ 
-                contact_channel_enabled: checked,
-                ...(checked && { reward_distribution: 'manual_cs' })
+                contact_channel_enabled: checked
               })}
             />
             <div className="flex-1">
@@ -2121,8 +2120,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <Switch
               checked={data.contact_channel_enabled || false}
               onCheckedChange={(checked) => onChange({ 
-                contact_channel_enabled: checked,
-                ...(checked && { reward_distribution: 'manual_cs' })
+                contact_channel_enabled: checked
               })}
             />
             <div className="flex-1">

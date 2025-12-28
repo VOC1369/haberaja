@@ -722,9 +722,36 @@ export async function deletePromoDraft(id: string): Promise<boolean> {
   return promoKB.delete(id);
 }
 
+/**
+ * Normalize legacy/invalid reward_distribution values
+ * This prevents UI showing "manual_cs" or "langsung" after save/refresh
+ */
+export function normalizeRewardDistribution(data: Partial<PromoFormData>): Partial<PromoFormData> {
+  const invalidValues = ['manual_cs', 'langsung'];
+  
+  if (data.reward_distribution && invalidValues.includes(data.reward_distribution)) {
+    // Determine best replacement based on existing data
+    let normalized: string;
+    if (data.distribution_day) {
+      normalized = 'hari_tertentu';
+    } else if (data.claim_frequency && ['mingguan', 'bulanan', 'harian'].includes(data.claim_frequency)) {
+      normalized = 'otomatis_setelah_periode';
+    } else {
+      normalized = 'setelah_syarat';
+    }
+    return { ...data, reward_distribution: normalized };
+  }
+  
+  return data;
+}
+
 export async function getPromoById(id: string): Promise<PromoItem | undefined> {
   const promo = await promoKB.getById(id);
-  return promo || undefined;
+  if (!promo) return undefined;
+  
+  // Normalize legacy values before returning
+  const normalized = normalizeRewardDistribution(promo) as PromoItem;
+  return normalized;
 }
 
 // Tier Archetype Options (UI-gating only, NOT business logic)
