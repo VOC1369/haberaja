@@ -308,11 +308,11 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
     const channelLabel = CONTACT_CHANNELS.find(c => c.value === data.contact_channel)?.label || data.contact_channel;
     
     if (data.contact_channel === 'livechat') {
-      terms.push(`Untuk informasi lebih lanjut, silakan hubungi melalui Live Chat.`);
+      terms.push(`Untuk claim bisa melalui: Live Chat.`);
     } else if (data.contact_link) {
-      terms.push(`Untuk informasi lebih lanjut, hubungi ${channelLabel} Official: ${data.contact_link}`);
+      terms.push(`Untuk claim bisa melalui: ${channelLabel} Official - ${data.contact_link}`);
     } else {
-      terms.push(`Untuk informasi lebih lanjut, hubungi ${channelLabel} Official.`);
+      terms.push(`Untuk claim bisa melalui: ${channelLabel} Official.`);
     }
   }
   
