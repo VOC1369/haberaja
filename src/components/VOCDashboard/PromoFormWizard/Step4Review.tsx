@@ -1121,11 +1121,61 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
               <>
                 {data.reward_mode === 'fixed' && (
                   <>
-                    <ValueBox label="Jenis Bonus" value={REWARD_TYPES.find(r => r.value === data.reward_type)?.label || data.reward_type} />
-                    <ValueBox label="Nilai Bonus" value={data.reward_amount ? `Rp ${data.reward_amount.toLocaleString('id-ID')}` : undefined} />
-                    <ValueBox label="Minimal Deposit" value={data.min_deposit ? `Rp ${data.min_deposit.toLocaleString('id-ID')}` : undefined} />
-                    <ValueBox label="Batas Maksimal Bonus" value={data.max_claim ? `Rp ${data.max_claim.toLocaleString('id-ID')}` : undefined} />
-                    <ValueBox label="Periode Klaim" value={CLAIM_FREQUENCIES.find(c => c.value === data.claim_frequency)?.label || data.claim_frequency} />
+                    {/* Dasar & Metode Perhitungan */}
+                    <ValueBox 
+                      label="Dasar Perhitungan" 
+                      value={CALCULATION_BASES.find(b => b.value === data.fixed_calculation_base)?.label || data.fixed_calculation_base} 
+                    />
+                    <ValueBox 
+                      label="Jenis Perhitungan" 
+                      value={CALCULATION_METHODS.find(c => c.value === data.fixed_calculation_method)?.label || data.fixed_calculation_method} 
+                    />
+                    {/* Nilai Bonus */}
+                    <ValueBox 
+                      label="Nilai Bonus" 
+                      value={data.fixed_calculation_value ? `${data.fixed_calculation_value}${data.fixed_calculation_method === 'percentage' ? '%' : ''}` : undefined} 
+                    />
+                    {/* Jenis Reward */}
+                    <ValueBox 
+                      label="Jenis Reward" 
+                      value={REWARD_TYPES.find(r => r.value === data.fixed_reward_type)?.label || data.fixed_reward_type} 
+                    />
+                    {/* Max Claim */}
+                    <ValueBox 
+                      label="Batas Maksimal Bonus" 
+                      value={data.fixed_max_claim_unlimited ? 'Unlimited' : (data.fixed_max_claim ? `Rp ${data.fixed_max_claim.toLocaleString('id-ID')}` : undefined)} 
+                    />
+                    {/* Payout Direction */}
+                    <ValueBox 
+                      label="Payout Direction" 
+                      value={data.fixed_payout_direction === 'before' ? 'Didepan' : 'Dibelakang'} 
+                    />
+                    {/* Admin Fee - hanya tampil jika enabled */}
+                    {data.fixed_admin_fee_enabled && (
+                      <ValueBox 
+                        label="Admin Fee" 
+                        value={`${data.fixed_admin_fee_percentage ?? 0}%`} 
+                      />
+                    )}
+                    {/* Minimum Depo - hanya tampil jika enabled */}
+                    {data.fixed_min_depo_enabled && data.fixed_min_depo && (
+                      <ValueBox 
+                        label="Minimum Depo" 
+                        value={`Rp ${data.fixed_min_depo.toLocaleString('id-ID')}`} 
+                      />
+                    )}
+                    {/* Minimal Perhitungan - hanya tampil jika enabled */}
+                    {data.fixed_min_calculation_enabled && data.fixed_min_calculation && (
+                      <ValueBox 
+                        label={`Minimal Perhitungan ${CALCULATION_BASES.find(b => b.value === data.fixed_calculation_base)?.label || ''}`}
+                        value={`Rp ${data.fixed_min_calculation.toLocaleString('id-ID')}`} 
+                      />
+                    )}
+                    {/* Periode Klaim */}
+                    <ValueBox 
+                      label="Periode Klaim" 
+                      value={CLAIM_FREQUENCIES.find(c => c.value === data.claim_frequency)?.label || data.claim_frequency} 
+                    />
                   </>
                 )}
                 {data.reward_mode === 'formula' && (
@@ -1219,12 +1269,10 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     <ValueBox label="Jenis Bonus" value={DINAMIS_REWARD_TYPES.find(r => r.value === data.dinamis_reward_type)?.label || data.dinamis_reward_type} />
                     <ValueBox label="Batas Maksimal Bonus" value={data.dinamis_max_claim_unlimited ? 'Unlimited' : (data.dinamis_max_claim ? `Rp ${data.dinamis_max_claim.toLocaleString('id-ID')}` : undefined)} />
                     <ValueBox label={`Minimal Perhitungan ${CALCULATION_BASES.find(b => b.value === data.calculation_base)?.label || ''}`} value={data.min_calculation_enabled ? (data.min_calculation ? `Rp ${data.min_calculation.toLocaleString('id-ID')}` : undefined) : 'Tidak ada batas minimal'} />
-                    <ValueBox label="Periode Klaim" value={CLAIM_FREQUENCIES.find(c => c.value === data.claim_frequency)?.label || data.claim_frequency} />
-                    <ValueBox label="Waktu Pembagian Bonus" value={getRewardDistributionDisplay(data)} />
-                    {/* Syarat Main Sebelum WD */}
+                    {/* Payout Direction */}
                     <ValueBox 
-                      label="Syarat Main Sebelum WD" 
-                      value={data.turnover_rule_enabled ? data.turnover_rule : 'Tidak aktif'} 
+                      label="Payout Direction" 
+                      value={data.global_payout_direction === 'before' ? 'Didepan' : 'Dibelakang'} 
                     />
                     {/* Admin Fee - hanya tampil jika enabled */}
                     {data.admin_fee_enabled && data.admin_fee_percentage !== null && (
@@ -1233,6 +1281,13 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         value={`${data.admin_fee_percentage}%`} 
                       />
                     )}
+                    <ValueBox label="Periode Klaim" value={CLAIM_FREQUENCIES.find(c => c.value === data.claim_frequency)?.label || data.claim_frequency} />
+                    <ValueBox label="Waktu Pembagian Bonus" value={getRewardDistributionDisplay(data)} />
+                    {/* Syarat Main Sebelum WD */}
+                    <ValueBox 
+                      label="Syarat Main Sebelum WD" 
+                      value={data.turnover_rule_enabled ? data.turnover_rule : 'Tidak aktif'} 
+                    />
                   </>
                 )}
                 {data.reward_mode === 'tier' && (
