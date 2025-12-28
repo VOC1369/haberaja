@@ -199,39 +199,72 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   // Regex untuk menangkap variasi (spasi, titik, case-insensitive)
   const OLD_SENTENCE_REGEX = /Bonus\s+HARUS\s+diklaim\s+secara\s+manual\s+melalui\s+CS\.?/gi;
   
-  const patchCustomTerms = (customTerms: string | undefined): { patched: string; wasChanged: boolean } => {
-    if (!customTerms) return { patched: '', wasChanged: false };
+  const patchCustomTerms = (customTerms: string | undefined, promoName?: string): { patched: string; wasChanged: boolean } => {
+    console.log('[PatchSK] === START PATCH ===');
+    console.log('[PatchSK] Promo:', promoName || 'unknown');
+    console.log('[PatchSK] Input customTerms:', customTerms?.substring(0, 200) + '...');
     
-    // Check if contains old sentence
-    if (OLD_SENTENCE_REGEX.test(customTerms)) {
-      // Reset regex lastIndex for replace
+    if (!customTerms) {
+      console.log('[PatchSK] No custom_terms, returning empty');
+      return { patched: '', wasChanged: false };
+    }
+    
+    // Reset regex before testing
+    OLD_SENTENCE_REGEX.lastIndex = 0;
+    const containsOld = OLD_SENTENCE_REGEX.test(customTerms);
+    console.log('[PatchSK] Regex test result:', containsOld);
+    console.log('[PatchSK] Regex pattern:', OLD_SENTENCE_REGEX.source);
+    
+    // Also try simple string includes as fallback check
+    const simpleContains = customTerms.includes('HARUS diklaim secara manual');
+    console.log('[PatchSK] Simple includes check:', simpleContains);
+    
+    if (containsOld || simpleContains) {
+      // Reset regex for replace
       OLD_SENTENCE_REGEX.lastIndex = 0;
       const patched = customTerms.replace(OLD_SENTENCE_REGEX, NEUTRAL_SENTENCE);
+      
+      // Verify replacement happened
+      const stillContains = patched.includes('HARUS diklaim secara manual');
+      console.log('[PatchSK] After patch, still contains old?:', stillContains);
+      console.log('[PatchSK] Output patched:', patched.substring(0, 200) + '...');
+      console.log('[PatchSK] === CHANGED: TRUE ===');
+      
       return { patched, wasChanged: true };
     }
     
+    console.log('[PatchSK] === NO CHANGE NEEDED ===');
     return { patched: customTerms, wasChanged: false };
   };
   
   const handleRegenerateSK = async (promo: PromoItem) => {
+    console.log('[PatchSK] Starting single patch for:', promo.promo_name);
+    console.log('[PatchSK] Promo ID:', promo.id);
+    console.log('[PatchSK] Full custom_terms:', promo.custom_terms);
+    
     setRegeneratingIds(prev => new Set(prev).add(promo.id));
     
     try {
-      const { patched, wasChanged } = patchCustomTerms(promo.custom_terms);
+      const { patched, wasChanged } = patchCustomTerms(promo.custom_terms, promo.promo_name);
       
       if (!wasChanged) {
+        console.log('[PatchSK] No change needed for:', promo.promo_name);
         toast.info(`"${promo.promo_name}" sudah netral, tidak perlu patch`);
         return;
       }
       
+      console.log('[PatchSK] Calling promoKB.update with patched terms...');
       const success = await promoKB.update(promo.id, {
         custom_terms: patched,
       } as Partial<PromoItem>);
+      
+      console.log('[PatchSK] Update result:', success);
       
       if (success) {
         toast.success(`S&K "${promo.promo_name}" berhasil dipatch ke netral`);
         loadPromos();
       } else {
+        console.error('[PatchSK] promoKB.update returned false!');
         toast.error(`Gagal patch S&K untuk "${promo.promo_name}"`);
       }
     } catch (error) {
