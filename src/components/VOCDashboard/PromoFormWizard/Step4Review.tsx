@@ -474,23 +474,31 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
   const terms: string[] = [];
   
   // Game restriction - humanize label (single promo mode)
-  // FIX: Resolve "specific_game" placeholder using game_types[] or subcategories
-  // FIX: Include eligible_providers (extracted from "KATEGORI (PROVIDER1 & PROVIDER2)" pattern)
-  if (data.game_restriction && data.game_restriction !== 'semua') {
-    let gameLabel = GAME_RESTRICTIONS.find(g => g.value === data.game_restriction)?.label;
+  // FIX: Sync dengan game_types[] dan game_providers[] dari UI whitelist
+  // Prioritas: game_types[] > game_restriction field
+  const hasSpecificGames = (data.game_types?.length > 0) || 
+    (data.game_restriction && data.game_restriction !== 'semua');
+  
+  if (hasSpecificGames) {
+    // Use getGameTypeDisplayForTerms() which reads from game_types[]
+    let gameLabel = getGameTypeDisplayForTerms(data);
     
-    // If game_restriction is "specific_game" or label not found, use inference helper
-    if (!gameLabel || data.game_restriction === 'specific_game') {
-      // FIX: Use getGameTypeDisplayForTerms() for inference + correct fallback
-      gameLabel = getGameTypeDisplayForTerms(data);
+    // Fallback to game_restriction label if game_types[] empty
+    if (gameLabel === 'Semua Permainan' && data.game_restriction && data.game_restriction !== 'semua') {
+      gameLabel = GAME_RESTRICTIONS.find(g => g.value === data.game_restriction)?.label || gameLabel;
     }
     
-    // Add eligible providers if extracted (e.g., "SABUNG AYAM (SV388 & WS168)")
-    const eligibleProviders = data.eligible_providers?.length > 0 
-      ? data.eligible_providers
-      : (data.subcategories?.[0]?.eligible_providers || []);
-    const providerSuffix = eligibleProviders.length > 0 
-      ? ` (${eligibleProviders.join(' & ')})` 
+    // Provider suffix: prioritas game_providers[] > eligible_providers > subcategories
+    const providers = data.game_providers?.length > 0 
+      ? data.game_providers
+      : (data.eligible_providers?.length > 0 
+          ? data.eligible_providers
+          : (data.subcategories?.[0]?.eligible_providers || []));
+    
+    // Filter out "ALL" placeholder
+    const filteredProviders = providers.filter(p => p && p.toUpperCase() !== 'ALL');
+    const providerSuffix = filteredProviders.length > 0 
+      ? ` (${filteredProviders.join(' & ')})` 
       : '';
     
     terms.push(`Bonus ini hanya berlaku untuk player yang bertaruh di permainan ${gameLabel}${providerSuffix}.`);
