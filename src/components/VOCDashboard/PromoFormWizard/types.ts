@@ -12,6 +12,9 @@ import { generateUUID } from '@/lib/supabase-client';
  * - PKB = sumber fakta bisnis (read-only metadata)
  * - UI = presentation/derivation layer (field terpisah untuk form state)
  * - formula_metadata = wrapper non-executable untuk fakta promo (0.8%, etc)
+ * 
+ * NOTE: UI-only fields (has_subcategories, turnover_rule_enabled, game_blacklist_enabled)
+ * are NOT included - only their data arrays/values are saved
  */
 export const PKB_FIELD_WHITELIST = [
   // Identitas
@@ -21,6 +24,7 @@ export const PKB_FIELD_WHITELIST = [
   'intent_category',
   'target_segment',
   'trigger_event',
+  'currency_scope',  // NEW: 'rupiah' | 'credit' | 'lp' | 'exp'
   
   // Reward Config
   'reward_mode',
@@ -30,7 +34,7 @@ export const PKB_FIELD_WHITELIST = [
   'max_claim',
   'max_claim_unlimited',
   'turnover_rule',
-  'turnover_rule_enabled',
+  // 'turnover_rule_enabled', // ❌ REMOVED - UI-only toggle
   'claim_frequency',
   'claim_date_from',
   'claim_date_until',
@@ -70,7 +74,7 @@ export const PKB_FIELD_WHITELIST = [
   'dinamis_min_claim',
   
   // Sub Kategori (Combo Promo)
-  'has_subcategories',
+  // 'has_subcategories', // ❌ REMOVED - UI-only toggle (subcategories array presence = has subcategories)
   'subcategories',
   
   // Point Store Redeem Table
@@ -84,8 +88,8 @@ export const PKB_FIELD_WHITELIST = [
   'game_providers',
   'game_names',
   
-  // Game Blacklist (Dinamis mode)
-  'game_blacklist_enabled',
+  // Game Blacklist (Dinamis mode) - arrays only, toggle removed
+  // 'game_blacklist_enabled', // ❌ REMOVED - UI-only toggle (blacklist arrays presence = enabled)
   'game_types_blacklist',
   'game_providers_blacklist',
   'game_names_blacklist',
@@ -142,6 +146,7 @@ export interface PromoFormData {
   intent_category: string;
   target_segment: string;
   trigger_event: string;
+  currency_scope?: 'rupiah' | 'credit' | 'lp' | 'exp';  // NEW: canonical currency unit
 
   // Step 2 - Konfigurasi Reward
   // Backend contract: 'formula' (UI displays as 'Dinamis')
@@ -447,6 +452,12 @@ export async function getPromoDrafts(): Promise<PromoItem[]> {
  * - UI fields (calculation_base, calculation_value, etc) di-wrap ke formula_metadata
  * - formula_metadata = non-executable, untuk AI menjelaskan bukan menghitung
  * 
+ * TAXONOMY PATCHES (v6.2):
+ * 1. Normalize claim_frequency → English enum
+ * 2. Auto-derive trigger_event dari calculation_base
+ * 3. Add currency_scope field
+ * 4. Remove UI-only fields from output
+ * 
  * EXPORTED: untuk digunakan di Step4Review JSON preview
  */
 export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
@@ -459,6 +470,36 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     }
   }
   
+  // ============================================
+  // PATCH 1: Normalize claim_frequency → English enum
+  // ============================================
+  const frequencyMap: Record<string, string> = {
+    'harian': 'daily',
+    'mingguan': 'weekly',
+    'bulanan': 'monthly',
+    'sekali': 'once',
+    'per_transaksi': 'per_transaction',
+  };
+  if (data.claim_frequency) {
+    pkbData.claim_frequency = frequencyMap[data.claim_frequency] || data.claim_frequency;
+  }
+  
+  // ============================================
+  // PATCH 3: Add currency_scope (derive from reward_type if not set)
+  // ============================================
+  if (!data.currency_scope) {
+    const rewardType = data.dinamis_reward_type || data.reward_type || '';
+    if (rewardType === 'credit_game') {
+      pkbData.currency_scope = 'credit';
+    } else if (rewardType === 'lp' || rewardType === 'loyalty_point') {
+      pkbData.currency_scope = 'lp';
+    } else if (rewardType === 'exp' || rewardType === 'experience') {
+      pkbData.currency_scope = 'exp';
+    } else {
+      pkbData.currency_scope = 'rupiah'; // Default
+    }
+  }
+  
   // Normalize dinamis mode fields → PKB canonical form
   if (data.reward_mode === 'formula') {
     // 1. Construct formula_metadata wrapper (NON-EXECUTABLE)
@@ -468,21 +509,27 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
       value: data.calculation_value || 0,
     };
     
-    // Add period from claim_frequency
-    if (data.claim_frequency) {
-      const periodMap: Record<string, string> = {
-        'harian': 'daily',
-        'mingguan': 'weekly',
-        'bulanan': 'monthly',
-        'sekali': 'once',
-      };
-      formulaMetadata.period = periodMap[data.claim_frequency] || data.claim_frequency;
+    // Add period from claim_frequency (use normalized value)
+    if (pkbData.claim_frequency) {
+      formulaMetadata.period = pkbData.claim_frequency as string;
     }
     
     // Default timezone
     formulaMetadata.timezone = 'GMT+7';
     
     pkbData.formula_metadata = formulaMetadata;
+    
+    // ============================================
+    // PATCH 2: Auto-derive trigger_event from calculation_base
+    // ============================================
+    const baseToTrigger: Record<string, string> = {
+      'turnover': 'turnover',
+      'deposit': 'deposit',
+      'win_loss': 'win_loss',
+      'loss': 'loss',
+      'bet_amount': 'bet',
+    };
+    pkbData.trigger_event = baseToTrigger[data.calculation_base] || data.calculation_base || data.trigger_event || 'turnover';
     
     // 2. Use min_requirement from minimum_base
     if (data.minimum_base && data.minimum_base_enabled) {
@@ -502,6 +549,20 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     if (data.max_claim === 0 && dataRecord.max_claim_unlimited) {
       pkbData.max_claim = null;
     }
+  }
+  
+  // ============================================
+  // PATCH 4: Clean up - remove empty blacklist arrays & UI-only remnants
+  // ============================================
+  // If blacklist arrays are empty, remove them from output for cleaner JSON
+  if (Array.isArray(pkbData.game_types_blacklist) && (pkbData.game_types_blacklist as string[]).length === 0) {
+    delete pkbData.game_types_blacklist;
+  }
+  if (Array.isArray(pkbData.game_providers_blacklist) && (pkbData.game_providers_blacklist as string[]).length === 0) {
+    delete pkbData.game_providers_blacklist;
+  }
+  if (Array.isArray(pkbData.game_names_blacklist) && (pkbData.game_names_blacklist as string[]).length === 0) {
+    delete pkbData.game_names_blacklist;
   }
   
   return pkbData as Partial<PromoFormData>;
