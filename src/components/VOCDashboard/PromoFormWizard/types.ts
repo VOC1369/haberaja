@@ -344,6 +344,31 @@ export interface PromoFormData {
     overridden_by: string;
     timestamp: string;
   };
+  
+  // =============================================
+  // Phase 1A: Mode Auto-Detection Metadata
+  // For UI to show "Auto-detected" badge & tooltip
+  // =============================================
+  _mode_auto_detected?: boolean;           // true if mode was auto-detected
+  _mode_detection_reason?: string;         // Explanation for tooltip
+  _raw_subcategories?: unknown[];          // Raw data for audit/debug (hidden from UI)
+  
+  // =============================================
+  // Phase 1C/1D: Event/Policy Read-Only Display
+  // Data extracted but not editable in wizard
+  // =============================================
+  _extracted_prizes?: Array<{
+    rank: string | number;
+    prize: string;
+    value?: number;
+    reward_type?: string;
+    physical_reward_name?: string;
+  }>;
+  _extracted_exchange_table?: Array<{
+    points: number;
+    reward: string;
+    value?: number;
+  }>;
 }
 
 export interface TierReward {
