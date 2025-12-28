@@ -2228,7 +2228,14 @@ export function getStatusLabel(status: 'draft' | 'ready'): string {
 import type { PromoFormData, PromoSubCategory } from '@/components/VOCDashboard/PromoFormWizard/types';
 
 /**
- * Map ExtractedPromo to PromoFormData for saving to Knowledge Base
+ * Maps ExtractedPromo to PromoFormData for form/storage use.
+ * 
+ * IMPORTANT: This mapper MUST be pure.
+ * - Do not introduce side effects
+ * - Do not read from global/external state  
+ * - Must produce consistent output for the same input
+ * 
+ * This function is used inside useMemo and relies on referential stability.
  */
 export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFormData {
   // Map promo type to Indonesian values

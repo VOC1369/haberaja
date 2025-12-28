@@ -739,7 +739,7 @@ export function PseudoKnowledgeSection() {
                     <TooltipTrigger asChild>
                       <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 gap-1 cursor-help">
                         <Sparkles className="w-3 h-3" />
-                        Auto: {mappedPreview.reward_mode === 'fixed' ? 'Fixed' : 'Formula'}
+                        Suggested: {mappedPreview.reward_mode === 'fixed' ? 'Fixed' : 'Formula'}
                       </Badge>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
