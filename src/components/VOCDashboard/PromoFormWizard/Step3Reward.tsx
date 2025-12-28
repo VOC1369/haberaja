@@ -422,11 +422,11 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="space-y-2">
                 <Label>Jenis Hadiah</Label>
                 <SelectWithAddNew
-                  value={data.dinamis_reward_type}
+                  value={data.fixed_reward_type || ''}
                   onValueChange={(value) => onChange({ 
-                    dinamis_reward_type: value,
-                    physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : '',
-                    cash_reward_amount: value === 'uang_tunai' ? data.cash_reward_amount : undefined
+                    fixed_reward_type: value,
+                    fixed_physical_reward_name: value === 'hadiah_fisik' ? data.fixed_physical_reward_name : '',
+                    fixed_cash_reward_amount: value === 'uang_tunai' ? data.fixed_cash_reward_amount : undefined
                   })}
                   options={dinamisRewardTypeOptions}
                   onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
@@ -434,13 +434,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   placeholder="Pilih jenis"
                 />
                 {/* Conditional field untuk Hadiah Fisik */}
-                {data.dinamis_reward_type === 'hadiah_fisik' && (
+                {data.fixed_reward_type === 'hadiah_fisik' && (
                   <div className="grid grid-cols-3 gap-4 mt-2">
                     <div className="col-span-2 space-y-2">
                       <Label>Nama Hadiah Fisik</Label>
                       <Input
-                        value={data.physical_reward_name || ''}
-                        onChange={(e) => onChange({ physical_reward_name: e.target.value })}
+                        value={data.fixed_physical_reward_name || ''}
+                        onChange={(e) => onChange({ fixed_physical_reward_name: e.target.value })}
                         placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
                       />
                       <p className="text-xs text-muted-foreground">
@@ -452,8 +452,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       <Input
                         type="number"
                         min={1}
-                        value={data.physical_reward_quantity || 1}
-                        onChange={(e) => onChange({ physical_reward_quantity: parseInt(e.target.value) || 1 })}
+                        value={data.fixed_physical_reward_quantity || 1}
+                        onChange={(e) => onChange({ fixed_physical_reward_quantity: parseInt(e.target.value) || 1 })}
                         placeholder="1"
                         className="w-full"
                       />
@@ -464,15 +464,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </div>
                 )}
                 {/* Conditional field untuk Uang Tunai */}
-                {data.dinamis_reward_type === 'uang_tunai' && (
+                {data.fixed_reward_type === 'uang_tunai' && (
                   <div className="space-y-2 mt-2">
                     <Label>Nominal Uang Tunai</Label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">Rp</span>
                       <Input
                         className="pl-10"
-                        value={formatRupiah(data.cash_reward_amount)}
-                        onChange={(e) => onChange({ cash_reward_amount: parseRupiah(e.target.value) })}
+                        value={formatRupiah(data.fixed_cash_reward_amount)}
+                        onChange={(e) => onChange({ fixed_cash_reward_amount: parseRupiah(e.target.value) })}
                         placeholder="50.000.000"
                       />
                     </div>
@@ -490,21 +490,21 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Unlimited</span>
                     <Switch
-                      checked={data.dinamis_max_claim_unlimited ?? false}
+                      checked={data.fixed_max_claim_unlimited ?? false}
                       onCheckedChange={(checked) => onChange({ 
-                        dinamis_max_claim_unlimited: checked,
-                        dinamis_max_claim: checked ? 0 : data.dinamis_max_claim
+                        fixed_max_claim_unlimited: checked,
+                        fixed_max_claim: checked ? undefined : data.fixed_max_claim
                       })}
                     />
                   </div>
                 </div>
                 <Input
                   type="text"
-                  value={data.dinamis_max_claim_unlimited ? '' : (data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : '')}
-                  onChange={(e) => onChange({ dinamis_max_claim: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={data.dinamis_max_claim_unlimited ? "Unlimited / Tanpa Batas" : "Contoh: 100.000"}
-                  disabled={data.dinamis_max_claim_unlimited}
-                  className={data.dinamis_max_claim_unlimited ? "opacity-50" : ""}
+                  value={data.fixed_max_claim_unlimited ? '' : (data.fixed_max_claim ? data.fixed_max_claim.toLocaleString('id-ID') : '')}
+                  onChange={(e) => onChange({ fixed_max_claim: Number(e.target.value.replace(/\D/g, '')) })}
+                  placeholder={data.fixed_max_claim_unlimited ? "Unlimited / Tanpa Batas" : "Contoh: 100.000"}
+                  disabled={data.fixed_max_claim_unlimited}
+                  className={data.fixed_max_claim_unlimited ? "opacity-50" : ""}
                 />
               </div>
             </div>
@@ -515,8 +515,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="space-y-2">
                 <Label>Payout Direction</Label>
                 <RadioGroup
-                  value={data.global_payout_direction || 'after'}
-                  onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })}
+                  value={data.fixed_payout_direction || 'after'}
+                  onValueChange={(value: 'before' | 'after') => onChange({ fixed_payout_direction: value })}
                   className="flex gap-6 pt-2"
                 >
                   <div className="flex items-center space-x-2">
@@ -537,10 +537,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Aktifkan</span>
                     <Switch
-                      checked={data.admin_fee_enabled ?? false}
+                      checked={data.fixed_admin_fee_enabled ?? false}
                       onCheckedChange={(checked) => onChange({ 
-                        admin_fee_enabled: checked,
-                        admin_fee_percentage: checked ? (data.admin_fee_percentage ?? 0) : 0
+                        fixed_admin_fee_enabled: checked,
+                        fixed_admin_fee_percentage: checked ? (data.fixed_admin_fee_percentage ?? 0) : undefined
                       })}
                     />
                   </div>
@@ -550,11 +550,11 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     type="number"
                     min={0}
                     max={100}
-                    value={data.admin_fee_enabled ? (data.admin_fee_percentage ?? 0) : ''}
-                    onChange={(e) => onChange({ admin_fee_percentage: Number(e.target.value) || 0 })}
-                    placeholder={data.admin_fee_enabled ? "0" : "Tidak aktif"}
-                    disabled={!data.admin_fee_enabled}
-                    className={cn("pr-10", !data.admin_fee_enabled && "opacity-50")}
+                    value={data.fixed_admin_fee_enabled ? (data.fixed_admin_fee_percentage ?? 0) : ''}
+                    onChange={(e) => onChange({ fixed_admin_fee_percentage: Number(e.target.value) || 0 })}
+                    placeholder={data.fixed_admin_fee_enabled ? "0" : "Tidak aktif"}
+                    disabled={!data.fixed_admin_fee_enabled}
+                    className={cn("pr-10", !data.fixed_admin_fee_enabled && "opacity-50")}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                 </div>
@@ -566,8 +566,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="space-y-2">
                 <Label>Dasar Perhitungan</Label>
                 <SelectWithAddNew
-                  value={data.calculation_base}
-                  onValueChange={(value) => onChange({ calculation_base: value })}
+                  value={data.fixed_calculation_base || ''}
+                  onValueChange={(value) => onChange({ fixed_calculation_base: value })}
                   options={calcBaseOptions}
                   onAddOption={(option) => setCalcBaseOptions([...calcBaseOptions, option])}
                   onDeleteOption={handleDeleteCalcBase}
@@ -577,8 +577,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="space-y-2">
                 <Label>Jenis Perhitungan</Label>
                 <SelectWithAddNew
-                  value={data.calculation_method}
-                  onValueChange={(value) => onChange({ calculation_method: value })}
+                  value={data.fixed_calculation_method || ''}
+                  onValueChange={(value) => onChange({ fixed_calculation_method: value })}
                   options={calcMethodOptions}
                   onAddOption={(option) => setCalcMethodOptions([...calcMethodOptions, option])}
                   onDeleteOption={handleDeleteCalcMethod}
@@ -591,27 +591,23 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <Input
                     type="text"
                     inputMode="decimal"
-                    value={calcValueInput}
+                    value={data.fixed_calculation_value !== undefined && data.fixed_calculation_value !== null 
+                      ? String(data.fixed_calculation_value).replace('.', ',') 
+                      : ''}
                     onChange={(e) => {
                       const rawValue = e.target.value.replace(/[^0-9.,]/g, '');
-                      setCalcValueInput(rawValue);
                       const normalizedValue = rawValue.replace(',', '.');
                       const numValue = parseFloat(normalizedValue);
                       if (!isNaN(numValue)) {
-                        onChange({ calculation_value: numValue });
+                        onChange({ fixed_calculation_value: numValue });
                       } else if (rawValue === '' || rawValue === '0' || rawValue === '0,' || rawValue === '0.') {
-                        onChange({ calculation_value: 0 });
-                      }
-                    }}
-                    onBlur={() => {
-                      if (data.calculation_value !== undefined && data.calculation_value !== null) {
-                        setCalcValueInput(String(data.calculation_value).replace('.', ','));
+                        onChange({ fixed_calculation_value: 0 });
                       }
                     }}
                     placeholder="Contoh: 0,5"
                     className="pr-10"
                   />
-                  {data.calculation_method === 'percentage' && (
+                  {data.fixed_calculation_method === 'percentage' && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                   )}
                 </div>
@@ -620,31 +616,31 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               {/* Minimal Perhitungan - Same row as Nilai Bonus */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>{getMinimumBaseLabel()}</Label>
+                  <Label>Minimal Perhitungan {calcBaseOptions.find(c => c.value === data.fixed_calculation_base)?.label || ''}</Label>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Aktifkan</span>
                     <Switch
-                      checked={data.min_calculation_enabled}
+                      checked={data.fixed_min_calculation_enabled ?? false}
                       onCheckedChange={(checked) => onChange({ 
-                        min_calculation_enabled: checked,
-                        min_calculation: checked ? data.min_calculation : 0
+                        fixed_min_calculation_enabled: checked,
+                        fixed_min_calculation: checked ? data.fixed_min_calculation : undefined
                       })}
                     />
                   </div>
                 </div>
                 <Input
                   type="text"
-                  value={data.min_calculation_enabled && data.min_calculation ? data.min_calculation.toLocaleString('id-ID') : ''}
-                  onChange={(e) => onChange({ min_calculation: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={data.min_calculation_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
-                  disabled={!data.min_calculation_enabled}
-                  className={!data.min_calculation_enabled ? "opacity-50" : ""}
+                  value={data.fixed_min_calculation_enabled && data.fixed_min_calculation ? data.fixed_min_calculation.toLocaleString('id-ID') : ''}
+                  onChange={(e) => onChange({ fixed_min_calculation: Number(e.target.value.replace(/\D/g, '')) })}
+                  placeholder={data.fixed_min_calculation_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
+                  disabled={!data.fixed_min_calculation_enabled}
+                  className={!data.fixed_min_calculation_enabled ? "opacity-50" : ""}
                 />
               </div>
             </div>
             
             {/* Ilustrasi Perhitungan - Collapsible */}
-            {data.calculation_method === 'percentage' && data.calculation_value > 0 && (
+            {data.fixed_calculation_method === 'percentage' && (data.fixed_calculation_value ?? 0) > 0 && (
               <Collapsible>
                 <div className="p-4 bg-muted rounded-lg space-y-3">
                   <CollapsibleTrigger className="flex items-center justify-between w-full group">
@@ -657,14 +653,14 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <CollapsibleContent>
                     <div className="rounded-lg border border-border overflow-hidden mt-3">
                       <div className="grid grid-cols-3 bg-card px-4 py-2 border-b border-border">
-                        <div className="text-xs font-medium text-muted-foreground">{data.calculation_base === 'turnover' ? 'Turnover' : data.calculation_base === 'deposit' ? 'Deposit' : 'Nilai'}</div>
+                        <div className="text-xs font-medium text-muted-foreground">{data.fixed_calculation_base === 'turnover' ? 'Turnover' : data.fixed_calculation_base === 'deposit' ? 'Deposit' : 'Nilai'}</div>
                         <div className="text-xs font-medium text-muted-foreground">Kalkulasi</div>
                         <div className="text-xs font-medium text-muted-foreground">Perkiraan Bonus</div>
                       </div>
                       {(() => {
-                        const percentage = data.calculation_value;
-                        const minBase = data.min_calculation || 1000000;
-                        const maxClaim = data.dinamis_max_claim_unlimited ? Infinity : (data.dinamis_max_claim || Infinity);
+                        const percentage = data.fixed_calculation_value ?? 0;
+                        const minBase = data.fixed_min_calculation || 1000000;
+                        const maxClaim = data.fixed_max_claim_unlimited ? Infinity : (data.fixed_max_claim || Infinity);
                         const sampleLevels = [minBase, minBase * 2, minBase * 5];
                         return sampleLevels.map((to, idx) => {
                           const rawReward = Math.floor(to * percentage / 100);
@@ -698,8 +694,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <div className="pt-4">
               <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-2">
                 <Switch
-                  checked={data.turnover_rule_enabled === true}
-                  onCheckedChange={(checked) => onChange({ turnover_rule_enabled: checked })}
+                  checked={data.fixed_turnover_rule_enabled === true}
+                  onCheckedChange={(checked) => onChange({ fixed_turnover_rule_enabled: checked })}
                 />
                 <div>
                   <div className="font-medium text-sm text-button-hover">Syarat Main Sebelum WD</div>
@@ -709,13 +705,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
-              {data.turnover_rule_enabled && (
+              {data.fixed_turnover_rule_enabled && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Kelipatan Main Bonus (TO)</Label>
                     <SelectWithAddNew
-                      value={data.turnover_rule}
-                      onValueChange={(value) => onChange({ turnover_rule: value })}
+                      value={data.fixed_turnover_rule || ''}
+                      onValueChange={(value) => onChange({ fixed_turnover_rule: value })}
                       options={turnoverRuleOptions}
                       onAddOption={(option) => setTurnoverRuleOptions([...turnoverRuleOptions, option])}
                       onDeleteOption={handleDeleteTurnoverRule}
@@ -725,11 +721,11 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="space-y-2">
                     <Label>Nilai Custom</Label>
                     <Input
-                      value={data.turnover_rule_custom || ''}
-                      onChange={(e) => onChange({ turnover_rule_custom: e.target.value })}
+                      value={data.fixed_turnover_rule_custom || ''}
+                      onChange={(e) => onChange({ fixed_turnover_rule_custom: e.target.value })}
                       placeholder="Contoh: 3x, 10x, 12x"
-                      disabled={data.turnover_rule !== 'custom'}
-                      className={data.turnover_rule !== 'custom' ? 'opacity-50' : ''}
+                      disabled={data.fixed_turnover_rule !== 'custom'}
+                      className={data.fixed_turnover_rule !== 'custom' ? 'opacity-50' : ''}
                     />
                   </div>
                 </div>
