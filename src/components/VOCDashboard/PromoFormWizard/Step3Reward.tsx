@@ -3356,16 +3356,56 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
                       <p className="text-xs text-warning">⚠️ Promo TIDAK berlaku untuk game yang dipilih di sini.</p>
                     </div>
+                    {/* Jenis Game Dilarang */}
                     <div className="space-y-2">
                       <Label>Jenis Game Dilarang</Label>
                       {data.game_types_blacklist?.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-2">
                           {data.game_types_blacklist.map((type, idx) => (
-                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">{type}<button type="button" onClick={() => { const updated = [...data.game_types_blacklist]; updated.splice(idx, 1); onChange({ game_types_blacklist: updated }); }} className="hover:text-destructive"><X className="h-3.5 w-3.5" /></button></span>
+                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
+                              {type}
+                              <button type="button" onClick={() => { const updated = [...data.game_types_blacklist]; updated.splice(idx, 1); onChange({ game_types_blacklist: updated }); }} className="hover:text-destructive">
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </span>
                           ))}
                         </div>
                       )}
                       <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_types_blacklist?.includes(value)) { onChange({ game_types_blacklist: [...(data.game_types_blacklist || []), value] }); } }} options={gameTypeBlacklistOptions} onAddOption={(option) => setGameTypeBlacklistOptions([...gameTypeBlacklistOptions, option])} onDeleteOption={handleDeleteGameTypeBlacklist} placeholder="Pilih jenis game" />
+                    </div>
+                    {/* Provider Dilarang */}
+                    <div className="space-y-2">
+                      <Label>Provider Dilarang</Label>
+                      {data.game_providers_blacklist?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {data.game_providers_blacklist.map((provider, idx) => (
+                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
+                              {gameProviderBlacklistOptions.find(p => p.value === provider)?.label || provider}
+                              <button type="button" onClick={() => { const updated = [...data.game_providers_blacklist]; updated.splice(idx, 1); onChange({ game_providers_blacklist: updated }); }} className="hover:text-destructive">
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_providers_blacklist?.includes(value)) { onChange({ game_providers_blacklist: [...(data.game_providers_blacklist || []), value] }); } }} options={gameProviderBlacklistOptions} onAddOption={(option) => setGameProviderBlacklistOptions([...gameProviderBlacklistOptions, option])} onDeleteOption={handleDeleteGameProviderBlacklist} placeholder="Pilih provider yang dilarang" />
+                    </div>
+                    {/* Nama Game Dilarang */}
+                    <div className="space-y-2">
+                      <Label>Nama Game Dilarang</Label>
+                      {data.game_names_blacklist?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {data.game_names_blacklist.map((name, idx) => (
+                            <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-destructive/20 rounded-full text-sm text-destructive border border-destructive/40">
+                              {gameNameBlacklistOptions.find(n => n.value === name)?.label || name}
+                              <button type="button" onClick={() => { const updated = [...data.game_names_blacklist]; updated.splice(idx, 1); onChange({ game_names_blacklist: updated }); }} className="hover:text-destructive">
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <SelectWithAddNew value="" onValueChange={(value) => { if (value && !data.game_names_blacklist?.includes(value)) { onChange({ game_names_blacklist: [...(data.game_names_blacklist || []), value] }); } }} options={gameNameBlacklistOptions} onAddOption={(option) => setGameNameBlacklistOptions([...gameNameBlacklistOptions, option])} onDeleteOption={handleDeleteGameNameBlacklist} placeholder="Pilih nama game yang dilarang" />
                     </div>
                   </div>
                 )}
