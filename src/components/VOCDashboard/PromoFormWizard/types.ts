@@ -705,6 +705,8 @@ export const GAME_PROVIDERS = [
   { value: 'evolution', label: 'Evolution Gaming' },
   { value: 'joker', label: 'Joker Gaming' },
   { value: 'cq9', label: 'CQ9' },
+  { value: 'sv388', label: 'SV388' },
+  { value: 'ws168', label: 'WS168' },
 ];
 
 // Game Name Options
