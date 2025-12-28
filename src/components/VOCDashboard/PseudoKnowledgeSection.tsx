@@ -113,10 +113,9 @@ export function PseudoKnowledgeSection() {
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   
-  // Extraction state
+  // Extraction state  
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
-  
   // Memoized mapped preview (single source of truth for badge + commit)
   const mappedPreview = useMemo<PromoFormData | null>(() => {
     if (!extractedPromo) return null;
