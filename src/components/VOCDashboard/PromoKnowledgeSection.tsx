@@ -50,7 +50,7 @@ import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal
 import { classifyContent, type ProgramCategory } from "@/lib/extractors/category-classifier";
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
-import { PromoItem, forceSeedSamplePromos, deletePromoDraft, duplicatePromo } from "./PromoFormWizard/types";
+import { PromoItem, deletePromoDraft, duplicatePromo } from "./PromoFormWizard/types";
 import { promoKB } from "@/lib/promo-storage";
 import { generateTermsList, formatNumber } from "./PromoFormWizard/Step4Review";
 import { inferRewardType, formatSubcategoryName, getRewardBadgeInfo } from "@/lib/reward-normalization";
@@ -126,15 +126,6 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   }, []);
 
   useEffect(() => {
-    // One-time seed: hanya jalankan sekali saja (flag disimpan di localStorage, bukan sessionStorage)
-    const SEED_FLAG_KEY = 'voc_promo_initial_seed_v1';
-    const hasInitialSeed = localStorage.getItem(SEED_FLAG_KEY);
-    
-    if (!hasInitialSeed) {
-      forceSeedSamplePromos();
-      localStorage.setItem(SEED_FLAG_KEY, 'true');
-      toast.success("Sample promo Welcome Bonus dengan 3 varian berhasil dimuat");
-    }
     loadPromos();
   }, []);
 
