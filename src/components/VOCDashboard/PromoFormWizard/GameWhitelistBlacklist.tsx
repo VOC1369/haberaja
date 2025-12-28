@@ -90,7 +90,7 @@ export function GameWhitelistBlacklist({
   onDeleteGameNameBlacklistOption,
 }: GameWhitelistBlacklistProps) {
   const [newExclusionRule, setNewExclusionRule] = useState("");
-  const [whitelistOpen, setWhitelistOpen] = useState(true);
+  const [whitelistOpen, setWhitelistOpen] = useState(false);
   const [blacklistOpen, setBlacklistOpen] = useState(false);
 
   // Count summaries
