@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
-import { PromoFormData, PromoItem, initialPromoData, savePromoDraft, normalizeRewardDistribution } from "./types";
+import { PromoFormData, PromoItem, initialPromoData, savePromoDraft, normalizePromoData } from "./types";
 import { Step1Identity } from "./Step1Identity";
 import { Step2Access } from "./Step2Access";
 import { StepProgramClassification, type ProgramType } from "./StepProgramClassification";
@@ -59,7 +59,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   
   // Normalize legacy values from initialData before setting state
   const normalizedInitialData = initialData 
-    ? normalizeRewardDistribution(initialData) as PromoFormData 
+    ? normalizePromoData(initialData) as PromoFormData 
     : initialPromoData;
   
   const [formData, setFormData] = useState<PromoFormData>(normalizedInitialData);

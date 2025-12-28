@@ -50,7 +50,7 @@ import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal
 import { classifyContent, type ProgramCategory } from "@/lib/extractors/category-classifier";
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
-import { PromoItem, deletePromoDraft, duplicatePromo } from "./PromoFormWizard/types";
+import { PromoItem, deletePromoDraft, duplicatePromo, normalizePromoData } from "./PromoFormWizard/types";
 import { promoKB } from "@/lib/promo-storage";
 import { generateTermsList, formatNumber } from "./PromoFormWizard/Step4Review";
 import { inferRewardType, formatSubcategoryName, getRewardBadgeInfo } from "@/lib/reward-normalization";
@@ -94,8 +94,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const loadPromos = async () => {
     try {
       const promos = await promoKB.getAll();
-      setItems(promos);
-      console.log('[PromoKnowledgeSection] Loaded promos from Supabase:', promos.length);
+      // Normalize all promos before setting state
+      const normalized = promos.map(p => normalizePromoData(p) as PromoItem);
+      setItems(normalized);
+      console.log('[PromoKnowledgeSection] Loaded promos from Supabase:', normalized.length);
     } catch (error) {
       console.error('[PromoKnowledgeSection] Failed to load promos:', error);
       setItems([]);

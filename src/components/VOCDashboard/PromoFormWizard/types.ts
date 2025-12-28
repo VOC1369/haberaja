@@ -723,34 +723,55 @@ export async function deletePromoDraft(id: string): Promise<boolean> {
 }
 
 /**
- * Normalize legacy/invalid reward_distribution values
- * This prevents UI showing "manual_cs" or "langsung" after save/refresh
+ * Normalize legacy/invalid promo data values
+ * - Fixes reward_distribution: "manual_cs" or "langsung" → proper values
+ * - Fixes reward_mode: detects inconsistency and corrects based on actual data
  */
-export function normalizeRewardDistribution(data: Partial<PromoFormData>): Partial<PromoFormData> {
-  const invalidValues = ['manual_cs', 'langsung'];
+export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoFormData> {
+  let normalized = { ...data };
   
-  if (data.reward_distribution && invalidValues.includes(data.reward_distribution)) {
-    // Determine best replacement based on existing data
-    let normalized: string;
-    if (data.distribution_day) {
-      normalized = 'hari_tertentu';
-    } else if (data.claim_frequency && ['mingguan', 'bulanan', 'harian'].includes(data.claim_frequency)) {
-      normalized = 'otomatis_setelah_periode';
+  // 1. Normalize reward_distribution
+  const invalidDistValues = ['manual_cs', 'langsung'];
+  if (normalized.reward_distribution && invalidDistValues.includes(normalized.reward_distribution)) {
+    if (normalized.distribution_day) {
+      normalized.reward_distribution = 'hari_tertentu';
+    } else if (normalized.claim_frequency && ['mingguan', 'bulanan', 'harian'].includes(normalized.claim_frequency)) {
+      normalized.reward_distribution = 'otomatis_setelah_periode';
     } else {
-      normalized = 'setelah_syarat';
+      normalized.reward_distribution = 'setelah_syarat';
     }
-    return { ...data, reward_distribution: normalized };
   }
   
-  return data;
+  // 2. Normalize reward_mode based on actual data context
+  // Jika calculation_method = 'percentage' dan ada calculation_value → harusnya 'formula' (dinamis)
+  if (normalized.calculation_method === 'percentage' && normalized.calculation_value) {
+    if (normalized.reward_mode !== 'formula') {
+      console.log('[normalizePromoData] Fixing reward_mode: was', normalized.reward_mode, '→ formula');
+      normalized.reward_mode = 'formula';
+    }
+  }
+  
+  // Jika ada tiers dengan data → harusnya 'tier'
+  const tiers = (normalized as PromoFormData).tiers;
+  if (tiers && tiers.length > 0 && tiers.some(t => t.type || t.minimal_point)) {
+    if (normalized.reward_mode !== 'tier') {
+      console.log('[normalizePromoData] Fixing reward_mode: was', normalized.reward_mode, '→ tier');
+      normalized.reward_mode = 'tier';
+    }
+  }
+  
+  return normalized;
 }
+
+// Legacy alias for backward compatibility
+export const normalizeRewardDistribution = normalizePromoData;
 
 export async function getPromoById(id: string): Promise<PromoItem | undefined> {
   const promo = await promoKB.getById(id);
   if (!promo) return undefined;
   
   // Normalize legacy values before returning
-  const normalized = normalizeRewardDistribution(promo) as PromoItem;
+  const normalized = normalizePromoData(promo) as PromoItem;
   return normalized;
 }
 
