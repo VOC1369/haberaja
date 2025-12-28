@@ -239,13 +239,13 @@ export function applyKeywordOverrides(
     return { category: 'B', wasOverridden: false };
   }
   
-  // If promo_name contains ROLLINGAN → C (ongoing turnover system)
+  // If promo_name contains ROLLINGAN → A (turnover-based cashback = Reward Program)
   if (/rollingan|roll(ing)?an/i.test(nameLower)) {
-    if (llmCategory !== 'C') {
-      console.log('[Classifier] Keyword override: ROLLINGAN in promo_name, forcing C (was', llmCategory, ')');
-      return { category: 'C', wasOverridden: true, overrideReason: 'ROLLINGAN in promo_name → Policy Program' };
+    if (llmCategory !== 'A') {
+      console.log('[Classifier] Keyword override: ROLLINGAN in promo_name, forcing A (was', llmCategory, ')');
+      return { category: 'A', wasOverridden: true, overrideReason: 'ROLLINGAN → Reward Program (turnover cashback)' };
     }
-    return { category: 'C', wasOverridden: false };
+    return { category: 'A', wasOverridden: false };
   }
   
   // DEPOSIT PULSA / INFO → C (informational policy)
@@ -277,13 +277,13 @@ export function applyKeywordOverrides(
     return { category: 'A', wasOverridden: false };
   }
   
-  // promo_type pure ROLLINGAN
+  // promo_type pure ROLLINGAN → A (turnover-based cashback = Reward Program)
   if (hasRollinganInType) {
-    if (llmCategory !== 'C') {
-      console.log('[Classifier] Keyword override: ROLLINGAN in promo_type, forcing C (was', llmCategory, ')');
-      return { category: 'C', wasOverridden: true, overrideReason: 'ROLLINGAN in promo_type → Policy Program' };
+    if (llmCategory !== 'A') {
+      console.log('[Classifier] Keyword override: ROLLINGAN in promo_type, forcing A (was', llmCategory, ')');
+      return { category: 'A', wasOverridden: true, overrideReason: 'ROLLINGAN → Reward Program (turnover cashback)' };
     }
-    return { category: 'C', wasOverridden: false };
+    return { category: 'A', wasOverridden: false };
   }
   
   // No override needed
