@@ -583,8 +583,10 @@ export function PseudoKnowledgeSection() {
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <h4 className="text-base font-semibold text-button-hover">
-              {sub.sub_name || `Varian ${idx + 1}`}
+          <h4 className="text-base font-semibold text-button-hover">
+              {sub.sub_name || (extractedPromo?.subcategories.length === 1 
+                ? extractedPromo?.promo_name 
+                : `Varian ${idx + 1}`)}
             </h4>
             {hasCriticalIssue && (
               <Badge variant="outline" className="bg-destructive/20 text-destructive border-destructive/40 text-xs">
@@ -593,9 +595,11 @@ export function PseudoKnowledgeSection() {
               </Badge>
             )}
           </div>
-          <Badge variant="outline" className="text-xs text-muted-foreground">
-            Varian {idx + 1}
-          </Badge>
+          {extractedPromo && extractedPromo.subcategories.length > 1 && (
+            <Badge variant="outline" className="text-xs text-muted-foreground">
+              Varian {idx + 1}
+            </Badge>
+          )}
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -819,7 +823,7 @@ export function PseudoKnowledgeSection() {
                 }
                 return null;
               })()}
-              {extractedPromo.subcategories.length > 0 && (
+              {extractedPromo.subcategories.length > 1 && (
                 <Badge variant="outline" className="text-xs">
                   {extractedPromo.subcategories.length} Sub Kategori
                 </Badge>
