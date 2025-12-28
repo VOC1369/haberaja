@@ -9,12 +9,13 @@
  * - localStorage for final commit to KB (via promoKB)
  */
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { 
   Send, Sparkles, Loader2, FileText, ExternalLink, CheckCircle2, 
   AlertTriangle, Copy, XCircle, AlertCircle, ChevronDown,
   X, RotateCcw, Terminal, HelpCircle, Paperclip, Lightbulb, Ban, Info
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { formatGameTypeLabel, formatProvidersDisplay } from "@/lib/promo-display";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +61,7 @@ import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } f
 import { formatPromoType } from "@/lib/utils";
 import { ClassificationOverride } from "./ClassificationOverride";
 import { ConfidenceGateModal } from "./ConfidenceGateModal";
+import type { PromoFormData } from "./PromoFormWizard/types";
 
 // Helper: Title Case for mode badges
 const formatPromoMode = (mode: string | null | undefined): string => {
@@ -114,6 +116,12 @@ export function PseudoKnowledgeSection() {
   // Extraction state
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  
+  // Memoized mapped preview (single source of truth for badge + commit)
+  const mappedPreview = useMemo<PromoFormData | null>(() => {
+    if (!extractedPromo) return null;
+    return mapExtractedToPromoFormData(extractedPromo);
+  }, [extractedPromo]);
   
   // Confidence Gate state (LLM Classifier)
   const [showConfidenceGate, setShowConfidenceGate] = useState(false);
@@ -497,12 +505,12 @@ export function PseudoKnowledgeSection() {
   };
   
   // Separated commit logic for reuse after gate confirmation
+  // Uses memoized mappedPreview to ensure badge ↔ commit consistency
   const proceedWithCommit = async () => {
-    if (!extractedPromo) return;
+    if (!mappedPreview) return;
     
     try {
-      const promoData = mapExtractedToPromoFormData(extractedPromo);
-      const savedPromo = await promoKB.add(promoData);
+      const savedPromo = await promoKB.add(mappedPreview);
       
       toast.success("Promo berhasil ditambahkan!", {
         description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`
@@ -725,6 +733,27 @@ export function PseudoKnowledgeSection() {
                 {status === 'draft' && <Info className="w-3 h-3 mr-1" />}
                 {getStatusLabel(status)}
               </Badge>
+              {/* Auto-detected Mode Badge */}
+              {mappedPreview?._mode_auto_detected && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 gap-1 cursor-help">
+                        <Sparkles className="w-3 h-3" />
+                        Auto: {mappedPreview.reward_mode === 'fixed' ? 'Fixed' : 'Formula'}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">
+                        {mappedPreview._mode_detection_reason}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Mode disarankan AI dan dapat diubah.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             <div className="flex gap-2 mt-2 flex-wrap">
               {/* Client/Website Badge */}
