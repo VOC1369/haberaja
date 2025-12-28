@@ -117,11 +117,15 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
       case 'B':
         return <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">🏆 Event/Kompetisi</Badge>;
       case 'C':
-        return <Badge className="bg-pink-500/20 text-pink-400 border border-pink-500/30">🧠 Program Sistem</Badge>;
+        // System Rule - should not appear in promo list, but display if somehow present
+        return <Badge className="bg-pink-500/20 text-pink-400 border border-pink-500/30">🧠 System Rule</Badge>;
       default:
         return <Badge variant="outline" className="border-border text-muted-foreground/50">-</Badge>;
     }
   };
+
+  // Filter out System Rules (C) from the promo list - they should not be in KB
+  const filteredPromos = promos.filter(p => p.program_classification !== 'C');
 
   const formatValidPeriod = (promo: PromoItem): React.ReactNode => {
     if (promo.valid_from && promo.valid_until) {
@@ -137,7 +141,7 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
     return "-";
   };
 
-  if (promos.length === 0) {
+  if (filteredPromos.length === 0) {
     return (
       <div className="page-wrapper space-y-6">
         <div className="flex items-center justify-between">
@@ -207,7 +211,7 @@ export function PromoListView({ onEdit, onAddNew }: PromoListViewProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {promos.map((promo) => {
+            {filteredPromos.map((promo) => {
               // DEBUG: Check subcategory data
               console.log('Promo Debug:', promo.promo_name, {
                 has_subcategories: promo.has_subcategories,

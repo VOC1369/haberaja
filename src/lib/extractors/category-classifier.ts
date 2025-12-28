@@ -166,15 +166,23 @@ export function getCategoryName(category: ProgramCategory): string {
   switch (category) {
     case 'A': return 'Reward Program';
     case 'B': return 'Event Program';
-    case 'C': return 'Policy Program';
+    case 'C': return 'System Rule'; // NOT a promo - informational only, cannot be claimed
   }
 }
 
 /**
+ * Check if a category is a System Rule (non-promo)
+ * System Rules are detected by extraction but NOT saved to promo KB
+ */
+export function isSystemRule(category: ProgramCategory): boolean {
+  return category === 'C';
+}
+
+/**
  * Post-processing override untuk memastikan konsistensi classification
- * ROLLINGAN = Policy Program (C) - turnover-based, recurring system
+ * ROLLINGAN = Reward Program (A) - turnover-based cashback
  * CASHBACK = Reward Program (A) - loss-based, instant claim
- * 
+ * C = System Rule (NOT a promo - informational only)
  * PRIORITY ORDER:
  * 1. promo_name (most reliable - user-facing title)
  * 2. promo_type (only if promo_name has no clear keywords)

@@ -263,17 +263,19 @@ min_deposit adalah ANGKA (number), bukan string.
 `;
 
 // ============================================
-// POLICY EXTRACTION PROMPT (Category C)
+// SYSTEM RULE EXTRACTION PROMPT (Category C)
+// NOTE: System Rules are NOT promos - they are informational only
 // ============================================
 
 export const POLICY_EXTRACTION_PROMPT = `
-Kamu adalah FIELD EXTRACTOR untuk Policy Program iGaming.
+Kamu adalah FIELD EXTRACTOR untuk System Rule iGaming.
 
 🔒 KLASIFIKASI SUDAH DIKUNCI:
 - program_classification: "C"
-- program_classification_name: "Policy Program"
+- program_classification_name: "System Rule"
 
 Ini adalah ATURAN/KEBIJAKAN/SISTEM, BUKAN bonus/reward langsung.
+PENTING: System Rule TIDAK dapat diklaim sebagai promo.
 
 ⚠️ REMINDER PENTING: Dokumen ini MUNGKIN memiliki MULTIPLE TABLES. 
 Kamu WAJIB extract SEMUA rows dari SEMUA tables yang relevan.
