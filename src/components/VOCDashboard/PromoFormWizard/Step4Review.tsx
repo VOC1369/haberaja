@@ -1618,7 +1618,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     
                     {data.subcategories.map((sub, idx) => (
                       <Collapsible key={sub.id || idx} defaultOpen={idx === 0}>
-                        <CollapsibleTrigger className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:bg-muted transition-colors group">
+                        <CollapsibleTrigger className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:bg-card/80 transition-colors group">
                           <div className="flex items-center gap-3">
                             <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180 text-muted-foreground group-data-[state=open]:text-button-hover" />
                             <span className="font-medium text-button-hover">{sub.name || `Varian ${idx + 1}`}</span>
@@ -1873,7 +1873,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                   <>
                     {/* Parent Promo JSON */}
                     <Collapsible defaultOpen>
-                      <CollapsibleTrigger className="w-full flex items-center justify-between p-3 bg-card border border-border rounded-xl hover:bg-muted transition-colors group">
+                      <CollapsibleTrigger className="w-full flex items-center justify-between p-3 bg-card border border-border rounded-xl hover:bg-card/80 transition-colors group">
                         <div className="flex items-center gap-3">
                           <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180 text-muted-foreground" />
                           <span className="font-medium text-foreground">📄 Promo Parent</span>
@@ -1896,7 +1896,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     {/* Subcategories JSON - separate collapsible per varian */}
                     {data.subcategories.map((sub, idx) => (
                       <Collapsible key={sub.id || idx} defaultOpen={idx === 0}>
-                        <CollapsibleTrigger className="w-full flex items-center justify-between p-3 bg-card border border-border rounded-xl hover:bg-muted transition-colors group">
+                        <CollapsibleTrigger className="w-full flex items-center justify-between p-3 bg-card border border-border rounded-xl hover:bg-card/80 transition-colors group">
                           <div className="flex items-center gap-3">
                             <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180 text-muted-foreground" />
                             <span className="font-medium text-button-hover">📁 Varian: {sub.name || `Sub Kategori ${idx + 1}`}</span>
