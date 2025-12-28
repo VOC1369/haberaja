@@ -298,7 +298,7 @@ body {
    * - Content: p-6 pt-4 (24px sides/bottom, 16px top)
    */
   .collapsible-trigger {
-    @apply flex items-center justify-between p-4 bg-card rounded-xl border border-border cursor-pointer hover:bg-muted transition-colors;
+    @apply flex items-center justify-between p-4 bg-card rounded-xl border border-border cursor-pointer hover:bg-card/80 transition-colors;
   }
 
   .collapsible-content {
