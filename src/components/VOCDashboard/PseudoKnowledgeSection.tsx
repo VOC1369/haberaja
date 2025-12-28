@@ -649,14 +649,29 @@ export function PseudoKnowledgeSection() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-muted rounded-lg p-3">
-            <span className="text-muted-foreground text-xs block mb-1">Turnover</span>
-            {getFieldStatus('turnover_rule', archetype) === 'not_applicable' ? (
-              <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
-            ) : (
-              <span className="text-foreground font-medium">
-                {sub.turnover_rule != null ? `${sub.turnover_rule}x` : '-'}
-              </span>
-            )}
+            {/* Rollingan uses min turnover (Rp), others use multiplier (x) */}
+            {(() => {
+              const isRollingan = extractedPromo?.promo_type?.toLowerCase().includes('rollingan') || 
+                                  extractedPromo?.promo_type?.toLowerCase().includes('cashback');
+              return (
+                <>
+                  <span className="text-muted-foreground text-xs block mb-1">
+                    {isRollingan ? 'Min Turnover' : 'Turnover'}
+                  </span>
+                  {getFieldStatus('turnover_rule', archetype) === 'not_applicable' ? (
+                    <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
+                  ) : (
+                    <span className="text-foreground font-medium">
+                      {sub.turnover_rule != null 
+                        ? (isRollingan
+                            ? `Rp ${Number(sub.turnover_rule).toLocaleString('id-ID')}`
+                            : `${sub.turnover_rule}x`)
+                        : '-'}
+                    </span>
+                  )}
+                </>
+              );
+            })()}
           </div>
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Payout</span>
@@ -879,9 +894,12 @@ export function PseudoKnowledgeSection() {
           {/* Subcategories */}
           {extractedPromo.subcategories.length > 0 && (
             <div>
-              <h4 className="text-base font-semibold text-button-hover mb-4">
-                Sub Kategori ({extractedPromo.subcategories.length} Varian)
-              </h4>
+              {/* Only show header if multi-variant */}
+              {extractedPromo.subcategories.length > 1 && (
+                <h4 className="text-base font-semibold text-button-hover mb-4">
+                  Sub Kategori ({extractedPromo.subcategories.length} Varian)
+                </h4>
+              )}
               <div className="space-y-4">
                 {[...extractedPromo.subcategories]
                   .sort((a, b) => {
