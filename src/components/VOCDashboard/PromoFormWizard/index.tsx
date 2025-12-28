@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
-import { PromoFormData, PromoItem, initialPromoData, savePromoDraft } from "./types";
+import { PromoFormData, PromoItem, initialPromoData, savePromoDraft, normalizeRewardDistribution } from "./types";
 import { Step1Identity } from "./Step1Identity";
 import { Step2Access } from "./Step2Access";
 import { StepProgramClassification, type ProgramType } from "./StepProgramClassification";
@@ -56,7 +56,13 @@ interface PromoFormWizardProps {
 export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFormWizardProps) {
   // Jump to Step 5 (Review) when editing existing promo
   const [currentStep, setCurrentStep] = useState(initialData ? 5 : 1);
-  const [formData, setFormData] = useState<PromoFormData>(initialData || initialPromoData);
+  
+  // Normalize legacy values from initialData before setting state
+  const normalizedInitialData = initialData 
+    ? normalizeRewardDistribution(initialData) as PromoFormData 
+    : initialPromoData;
+  
+  const [formData, setFormData] = useState<PromoFormData>(normalizedInitialData);
   const [editingId, setEditingId] = useState<string | undefined>(initialData?.id);
   const [isEditingFromReview, setIsEditingFromReview] = useState(false);
   // Restore selectedProgram from initialData when editing
