@@ -358,22 +358,41 @@ export const generateGlobalTerms = (data: PromoFormData): string[] => {
   
   // Claim frequency - use inferred value
   if (effectiveFrequency === 'mingguan') {
-    terms.push(`Bonus diberikan berdasarkan perhitungan mingguan.`);
-    
-    // Dynamic period - ONLY show if explicitly extracted (jangan hardcode!)
     if (data.calculation_period_start && data.calculation_period_end) {
       const startDay = capitalizeFirst(data.calculation_period_start);
       const endDay = capitalizeFirst(data.calculation_period_end);
-      terms.push(`Periode hitungan berlaku hari ${startDay} s/d ${endDay}.`);
+      // Check if standard week (Senin-Minggu) - combine into ONE sentence
+      const isStandardWeek = 
+        data.calculation_period_start.toLowerCase() === 'senin' && 
+        data.calculation_period_end.toLowerCase() === 'minggu';
+      
+      if (isStandardWeek) {
+        terms.push(`Bonus diberikan berdasarkan perhitungan mingguan (${startDay} s/d ${endDay}).`);
+      } else {
+        // Custom period: need two sentences for clarity
+        terms.push(`Bonus diberikan berdasarkan perhitungan mingguan.`);
+        terms.push(`Periode hitungan berlaku hari ${startDay} s/d ${endDay}.`);
+      }
+    } else {
+      terms.push(`Bonus diberikan berdasarkan perhitungan mingguan.`);
     }
   } else if (effectiveFrequency === 'harian') {
-    terms.push(`Bonus diberikan berdasarkan perhitungan harian.`);
-    
-    // Dynamic period for daily (if extracted)
     if (data.calculation_period_start && data.calculation_period_end) {
       const startDay = capitalizeFirst(data.calculation_period_start);
       const endDay = capitalizeFirst(data.calculation_period_end);
-      terms.push(`Periode hitungan berlaku hari ${startDay} s/d ${endDay}.`);
+      // Check if standard day period - combine into ONE sentence
+      const isStandardDay = 
+        data.calculation_period_start.toLowerCase() === 'senin' && 
+        data.calculation_period_end.toLowerCase() === 'minggu';
+      
+      if (isStandardDay) {
+        terms.push(`Bonus diberikan berdasarkan perhitungan harian (${startDay} s/d ${endDay}).`);
+      } else {
+        terms.push(`Bonus diberikan berdasarkan perhitungan harian.`);
+        terms.push(`Periode hitungan berlaku hari ${startDay} s/d ${endDay}.`);
+      }
+    } else {
+      terms.push(`Bonus diberikan berdasarkan perhitungan harian.`);
     }
   } else if (effectiveFrequency) {
     terms.push(`Frekuensi klaim: ${effectiveFrequency}.`);
