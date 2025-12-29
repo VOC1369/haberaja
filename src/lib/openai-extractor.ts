@@ -2404,6 +2404,72 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   const hasUnlimitedMaxBonus = extracted.subcategories.some(sub => sub.max_bonus === null);
 
   // ============================================
+  // REWARD DISTRIBUTION NORMALIZER
+  // Maps extracted values to valid REWARD_DISTRIBUTIONS enum values
+  // ============================================
+  const normalizeRewardDistribution = (): string => {
+    const raw = extracted.reward_distribution?.toLowerCase()?.trim() || '';
+    const hasDistributionDay = !!extracted.distribution_day;
+    const claimFreq = extracted.claim_frequency?.toLowerCase() || '';
+    const promoType = extracted.promo_type?.toLowerCase() || '';
+    
+    // Priority 1: Explicit distribution_day → 'hari_tertentu'
+    if (hasDistributionDay) {
+      return 'hari_tertentu';
+    }
+    
+    // Priority 2: Direct matches from extraction
+    // Map various LLM outputs to canonical enum values
+    const mapping: Record<string, string> = {
+      // Setelah Syarat
+      'setelah_syarat': 'setelah_syarat',
+      'setelah syarat': 'setelah_syarat',
+      'langsung': 'setelah_syarat',  // ← FIX: "Langsung" maps to setelah_syarat
+      'instant': 'setelah_syarat',
+      'segera': 'setelah_syarat',
+      'otomatis': 'setelah_syarat',
+      'auto': 'setelah_syarat',
+      
+      // Otomatis Setelah Periode
+      'otomatis_setelah_periode': 'otomatis_setelah_periode',
+      'otomatis setelah periode': 'otomatis_setelah_periode',
+      'after_period': 'otomatis_setelah_periode',
+      'setelah periode': 'otomatis_setelah_periode',
+      'mingguan': 'otomatis_setelah_periode',
+      'harian': 'otomatis_setelah_periode',
+      'bulanan': 'otomatis_setelah_periode',
+      
+      // Hari Tertentu
+      'hari_tertentu': 'hari_tertentu',
+      'hari tertentu': 'hari_tertentu',
+      'tiap hari': 'hari_tertentu',
+      
+      // Tanggal Tertentu
+      'tanggal_tertentu': 'tanggal_tertentu',
+      'tanggal tertentu': 'tanggal_tertentu',
+      'rentang tanggal': 'tanggal_tertentu',
+    };
+    
+    if (mapping[raw]) {
+      return mapping[raw];
+    }
+    
+    // Priority 3: Infer from claim_frequency for periodic promos
+    if (['mingguan', 'harian', 'bulanan'].includes(claimFreq)) {
+      return 'otomatis_setelah_periode';
+    }
+    
+    // Priority 4: Infer from promo_type
+    // Rollingan/Cashback = periodic = otomatis_setelah_periode
+    if (['cashback', 'rebate', 'rollingan', 'rollingan cashback', 'rollingan / cashback'].includes(promoType)) {
+      return 'otomatis_setelah_periode';
+    }
+    
+    // Default: setelah_syarat (most neutral for non-periodic promos)
+    return 'setelah_syarat';
+  };
+
+  // ============================================
   // PHASE 1A: SMART MODE DETECTION
   // Logika: Single-variant + stateless = Fixed
   // Stateless = tidak ada time-window berbeda, tidak ada kondisi kompleks
@@ -2564,8 +2630,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       tiers: [],
     },
 
-    // Distribution - from extracted or defaults
-    reward_distribution: extracted.distribution_day ? 'hari_tertentu' : (extracted.reward_distribution || 'Langsung'),
+    // Distribution - normalized to valid REWARD_DISTRIBUTIONS enum values
+    reward_distribution: normalizeRewardDistribution(),  // ✅ FIX: Use normalizer instead of raw 'Langsung'
     distribution_day: extracted.distribution_day || '',
     distribution_time: '',
     
