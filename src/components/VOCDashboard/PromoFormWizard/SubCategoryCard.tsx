@@ -227,6 +227,64 @@ export function SubCategoryCard({
     }
   }, [subCategory.minimum_base, subCategory.minimum_base_enabled]);
 
+  // ============================================
+  // SYNC SELECT FIELD VALUES FROM PROPS
+  // These ensure SelectWithAddNew components stay in sync when extraction data changes
+  // ============================================
+  
+  // Sync calculation_base - ensure dropdown options include extracted value
+  useEffect(() => {
+    if (subCategory.calculation_base) {
+      const exists = calcBaseOptions.some(opt => opt.value === subCategory.calculation_base);
+      if (!exists) {
+        // Add as custom option if not in defaults
+        setCalcBaseOptions(prev => [
+          ...prev,
+          { value: subCategory.calculation_base, label: subCategory.calculation_base }
+        ]);
+      }
+    }
+  }, [subCategory.calculation_base]);
+  
+  // Sync calculation_method - ensure dropdown options include extracted value
+  useEffect(() => {
+    if (subCategory.calculation_method) {
+      const exists = calcMethodOptions.some(opt => opt.value === subCategory.calculation_method);
+      if (!exists) {
+        setCalcMethodOptions(prev => [
+          ...prev,
+          { value: subCategory.calculation_method, label: subCategory.calculation_method }
+        ]);
+      }
+    }
+  }, [subCategory.calculation_method]);
+  
+  // Sync jenis_hadiah (dinamis_reward_type) - ensure dropdown options include extracted value
+  useEffect(() => {
+    if (subCategory.jenis_hadiah) {
+      const exists = dinamisRewardTypeOptions.some(opt => opt.value === subCategory.jenis_hadiah);
+      if (!exists) {
+        setDinamisRewardTypeOptions(prev => [
+          ...prev,
+          { value: subCategory.jenis_hadiah!, label: subCategory.jenis_hadiah! }
+        ]);
+      }
+    }
+  }, [subCategory.jenis_hadiah]);
+  
+  // Sync turnover_rule - ensure dropdown options include extracted value
+  useEffect(() => {
+    if (subCategory.turnover_rule) {
+      const exists = turnoverRuleOptions.some(opt => opt.value === subCategory.turnover_rule);
+      if (!exists) {
+        setTurnoverRuleOptions(prev => [
+          ...prev,
+          { value: subCategory.turnover_rule!, label: subCategory.turnover_rule! }
+        ]);
+      }
+    }
+  }, [subCategory.turnover_rule]);
+
   // Get list of overridden fields for visual indicator
   const getOverriddenFields = (): string[] => {
     const overrides: string[] = [];
