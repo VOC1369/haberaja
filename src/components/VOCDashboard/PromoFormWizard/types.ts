@@ -165,6 +165,7 @@ export interface PromoFormData {
   min_deposit: number;  // Fixed mode: Minimal deposit untuk klaim (formerly min_requirement)
   max_claim: number | null;  // null jika unlimited (canonical form)
   turnover_rule: string;
+  turnover_rule_format?: 'multiplier' | 'min_rupiah';  // Semantic: multiplier (20x) vs min_rupiah (Rp)
   turnover_rule_enabled: boolean;
   turnover_rule_custom: string;
   claim_frequency: string;
@@ -1043,6 +1044,33 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
         normalized.dinamis_reward_type = typeMapping[lowerType] || 'credit_game';
       }
     }
+  }
+  
+  // ============================================
+  // 13. Normalize turnover_rule format (ensure correct display)
+  // ============================================
+  if (normalized.turnover_rule) {
+    const rule = String(normalized.turnover_rule).trim();
+    // If turnover_rule_format is min_rupiah, keep as raw number
+    if (normalized.turnover_rule_format === 'min_rupiah') {
+      // Strip non-numeric characters, keep as number string
+      normalized.turnover_rule = rule.replace(/[^0-9]/g, '');
+    } else {
+      // For multiplier format, ensure it ends with 'x' or is a small number
+      const numOnly = rule.replace(/[^0-9]/g, '');
+      const numValue = Number(numOnly);
+      // If it's a large number (> 100), it's likely a Rupiah value misplaced
+      if (numValue > 100 && !rule.includes('x')) {
+        console.warn(`[normalizePromoData] Clearing likely Rupiah value from turnover_rule: ${rule}`);
+        normalized.turnover_rule = '';
+        normalized.turnover_rule_enabled = false;
+      }
+    }
+  }
+  
+  // Propagate turnover_rule_format from first subcategory if not set
+  if (!normalized.turnover_rule_format && normalized.subcategories?.[0]?.turnover_rule_format) {
+    normalized.turnover_rule_format = normalized.subcategories[0].turnover_rule_format;
   }
   
   return normalized;
