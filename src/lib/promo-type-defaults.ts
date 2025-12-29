@@ -36,6 +36,8 @@ export const PROMO_TYPE_DEFAULTS: Record<string, PromoTypeDefaultConfig> = {
     game_restriction: 'semua',
     claim_frequency: 'mingguan',
     intent_category: 'Retention',
+    target_segment: 'Semua',        // Rollingan untuk semua player
+    trigger_event: 'Turnover',      // Trigger by playing activity, bukan deposit
   },
   
   // Welcome Bonus
@@ -83,6 +85,8 @@ export const PROMO_TYPE_DEFAULTS: Record<string, PromoTypeDefaultConfig> = {
     game_restriction: 'semua',
     claim_frequency: 'unlimited',
     intent_category: 'Retention',
+    target_segment: 'Semua',
+    trigger_event: 'Turnover',      // Trigger by playing activity
   },
   
   // Event / Level Up
@@ -123,6 +127,7 @@ export const PROMO_TYPE_DEFAULTS: Record<string, PromoTypeDefaultConfig> = {
     game_restriction: 'semua',
     claim_frequency: 'unlimited',
     target_segment: 'Semua',
+    trigger_event: 'Referral',      // Trigger by referral activity
     intent_category: 'Acquisition',
   },
   
