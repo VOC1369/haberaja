@@ -653,21 +653,21 @@ export function PseudoKnowledgeSection() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-muted rounded-lg p-3">
-            {/* Rollingan uses min turnover (Rp), others use multiplier (x) */}
+            {/* Read format from metadata (set by extractor), fallback to calculation_base for old data */}
             {(() => {
-              const isRollingan = extractedPromo?.promo_type?.toLowerCase().includes('rollingan') || 
-                                  extractedPromo?.promo_type?.toLowerCase().includes('cashback');
+              const isMinRupiahFormat = sub.turnover_rule_format === 'min_rupiah' 
+                || sub.calculation_base === 'turnover'; // Fallback for old data
               return (
                 <>
                   <span className="text-muted-foreground text-xs block mb-1">
-                    {isRollingan ? 'Min Turnover' : 'Turnover'}
+                    {isMinRupiahFormat ? 'Min Turnover' : 'Turnover'}
                   </span>
                   {getFieldStatus('turnover_rule', archetype) === 'not_applicable' ? (
                     <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
                   ) : (
                     <span className="text-foreground font-medium">
                       {sub.turnover_rule != null 
-                        ? (isRollingan
+                        ? (isMinRupiahFormat
                             ? `Rp ${Number(sub.turnover_rule).toLocaleString('id-ID')}`
                             : `${sub.turnover_rule}x`)
                         : '-'}
