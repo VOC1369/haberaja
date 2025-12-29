@@ -1047,25 +1047,35 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
   }
   
   // ============================================
-  // 13. Normalize turnover_rule format (ensure correct display)
+  // 13. Normalize turnover_rule format — CONTEXT-AWARE DETECTION
   // ============================================
   if (normalized.turnover_rule) {
     const rule = String(normalized.turnover_rule).trim();
-    // If turnover_rule_format is min_rupiah, keep as raw number
-    if (normalized.turnover_rule_format === 'min_rupiah') {
-      // Strip non-numeric characters, keep as number string
-      normalized.turnover_rule = rule.replace(/[^0-9]/g, '');
-    } else {
-      // For multiplier format, ensure it ends with 'x' or is a small number
-      const numOnly = rule.replace(/[^0-9]/g, '');
-      const numValue = Number(numOnly);
-      // If it's a large number (> 100), it's likely a Rupiah value misplaced
-      if (numValue > 100 && !rule.includes('x')) {
-        console.warn(`[normalizePromoData] Clearing likely Rupiah value from turnover_rule: ${rule}`);
-        normalized.turnover_rule = '';
-        normalized.turnover_rule_enabled = false;
+    const numOnly = rule.replace(/[^0-9]/g, '');
+    const numValue = Number(numOnly);
+    
+    // Context-aware detection:
+    // 1. If >= 10000, almost certainly Rupiah misplaced (even 10.000x is absurd for multiplier)
+    // 2. If calculation_base is 'turnover' and value >= 1000, likely min TO qualify
+    const isLikelyRupiah = 
+      numValue >= 10000 ||  // 10.000 or above = definitely Rupiah
+      (normalized.calculation_base === 'turnover' && numValue >= 1000);  // 1000 + TO base = Rupiah
+    
+    if (isLikelyRupiah) {
+      console.warn(`[normalizePromoData] Context-aware: Detected Rupiah in turnover_rule: ${rule}, moving to min_calculation`);
+      // Move to min_calculation if not already set
+      if (!normalized.min_calculation || normalized.min_calculation === 0) {
+        normalized.min_calculation = numValue;
+        normalized.min_calculation_enabled = true;
       }
+      // Clear turnover_rule - it's not a WD multiplier
+      normalized.turnover_rule = '';
+      normalized.turnover_rule_enabled = false;
+    } else if (normalized.turnover_rule_format === 'min_rupiah') {
+      // If explicitly marked as min_rupiah, strip non-numeric
+      normalized.turnover_rule = numOnly;
     }
+    // For small valid multipliers, keep as-is
   }
   
   // Propagate turnover_rule_format from first subcategory if not set
