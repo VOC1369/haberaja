@@ -432,6 +432,7 @@ export interface PromoSubCategory {
   minimum_base: number;
   minimum_base_enabled: boolean;
   turnover_rule: string;
+  turnover_rule_format?: 'multiplier' | 'min_rupiah';  // Semantic hint: multiplier (20x) vs min_rupiah (Rp 1.000.000)
   turnover_rule_enabled: boolean;
   turnover_rule_custom: string;
   
