@@ -2556,6 +2556,30 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   
   const modeDetection = detectRewardMode();
   
+  // ✅ SEMANTIC SANITIZATION: Prevent Rupiah from becoming WD multiplier
+  subcategories.forEach((sub) => {
+    if (typeof sub.turnover_rule === 'number' || typeof sub.turnover_rule === 'string') {
+      const numValue = typeof sub.turnover_rule === 'number' 
+        ? sub.turnover_rule 
+        : Number(String(sub.turnover_rule).replace(/[^0-9]/g, ''));
+      
+      // If turnover_rule >= 1000 and base is 'turnover', it's min qualify, not WD multiplier
+      if (numValue >= 1000 && sub.calculation_base === 'turnover') {
+        console.warn(`[Semantic Fix] Moving turnover_rule ${numValue} to minimum_base (base=turnover)`);
+        sub.minimum_base = Math.max(sub.minimum_base || 0, numValue);
+        sub.turnover_rule = '0';
+        sub.turnover_rule_enabled = false;
+      }
+      // General rule: any value >= 10000 is almost certainly Rupiah
+      else if (numValue >= 10000) {
+        console.warn(`[Semantic Fix] Large turnover_rule ${numValue} detected, treating as min qualify`);
+        sub.minimum_base = Math.max(sub.minimum_base || 0, numValue);
+        sub.turnover_rule = '0';
+        sub.turnover_rule_enabled = false;
+      }
+    }
+  });
+  
   // Build base PromoFormData
   const promoData: PromoFormData = {
     // Step 1 - Identitas (with exact enum value mappings)

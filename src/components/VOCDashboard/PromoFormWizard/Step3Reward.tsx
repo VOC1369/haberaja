@@ -1546,37 +1546,38 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
               </div>
               
-              {/* KOLOM 2: Minimum Depo */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Minimum Depo</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">Aktifkan</span>
-                    <Switch
-                      checked={data.min_calculation_enabled ?? false}
-                      onCheckedChange={(checked) => onChange({ 
-                        min_calculation_enabled: checked,
-                        min_calculation: checked ? (data.min_calculation ?? 0) : 0
-                      })}
-                    />
+              {/* KOLOM 2: Minimum Depo — ONLY for deposit-based calculation */}
+              {data.calculation_base === 'deposit' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Minimum Deposit</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Aktifkan</span>
+                      <Switch
+                        checked={(data.min_deposit ?? 0) > 0}
+                        onCheckedChange={(checked) => onChange({ 
+                          min_deposit: checked ? 50000 : 0
+                        })}
+                      />
+                    </div>
+                  </div>
+                  <div className={(data.min_deposit ?? 0) <= 0 ? "opacity-50 pointer-events-none" : ""}>
+                    {(data.min_deposit ?? 0) > 0 ? (
+                      <FormattedNumberInput
+                        value={data.min_deposit ?? 0}
+                        onChange={(value) => onChange({ min_deposit: value })}
+                        placeholder="Contoh: 50.000"
+                      />
+                    ) : (
+                      <Input
+                        value=""
+                        placeholder="Tidak aktif"
+                        disabled
+                      />
+                    )}
                   </div>
                 </div>
-                <div className={!data.min_calculation_enabled ? "opacity-50 pointer-events-none" : ""}>
-                  {data.min_calculation_enabled ? (
-                    <FormattedNumberInput
-                      value={data.min_calculation ?? 0}
-                      onChange={(value) => onChange({ min_calculation: value })}
-                      placeholder="Contoh: 50.000"
-                    />
-                  ) : (
-                    <Input
-                      value=""
-                      placeholder="Tidak aktif"
-                      disabled
-                    />
-                  )}
-                </div>
-              </div>
+              )}
             </div>
             
             {/* Row 3: Dasar Perhitungan & Jenis Perhitungan */}
