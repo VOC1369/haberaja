@@ -916,6 +916,103 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
     });
   }
   
+  // ============================================
+  // 7. Normalize promo_type to exact PROMO_TYPES values
+  // ============================================
+  if (normalized.promo_type && !PROMO_TYPES.includes(normalized.promo_type)) {
+    const lowerType = normalized.promo_type.toLowerCase();
+    if (lowerType.includes('cashback') || lowerType.includes('loss')) {
+      normalized.promo_type = 'Cashback (Loss-based)';
+    } else if (lowerType.includes('rollingan') || lowerType.includes('turnover')) {
+      normalized.promo_type = 'Rollingan (Turnover-based)';
+    } else if (lowerType.includes('welcome')) {
+      normalized.promo_type = 'Welcome Bonus';
+    } else if (lowerType.includes('deposit')) {
+      normalized.promo_type = 'Deposit Bonus';
+    } else if (lowerType.includes('freechip')) {
+      normalized.promo_type = 'Freechip';
+    } else if (lowerType.includes('referral')) {
+      normalized.promo_type = 'Referral Bonus';
+    } else if (lowerType.includes('event') || lowerType.includes('level')) {
+      normalized.promo_type = 'Event / Level Up';
+    } else if (lowerType.includes('loyalty') || lowerType.includes('point')) {
+      normalized.promo_type = 'Loyalty Point';
+    } else {
+      normalized.promo_type = 'Deposit Bonus'; // Safe fallback
+    }
+  }
+  
+  // ============================================
+  // 8. Normalize intent_category
+  // ============================================
+  if (normalized.intent_category && !INTENT_CATEGORIES.includes(normalized.intent_category)) {
+    const lowerIntent = normalized.intent_category.toLowerCase();
+    const intentMapping: Record<string, string> = {
+      'acquisition': 'Acquisition',
+      'retention': 'Retention',
+      'reactivation': 'Reactivation',
+      'vip': 'VIP',
+      'bonus_claim': 'Retention',
+    };
+    normalized.intent_category = intentMapping[lowerIntent] || 'Retention';
+  }
+  
+  // ============================================
+  // 9. Normalize target_segment
+  // ============================================
+  if (normalized.target_segment && !TARGET_SEGMENTS.includes(normalized.target_segment)) {
+    const lowerSeg = normalized.target_segment.toLowerCase();
+    const segmentMapping: Record<string, string> = {
+      'all_users': 'Semua',
+      'all': 'Semua',
+      'new_member': 'Baru',
+      'new': 'Baru',
+      'baru': 'Baru',
+      'existing': 'Existing',
+      'vip_only': 'VIP',
+      'vip': 'VIP',
+      'dormant': 'Dormant',
+    };
+    normalized.target_segment = segmentMapping[lowerSeg] || 'Semua';
+  }
+  
+  // ============================================
+  // 10. Normalize trigger_event
+  // ============================================
+  if (normalized.trigger_event && !TRIGGER_EVENTS.includes(normalized.trigger_event)) {
+    const lowerTrigger = normalized.trigger_event.toLowerCase().replace(/[_-]/g, ' ');
+    const triggerMapping: Record<string, string> = {
+      'first deposit': 'First Deposit',
+      'deposit': 'First Deposit',
+      'login': 'Login',
+      'loss streak': 'Loss Streak',
+      'apk download': 'APK Download',
+      'turnover': 'Turnover',
+      'mission completed': 'Mission Completed',
+      'user request': 'First Deposit',
+    };
+    normalized.trigger_event = triggerMapping[lowerTrigger] || 'First Deposit';
+  }
+  
+  // ============================================
+  // 11. Normalize platform_access
+  // ============================================
+  const validPlatforms = PLATFORM_ACCESS.map(p => p.value);
+  if (normalized.platform_access && !validPlatforms.includes(normalized.platform_access)) {
+    const lowerPlatform = normalized.platform_access.toLowerCase();
+    if (lowerPlatform === 'all' || lowerPlatform === 'semua') {
+      normalized.platform_access = 'semua';
+    } else if (lowerPlatform === 'web') {
+      normalized.platform_access = 'web';
+    } else if (lowerPlatform === 'apk') {
+      normalized.platform_access = 'apk';
+    } else if (lowerPlatform === 'mobile') {
+      normalized.platform_access = 'mobile';
+    } else {
+      normalized.platform_access = 'semua';
+    }
+  }
+  
   return normalized;
 }
 

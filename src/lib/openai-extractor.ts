@@ -2289,21 +2289,52 @@ import type { PromoFormData, PromoSubCategory } from '@/components/VOCDashboard/
  * This function is used inside useMemo and relies on referential stability.
  */
 export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFormData {
-  // Map promo type to Indonesian values
+  // Map promo type to exact PROMO_TYPES values
   const promoTypeMap: Record<string, string> = {
-    'combo': 'Rollingan / Cashback',
+    'combo': 'Rollingan (Turnover-based)',
     'welcome_bonus': 'Welcome Bonus',
     'deposit_bonus': 'Deposit Bonus',
-    'cashback': 'Rollingan / Cashback',
-    'rollingan': 'Rollingan / Cashback',
-    'referral': 'Campaign / Informational',
+    'cashback': 'Cashback (Loss-based)',
+    'rollingan': 'Rollingan (Turnover-based)',
+    'referral': 'Referral Bonus',
+    'event_level_up': 'Event / Level Up',
+    'mini_game': 'Mini Game (Spin, Lucky Draw)',
+    'freechip': 'Freechip',
+    'loyalty_point': 'Loyalty Point',
+    'merchandise': 'Merchandise',
+    'campaign': 'Campaign / Informational',
   };
 
-  // Map target user
+  // Map target user to exact TARGET_SEGMENTS values
   const targetUserMap: Record<string, string> = {
-    'new_member': 'new_member',
-    'all': 'all_users',
-    'vip': 'vip_only',
+    'new_member': 'Baru',
+    'all': 'Semua',
+    'all_users': 'Semua',
+    'vip': 'VIP',
+    'vip_only': 'VIP',
+    'existing': 'Existing',
+    'dormant': 'Dormant',
+  };
+
+  // Map intent category to exact INTENT_CATEGORIES values
+  const intentCategoryMap: Record<string, string> = {
+    'acquisition': 'Acquisition',
+    'retention': 'Retention',
+    'reactivation': 'Reactivation',
+    'vip': 'VIP',
+    'bonus_claim': 'Retention',  // Fallback mapping
+  };
+
+  // Map trigger event to exact TRIGGER_EVENTS values
+  const triggerEventMap: Record<string, string> = {
+    'first_deposit': 'First Deposit',
+    'deposit': 'First Deposit',
+    'login': 'Login',
+    'loss_streak': 'Loss Streak',
+    'apk_download': 'APK Download',
+    'turnover': 'Turnover',
+    'mission_completed': 'Mission Completed',
+    'user_request': 'First Deposit',  // Fallback for generic trigger
   };
 
   // Helper to map game providers (handle "ALL" special case)
@@ -2527,13 +2558,13 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   
   // Build base PromoFormData
   const promoData: PromoFormData = {
-    // Step 1 - Identitas
+    // Step 1 - Identitas (with exact enum value mappings)
     client_id: extracted.client_id || '',  // Auto-detected from content
     promo_name: extracted.promo_name || 'Promo Baru',
-    promo_type: promoTypeMap[extracted.promo_type] || extracted.promo_type || 'Deposit Bonus',
-    intent_category: 'bonus_claim',
-    target_segment: targetUserMap[extracted.target_user] || 'all_users',
-    trigger_event: 'user_request',
+    promo_type: promoTypeMap[extracted.promo_type?.toLowerCase()] || extracted.promo_type || 'Deposit Bonus',
+    intent_category: 'Retention',  // Default - not extracted from source
+    target_segment: targetUserMap[extracted.target_user?.toLowerCase()] || 'Semua',
+    trigger_event: 'First Deposit',  // Default - not extracted from source
 
     // Step 2 - Reward Mode (NOW WITH AUTO-DETECTION)
     reward_mode: modeDetection.mode,
@@ -2670,7 +2701,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     conversion_formula: '',
 
     // Step 2 - Batasan & Akses
-    platform_access: 'all',
+    platform_access: 'semua',
     game_restriction: 'specific_game',
     game_types: subcategories[0]?.game_types || [],
     eligible_providers: extracted.eligible_providers || subcategories[0]?.eligible_providers || [],  // ← NEW
