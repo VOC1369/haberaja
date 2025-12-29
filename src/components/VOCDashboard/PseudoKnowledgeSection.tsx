@@ -620,19 +620,49 @@ export function PseudoKnowledgeSection() {
             )}
           </div>
           <div className="bg-muted rounded-lg p-3">
-            <span className="text-muted-foreground text-xs block mb-1">Min Deposit</span>
-            {getFieldStatus('minimum_base', archetype) === 'not_applicable' ? (
-              <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
-            ) : (
-              <span className="text-foreground font-medium">
-                {sub.minimum_base ? `Rp ${sub.minimum_base.toLocaleString('id-ID')}` : "-"}
-              </span>
-            )}
+            {(() => {
+              // Rollingan/Cashback: No min deposit, use min_claim instead
+              const isRollinganArchetype = sub.calculation_base === 'turnover' || 
+                archetype?.toLowerCase().includes('rollingan') ||
+                archetype?.toLowerCase().includes('cashback');
+              
+              if (isRollinganArchetype) {
+                const minClaim = (sub as any).dinamis_min_claim || (sub as any).min_claim;
+                return (
+                  <>
+                    <span className="text-muted-foreground text-xs block mb-1">Min Bonus Cair</span>
+                    <span className="text-foreground font-medium">
+                      {minClaim ? `Rp ${Number(minClaim).toLocaleString('id-ID')}` : "Tidak ada batas"}
+                    </span>
+                  </>
+                );
+              }
+              
+              // Default: Min Deposit for other promo types
+              return (
+                <>
+                  <span className="text-muted-foreground text-xs block mb-1">Min Deposit</span>
+                  {getFieldStatus('minimum_base', archetype) === 'not_applicable' ? (
+                    <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
+                  ) : (
+                    <span className="text-foreground font-medium">
+                      {sub.minimum_base ? `Rp ${sub.minimum_base.toLocaleString('id-ID')}` : "-"}
+                    </span>
+                  )}
+                </>
+              );
+            })()}
           </div>
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Max Bonus</span>
             <span className="text-foreground font-medium">
-              {sub.max_bonus ? `Rp ${sub.max_bonus.toLocaleString('id-ID')}` : "-"}
+              {(sub as any).dinamis_max_claim_unlimited || (sub as any).max_bonus_unlimited
+                ? 'Unlimited' 
+                : sub.max_bonus 
+                  ? `Rp ${sub.max_bonus.toLocaleString('id-ID')}` 
+                  : (sub as any).dinamis_max_claim
+                    ? `Rp ${(sub as any).dinamis_max_claim.toLocaleString('id-ID')}`
+                    : "-"}
             </span>
           </div>
           <div className="bg-muted rounded-lg p-3">
@@ -686,7 +716,7 @@ export function PseudoKnowledgeSection() {
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Jenis Game</span>
             <span className="text-foreground font-medium">
-              {sub.game_types?.length ? sub.game_types.map(formatGameTypeLabel).join(", ") : "-"}
+              {sub.game_types?.length ? sub.game_types.map(formatGameTypeLabel).join(", ") : "Semua"}
             </span>
           </div>
           <div className="bg-muted rounded-lg p-3">
