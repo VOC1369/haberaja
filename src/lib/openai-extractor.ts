@@ -2435,6 +2435,19 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   const hasUnlimitedMaxBonus = extracted.subcategories.some(sub => sub.max_bonus === null);
 
   // ============================================
+  // TRIGGER EVENT DEFAULT HELPER
+  // Context-aware trigger based on promo type
+  // ============================================
+  const getTriggerEventDefault = (promoType: string): string => {
+    const lowerType = promoType?.toLowerCase() || '';
+    if (lowerType.includes('rollingan') || lowerType.includes('cashback')) return 'Turnover';
+    if (lowerType.includes('referral')) return 'Referral';
+    if (lowerType.includes('loyalty')) return 'Turnover';
+    if (lowerType.includes('event') || lowerType.includes('level')) return 'Mission Completed';
+    return 'First Deposit';  // Default for deposit-based promos
+  };
+
+  // ============================================
   // REWARD DISTRIBUTION NORMALIZER
   // Maps extracted values to valid REWARD_DISTRIBUTIONS enum values
   // ============================================
@@ -2588,7 +2601,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     promo_type: promoTypeMap[extracted.promo_type?.toLowerCase()] || extracted.promo_type || 'Deposit Bonus',
     intent_category: 'Retention',  // Default - not extracted from source
     target_segment: targetUserMap[extracted.target_user?.toLowerCase()] || 'Semua',
-    trigger_event: 'First Deposit',  // Default - not extracted from source
+    trigger_event: getTriggerEventDefault(extracted.promo_type || ''),  // Context-aware default
 
     // Step 2 - Reward Mode (NOW WITH AUTO-DETECTION)
     reward_mode: modeDetection.mode,
