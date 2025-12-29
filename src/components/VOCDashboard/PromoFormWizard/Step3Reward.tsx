@@ -1404,7 +1404,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="space-y-2">
                 <Label>Jenis Hadiah</Label>
                 <SelectWithAddNew
-                  value={data.dinamis_reward_type}
+                  value={data.dinamis_reward_type || ''}
                   onValueChange={(value) => onChange({ 
                     dinamis_reward_type: value,
                     physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : '',

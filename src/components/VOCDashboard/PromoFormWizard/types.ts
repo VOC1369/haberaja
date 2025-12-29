@@ -1013,6 +1013,38 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
     }
   }
   
+  // ============================================
+  // 12. Normalize dinamis_reward_type (PromoFormData level)
+  // ============================================
+  const validDinamisTypes = DINAMIS_REWARD_TYPES.map(d => d.value);
+  if (normalized.dinamis_reward_type) {
+    if (!validDinamisTypes.includes(normalized.dinamis_reward_type)) {
+      const lowerType = normalized.dinamis_reward_type.toLowerCase().trim();
+      // Direct mapping if lowercase version exists
+      if (validDinamisTypes.includes(lowerType)) {
+        normalized.dinamis_reward_type = lowerType;
+      } else {
+        // Fallback mapping for legacy values
+        const typeMapping: Record<string, string> = {
+          'freechip': 'freechip',
+          'free chip': 'freechip',
+          'free_chip': 'freechip',
+          'cash': 'uang_tunai',
+          'tunai': 'uang_tunai',
+          'fisik': 'hadiah_fisik',
+          'physical': 'hadiah_fisik',
+          'credit': 'credit_game',
+          'game_credit': 'credit_game',
+          'bonus': 'saldo',
+          'balance': 'saldo',
+          'lp': 'lp',
+          'loyalty': 'lp',
+        };
+        normalized.dinamis_reward_type = typeMapping[lowerType] || 'credit_game';
+      }
+    }
+  }
+  
   return normalized;
 }
 
