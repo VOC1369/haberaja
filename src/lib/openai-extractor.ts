@@ -2484,9 +2484,10 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     reward_amount: 0,
     min_deposit: 0,
     max_claim: null,
-    turnover_rule: '0x',
-    turnover_rule_enabled: false,
-    turnover_rule_custom: '',
+    // ✅ FIX: Map turnover_rule from first subcategory (not hardcoded '0x')
+    turnover_rule: subcategories[0]?.turnover_rule || '0x',
+    turnover_rule_enabled: subcategories[0]?.turnover_rule_enabled ?? (subcategories[0]?.turnover_rule && subcategories[0]?.turnover_rule !== '0x'),
+    turnover_rule_custom: subcategories[0]?.turnover_rule_custom || '',
     // ⚠️ FIX: claim_frequency dari extracted, atau infer dari promo_type
     claim_frequency: extracted.claim_frequency || 
       (['cashback', 'rebate', 'rollingan', 'rollingan cashback'].includes(extracted.promo_type?.toLowerCase() || '') 
@@ -2588,7 +2589,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     min_calculation: subcategories[0]?.minimum_base || 0,  // Renamed from minimum_base
     min_calculation_enabled: (subcategories[0]?.minimum_base || 0) > 0,
     
-    dinamis_reward_type: 'Freechip',
+    // ✅ FIX: Map dinamis_reward_type from first subcategory (was hardcoded to 'Freechip')
+    dinamis_reward_type: subcategories[0]?.jenis_hadiah || subcategories[0]?.dinamis_reward_type || 'Freechip',
     dinamis_reward_amount: 0,
     dinamis_max_claim: subcategories[0]?.max_bonus || 0,
     dinamis_max_claim_unlimited: hasUnlimitedMaxBonus,
