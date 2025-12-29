@@ -2577,7 +2577,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     _raw_subcategories: extracted.subcategories,
     
     // Fixed mode defaults
-    reward_type: 'Freechip',
+    reward_type: 'freechip',  // lowercase to match enum
     reward_amount: 0,
     min_deposit: 0,
     max_claim: null,
@@ -2596,7 +2596,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Fixed Mode - SEPARATE fields (prefix: fixed_)
     // Phase 1B: Map from subcategories[0] when mode is 'fixed'
     fixed_reward_type: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? (extracted.subcategories[0].reward_type || 'credit_game')
+      ? ((extracted.subcategories[0].reward_type || 'credit_game').toLowerCase())
       : '',
     fixed_calculation_base: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].calculation_base || 'deposit')
@@ -2687,7 +2687,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     min_calculation_enabled: (subcategories[0]?.minimum_base || 0) > 0,
     
     // ✅ FIX: Map dinamis_reward_type from first subcategory (was hardcoded to 'Freechip')
-    dinamis_reward_type: subcategories[0]?.jenis_hadiah || subcategories[0]?.dinamis_reward_type || 'Freechip',
+    dinamis_reward_type: (subcategories[0]?.jenis_hadiah || subcategories[0]?.dinamis_reward_type || 'credit_game').toLowerCase(),  // lowercase to match DINAMIS_REWARD_TYPES
     dinamis_reward_amount: 0,
     dinamis_max_claim: subcategories[0]?.max_bonus || 0,
     dinamis_max_claim_unlimited: hasUnlimitedMaxBonus,
