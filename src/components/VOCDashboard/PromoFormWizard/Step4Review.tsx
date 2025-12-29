@@ -1169,7 +1169,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
             />
             <ValueBox label="Wilayah" value={GEO_RESTRICTIONS.find(g => g.value === data.geo_restriction)?.label || data.geo_restriction} />
             <ValueBox label="Mulai" value={data.valid_from} />
-            <ValueBox label="Berakhir" value={data.valid_until} />
+            <ValueBox label="Berakhir" value={data.valid_until_unlimited ? 'Unlimited' : data.valid_until} />
             <ValueBox label="Wajib APK" value={data.require_apk ? 'Ya' : 'Tidak'} />
             {data.promo_risk_level && (
               <ValueBox 

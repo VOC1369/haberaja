@@ -2760,7 +2760,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     valid_until: extracted.valid_until || '',
     valid_until_unlimited: !extracted.valid_until,
     status: 'draft',
-    geo_restriction: '',
+    geo_restriction: 'indonesia',  // Default wilayah Indonesia
     require_apk: false,
     promo_risk_level: 'medium',
 

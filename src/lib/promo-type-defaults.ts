@@ -24,6 +24,9 @@ export interface PromoTypeDefaultConfig {
   intent_category?: string;
   // Payment method fields
   deposit_method?: 'bank' | 'pulsa' | 'ewallet' | 'crypto' | 'qris' | 'all';
+  // Validity fields
+  valid_until_unlimited?: boolean;
+  geo_restriction?: string;
 }
 
 export const PROMO_TYPE_DEFAULTS: Record<string, PromoTypeDefaultConfig> = {
@@ -38,6 +41,8 @@ export const PROMO_TYPE_DEFAULTS: Record<string, PromoTypeDefaultConfig> = {
     intent_category: 'Retention',
     target_segment: 'Semua',        // Rollingan untuk semua player
     trigger_event: 'Turnover',      // Trigger by playing activity, bukan deposit
+    valid_until_unlimited: true,    // Rollingan biasanya ongoing tanpa batas waktu
+    geo_restriction: 'indonesia',   // Default wilayah
   },
   
   // Welcome Bonus
@@ -87,6 +92,8 @@ export const PROMO_TYPE_DEFAULTS: Record<string, PromoTypeDefaultConfig> = {
     intent_category: 'Retention',
     target_segment: 'Semua',
     trigger_event: 'Turnover',      // Trigger by playing activity
+    valid_until_unlimited: true,    // Loyalty biasanya ongoing
+    geo_restriction: 'indonesia',
   },
   
   // Event / Level Up
@@ -129,6 +136,8 @@ export const PROMO_TYPE_DEFAULTS: Record<string, PromoTypeDefaultConfig> = {
     target_segment: 'Semua',
     trigger_event: 'Referral',      // Trigger by referral activity
     intent_category: 'Acquisition',
+    valid_until_unlimited: true,    // Referral biasanya ongoing
+    geo_restriction: 'indonesia',
   },
   
   // Campaign / Informational
