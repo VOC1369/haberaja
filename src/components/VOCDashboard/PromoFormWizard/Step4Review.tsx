@@ -1349,11 +1349,24 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     )}
                     <ValueBox label="Periode Klaim" value={CLAIM_FREQUENCIES.find(c => c.value === data.claim_frequency)?.label || data.claim_frequency} />
                     <ValueBox label="Waktu Pembagian Bonus" value={getRewardDistributionDisplay(data)} />
-                    {/* Syarat Main Sebelum WD */}
+                    {/* Syarat Main Sebelum WD - Format-aware display */}
                     <ValueBox 
-                      label="Syarat Main Sebelum WD" 
-                      value={data.turnover_rule_enabled ? data.turnover_rule : 'Tidak aktif'} 
+                      label={data.turnover_rule_format === 'min_rupiah' ? 'Minimal Turnover' : 'Syarat Main Sebelum WD'}
+                      value={
+                        data.turnover_rule_enabled && data.turnover_rule
+                          ? (data.turnover_rule_format === 'min_rupiah'
+                              ? `Rp ${Number(String(data.turnover_rule).replace(/[^0-9]/g, '')).toLocaleString('id-ID')}`
+                              : (String(data.turnover_rule).endsWith('x') ? data.turnover_rule : `${data.turnover_rule}x`))
+                          : 'Tidak aktif'
+                      } 
                     />
+                    {/* Minimal Perhitungan - Show when enabled */}
+                    {data.min_calculation_enabled && data.min_calculation > 0 && (
+                      <ValueBox 
+                        label={`Minimal ${CALCULATION_BASES.find(c => c.value === data.calculation_base)?.label || 'Perhitungan'}`}
+                        value={`Rp ${Number(data.min_calculation).toLocaleString('id-ID')}`}
+                      />
+                    )}
                   </>
                 )}
                 {data.reward_mode === 'tier' && (
