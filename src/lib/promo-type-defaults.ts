@@ -194,6 +194,9 @@ const DEFAULT_VALUES: Partial<PromoFormData> = {
   deposit_method: undefined,
   deposit_method_providers: undefined,
   deposit_rate: undefined,
+  // Validity fields
+  valid_until_unlimited: false,
+  geo_restriction: '',
 };
 
 /**
@@ -280,6 +283,17 @@ export function applyPromoTypeDefaults(
   // Payment method defaults (only if not already set)
   if (defaults.deposit_method && isEmptyOrDefault(currentData.deposit_method, DEFAULT_VALUES.deposit_method)) {
     updates.deposit_method = defaults.deposit_method;
+  }
+  
+  // Validity period defaults
+  if (defaults.valid_until_unlimited !== undefined && 
+      isEmptyOrDefault(currentData.valid_until_unlimited, DEFAULT_VALUES.valid_until_unlimited)) {
+    updates.valid_until_unlimited = defaults.valid_until_unlimited;
+  }
+  
+  if (defaults.geo_restriction && 
+      isEmptyOrDefault(currentData.geo_restriction, DEFAULT_VALUES.geo_restriction)) {
+    updates.geo_restriction = defaults.geo_restriction;
   }
   
   return updates;
