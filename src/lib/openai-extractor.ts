@@ -380,6 +380,7 @@ export interface ExtractedPromoSubCategory {
   min_claim?: number | null;       // NEW: payout threshold (min bonus untuk dicairkan)
   payout_threshold?: number | null; // Alias for min_claim
   turnover_rule: number;           // e.g., 20 (untuk 20x)
+  turnover_rule_format?: 'multiplier' | 'min_rupiah';  // Semantic hint: multiplier (20x) vs min_rupiah (Rp 1.000.000)
   payout_direction: 'depan' | 'belakang';
   
   // NEW: Jenis Hadiah Detection (v1.1)
@@ -1954,6 +1955,13 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
             .replace(/^min\s+/i, '')  // Hapus "min " prefix
             .replace(/x$/i, '');       // Hapus trailing "x"
         }
+        
+        // Set turnover_rule_format based on calculation_base (single source of truth)
+        // Rollingan/Cashback uses turnover as base → min_rupiah format
+        // Deposit bonus uses deposit as base → multiplier format
+        updatedSub.turnover_rule_format = updatedSub.calculation_base === 'turnover' 
+          ? 'min_rupiah' 
+          : 'multiplier';
         
         return updatedSub;
       }) || [];
