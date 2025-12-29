@@ -775,25 +775,101 @@ export async function deletePromoDraft(id: string): Promise<boolean> {
 
 /**
  * Normalize legacy/invalid promo data values
- * - Fixes reward_distribution: "manual_cs" or "langsung" → proper values
+ * - Fixes reward_distribution: case-insensitive normalization to valid enum values
  * - Fixes reward_mode: detects inconsistency and corrects based on actual data
+ * - Fixes calculation_base, calculation_method, claim_frequency: validates against enums
  */
 export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoFormData> {
   let normalized = { ...data };
   
-  // 1. Normalize reward_distribution
-  const invalidDistValues = ['manual_cs', 'langsung'];
-  if (normalized.reward_distribution && invalidDistValues.includes(normalized.reward_distribution)) {
-    if (normalized.distribution_day) {
+  // ============================================
+  // 1. Normalize reward_distribution (CASE-INSENSITIVE)
+  // ============================================
+  const validDistValues = ['setelah_syarat', 'otomatis_setelah_periode', 'hari_tertentu', 'tanggal_tertentu'];
+  const rawDist = (normalized.reward_distribution || '').toLowerCase().trim();
+  
+  // Mapping for legacy/variant values
+  const distMapping: Record<string, string> = {
+    'langsung': 'setelah_syarat',
+    'instant': 'setelah_syarat',
+    'segera': 'setelah_syarat',
+    'otomatis': 'setelah_syarat',
+    'auto': 'setelah_syarat',
+    'manual_cs': 'setelah_syarat',
+    'mingguan': 'otomatis_setelah_periode',
+    'harian': 'otomatis_setelah_periode',
+    'bulanan': 'otomatis_setelah_periode',
+    'after_period': 'otomatis_setelah_periode',
+    'setelah periode': 'otomatis_setelah_periode',
+    'hari tertentu': 'hari_tertentu',
+    'tanggal tertentu': 'tanggal_tertentu',
+  };
+  
+  if (!validDistValues.includes(rawDist)) {
+    // Check if it maps to a valid value
+    if (distMapping[rawDist]) {
+      normalized.reward_distribution = distMapping[rawDist];
+    } else if (normalized.distribution_day) {
+      // Has specific day → hari_tertentu
       normalized.reward_distribution = 'hari_tertentu';
-    } else if (normalized.claim_frequency && ['mingguan', 'bulanan', 'harian'].includes(normalized.claim_frequency)) {
+    } else if (normalized.claim_frequency && ['mingguan', 'bulanan', 'harian'].includes(normalized.claim_frequency.toLowerCase())) {
+      // Periodic claim → otomatis_setelah_periode
       normalized.reward_distribution = 'otomatis_setelah_periode';
     } else {
+      // Default fallback
       normalized.reward_distribution = 'setelah_syarat';
     }
   }
   
-  // 2. Normalize reward_mode based on actual data context
+  // ============================================
+  // 2. Normalize calculation_base
+  // ============================================
+  const validCalcBases = CALCULATION_BASES.map(c => c.value);
+  if (normalized.calculation_base && !validCalcBases.includes(normalized.calculation_base)) {
+    const lowerBase = normalized.calculation_base.toLowerCase().trim();
+    const baseMapping: Record<string, string> = {
+      'to': 'turnover',
+      'depo': 'deposit',
+      'dp': 'deposit',
+      'menang': 'win',
+      'kalah': 'loss',
+      'kekalahan': 'loss',
+    };
+    normalized.calculation_base = baseMapping[lowerBase] || 'turnover';
+  }
+  
+  // ============================================
+  // 3. Normalize calculation_method
+  // ============================================
+  const validCalcMethods = CALCULATION_METHODS.map(c => c.value);
+  if (normalized.calculation_method && !validCalcMethods.includes(normalized.calculation_method)) {
+    const lowerMethod = normalized.calculation_method.toLowerCase().trim();
+    if (lowerMethod.includes('percent') || lowerMethod.includes('persen') || lowerMethod === '%') {
+      normalized.calculation_method = 'percentage';
+    } else {
+      normalized.calculation_method = 'fixed';
+    }
+  }
+  
+  // ============================================
+  // 4. Normalize claim_frequency
+  // ============================================
+  const validFreqs = CLAIM_FREQUENCIES.map(f => f.value);
+  if (normalized.claim_frequency && !validFreqs.includes(normalized.claim_frequency)) {
+    const lowerFreq = normalized.claim_frequency.toLowerCase().trim();
+    const freqMapping: Record<string, string> = {
+      'sekali': 'sekali_saja',
+      'once': 'sekali_saja',
+      'daily': 'harian',
+      'weekly': 'mingguan',
+      'monthly': 'bulanan',
+    };
+    normalized.claim_frequency = freqMapping[lowerFreq] || normalized.claim_frequency;
+  }
+  
+  // ============================================
+  // 5. Normalize reward_mode based on actual data context
+  // ============================================
   // Jika calculation_method = 'percentage' dan ada calculation_value → harusnya 'formula' (dinamis)
   if (normalized.calculation_method === 'percentage' && normalized.calculation_value) {
     if (normalized.reward_mode !== 'formula') {
@@ -809,6 +885,35 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
       console.log('[normalizePromoData] Fixing reward_mode: was', normalized.reward_mode, '→ tier');
       normalized.reward_mode = 'tier';
     }
+  }
+  
+  // ============================================
+  // 6. Normalize subcategories if present
+  // ============================================
+  const subcats = (normalized as PromoFormData).subcategories;
+  if (subcats && Array.isArray(subcats)) {
+    (normalized as PromoFormData).subcategories = subcats.map(sub => {
+      const normalizedSub = { ...sub };
+      
+      // Normalize calculation_base in subcategory
+      if (normalizedSub.calculation_base && !validCalcBases.includes(normalizedSub.calculation_base)) {
+        const lowerBase = normalizedSub.calculation_base.toLowerCase().trim();
+        normalizedSub.calculation_base = lowerBase === 'to' ? 'turnover' : 'turnover';
+      }
+      
+      // Normalize calculation_method in subcategory
+      if (normalizedSub.calculation_method && !validCalcMethods.includes(normalizedSub.calculation_method)) {
+        normalizedSub.calculation_method = 'percentage';
+      }
+      
+      // Normalize jenis_hadiah in subcategory
+      const validHadiah = DINAMIS_REWARD_TYPES.map(d => d.value);
+      if (normalizedSub.jenis_hadiah && !validHadiah.includes(normalizedSub.jenis_hadiah)) {
+        normalizedSub.jenis_hadiah = 'credit_game'; // Safe default
+      }
+      
+      return normalizedSub;
+    });
   }
   
   return normalized;
