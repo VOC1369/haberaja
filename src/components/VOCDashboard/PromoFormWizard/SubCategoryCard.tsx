@@ -188,7 +188,13 @@ export function SubCategoryCard({
     label: n.label
   }))]);
 
-  // Reformat calcValueInput when calculation_method changes
+  // ============================================
+  // SYNC LOCAL STATE FROM PROPS
+  // Critical: These effects ensure extracted data syncs to form fields
+  // Without these, lazy initialization only runs on mount, not on prop changes
+  // ============================================
+  
+  // Sync calcValueInput when calculation_value OR calculation_method changes
   useEffect(() => {
     if (subCategory.calculation_value !== undefined && subCategory.calculation_value !== null && subCategory.calculation_value > 0) {
       if (subCategory.calculation_method === 'percentage') {
@@ -201,7 +207,25 @@ export function SubCategoryCard({
     } else {
       setCalcValueInput('');
     }
-  }, [subCategory.calculation_method]);
+  }, [subCategory.calculation_value, subCategory.calculation_method]);
+  
+  // Sync maxBonusInput when max_bonus changes (from extraction or parent)
+  useEffect(() => {
+    if (subCategory.max_bonus !== undefined && subCategory.max_bonus !== null && subCategory.max_bonus > 0 && !subCategory.max_bonus_unlimited) {
+      setMaxBonusInput(formatThousands(subCategory.max_bonus));
+    } else {
+      setMaxBonusInput('');
+    }
+  }, [subCategory.max_bonus, subCategory.max_bonus_unlimited]);
+  
+  // Sync minBaseInput when minimum_base changes (from extraction or parent)
+  useEffect(() => {
+    if (subCategory.minimum_base !== undefined && subCategory.minimum_base !== null && subCategory.minimum_base > 0 && subCategory.minimum_base_enabled) {
+      setMinBaseInput(formatThousands(subCategory.minimum_base));
+    } else {
+      setMinBaseInput('');
+    }
+  }, [subCategory.minimum_base, subCategory.minimum_base_enabled]);
 
   // Get list of overridden fields for visual indicator
   const getOverriddenFields = (): string[] => {
