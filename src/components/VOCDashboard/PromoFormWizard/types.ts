@@ -1015,7 +1015,32 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
   }
   
   // ============================================
-  // 12. Normalize dinamis_reward_type (PromoFormData level)
+  // 12. Normalize geo_restriction — FALLBACK TO INDONESIA
+  // ============================================
+  const validGeos = GEO_RESTRICTIONS.map(g => g.value);
+  if (!normalized.geo_restriction || !validGeos.includes(normalized.geo_restriction)) {
+    const lowerGeo = (normalized.geo_restriction || '').toLowerCase().trim();
+    if (lowerGeo === 'global') {
+      normalized.geo_restriction = 'global';
+    } else if (lowerGeo.includes('jakarta')) {
+      normalized.geo_restriction = 'jakarta';
+    } else if (lowerGeo.includes('asia')) {
+      normalized.geo_restriction = 'asia_tenggara';
+    } else {
+      // Default fallback ke Indonesia
+      normalized.geo_restriction = 'indonesia';
+    }
+  }
+  
+  // ============================================
+  // 13. Normalize valid_until_unlimited — infer from valid_until
+  // ============================================
+  if (normalized.valid_until_unlimited === undefined) {
+    normalized.valid_until_unlimited = !normalized.valid_until;
+  }
+  
+  // ============================================
+  // 14. Normalize dinamis_reward_type (PromoFormData level)
   // ============================================
   const validDinamisTypes = DINAMIS_REWARD_TYPES.map(d => d.value);
   if (normalized.dinamis_reward_type) {
