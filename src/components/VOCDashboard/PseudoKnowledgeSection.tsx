@@ -969,6 +969,7 @@ export function PseudoKnowledgeSection() {
                       <tr>
                         <th className="text-left py-3 px-4 font-medium text-foreground">Nama Tier</th>
                         <th className="text-left py-3 px-4 font-medium text-foreground">Min Downline</th>
+                        <th className="text-left py-3 px-4 font-medium text-foreground">Min Winlose</th>
                         <th className="text-left py-3 px-4 font-medium text-foreground">Komisi</th>
                       </tr>
                     </thead>
@@ -983,10 +984,16 @@ export function PseudoKnowledgeSection() {
                           )?.match(/(\d+)\s*(id|member|downline)/i);
                           const minDownline = nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
                           
+                          // Extract min_winlose from minimum_base (used for winlose threshold in referral)
+                          const minWinlose = tier.minimum_base && tier.minimum_base > 0
+                            ? new Intl.NumberFormat('id-ID').format(Number(tier.minimum_base))
+                            : '-';
+                          
                           return (
                             <tr key={idx} className="border-t border-border">
                               <td className="py-3 px-4 text-foreground">{tier.sub_name || `Tier ${idx + 1}`}</td>
                               <td className="py-3 px-4 text-foreground">{minDownline} ID</td>
+                              <td className="py-3 px-4 text-foreground">{minWinlose !== '-' ? `Rp ${minWinlose}` : '-'}</td>
                               <td className="py-3 px-4 text-button-hover font-semibold">{tier.calculation_value}%</td>
                             </tr>
                           );
