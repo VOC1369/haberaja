@@ -2335,6 +2335,10 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
         (parsed._extraction_meta as Record<string, unknown>).original_llm_category = classificationResult.category;
       }
       
+      // Store keyword override version for session invalidation
+      (parsed as unknown as Record<string, unknown>)._keyword_override_version = 
+        (await import('./extractors/category-classifier')).KEYWORD_OVERRIDE_VERSION;
+      
       console.log('[Extractor] Classification metadata merged:', {
         category: parsed.program_classification,
         wasOverridden,
