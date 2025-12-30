@@ -1523,26 +1523,45 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         {data.referral_tiers && data.referral_tiers.length > 0 && (
                           <div className="col-span-full mt-2">
                             <p className="text-muted-foreground text-xs mb-2">Detail Tier Komisi Referral</p>
-                            <div className="bg-muted rounded-lg overflow-hidden">
+                            <div className="bg-muted rounded-lg overflow-x-auto">
                               <table className="w-full text-sm">
                                 <thead className="bg-muted/50">
                                   <tr>
-                                    <th className="text-left py-2 px-3 font-medium text-foreground">Nama Tier</th>
-                                    <th className="text-left py-2 px-3 font-medium text-foreground">Min Downline</th>
-                                    <th className="text-left py-2 px-3 font-medium text-foreground">Komisi</th>
+                                    <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Nama Tier</th>
+                                    <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Min Downline</th>
+                                    <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Winlose</th>
+                                    <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Cashback</th>
+                                    <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Fee</th>
+                                    <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">WL Bersih</th>
+                                    <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Komisi %</th>
+                                    <th className="text-left py-2 px-3 font-medium text-amber-400 whitespace-nowrap">Komisi Rp</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {data.referral_tiers.slice(0, 5).map((tier, idx) => (
-                                    <tr key={tier.id || idx} className="border-t border-border">
-                                      <td className="py-2 px-3 text-foreground">{tier.tier_label || `Tier ${idx + 1}`}</td>
-                                      <td className="py-2 px-3 text-foreground">{tier.min_downline?.toLocaleString('id-ID') || 0} downline</td>
-                                      <td className="py-2 px-3 text-button-hover font-medium">{tier.commission_percentage}%</td>
-                                    </tr>
-                                  ))}
+                                  {data.referral_tiers.slice(0, 5).map((tier, idx) => {
+                                    const adminFeePercent = data.referral_admin_fee_percentage ?? 20;
+                                    const sampleWinlose = tier.sample_winlose ?? 0;
+                                    const sampleCashback = tier.sample_cashback ?? 0;
+                                    const feeAmount = tier.sample_commission_deduction ?? Math.round((sampleWinlose * adminFeePercent) / 100);
+                                    const wlBersih = tier.sample_net_winlose ?? (sampleWinlose - sampleCashback - feeAmount);
+                                    const komisiRp = tier.sample_commission_result ?? Math.round((wlBersih * tier.commission_percentage) / 100);
+                                    
+                                    return (
+                                      <tr key={tier.id || idx} className="border-t border-border">
+                                        <td className="py-2 px-3 text-foreground">{tier.tier_label || `Tier ${idx + 1}`}</td>
+                                        <td className="py-2 px-3 text-foreground">{tier.min_downline?.toLocaleString('id-ID') || 0} ID</td>
+                                        <td className="py-2 px-3 text-foreground">{formatNumber(sampleWinlose)}</td>
+                                        <td className="py-2 px-3 text-foreground">{formatNumber(sampleCashback)}</td>
+                                        <td className="py-2 px-3 text-foreground">{formatNumber(feeAmount)}</td>
+                                        <td className="py-2 px-3 text-foreground">{formatNumber(wlBersih)}</td>
+                                        <td className="py-2 px-3 text-button-hover font-medium">{tier.commission_percentage}%</td>
+                                        <td className="py-2 px-3 text-amber-400 font-semibold">{formatNumber(komisiRp)}</td>
+                                      </tr>
+                                    );
+                                  })}
                                   {data.referral_tiers.length > 5 && (
                                     <tr className="border-t border-border bg-muted/30">
-                                      <td colSpan={3} className="py-2 px-3 text-center text-muted-foreground">
+                                      <td colSpan={8} className="py-2 px-3 text-center text-muted-foreground">
                                         +{data.referral_tiers.length - 5} tier lainnya
                                       </td>
                                     </tr>
@@ -1550,6 +1569,9 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                 </tbody>
                               </table>
                             </div>
+                            <p className="text-xs text-muted-foreground mt-2 px-1">
+                              * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah data simulasi dari tabel promo.
+                            </p>
                           </div>
                         )}
                       </>
