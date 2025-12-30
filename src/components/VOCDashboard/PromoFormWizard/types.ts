@@ -88,6 +88,10 @@ export const PKB_FIELD_WHITELIST = [
   'redeem_items',
   'redeem_jenis_reward',  // Global jenis reward untuk semua redeem items
   
+  // Referral Commission Tiers (tier_network)
+  'referral_tiers',
+  'referral_admin_fee_percentage',
+  
   // Batasan & Akses
   'platform_access',
   'game_restriction',
@@ -326,6 +330,10 @@ export interface PromoFormData {
   // Point Store Redeem Table (untuk tier_point_store)
   redeem_items: RedeemItem[];
   redeem_jenis_reward: string;  // Global jenis reward untuk semua redeem items
+  
+  // Referral Commission Tiers (untuk tier_network)
+  referral_tiers: ReferralCommissionTier[];
+  referral_admin_fee_percentage: number;  // Admin fee display (readonly, e.g., 20%)
 
   // Step 4 - Template Pesan AI (saved to PersonaBinding, not PKB)
   response_template_offer: string;
@@ -413,6 +421,14 @@ export interface RedeemItem {
   biaya_lp: number;            // Contoh: 1000
   is_active?: boolean;         // Optional: toggle aktif/tidak
   note?: string;               // Optional: catatan internal
+}
+
+// Referral Commission Tier untuk tier_network (Network Metric)
+export interface ReferralCommissionTier {
+  id: string;
+  tier_label: string;          // Auto-generated: "Tier 1", "Tier 2", etc.
+  min_downline: number;        // Minimal downline aktif (≥)
+  commission_percentage: number; // Persentase komisi (e.g., 5 = 5%)
 }
 
 
@@ -1563,6 +1579,10 @@ export const initialPromoData: PromoFormData = {
   redeem_items: [],
   redeem_jenis_reward: '',
   
+  // Referral Commission Tiers (untuk tier_network)
+  referral_tiers: [],
+  referral_admin_fee_percentage: 20,  // Default 20%
+  
   response_template_offer: '',
   response_template_requirement: '',
   response_template_instruction: '',
@@ -1836,6 +1856,10 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   // Point Store Redeem Table
   redeem_items: [],
   redeem_jenis_reward: '',
+  
+  // Referral Commission Tiers (tier_network)
+  referral_tiers: [],
+  referral_admin_fee_percentage: 20,
 
   // AI Templates
   response_template_offer: '',

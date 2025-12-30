@@ -34,6 +34,7 @@ import {
   PromoFormData,
   PromoSubCategory,
   RedeemItem,
+  ReferralCommissionTier,
   TierReward,
   FastExpMission,
   LevelUpReward,
@@ -2611,7 +2612,157 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </Collapsible>
           )}
 
-          {/* Simplified Tier Level UI - Card 1: Aturan Progress Level */}
+          {/* Network Metric UI (tier_network) - Cloned from tier_point_store pattern */}
+          {data.tier_archetype === 'tier_network' && (
+            <>
+              {/* Section 1: Metode Perhitungan Komisi (Static/Declarative) */}
+              <div className="p-4 bg-card border border-border rounded-xl space-y-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calculator className="h-5 w-5 text-button-hover" />
+                  <div>
+                    <span className="font-semibold text-sm">Metode Perhitungan Komisi</span>
+                    <p className="text-xs text-muted-foreground">Konfigurasi dasar perhitungan komisi referral.</p>
+                  </div>
+                </div>
+                
+                {/* Info Display - Static/Readonly */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Basis Perhitungan</Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
+                      Winlose Bersih
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Admin Fee</Label>
+                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
+                      {data.referral_admin_fee_percentage || 20}%
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Helper text */}
+                <p className="text-xs text-muted-foreground">
+                  💡 Komisi dihitung dari winlose bersih setelah potongan admin fee.
+                </p>
+              </div>
+
+              {/* Section 2: Tabel Tier Komisi Referral */}
+              <div className="p-4 bg-card border border-border rounded-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers className="h-5 w-5 text-button-hover" />
+                    <span className="font-semibold text-sm">Tabel Tier Komisi Referral</span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const currentTiers = data.referral_tiers || [];
+                      const newTier: ReferralCommissionTier = {
+                        id: generateUUID(),
+                        tier_label: `Tier ${currentTiers.length + 1}`,
+                        min_downline: 0,
+                        commission_percentage: 0,
+                      };
+                      onChange({ referral_tiers: [...currentTiers, newTier] });
+                    }}
+                    className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Row
+                  </Button>
+                </div>
+                
+                {/* Table */}
+                {(data.referral_tiers || []).length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Tier</TableHead>
+                        <TableHead>Downline Aktif (≥)</TableHead>
+                        <TableHead>Persentase Komisi</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(data.referral_tiers || []).map((tier, index) => (
+                        <TableRow key={tier.id}>
+                          <TableCell>
+                            <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
+                              Tier {index + 1}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={tier.min_downline}
+                              onChange={(e) => {
+                                const updatedTiers = [...(data.referral_tiers || [])];
+                                updatedTiers[index] = { ...updatedTiers[index], min_downline: parseInt(e.target.value) || 0 };
+                                onChange({ referral_tiers: updatedTiers });
+                              }}
+                              placeholder="0"
+                              className="bg-muted"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={100}
+                                step={0.1}
+                                value={tier.commission_percentage}
+                                onChange={(e) => {
+                                  const updatedTiers = [...(data.referral_tiers || [])];
+                                  updatedTiers[index] = { ...updatedTiers[index], commission_percentage: parseFloat(e.target.value) || 0 };
+                                  onChange({ referral_tiers: updatedTiers });
+                                }}
+                                placeholder="0"
+                                className="bg-muted"
+                              />
+                              <span className="text-sm text-muted-foreground">%</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const updatedTiers = (data.referral_tiers || []).filter((_, i) => i !== index);
+                                // Re-label tiers after deletion
+                                const relabeledTiers = updatedTiers.map((t, i) => ({
+                                  ...t,
+                                  tier_label: `Tier ${i + 1}`
+                                }));
+                                onChange({ referral_tiers: relabeledTiers });
+                              }}
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-lg">
+                    Belum ada tier. Klik "Add Row" untuk menambahkan.
+                  </div>
+                )}
+                
+                {/* Helper text */}
+                <p className="text-xs text-muted-foreground">
+                  💡 Komisi diberikan berdasarkan jumlah downline aktif yang dimiliki user.
+                </p>
+              </div>
+            </>
+          )}
           {data.tier_archetype === 'tier_level' && (
             <>
               {/* Card 1: Aturan Progress Level (Simple, not accordion) */}
