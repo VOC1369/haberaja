@@ -346,14 +346,6 @@ export function applyKeywordOverride(
   const nameLower = promoName.toLowerCase();
   const typeLower = (promoType || '').toLowerCase();
   
-  // Special case: promo_type contains BOTH cashback AND rollingan → don't override
-  const hasCashbackInType = /cashback|cash\s*back|rebate/i.test(typeLower);
-  const hasRollinganInType = /rollingan|roll(ing)?an/i.test(typeLower);
-  if (hasCashbackInType && hasRollinganInType) {
-    console.log('[KeywordRules] promo_type has both CASHBACK and ROLLINGAN, no override');
-    return { category: llmCategory, wasOverridden: false };
-  }
-  
   // Check promo_name first (higher priority)
   for (const rule of KEYWORD_RULES) {
     if (rule.patterns.some(pattern => pattern.test(nameLower))) {
