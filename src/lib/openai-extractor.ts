@@ -1830,12 +1830,22 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     // Step 3: Merge classification metadata
     parsed.program_classification = finalCategory;
     parsed.program_classification_name = getCategoryName(finalCategory);
-    parsed.classification_confidence = classificationResult?.confidence || 'medium';
+    
+    // CRITICAL: If keyword override applied, force HIGH confidence
+    // Keyword rules are deterministic and authoritative for Referral, Rollingan, etc.
+    if (wasOverridden) {
+      parsed.classification_confidence = 'high';
+      parsed.quality_flags = ['valid']; // Clear LLM quality flags
+      console.log('[extractPromoFromImage] Keyword override applied → forcing HIGH confidence');
+    } else {
+      parsed.classification_confidence = classificationResult?.confidence || 'medium';
+      parsed.quality_flags = classificationResult?.quality_flags || [];
+    }
+    
     parsed.classification_q1 = classificationResult?.q1;
     parsed.classification_q2 = classificationResult?.q2;
     parsed.classification_q3 = classificationResult?.q3;
     parsed.classification_q4 = classificationResult?.q4;
-    parsed.quality_flags = classificationResult?.quality_flags || [];
 
     // Track override metadata (extend existing meta or create with defaults)
     if (wasOverridden) {
