@@ -1304,6 +1304,7 @@ export function PseudoKnowledgeSection() {
                   qualityFlags={extractedPromo.quality_flags || []}
                   reasoning={
                     extractedPromo.classification_q1 ? {
+                      q0: extractedPromo.classification_q0,  // v2.0.0
                       q1: extractedPromo.classification_q1,
                       q2: extractedPromo.classification_q2!,
                       q3: extractedPromo.classification_q3!,
