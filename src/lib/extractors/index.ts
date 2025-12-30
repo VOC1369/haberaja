@@ -65,6 +65,7 @@ export {
   applyKeywordOverrides,
   CLASSIFIER_PROMPT_VERSION,
   CLASSIFICATION_MODEL,
+  KEYWORD_OVERRIDE_VERSION,
   type ProgramCategory,
   type ClassificationConfidence,
   type QualityFlag,
@@ -72,6 +73,19 @@ export {
   type ClassificationResult,
   type ClassificationOverride,
 } from './category-classifier';
+
+// Keyword Rules (Single Source of Truth for classification + archetype + defaults)
+export {
+  matchKeywordRule,
+  getCategoryFromKeywords,
+  getArchetypeFromKeywords,
+  getDefaultsFromKeywords,
+  applyKeywordOverride,
+  KEYWORD_RULES,
+  ARCHETYPE_KEYWORD_ARRAYS,
+  type KeywordRule,
+  type RewardArchetype,
+} from './keyword-rules';
 
 // Category-specific extraction prompts
 export {

@@ -110,20 +110,10 @@ export const UNLOCK_CONDITION_PATTERNS = [
 // Field applicability status per archetype
 export type FieldStatus = 'required' | 'optional' | 'not_applicable';
 
-// Archetype detection keywords
-const ARCHETYPE_KEYWORDS = {
-  event_table: [
-    'scatter', 'event', 'level up', 'naik level', 'milestone', 'achievement',
-    'tournament', 'race', 'kejar level', 'bonus scatter', 'hadiah scatter',
-    'misi', 'quest', 'challenge', 'prize 2nd', 'prize 3rd', 'prize 1st'
-  ],
-  tiered_fixed: [
-    'point', 'redeem', 'tukar', 'loyalty', 'reward point', 'poin', 'penukaran'
-  ],
-  referral: [
-    'referral', 'ajak teman', 'undang', 'invite', 'ref bonus', 'rekrut'
-  ]
-} as const;
+// ============================================
+// ARCHETYPE DETECTION (delegated to keyword-rules.ts)
+// ============================================
+import { getArchetypeFromKeywords, KEYWORD_RULES } from './extractors/keyword-rules';
 
 // Game domain detection patterns
 const DOMAIN_PATTERNS = {
@@ -274,23 +264,13 @@ export function getDomainDefaults(domain: GameDomain): DomainDefaults {
 
 // Detect archetype from promo data (SYSTEM-DERIVED - not user input)
 export function detectRewardArchetype(data: { promo_name?: string; promo_type?: string }): RewardArchetype {
-  const name = (data.promo_name || '').toLowerCase();
-  const type = (data.promo_type || '').toLowerCase();
-  const combined = `${name} ${type}`;
+  const name = data.promo_name || '';
+  const type = data.promo_type || '';
   
-  // Event-based detection (highest priority for event-like promos)
-  if (ARCHETYPE_KEYWORDS.event_table.some(kw => combined.includes(kw))) {
-    return 'event_table';
-  }
-  
-  // Referral detection
-  if (ARCHETYPE_KEYWORDS.referral.some(kw => combined.includes(kw))) {
-    return 'referral';
-  }
-  
-  // Tiered/Point detection
-  if (ARCHETYPE_KEYWORDS.tiered_fixed.some(kw => combined.includes(kw))) {
-    return 'tiered_fixed';
+  // Use centralized keyword rules
+  const archetype = getArchetypeFromKeywords(name, type);
+  if (archetype) {
+    return archetype;
   }
   
   // Default: formula-based (rollingan, cashback, deposit bonus, etc)
