@@ -856,12 +856,11 @@ export function PseudoKnowledgeSection() {
                 }
                 return null;
               })()}
-              {extractedPromo.subcategories.length > 1 && (
+              {/* Only show sub-kategori badge for non-referral (referral already has "Tiered Referral" badge above) */}
+              {extractedPromo.subcategories.length > 1 && 
+               !/referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') && (
                 <Badge variant="outline" className="text-xs">
-                  {/* REFERRAL: Show "X Tier" instead of "X Sub Kategori" */}
-                  {/referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '')
-                    ? `${extractedPromo.subcategories.length} Tier`
-                    : `${extractedPromo.subcategories.length} Sub Kategori`}
+                  {extractedPromo.subcategories.length} Sub Kategori
                 </Badge>
               )}
             </div>
@@ -1005,10 +1004,10 @@ export function PseudoKnowledgeSection() {
                             <tr key={idx} className="border-t border-border">
                               <td className="py-3 px-3 text-foreground font-medium">{tier.sub_name || `Tier ${idx + 1}`}</td>
                               <td className="py-3 px-3 text-foreground">{minDownline} ID</td>
-                              <td className="py-3 px-3 text-muted-foreground italic">{formatRp(sampleWinlose)}</td>
-                              <td className="py-3 px-3 text-muted-foreground italic">{formatRp(sampleCashback)}</td>
-                              <td className="py-3 px-3 text-muted-foreground italic">{formatRp(sampleFee)}</td>
-                              <td className="py-3 px-3 text-muted-foreground italic">{formatRp(sampleNetWL)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(sampleWinlose)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(sampleCashback)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(sampleFee)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(sampleNetWL)}</td>
                               <td className="py-3 px-3 text-button-hover font-semibold">{tier.calculation_value}%</td>
                               <td className="py-3 px-3 text-amber-400 font-semibold">{formatRp(sampleKomisi)}</td>
                             </tr>
@@ -1017,7 +1016,7 @@ export function PseudoKnowledgeSection() {
                     </tbody>
                   </table>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 italic px-1">
+                <p className="text-xs text-muted-foreground mt-2 px-1">
                   * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah data tabel promo. Threshold tier hanya berdasarkan Min Downline.
                 </p>
               </div>
