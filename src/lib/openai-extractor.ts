@@ -1196,6 +1196,86 @@ Input: "Max Bonus Rp 500.000"
 Output BENAR: max_bonus: 500000 ✅
 
 
+🔹 REFERRAL BONUS MULTI-TIER (KRITIKAL!)
+
+Pattern Referral dengan Tier berbasis Downline:
+Referral promo SERING memiliki struktur tier berdasarkan JUMLAH DOWNLINE AKTIF.
+
+CONTOH TABEL REFERRAL:
+| DOWNLINE | WINLOSE | COMMISION | CASHBACK | FEE 20% | WINLOSE BERSIH | KOMISI |
+| 5 ID     | 10.000.000 | 300.000 | 700.000 | -2.000.000 | 8.500.000 | 5%  |
+| 10 ID    | 50.000.000 | ... | ... | ... | ... | 10% |
+| 15 ID    | 100.000.000 | ... | ... | ... | ... | 15% |
+
+ATURAN PARSING REFERRAL:
+1. Jika ada tabel dengan kolom DOWNLINE + KOMISI (persentase berbeda per tier):
+   - promo_mode = "multi"
+   - SETIAP ROW = 1 subcategory
+   
+2. sub_name = "Komisi X%" atau "Tier X ID" (dari nilai persentase/downline)
+
+3. calculation_value = nilai KOMISI (persentase) per tier
+   - 5 ID → 5%
+   - 10 ID → 10%
+   - 15 ID → 15%
+
+4. Tambahkan metadata tier di terms_conditions:
+   - "Tier 5%: Minimal 5 ID aktif dalam sebulan"
+   - "Tier 10%: Minimal 10 ID aktif dalam sebulan"
+
+OUTPUT FORMAT REFERRAL MULTI-TIER:
+{
+  "promo_name": "EXTRA CUAN! REFERRAL UP TO 15%",
+  "promo_type": "Referral Bonus",
+  "promo_mode": "multi",
+  "has_subcategories": true,
+  "expected_subcategory_count": 3,
+  "subcategories": [
+    {
+      "sub_name": "Komisi 5%",
+      "calculation_base": "winloss",
+      "calculation_method": "percentage",
+      "calculation_value": 5,
+      "minimum_base": null,
+      "max_bonus": null,
+      "turnover_rule": null,
+      "payout_direction": "belakang",
+      "game_types": ["ALL"],
+      "confidence": {
+        "calculation_value": "explicit",
+        "minimum_base": "not_applicable",
+        "turnover_rule": "not_applicable"
+      }
+    },
+    {
+      "sub_name": "Komisi 10%",
+      "calculation_value": 10,
+      ...
+    },
+    {
+      "sub_name": "Komisi 15%",
+      "calculation_value": 15,
+      ...
+    }
+  ],
+  "terms_conditions": [
+    "Tier 5%: Minimal 5 ID aktif dalam sebulan",
+    "Tier 10%: Minimal 10 ID aktif dalam sebulan",
+    "Tier 15%: Minimal 15 ID aktif dalam sebulan",
+    "Hitungan komisi: Winlose - Commision - Cashback - Admin Fee 20% = hasil x persentase"
+  ]
+}
+
+⚠️ ATURAN KERAS REFERRAL:
+- JANGAN merge tier menjadi 1 varian!
+- JANGAN skip tier apapun dari tabel!
+- 3 baris dengan KOMISI berbeda = 3 subcategories!
+- minimum_base = null (not_applicable untuk referral)
+- turnover_rule = null (not_applicable untuk referral)
+- payout_direction = "belakang" (komisi dihitung setelah downline bermain)
+- calculation_base = "winloss" (referral biasanya dari win/loss downline)
+
+
 🚫 BLACKLIST EXTRACTION (PHASE 4 - GAME DIKECUALIKAN)
 
 ⚠️ PARSING KRITIS — PATTERN INDONESIA:
@@ -1965,6 +2045,109 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
         
         return updatedSub;
       }) || [];
+    }
+    
+    // ============================================
+    // FIX 3C: REFERRAL MULTI-TIER DETECTION
+    // Referral promos with different commission rates per downline tier
+    // Each tier should be a separate subcategory
+    // ============================================
+    const isReferralPromo = /referral|ref\s*bonus|ajak\s*teman|undang|invite|rekrut/i.test(parsed.promo_name || '') || 
+                            /referral/i.test(parsed.promo_type || '');
+
+    if (isReferralPromo) {
+      console.log('[Extractor] REFERRAL promo detected → checking multi-tier structure');
+      
+      // Check if there are multiple percentage values in the content (indicates multi-tier)
+      const commissionMatches = rawText.match(/(\d+)\s*%/g);
+      const uniqueCommissions = commissionMatches 
+        ? [...new Set(commissionMatches.map(m => parseInt(m)))].filter(v => v > 0 && v <= 100)
+        : [];
+      
+      console.log('[Extractor] Found commission percentages:', uniqueCommissions);
+      
+      // Check for downline tier patterns
+      const hasDownlineTiers = /(\d+)\s*(id|member|downline)/i.test(rawText);
+      
+      // If we have multiple unique commissions and downline tiers but only 1 subcategory
+      if (uniqueCommissions.length > 1 && hasDownlineTiers && parsed.subcategories?.length === 1) {
+        console.log('[Extractor] Multi-tier referral detected but only 1 subcategory → expanding tiers');
+        
+        // Extract tier data from raw text
+        const tierPattern = /(\d+)\s*(id|member|downline)[^%]*?(\d+)\s*%/gi;
+        const tiers: Array<{ downline: number; commission: number }> = [];
+        let match;
+        
+        while ((match = tierPattern.exec(rawText)) !== null) {
+          tiers.push({
+            downline: parseInt(match[1]),
+            commission: parseInt(match[3])
+          });
+        }
+        
+        // Also try reverse pattern: commission first, then downline
+        const reverseTierPattern = /(\d+)\s*%[^ID]*?(\d+)\s*(id|member|downline)/gi;
+        while ((match = reverseTierPattern.exec(rawText)) !== null) {
+          const tier = {
+            downline: parseInt(match[2]),
+            commission: parseInt(match[1])
+          };
+          // Only add if not already present
+          if (!tiers.some(t => t.downline === tier.downline && t.commission === tier.commission)) {
+            tiers.push(tier);
+          }
+        }
+        
+        // Sort by commission/downline
+        tiers.sort((a, b) => a.commission - b.commission);
+        
+        if (tiers.length > 1) {
+          console.log('[Extractor] Extracted referral tiers:', tiers);
+          
+          const baseSub = parsed.subcategories[0];
+          parsed.subcategories = tiers.map(tier => ({
+            ...baseSub,
+            sub_name: `Komisi ${tier.commission}%`,
+            calculation_base: 'win_loss' as const,  // Use correct type
+            calculation_method: 'percentage' as const,
+            calculation_value: tier.commission,
+            minimum_base: null,
+            turnover_rule: null,
+            payout_direction: 'belakang' as const,
+            confidence: {
+              ...baseSub.confidence,
+              calculation_value: 'derived' as ConfidenceLevel,
+              minimum_base: 'not_applicable' as ConfidenceLevel,
+              turnover_rule: 'not_applicable' as ConfidenceLevel
+            }
+          }));
+          
+          parsed.promo_mode = 'multi';
+          parsed.has_subcategories = true;
+          parsed.expected_subcategory_count = tiers.length;
+          
+          // Add tier requirements to terms_conditions
+          const tierTerms = tiers.map(t => `Tier ${t.commission}%: Minimal ${t.downline} ID aktif`);
+          parsed.terms_conditions = [
+            ...(parsed.terms_conditions || []),
+            ...tierTerms
+          ];
+        }
+      }
+      
+      // Force correct field values for all referral subcategories
+      parsed.subcategories = parsed.subcategories?.map((sub: any) => ({
+        ...sub,
+        calculation_base: sub.calculation_base || 'win_loss',
+        payout_direction: 'belakang',
+        minimum_base: null,
+        turnover_rule: null,
+        confidence: {
+          ...sub.confidence,
+          minimum_base: 'not_applicable',
+          turnover_rule: 'not_applicable'
+        }
+      })) || [];
     }
     
     // ============================================
