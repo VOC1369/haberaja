@@ -2668,21 +2668,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         checked={data.referral_admin_fee_enabled ?? true}
                         onCheckedChange={(checked) => onChange({ referral_admin_fee_enabled: checked })}
                       />
-                      {data.referral_admin_fee_enabled !== false ? (
-                        <div className="flex items-center gap-2">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={data.referral_admin_fee_percentage ?? 20}
-                            onChange={(e) => onChange({ referral_admin_fee_percentage: parseFloat(e.target.value) || 0 })}
-                            className="w-20 bg-muted"
-                          />
-                          <span className="text-sm text-muted-foreground">%</span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Tidak aktif</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={data.referral_admin_fee_enabled !== false ? (data.referral_admin_fee_percentage ?? 20) : ''}
+                          onChange={(e) => onChange({ referral_admin_fee_percentage: parseFloat(e.target.value) || 0 })}
+                          disabled={data.referral_admin_fee_enabled === false}
+                          className="w-20 bg-muted"
+                          placeholder="0"
+                        />
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
                     </div>
                   </div>
                 </div>
