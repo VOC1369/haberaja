@@ -433,6 +433,9 @@ export interface ReferralCommissionTier {
   tier_label: string;          // Auto-generated: "Tier 1", "Tier 2", etc.
   min_downline: number;        // Minimal downline aktif (≥)
   commission_percentage: number; // Persentase komisi (e.g., 5 = 5%)
+  // Simulation fields for preview calculation
+  sample_winlose?: number;     // Contoh nilai winlose untuk simulasi
+  sample_cashback?: number;    // Contoh nilai cashback untuk simulasi
 }
 
 
