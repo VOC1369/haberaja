@@ -2958,6 +2958,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     
     // Referral Commission Tiers (tier_network)
     referral_tiers: [],
+    referral_calculation_basis: 'turnover',
+    referral_admin_fee_enabled: true,
     referral_admin_fee_percentage: 20,
 
     // Step 4 - AI Templates (empty defaults)
