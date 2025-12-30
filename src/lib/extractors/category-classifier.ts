@@ -18,9 +18,9 @@ import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
 
 // ============================================
 // KEYWORD OVERRIDE VERSION (for session invalidation)
-// Update this whenever keyword override rules change
+// Update this whenever keyword rules change in keyword-rules.ts
 // ============================================
-export const KEYWORD_OVERRIDE_VERSION = '2025-12-30-v1';
+export const KEYWORD_OVERRIDE_VERSION = '2025-12-30-v2';
 
 // ============================================
 // TYPES
@@ -184,145 +184,28 @@ export function isSystemRule(category: ProgramCategory): boolean {
   return category === 'C';
 }
 
+// ============================================
+// KEYWORD OVERRIDES (DELEGATED TO keyword-rules.ts)
+// ============================================
+
+import { applyKeywordOverride as applyKeywordOverrideFromRules } from './keyword-rules';
+
 /**
- * Post-processing override untuk memastikan konsistensi classification
- * ROLLINGAN = Reward Program (A) - turnover-based cashback
- * CASHBACK = Reward Program (A) - loss-based, instant claim
- * C = System Rule (NOT a promo - informational only)
- * PRIORITY ORDER:
- * 1. promo_name (most reliable - user-facing title)
- * 2. promo_type (only if promo_name has no clear keywords)
+ * Apply keyword-based override to LLM classification
  * 
- * CASHBACK checked before ROLLINGAN to handle "Rollingan Cashback" promo_type correctly
+ * SEMANTIC ESCAPE HATCH:
+ * Certain keywords GUARANTEE a specific category regardless of LLM output.
+ * This is a "semantic escape hatch" for cases where the keyword itself
+ * is definitionally tied to a category.
+ * 
+ * @see keyword-rules.ts for the single source of truth
  */
 export function applyKeywordOverrides(
   llmCategory: ProgramCategory,
   promoName: string,
   promoType?: string
 ): { category: ProgramCategory; wasOverridden: boolean; overrideReason?: string } {
-  const nameLower = promoName.toLowerCase();
-  const typeLower = (promoType || '').toLowerCase();
-  
-  // ============================================
-  // STEP 1: Check PROMO_NAME first (highest priority)
-  // The promo name is the most reliable indicator
-  // ============================================
-  
-  // If promo_name contains CASHBACK → A (instant loss-based reward)
-  if (/cashback|cash\s*back|rebate/i.test(nameLower)) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: CASHBACK in promo_name, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'CASHBACK in promo_name → Reward Program' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
-  // NEW MEMBER / WELCOME → A (one-time welcome bonus)
-  if (/new\s*member|member\s*baru|welcome|selamat\s*datang/i.test(nameLower)) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: NEW MEMBER in promo_name, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'NEW MEMBER → Bonus Instan' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
-  // BIRTHDAY / ULANG TAHUN → A (one-time birthday reward)
-  if (/birthday|ulang\s*tahun|ultah/i.test(nameLower)) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: BIRTHDAY in promo_name, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'BIRTHDAY → Bonus Instan' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
-  // LUCKY SPIN / MINI GAME / RODA → B (event with random/undian mechanism)
-  if (/lucky\s*spin|mini\s*game|roda\s*keberuntungan|spin\s*the\s*wheel|putar\s*roda/i.test(nameLower)) {
-    if (llmCategory !== 'B') {
-      console.log('[Classifier] Keyword override: LUCKY SPIN/MINI GAME in promo_name, forcing B (was', llmCategory, ')');
-      return { category: 'B', wasOverridden: true, overrideReason: 'LUCKY SPIN → Event Program' };
-    }
-    return { category: 'B', wasOverridden: false };
-  }
-  
-  // TOURNAMENT / TURNAMEN / KOMPETISI → B (event with ranking/winners)
-  if (/tournament|turnamen|kompetisi|leaderboard|ranking\s*event/i.test(nameLower)) {
-    if (llmCategory !== 'B') {
-      console.log('[Classifier] Keyword override: TOURNAMENT in promo_name, forcing B (was', llmCategory, ')');
-      return { category: 'B', wasOverridden: true, overrideReason: 'TOURNAMENT → Event Program' };
-    }
-    return { category: 'B', wasOverridden: false };
-  }
-  
-  // If promo_name contains ROLLINGAN → A (turnover-based cashback = Reward Program)
-  if (/rollingan|roll(ing)?an/i.test(nameLower)) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: ROLLINGAN in promo_name, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'ROLLINGAN → Reward Program (turnover cashback)' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
-  // REFERRAL → A (commission-based reward program)
-  // Referral bonus adalah bonus komisi berdasarkan aktivitas downline
-  // Bukan sistem loyalty/tier karena user LANGSUNG dapat value dari rekrutasi
-  if (/referral|referal|refferal|ajak\s*teman|ajak\s*team|undang\s*teman|invite\s*friend|extra\s*cuan.*referral|rekrut|ref\s*bonus/i.test(nameLower)) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: REFERRAL in promo_name, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'REFERRAL → Reward Program (commission-based)' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
-  // DEPOSIT PULSA / INFO → C (informational policy)
-  if (/tersedia\s*deposit|deposit\s*pulsa|info\s*deposit/i.test(nameLower)) {
-    return { category: 'C', wasOverridden: false };
-  }
-  
-  // ============================================
-  // STEP 2: Fallback to promo_type (if name didn't match)
-  // Only check promo_type if promo_name didn't have clear keywords
-  // Skip if promo_type contains BOTH keywords (e.g., "Rollingan Cashback")
-  // ============================================
-  
-  const hasCashbackInType = /cashback|cash\s*back|rebate/i.test(typeLower);
-  const hasRollinganInType = /rollingan|roll(ing)?an/i.test(typeLower);
-  
-  // If promo_type has BOTH keywords, don't override (rely on LLM)
-  if (hasCashbackInType && hasRollinganInType) {
-    console.log('[Classifier] promo_type has both CASHBACK and ROLLINGAN, no override');
-    return { category: llmCategory, wasOverridden: false };
-  }
-  
-  // promo_type pure CASHBACK
-  if (hasCashbackInType) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: CASHBACK in promo_type, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'CASHBACK in promo_type → Reward Program' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
-  // promo_type pure ROLLINGAN → A (turnover-based cashback = Reward Program)
-  if (hasRollinganInType) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: ROLLINGAN in promo_type, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'ROLLINGAN → Reward Program (turnover cashback)' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
-  // promo_type REFERRAL → A (commission-based reward)
-  const hasReferralInType = /referral\s*bonus|referal|refferal|ref\s*bonus|referral/i.test(typeLower);
-  if (hasReferralInType) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: REFERRAL in promo_type, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'REFERRAL in promo_type → Reward Program' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
-  // No override needed
-  return { category: llmCategory, wasOverridden: false };
+  return applyKeywordOverrideFromRules(llmCategory, promoName, promoType);
 }
 
 // ============================================
