@@ -18,6 +18,7 @@
  */
 
 import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
+import { generateUUID } from './supabase-client';
 
 // ============= CONFIDENCE LEVELS (EXPANDED + NOT_APPLICABLE) =============
 export type ConfidenceLevel = 
@@ -2736,6 +2737,56 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   
   const modeDetection = detectRewardMode();
   
+  // ============================================
+  // REFERRAL MULTI-TIER DETECTION & MAPPING
+  // Convert subcategories[] → referral_tiers[] for Referral promos
+  // ============================================
+  const isReferralMultiTier = 
+    /referral|referal|refferal|ajak.*teman|ajak.*team/i.test(extracted.promo_type || '') && 
+    extracted.subcategories?.length > 1;
+
+  // Helper: Extract min_downline from terms or pattern
+  const extractMinDownline = (
+    sub: typeof extracted.subcategories[0], 
+    terms: string[] | undefined,
+    tierIndex: number
+  ): number => {
+    // Pattern 1: Check sub's name for downline pattern "Tier 5 ID"
+    const nameMatch = sub.sub_name?.match(/(\d+)\s*(id|member|downline)/i);
+    if (nameMatch) return parseInt(nameMatch[1]);
+    
+    // Pattern 2: Check global terms for tier-specific pattern "Tier X%: minimal Y ID"
+    const tierTerms = terms?.find(t => 
+      t.includes(`${sub.calculation_value}%`) && 
+      /(\d+)\s*(id|member|downline)/i.test(t)
+    );
+    if (tierTerms) {
+      const match = tierTerms.match(/(\d+)\s*(id|member|downline)/i);
+      if (match) return parseInt(match[1]);
+    }
+    
+    // Pattern 3: Auto-increment fallback (5, 10, 15...)
+    return (tierIndex + 1) * 5;
+  };
+
+  // Build referral_tiers if this is a referral multi-tier promo
+  let referralTiers: Array<{
+    id: string;
+    tier_label: string;
+    min_downline: number;
+    commission_percentage: number;
+  }> = [];
+  
+  if (isReferralMultiTier) {
+    console.log('[Referral Mapping] Detected multi-tier referral, converting subcategories to referral_tiers');
+    referralTiers = extracted.subcategories.map((sub, idx) => ({
+      id: generateUUID(),
+      tier_label: sub.sub_name || `Tier ${idx + 1}`,
+      min_downline: extractMinDownline(sub, extracted.terms_conditions, idx),
+      commission_percentage: sub.calculation_value || 0,
+    }));
+  }
+  
   // ✅ SEMANTIC SANITIZATION: Prevent Rupiah from becoming WD multiplier
   subcategories.forEach((sub) => {
     if (typeof sub.turnover_rule === 'number' || typeof sub.turnover_rule === 'string') {
@@ -2957,10 +3008,19 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     redeem_jenis_reward: '',
     
     // Referral Commission Tiers (tier_network)
-    referral_tiers: [],
+    // If multi-tier referral detected, use converted referral_tiers and set tier_archetype
+    referral_tiers: referralTiers,
     referral_calculation_basis: 'turnover',
-    referral_admin_fee_enabled: true,
+    referral_admin_fee_enabled: isReferralMultiTier ? true : false,
     referral_admin_fee_percentage: 20,
+    
+    // Override for referral multi-tier: switch to tier mode with tier_network archetype
+    ...(isReferralMultiTier && {
+      reward_mode: 'tier' as const,
+      tier_archetype: 'tier_network' as const,
+      has_subcategories: false,  // Disable combo subcategories mode
+      subcategories: [],         // Clear generic subcategories
+    }),
 
     // Step 4 - AI Templates (empty defaults)
     response_template_offer: '',

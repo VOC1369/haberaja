@@ -1566,14 +1566,19 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
             )}
           </CollapsibleSection>
 
-          {/* Sub Kategori Section - Combo Promo */}
+          {/* Sub Kategori Section - Combo Promo OR Referral Tiers from subcategories */}
           {data.has_subcategories && data.subcategories && data.subcategories.length > 0 && (
             <div className="rounded-xl overflow-hidden bg-card border border-border">
               <div className="flex items-center justify-between p-6">
                 <div className="flex items-center gap-3">
-                  <span className="font-semibold text-foreground">Sub Kategori Promo ({data.subcategories.length})</span>
+                  <span className="font-semibold text-foreground">
+                    {/referral|referal|refferal/i.test(data.promo_type || '') 
+                      ? `Tier Referral (${data.subcategories.length})`
+                      : `Sub Kategori Promo (${data.subcategories.length})`
+                    }
+                  </span>
                   <Badge variant="outline" className="bg-button-hover/10 text-button-hover border-button-hover/30">
-                    Combo Promo
+                    {/referral|referal|refferal/i.test(data.promo_type || '') ? 'Referral' : 'Combo Promo'}
                   </Badge>
                 </div>
                 <Button 
@@ -1587,17 +1592,52 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
               </div>
               
               <div className="px-6 pb-6 space-y-4">
-                {data.subcategories.map((sub, idx) => (
-                  <div key={sub.id || idx} className="bg-muted rounded-lg p-4 space-y-3">
-                    {/* Subcategory Header */}
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-foreground">
-                        {sub.name || `Sub Kategori ${idx + 1}`}
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        Varian {idx + 1}
-                      </Badge>
-                    </div>
+                {/* REFERRAL LAYOUT: Simplified card with Min Downline + Komisi */}
+                {/referral|referal|refferal/i.test(data.promo_type || '') ? (
+                  <>
+                    {data.subcategories.map((sub, idx) => {
+                      // Try to extract min_downline from name pattern "Tier X ID" or infer from index
+                      const nameMatch = sub.name?.match(/(\d+)\s*(id|member|downline)/i);
+                      const minDownline = nameMatch ? parseInt(nameMatch[1]) : (idx + 1) * 5;
+                      
+                      
+                      return (
+                        <div key={sub.id || idx} className="bg-muted rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-foreground">
+                              {sub.name || `Tier ${idx + 1}`}
+                            </span>
+                            <Badge variant="outline" className="text-button-hover border-button-hover/30">
+                              {sub.calculation_value}%
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3 mt-3 text-sm">
+                            <div>
+                              <p className="text-muted-foreground text-xs">Min Downline Aktif</p>
+                              <p className="text-foreground">{minDownline} ID</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground text-xs">Komisi</p>
+                              <p className="text-button-hover font-medium">{sub.calculation_value}%</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                ) : (
+                  /* GENERIC LAYOUT: Full subcategory display */
+                  data.subcategories.map((sub, idx) => (
+                    <div key={sub.id || idx} className="bg-muted rounded-lg p-4 space-y-3">
+                      {/* Subcategory Header */}
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-foreground">
+                          {sub.name || `Sub Kategori ${idx + 1}`}
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          Varian {idx + 1}
+                        </Badge>
+                      </div>
                     
                     {/* Subcategory Details Grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
@@ -1705,7 +1745,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </div>
                     )}
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
