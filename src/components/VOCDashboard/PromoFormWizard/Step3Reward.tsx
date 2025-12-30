@@ -110,6 +110,17 @@ const DEFAULT_LP_VALUE_TYPES: SelectOption[] = [
   { value: 'freechip', label: 'Freechip' },
 ];
 
+// Referral Basis Perhitungan options
+const REFERRAL_BASIS_OPTIONS: SelectOption[] = [
+  { value: 'turnover', label: 'Turnover (TO)' },
+  { value: 'deposit', label: 'Deposit' },
+  { value: 'win', label: 'Win' },
+  { value: 'loss', label: 'Loss' },
+  { value: 'bet_amount', label: 'Bet Amount' },
+  { value: 'lp', label: 'Loyalty Point' },
+  { value: 'exp', label: 'Experience Point' },
+];
+
 export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndReturn, stepNumber = 3, stepTitle = "Konfigurasi Reward" }: Step3Props) {
   // State for new requirement input
   const [newRequirement, setNewRequirement] = useState("");
@@ -188,6 +199,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
   const [gameNameBlacklistOptions, setGameNameBlacklistOptions] = useState<SelectOption[]>(
     GAME_NAMES.map(n => ({ value: n.value, label: n.label }))
   );
+  
+  // Referral Basis options state
+  const [referralBasisOptions, setReferralBasisOptions] = useState<SelectOption[]>([...REFERRAL_BASIS_OPTIONS]);
 
   // Dynamic label helpers based on calculation_base
   const getMinimumBaseLabel = () => {
@@ -211,6 +225,12 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
       case 'lp':
       default: return 'Loyalty Point';
     }
+  };
+
+  // Helper untuk Referral Basis Label
+  const getReferralBasisLabel = (basis: string) => {
+    const found = referralBasisOptions.find(o => o.value === basis);
+    return found?.label || basis;
   };
 
   const getPointUnitShort = (pointUnit: string | undefined) => {
@@ -2615,7 +2635,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           {/* Network Metric UI (tier_network) - Cloned from tier_point_store pattern */}
           {data.tier_archetype === 'tier_network' && (
             <>
-              {/* Section 1: Metode Perhitungan Komisi (Static/Declarative) */}
+              {/* Section 1: Metode Perhitungan Komisi (Interactive) */}
               <div className="p-4 bg-card border border-border rounded-xl space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Calculator className="h-5 w-5 text-button-hover" />
@@ -2625,25 +2645,54 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </div>
                 </div>
                 
-                {/* Info Display - Static/Readonly */}
+                {/* Interactive Fields */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
+                  {/* Col 1: Basis Perhitungan - SelectWithAddNew */}
+                  <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Basis Perhitungan</Label>
-                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
-                      Winlose Bersih
-                    </div>
+                    <SelectWithAddNew
+                      value={data.referral_calculation_basis || 'turnover'}
+                      onValueChange={(value) => onChange({ referral_calculation_basis: value })}
+                      options={referralBasisOptions}
+                      onAddOption={(opt) => setReferralBasisOptions(prev => [...prev, opt])}
+                      onDeleteOption={(val) => setReferralBasisOptions(prev => prev.filter(o => o.value !== val))}
+                      placeholder="Pilih dasar (TO, Deposit, dll)"
+                    />
                   </div>
-                  <div className="space-y-1">
+                  
+                  {/* Col 2: Admin Fee - Toggle + Percentage */}
+                  <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Admin Fee</Label>
-                    <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium">
-                      {data.referral_admin_fee_percentage || 20}%
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={data.referral_admin_fee_enabled ?? true}
+                        onCheckedChange={(checked) => onChange({ referral_admin_fee_enabled: checked })}
+                      />
+                      {data.referral_admin_fee_enabled !== false ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={data.referral_admin_fee_percentage ?? 20}
+                            onChange={(e) => onChange({ referral_admin_fee_percentage: parseFloat(e.target.value) || 0 })}
+                            className="w-20 bg-muted"
+                          />
+                          <span className="text-sm text-muted-foreground">%</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Tidak aktif</span>
+                      )}
                     </div>
                   </div>
                 </div>
                 
-                {/* Helper text */}
+                {/* Dynamic Helper text */}
                 <p className="text-xs text-muted-foreground">
-                  💡 Komisi dihitung dari winlose bersih setelah potongan admin fee.
+                  💡 {data.referral_admin_fee_enabled !== false 
+                    ? `Komisi dihitung dari ${getReferralBasisLabel(data.referral_calculation_basis || 'turnover')} setelah potongan admin fee ${data.referral_admin_fee_percentage ?? 20}%.`
+                    : `Komisi dihitung dari ${getReferralBasisLabel(data.referral_calculation_basis || 'turnover')} tanpa potongan admin fee.`
+                  }
                 </p>
               </div>
 

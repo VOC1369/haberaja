@@ -90,6 +90,8 @@ export const PKB_FIELD_WHITELIST = [
   
   // Referral Commission Tiers (tier_network)
   'referral_tiers',
+  'referral_calculation_basis',
+  'referral_admin_fee_enabled',
   'referral_admin_fee_percentage',
   
   // Batasan & Akses
@@ -333,7 +335,9 @@ export interface PromoFormData {
   
   // Referral Commission Tiers (untuk tier_network)
   referral_tiers: ReferralCommissionTier[];
-  referral_admin_fee_percentage: number;  // Admin fee display (readonly, e.g., 20%)
+  referral_calculation_basis: string;     // dropdown value (turnover, deposit, win, loss, etc.)
+  referral_admin_fee_enabled: boolean;    // toggle on/off
+  referral_admin_fee_percentage: number;  // Admin fee percentage value
 
   // Step 4 - Template Pesan AI (saved to PersonaBinding, not PKB)
   response_template_offer: string;
@@ -1581,7 +1585,9 @@ export const initialPromoData: PromoFormData = {
   
   // Referral Commission Tiers (untuk tier_network)
   referral_tiers: [],
-  referral_admin_fee_percentage: 20,  // Default 20%
+  referral_calculation_basis: 'turnover',  // Default: Turnover
+  referral_admin_fee_enabled: true,        // Default: aktif
+  referral_admin_fee_percentage: 20,       // Default 20%
   
   response_template_offer: '',
   response_template_requirement: '',
@@ -1859,6 +1865,8 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   
   // Referral Commission Tiers (tier_network)
   referral_tiers: [],
+  referral_calculation_basis: 'turnover',
+  referral_admin_fee_enabled: true,
   referral_admin_fee_percentage: 20,
 
   // AI Templates
