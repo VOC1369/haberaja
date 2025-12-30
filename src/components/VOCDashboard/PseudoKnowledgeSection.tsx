@@ -786,7 +786,10 @@ export function PseudoKnowledgeSection() {
                   ? 'bg-purple-500/20 text-purple-400 border-purple-500/40' 
                   : 'bg-muted text-muted-foreground'}
               `}>
-                {formatPromoMode(extractedPromo.promo_mode)}
+                {/* REFERRAL OVERRIDE: Show "Tiered Referral" instead of "Multi Variant" */}
+                {/referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '')
+                  ? `Tiered Referral (${extractedPromo.subcategories?.length || 0} Tier)`
+                  : formatPromoMode(extractedPromo.promo_mode)}
               </Badge>
               <Badge variant="outline" className={getStatusBadgeStyle(status)}>
                 {status === 'ready' && <CheckCircle2 className="w-3 h-3 mr-1" />}
@@ -855,7 +858,10 @@ export function PseudoKnowledgeSection() {
               })()}
               {extractedPromo.subcategories.length > 1 && (
                 <Badge variant="outline" className="text-xs">
-                  {extractedPromo.subcategories.length} Sub Kategori
+                  {/* REFERRAL: Show "X Tier" instead of "X Sub Kategori" */}
+                  {/referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '')
+                    ? `${extractedPromo.subcategories.length} Tier`
+                    : `${extractedPromo.subcategories.length} Sub Kategori`}
                 </Badge>
               )}
             </div>
@@ -875,39 +881,63 @@ export function PseudoKnowledgeSection() {
           </div>
         )}
 
-        {/* COMBO Summary Bar */}
+        {/* COMBO Summary Bar - Conditional for Referral vs Other */}
         {extractedPromo.promo_mode === 'multi' && extractedPromo.subcategories.length > 1 && (
-          <div className="px-6 pb-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-muted rounded-lg p-3 text-center">
-                <span className="text-2xl font-bold text-button-hover">
-                  {extractedPromo.subcategories.length}
-                </span>
-                <span className="text-xs text-muted-foreground block mt-1">Sub Kategori</span>
-              </div>
-              <div className="bg-muted rounded-lg p-3 text-center">
-                <span className="text-sm font-semibold text-foreground">
-                  {getPayoutSummary(extractedPromo.subcategories)}
-                </span>
-                <span className="text-xs text-muted-foreground block mt-1">Payout</span>
-              </div>
-              <div className="bg-muted rounded-lg p-3 text-center">
-                <span className="text-sm font-semibold text-foreground capitalize">
-                  {getGameTypesSummary(extractedPromo.subcategories)}
-                </span>
-                <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
-              </div>
-              <div className="bg-muted rounded-lg p-3 text-center">
-                <span className={`text-sm font-semibold ${
-                  extractedPromo.global_blacklist?.enabled || extractedPromo.subcategories.some(s => s.blacklist?.enabled) 
-                    ? 'text-destructive' : 'text-muted-foreground'
-                }`}>
-                  {getBlacklistSummary(extractedPromo)}
-                </span>
-                <span className="text-xs text-muted-foreground block mt-1">Blacklist</span>
+          /referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') ? (
+            // REFERRAL: Show Tier Summary (simpler layout)
+            <div className="px-6 pb-4">
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-xs text-muted-foreground mb-3">Struktur Tier Komisi</p>
+                <div className="space-y-2">
+                  {[...extractedPromo.subcategories]
+                    .sort((a, b) => (Number(a.calculation_value) || 0) - (Number(b.calculation_value) || 0))
+                    .map((tier, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-card rounded-lg px-3 py-2">
+                      <span className="text-foreground font-medium">
+                        {tier.sub_name || `Tier ${idx + 1}`}
+                      </span>
+                      <Badge className="bg-button-hover/20 text-button-hover border-button-hover/40">
+                        {tier.calculation_value}%
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            // NON-REFERRAL: Keep existing COMBO Summary Bar
+            <div className="px-6 pb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <span className="text-2xl font-bold text-button-hover">
+                    {extractedPromo.subcategories.length}
+                  </span>
+                  <span className="text-xs text-muted-foreground block mt-1">Sub Kategori</span>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <span className="text-sm font-semibold text-foreground">
+                    {getPayoutSummary(extractedPromo.subcategories)}
+                  </span>
+                  <span className="text-xs text-muted-foreground block mt-1">Payout</span>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <span className="text-sm font-semibold text-foreground capitalize">
+                    {getGameTypesSummary(extractedPromo.subcategories)}
+                  </span>
+                  <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <span className={`text-sm font-semibold ${
+                    extractedPromo.global_blacklist?.enabled || extractedPromo.subcategories.some(s => s.blacklist?.enabled) 
+                      ? 'text-destructive' : 'text-muted-foreground'
+                  }`}>
+                    {getBlacklistSummary(extractedPromo)}
+                  </span>
+                  <span className="text-xs text-muted-foreground block mt-1">Blacklist</span>
+                </div>
+              </div>
+            </div>
+          )
         )}
 
         {/* Content */}
@@ -925,28 +955,69 @@ export function PseudoKnowledgeSection() {
             </div>
           )}
 
-          {/* Subcategories */}
+          {/* Subcategories - Conditional for Referral vs Other */}
           {extractedPromo.subcategories.length > 0 && (
-            <div>
-              {/* Only show header if multi-variant */}
-              {extractedPromo.subcategories.length > 1 && (
+            /referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') ? (
+              // REFERRAL: Render as Tier Table (not variant cards)
+              <div>
                 <h4 className="text-base font-semibold text-button-hover mb-4">
-                  Sub Kategori ({extractedPromo.subcategories.length} Varian)
+                  Detail Tier Komisi Referral
                 </h4>
-              )}
-              <div className="space-y-4">
-                {[...extractedPromo.subcategories]
-                  .sort((a, b) => {
-                    const valueA = Number(a.calculation_value) || 0;
-                    const valueB = Number(b.calculation_value) || 0;
-                    return valueA - valueB; // ascending (smallest first)
-                  })
-                  .map((sub, idx) => {
-                  const archetype = detectRewardArchetype(extractedPromo);
-                  return renderSubCategoryCard(sub, idx, archetype);
-                })}
+                <div className="bg-card rounded-lg overflow-hidden border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-medium text-foreground">Nama Tier</th>
+                        <th className="text-left py-3 px-4 font-medium text-foreground">Min Downline</th>
+                        <th className="text-left py-3 px-4 font-medium text-foreground">Komisi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...extractedPromo.subcategories]
+                        .sort((a, b) => (Number(a.calculation_value) || 0) - (Number(b.calculation_value) || 0))
+                        .map((tier, idx) => {
+                          // Extract min_downline from sub_name or terms pattern
+                          const nameMatch = tier.sub_name?.match(/(\d+)\s*(id|member|downline)/i);
+                          const termsMatch = extractedPromo.terms_conditions?.find(t => 
+                            t.includes(`${tier.calculation_value}%`) && /(\d+)\s*(id|member|downline)/i.test(t)
+                          )?.match(/(\d+)\s*(id|member|downline)/i);
+                          const minDownline = nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
+                          
+                          return (
+                            <tr key={idx} className="border-t border-border">
+                              <td className="py-3 px-4 text-foreground">{tier.sub_name || `Tier ${idx + 1}`}</td>
+                              <td className="py-3 px-4 text-foreground">{minDownline} ID</td>
+                              <td className="py-3 px-4 text-button-hover font-semibold">{tier.calculation_value}%</td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            ) : (
+              // NON-REFERRAL: Keep existing variant cards
+              <div>
+                {/* Only show header if multi-variant */}
+                {extractedPromo.subcategories.length > 1 && (
+                  <h4 className="text-base font-semibold text-button-hover mb-4">
+                    Sub Kategori ({extractedPromo.subcategories.length} Varian)
+                  </h4>
+                )}
+                <div className="space-y-4">
+                  {[...extractedPromo.subcategories]
+                    .sort((a, b) => {
+                      const valueA = Number(a.calculation_value) || 0;
+                      const valueB = Number(b.calculation_value) || 0;
+                      return valueA - valueB; // ascending (smallest first)
+                    })
+                    .map((sub, idx) => {
+                    const archetype = detectRewardArchetype(extractedPromo);
+                    return renderSubCategoryCard(sub, idx, archetype);
+                  })}
+                </div>
+              </div>
+            )
           )}
 
           {/* Tabel Hadiah (Togel Event Rewards) - READ ONLY */}
