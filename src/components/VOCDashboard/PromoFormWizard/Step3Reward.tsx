@@ -2316,7 +2316,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           <div className="space-y-3">
             <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
               <p className="text-xs text-amber-200">
-                ⚠️ Mode <strong>Tier</strong> digunakan untuk <strong>Event berbasis level, milestone, atau point store</strong>. 
+                ⚠️ Mode <strong>Tier</strong> digunakan untuk reward berbasis ambang (level, point, atau metrik lain). 
                 Pilih tipe tier di bawah untuk menampilkan field yang relevan.
               </p>
             </div>
@@ -2324,11 +2324,11 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <div className="space-y-2">
               <Label className="text-sm font-semibold">Tier Archetype <span className="text-red-500">*</span></Label>
               <Select
-                value={data.tier_archetype || 'tier_advanced'}
+                value={data.tier_archetype || ''}
                 onValueChange={(value: TierArchetype) => onChange({ tier_archetype: value })}
               >
                 <SelectTrigger className="w-full bg-card border-border">
-                  <SelectValue placeholder="Pilih tipe tier..." />
+                  <SelectValue placeholder="Pilihan tier archetype" />
                 </SelectTrigger>
                 <SelectContent className="bg-card border-border">
                   {TIER_ARCHETYPE_OPTIONS.map((option) => (
@@ -2339,7 +2339,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {TIER_ARCHETYPE_OPTIONS.find(o => o.value === (data.tier_archetype || 'tier_advanced'))?.description}
+                {data.tier_archetype 
+                  ? TIER_ARCHETYPE_OPTIONS.find(o => o.value === data.tier_archetype)?.description
+                  : 'Pilih archetype untuk melihat deskripsi'}
               </p>
             </div>
           </div>

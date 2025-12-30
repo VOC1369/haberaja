@@ -173,7 +173,7 @@ export interface PromoFormData {
   claim_date_until: string;
 
   // Tier mode
-  tier_archetype?: 'tier_level' | 'tier_point_store';  // UI-gating only (optional for backward compat)
+  tier_archetype?: 'tier_level' | 'tier_point_store' | 'tier_network';  // UI-gating only (optional for backward compat)
   tier_claim_mode?: 'otomatis' | 'manual';  // Mode claim untuk tier rewards
   promo_unit: 'lp' | 'exp' | 'hybrid';
   exp_mode: 'level_up' | 'exp_store' | 'both';
@@ -1181,6 +1181,11 @@ export const TIER_ARCHETYPE_OPTIONS = [
     value: 'tier_point_store' as const, 
     label: 'Sistem Point (Loyalty / Experience)',
     description: 'Loyalty point atau experience redemption store'
+  },
+  { 
+    value: 'tier_network' as const, 
+    label: 'Network Metric (External)',
+    description: 'Tier ditentukan oleh metrik eksternal (jumlah downline, referral count, network activity)'
   },
 ] as const;
 
