@@ -2698,37 +2698,57 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
 
               {/* Section 2: Tabel Tier Komisi Referral */}
-              <div className="p-4 bg-card border border-border rounded-xl space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Layers className="h-5 w-5 text-button-hover" />
-                    <span className="font-semibold text-sm">Tabel Tier Komisi Referral</span>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const currentTiers = data.referral_tiers || [];
-                      const newTier: ReferralCommissionTier = {
-                        id: generateUUID(),
-                        tier_label: `Tier ${currentTiers.length + 1}`,
-                        min_downline: 0,
-                        commission_percentage: 0,
-                      };
-                      onChange({ referral_tiers: [...currentTiers, newTier] });
-                    }}
-                    className="h-8 rounded-full"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Row
-                  </Button>
-                </div>
+              {(() => {
+                // Validate tier order - min_downline must increase progressively
+                const tiers = data.referral_tiers || [];
+                const orderError = tiers.length >= 2 && tiers.some((tier, idx) => {
+                  if (idx === 0) return false;
+                  return tier.min_downline <= tiers[idx - 1].min_downline;
+                });
+                
+                return (
+                  <div className="p-4 bg-card border border-border rounded-xl space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Layers className="h-5 w-5 text-button-hover" />
+                        <span className="font-semibold text-sm">Tabel Tier Komisi Referral</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const currentTiers = data.referral_tiers || [];
+                          const lastMinDownline = currentTiers.length > 0 
+                            ? currentTiers[currentTiers.length - 1].min_downline 
+                            : 0;
+                          const newTier: ReferralCommissionTier = {
+                            id: generateUUID(),
+                            tier_label: `Tier ${currentTiers.length + 1}`,
+                            min_downline: lastMinDownline + 5, // Auto-increment by 5
+                            commission_percentage: 0,
+                          };
+                          onChange({ referral_tiers: [...currentTiers, newTier] });
+                        }}
+                        className="h-8 rounded-full"
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Row
+                      </Button>
+                    </div>
 
-                {/* Table - 2 Baris per Tier */}
-                {(data.referral_tiers || []).length > 0 ? (
-                  <div className="border border-border rounded-lg overflow-hidden">
-                    <Table>
+                    {/* Validation Error */}
+                    {orderError && (
+                      <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
+                        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                        <span>Min Downline harus naik secara bertahap antar tier (Tier 2 &gt; Tier 1, dst)</span>
+                      </div>
+                    )}
+
+                    {/* Table - 2 Baris per Tier */}
+                    {(data.referral_tiers || []).length > 0 ? (
+                      <div className="border border-border rounded-lg overflow-hidden">
+                        <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
                           <TableHead className="text-foreground font-semibold px-4 w-1/4">Nama Tier</TableHead>
@@ -2905,11 +2925,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </div>
                 )}
 
-                {/* Helper text */}
-                <p className="text-xs text-muted-foreground">
-                  💡 Komisi diberikan berdasarkan jumlah downline aktif yang dimiliki user.
-                </p>
-              </div>
+                    {/* Helper text */}
+                    <p className="text-xs text-muted-foreground">
+                      💡 Komisi diberikan berdasarkan jumlah downline aktif yang dimiliki user.
+                    </p>
+                  </div>
+                );
+              })()}
             </>
           )}
           {data.tier_archetype === 'tier_level' && (
