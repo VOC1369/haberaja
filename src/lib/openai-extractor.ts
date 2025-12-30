@@ -2955,6 +2955,10 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Point Store Redeem Table
     redeem_items: [],
     redeem_jenis_reward: '',
+    
+    // Referral Commission Tiers (tier_network)
+    referral_tiers: [],
+    referral_admin_fee_percentage: 20,
 
     // Step 4 - AI Templates (empty defaults)
     response_template_offer: '',
