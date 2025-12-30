@@ -969,37 +969,12 @@ export function PseudoKnowledgeSection() {
                       <tr>
                         <th className="text-left py-3 px-3 font-medium text-foreground">Nama Tier</th>
                         <th className="text-left py-3 px-3 font-medium text-foreground">Min Downline</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">
-                          <div className="flex flex-col">
-                            <span>Winlose</span>
-                            <span className="text-xs text-muted-foreground font-normal">(simulasi)</span>
-                          </div>
-                        </th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">
-                          <div className="flex flex-col">
-                            <span>Cashback</span>
-                            <span className="text-xs text-muted-foreground font-normal">(simulasi)</span>
-                          </div>
-                        </th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">
-                          <div className="flex flex-col">
-                            <span>Fee</span>
-                            <span className="text-xs text-muted-foreground font-normal">(potongan)</span>
-                          </div>
-                        </th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">
-                          <div className="flex flex-col">
-                            <span>WL Bersih</span>
-                            <span className="text-xs text-muted-foreground font-normal">(simulasi)</span>
-                          </div>
-                        </th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Winlose</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Cashback</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Fee</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">WL Bersih</th>
                         <th className="text-left py-3 px-3 font-medium text-foreground">Komisi %</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">
-                          <div className="flex flex-col">
-                            <span>Komisi Rp</span>
-                            <span className="text-xs text-muted-foreground font-normal">(hasil)</span>
-                          </div>
-                        </th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Komisi Rp</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1043,7 +1018,7 @@ export function PseudoKnowledgeSection() {
                   </table>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 italic px-1">
-                  * Kolom simulasi (Winlose, Cashback, Fee, WL Bersih, Komisi Rp) adalah contoh perhitungan dari promo, bukan syarat kualifikasi. Threshold tier hanya berdasarkan Min Downline.
+                  * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah data tabel promo. Threshold tier hanya berdasarkan Min Downline.
                 </p>
               </div>
             ) : (
