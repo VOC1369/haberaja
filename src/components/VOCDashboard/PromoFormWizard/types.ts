@@ -1108,6 +1108,53 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
     normalized.turnover_rule_format = normalized.subcategories[0].turnover_rule_format;
   }
   
+  // ============================================
+  // 15. Normalize calculation_period_start / calculation_period_end
+  // ============================================
+  // Untuk promo periodic (mingguan, harian), pastikan period range valid
+  const claimFreq = (normalized.claim_frequency || '').toLowerCase();
+  
+  if (claimFreq === 'mingguan' || claimFreq === 'bulanan') {
+    const startDay = (normalized.calculation_period_start || '').toLowerCase().trim();
+    const endDay = (normalized.calculation_period_end || '').toLowerCase().trim();
+    
+    // Case 1: Start exists but end is empty or same as start → fix to standard week
+    if (startDay && (!endDay || startDay === endDay)) {
+      console.log('[normalizePromoData] Fixing calculation_period_end:', endDay, '→ minggu');
+      normalized.calculation_period_end = 'minggu';
+      
+      // Ensure start is set if it was empty
+      if (!normalized.calculation_period_start) {
+        normalized.calculation_period_start = 'senin';
+      }
+    }
+    
+    // Case 2: End exists but start is empty → default start to senin
+    if (endDay && !startDay) {
+      console.log('[normalizePromoData] Fixing calculation_period_start: empty → senin');
+      normalized.calculation_period_start = 'senin';
+    }
+    
+    // Case 3: Both empty but frequency is weekly/monthly → set standard week
+    if (!startDay && !endDay) {
+      console.log('[normalizePromoData] Setting default weekly period: senin → minggu');
+      normalized.calculation_period_start = 'senin';
+      normalized.calculation_period_end = 'minggu';
+    }
+  }
+  
+  // For harian (daily) frequency, ensure proper range if both missing
+  if (claimFreq === 'harian') {
+    const startDay = (normalized.calculation_period_start || '').toLowerCase().trim();
+    const endDay = (normalized.calculation_period_end || '').toLowerCase().trim();
+    
+    // Default daily range: senin → minggu (all days active)
+    if (!startDay && !endDay) {
+      normalized.calculation_period_start = 'senin';
+      normalized.calculation_period_end = 'minggu';
+    }
+  }
+  
   return normalized;
 }
 
