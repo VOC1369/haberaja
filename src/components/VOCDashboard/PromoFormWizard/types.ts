@@ -910,20 +910,35 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
   // ============================================
   // 5. Normalize reward_mode based on actual data context
   // ============================================
-  // Jika calculation_method = 'percentage' dan ada calculation_value → harusnya 'formula' (dinamis)
-  if (normalized.calculation_method === 'percentage' && normalized.calculation_value) {
-    if (normalized.reward_mode !== 'formula') {
-      console.log('[normalizePromoData] Fixing reward_mode: was', normalized.reward_mode, '→ formula');
-      normalized.reward_mode = 'formula';
+  
+  // PRIORITY 1: Check for tier_network (Referral) first - this takes precedence!
+  // Referral promos use referral_tiers, not standard tiers
+  const referralTiers = (normalized as PromoFormData).referral_tiers;
+  const tierArchetype = normalized.tier_archetype;
+
+  if (tierArchetype === 'tier_network' || (referralTiers && referralTiers.length > 0)) {
+    if (normalized.reward_mode !== 'tier') {
+      console.log('[normalizePromoData] Fixing reward_mode: was', normalized.reward_mode, '→ tier (referral detected)');
+      normalized.reward_mode = 'tier';
+      normalized.tier_archetype = 'tier_network';
     }
   }
-  
-  // Jika ada tiers dengan data → harusnya 'tier'
-  const tiers = (normalized as PromoFormData).tiers;
-  if (tiers && tiers.length > 0 && tiers.some(t => t.type || t.minimal_point)) {
-    if (normalized.reward_mode !== 'tier') {
-      console.log('[normalizePromoData] Fixing reward_mode: was', normalized.reward_mode, '→ tier');
-      normalized.reward_mode = 'tier';
+  // PRIORITY 2: Check for standard tiers (loyalty, level-up)
+  else {
+    const tiers = (normalized as PromoFormData).tiers;
+    if (tiers && tiers.length > 0 && tiers.some(t => t.type || t.minimal_point)) {
+      if (normalized.reward_mode !== 'tier') {
+        console.log('[normalizePromoData] Fixing reward_mode: was', normalized.reward_mode, '→ tier');
+        normalized.reward_mode = 'tier';
+      }
+    }
+    // PRIORITY 3: Percentage + calculation_value → formula (dinamis)
+    // Only if NOT a tier mode
+    else if (normalized.calculation_method === 'percentage' && normalized.calculation_value) {
+      if (normalized.reward_mode !== 'formula') {
+        console.log('[normalizePromoData] Fixing reward_mode: was', normalized.reward_mode, '→ formula');
+        normalized.reward_mode = 'formula';
+      }
     }
   }
   
