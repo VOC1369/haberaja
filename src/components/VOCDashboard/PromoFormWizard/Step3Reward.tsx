@@ -2731,10 +2731,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/30 hover:bg-muted/30">
-                          <TableHead className="text-foreground font-semibold px-4 w-[120px]">Tier</TableHead>
-                          <TableHead className="text-foreground font-semibold px-4">Downline Aktif (≥)</TableHead>
-                          <TableHead className="text-foreground font-semibold px-4">Winlose</TableHead>
-                          <TableHead className="text-foreground font-semibold px-4">Cashback</TableHead>
+                          <TableHead className="text-foreground font-semibold px-4 w-1/4">Nama Tier</TableHead>
+                          <TableHead className="text-foreground font-semibold px-4 w-1/4">Downline Aktif (≥)</TableHead>
+                          <TableHead className="text-foreground font-semibold px-4 w-1/4">Winlose</TableHead>
+                          <TableHead className="text-foreground font-semibold px-4 w-1/4">Cashback</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -2751,14 +2751,21 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
                           return (
                             <React.Fragment key={tier.id}>
-                              {/* Row 1: Identitas & Input */}
+                              {/* Row 1: Identitas & Input - 4 kolom sama lebar */}
                               <TableRow className="hover:bg-muted/20 border-b-0">
-                                <TableCell className="px-4 py-4">
-                                  <Badge variant="outline" className="font-medium">
-                                    Tier {index + 1}
-                                  </Badge>
+                                <TableCell className="px-4 py-4 w-1/4">
+                                  <Input
+                                    value={tier.tier_label || `Tier ${index + 1}`}
+                                    onChange={(e) => {
+                                      const updatedTiers = [...(data.referral_tiers || [])];
+                                      updatedTiers[index] = { ...updatedTiers[index], tier_label: e.target.value };
+                                      onChange({ referral_tiers: updatedTiers });
+                                    }}
+                                    placeholder={`Tier ${index + 1}`}
+                                    className="bg-muted"
+                                  />
                                 </TableCell>
-                                <TableCell className="px-4 py-4">
+                                <TableCell className="px-4 py-4 w-1/4">
                                   <Input
                                     type="number"
                                     min={0}
@@ -2775,7 +2782,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                     className="bg-muted"
                                   />
                                 </TableCell>
-                                <TableCell className="px-4 py-4">
+                                <TableCell className="px-4 py-4 w-1/4">
                                   <FormattedNumberInput
                                     value={tier.sample_winlose ?? 0}
                                     onChange={(val) => {
@@ -2787,7 +2794,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                     className="bg-muted"
                                   />
                                 </TableCell>
-                                <TableCell className="px-4 py-4">
+                                <TableCell className="px-4 py-4 w-1/4">
                                   <FormattedNumberInput
                                     value={tier.sample_cashback ?? 0}
                                     onChange={(val) => {
@@ -2801,86 +2808,97 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                 </TableCell>
                               </TableRow>
 
-                              {/* Row 2: Perhitungan Auto */}
+                              {/* Row 2: Perhitungan - 4 kolom sama lebar (25% each) */}
+                              <TableRow className="bg-muted/20 border-b-0">
+                                <TableCell className="px-4 py-3 w-1/4">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground">
+                                      Fee {adminFeePercent}%
+                                      <span className="ml-1 text-[10px] text-muted-foreground/60">(dari Admin Fee)</span>
+                                    </Label>
+                                    <FormattedNumberInput
+                                      value={feeAmount}
+                                      onChange={() => {}}
+                                      placeholder="Rp"
+                                      className="bg-muted opacity-60 cursor-not-allowed"
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-4 py-3 w-1/4">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground">Winlose Bersih</Label>
+                                    <FormattedNumberInput
+                                      value={winloseBersih}
+                                      onChange={() => {}}
+                                      placeholder="Rp"
+                                      className="bg-muted opacity-60 cursor-not-allowed"
+                                    />
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-4 py-3 w-1/4">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground">Persentase Komisi</Label>
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        step={0.1}
+                                        value={tier.commission_percentage}
+                                        onChange={(e) => {
+                                          const updatedTiers = [...(data.referral_tiers || [])];
+                                          updatedTiers[index] = {
+                                            ...updatedTiers[index],
+                                            commission_percentage: parseFloat(e.target.value) || 0,
+                                          };
+                                          onChange({ referral_tiers: updatedTiers });
+                                        }}
+                                        placeholder="0"
+                                        className="bg-muted"
+                                      />
+                                      <span className="text-sm text-muted-foreground">%</span>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-4 py-3 w-1/4">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs text-muted-foreground">Komisi</Label>
+                                    <FormattedNumberInput
+                                      value={komisi}
+                                      onChange={() => {}}
+                                      placeholder="Rp"
+                                      className="bg-primary/10 border-primary/20 cursor-not-allowed"
+                                    />
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+
+                              {/* Row 3: Delete Button */}
                               <TableRow
                                 className={cn(
                                   "bg-muted/20",
                                   index < (data.referral_tiers || []).length - 1 && "border-b-2 border-border"
                                 )}
                               >
-                                <TableCell colSpan={4} className="px-4 py-3">
-                                  <div className="grid grid-cols-5 gap-4">
-                                    {/* Fee (LOCKED) */}
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-muted-foreground">
-                                        Fee {adminFeePercent}%
-                                        <span className="ml-1 text-[10px] text-muted-foreground/60">(dari Admin Fee)</span>
-                                      </Label>
-                                      <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium text-muted-foreground">
-                                        Rp {formatNumberWithSeparator(feeAmount)}
-                                      </div>
-                                    </div>
-
-                                    {/* Winlose Bersih (Auto) */}
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-muted-foreground">Winlose Bersih</Label>
-                                      <div className="px-3 py-2 bg-muted rounded-md text-sm font-medium text-muted-foreground">
-                                        Rp {formatNumberWithSeparator(winloseBersih)}
-                                      </div>
-                                    </div>
-
-                                    {/* Persentase Komisi (Input) */}
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-muted-foreground">Persentase Komisi</Label>
-                                      <div className="flex items-center gap-2">
-                                        <Input
-                                          type="number"
-                                          min={0}
-                                          max={100}
-                                          step={0.1}
-                                          value={tier.commission_percentage}
-                                          onChange={(e) => {
-                                            const updatedTiers = [...(data.referral_tiers || [])];
-                                            updatedTiers[index] = {
-                                              ...updatedTiers[index],
-                                              commission_percentage: parseFloat(e.target.value) || 0,
-                                            };
-                                            onChange({ referral_tiers: updatedTiers });
-                                          }}
-                                          placeholder="0"
-                                          className="bg-muted"
-                                        />
-                                        <span className="text-sm text-muted-foreground">%</span>
-                                      </div>
-                                    </div>
-
-                                    {/* Komisi (Auto) */}
-                                    <div className="space-y-1">
-                                      <Label className="text-xs text-muted-foreground">Komisi</Label>
-                                      <div className="px-3 py-2 bg-primary/10 border border-primary/20 rounded-md text-sm font-semibold text-primary">
-                                        Rp {formatNumberWithSeparator(komisi)}
-                                      </div>
-                                    </div>
-
-                                    {/* Delete Button */}
-                                    <div className="flex items-end justify-end">
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => {
-                                          const updatedTiers = (data.referral_tiers || []).filter((_, i) => i !== index);
-                                          const relabeledTiers = updatedTiers.map((t, i) => ({
-                                            ...t,
-                                            tier_label: `Tier ${i + 1}`,
-                                          }));
-                                          onChange({ referral_tiers: relabeledTiers });
-                                        }}
-                                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
+                                <TableCell colSpan={4} className="px-4 py-2">
+                                  <div className="flex justify-end">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const updatedTiers = (data.referral_tiers || []).filter((_, i) => i !== index);
+                                        const relabeledTiers = updatedTiers.map((t, i) => ({
+                                          ...t,
+                                          tier_label: t.tier_label || `Tier ${i + 1}`,
+                                        }));
+                                        onChange({ referral_tiers: relabeledTiers });
+                                      }}
+                                      className="h-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-1" />
+                                      Hapus Tier
+                                    </Button>
                                   </div>
                                 </TableCell>
                               </TableRow>
