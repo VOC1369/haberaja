@@ -230,6 +230,26 @@ export function isSystemRule(category: ProgramCategory): boolean {
 }
 
 /**
+ * EPISTEMIC GUARD: Validate that Q0 and derived category are consistent
+ * RULE: User-facing incentive (Q0=ya) CANNOT be classified as System Rule (C)
+ * 
+ * @returns { valid: boolean, violation?: string }
+ */
+export function validateEpistemicConsistency(
+  q0: string,
+  derivedCategory: ProgramCategory
+): { valid: boolean; violation?: string } {
+  // RULE: User-facing incentive CANNOT be System Rule
+  if (q0 === 'ya' && derivedCategory === 'C') {
+    return {
+      valid: false,
+      violation: 'User-facing incentive (Q0=ya) cannot be classified as System Rule (C)'
+    };
+  }
+  return { valid: true };
+}
+
+/**
  * Post-processing override untuk memastikan konsistensi classification
  * ROLLINGAN = Reward Program (A) - turnover-based cashback
  * CASHBACK = Reward Program (A) - loss-based, instant claim
