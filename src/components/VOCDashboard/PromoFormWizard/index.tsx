@@ -93,68 +93,6 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
 
   // Handle navigation from Review to specific step for editing
   const handleGoToStepFromReview = (step: number) => {
-    // Auto-convert subcategories → referral_tiers jika:
-    // 1. Navigasi ke Step 4 (Reward Config)
-    // 2. Promo adalah tipe Referral
-    // 3. Data masih di subcategories[] (belum di referral_tiers[])
-    // 4. tier_archetype belum 'tier_network'
-    const isReferralPromo = /referral|referal|refferal|ajak\s*teman|ajak\s*team/i.test(formData.promo_type || '');
-    const hasSubcategoriesData = formData.subcategories && formData.subcategories.length > 0;
-    const notYetConverted = formData.tier_archetype !== 'tier_network';
-    const noReferralTiersYet = !formData.referral_tiers || formData.referral_tiers.length === 0;
-    
-    if (step === 4 && isReferralPromo && hasSubcategoriesData && notYetConverted && noReferralTiersYet) {
-      // Convert subcategories ke referral_tiers format
-      const convertedTiers = formData.subcategories.map((sub, idx) => {
-        // Parse min_downline dari berbagai kemungkinan field
-        let minDownline = 0;
-        
-        // Pattern 1: Cek field min_downline langsung (jika ada)
-        if (typeof (sub as any).min_downline === 'number') {
-          minDownline = (sub as any).min_downline;
-        }
-        // Pattern 2: Parse dari terms_conditions jika ada pattern "X ID" atau "X member"
-        else if (formData.custom_terms) {
-          const tierPercentage = sub.calculation_value;
-          // Cari pattern: "5% ... 5 ID" atau "Tier 5%: minimal 5 ID aktif"
-          const regex = new RegExp(`${tierPercentage}%[^\\d]*(\\d+)\\s*(id|member|downline|aktif)`, 'i');
-          const match = formData.custom_terms.match(regex);
-          if (match) {
-            minDownline = parseInt(match[1], 10);
-          }
-        }
-        // Pattern 3: Fallback - increment berdasarkan index (5, 10, 15, 20...)
-        if (minDownline === 0) {
-          minDownline = (idx + 1) * 5;
-        }
-        
-        return {
-          id: sub.id || crypto.randomUUID(),
-          tier_label: sub.name || `Tier ${idx + 1}`,
-          min_downline: minDownline,
-          commission_percentage: sub.calculation_value || 0,
-        };
-      });
-      
-      // Update formData dengan referral_tiers yang sudah di-convert
-      handleChange({
-        reward_mode: 'tier',
-        tier_archetype: 'tier_network',
-        referral_tiers: convertedTiers,
-        referral_admin_fee_enabled: true,
-        referral_admin_fee_percentage: formData.referral_admin_fee_percentage || 20,
-        has_subcategories: false,
-        subcategories: [], // Clear subcategories setelah di-convert
-      });
-      
-      // Also set selectedProgram to 'reward' if not set
-      if (!selectedProgram) {
-        setSelectedProgram('reward');
-      }
-      
-      console.log('[Wizard] Auto-converted referral subcategories to referral_tiers:', convertedTiers);
-    }
-    
     setIsEditingFromReview(true);
     setCurrentStep(step);
   };

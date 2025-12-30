@@ -2837,7 +2837,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                       <span className="ml-1 text-[10px] text-muted-foreground/60">(dari Admin Fee)</span>
                                     </Label>
                                     <div className="h-10 px-3 py-2 bg-muted/50 border border-input rounded-md flex items-center text-sm text-muted-foreground">
-                                      {feeAmount === 0 ? '0' : formatNumberWithSeparator(feeAmount)}
+                                      {formatNumberWithSeparator(feeAmount)}
                                     </div>
                                   </div>
                                 </TableCell>
@@ -2845,7 +2845,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                   <div className="space-y-1">
                                     <Label className="text-xs text-muted-foreground">Winlose Bersih</Label>
                                     <div className="h-10 px-3 py-2 bg-muted/50 border border-input rounded-md flex items-center text-sm text-muted-foreground">
-                                      {winloseBersih === 0 ? '0' : formatNumberWithSeparator(winloseBersih)}
+                                      {formatNumberWithSeparator(winloseBersih)}
                                     </div>
                                   </div>
                                 </TableCell>
@@ -2878,7 +2878,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                   <div className="space-y-1">
                                     <Label className="text-xs text-muted-foreground">Komisi</Label>
                                     <div className="h-10 px-3 py-2 bg-primary/10 border border-primary/20 rounded-md flex items-center text-sm font-medium text-foreground">
-                                      {komisi === 0 ? '0' : formatNumberWithSeparator(komisi)}
+                                      {formatNumberWithSeparator(komisi)}
                                     </div>
                                   </div>
                                 </TableCell>

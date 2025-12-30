@@ -1806,166 +1806,117 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                 {/* Detail per Varian - Combined Ilustrasi + S&K */}
                 {data.has_subcategories && data.subcategories && data.subcategories.length > 0 ? (
                   <div className="space-y-4">
-                    {/* Special handling for Referral Promo: Show Tier Komisi Table instead of per-variant details */}
-                    {/referral|referal|refferal|ajak\s*teman|ajak\s*team/i.test(data.promo_type || '') ? (
-                      <>
-                        <p className="font-semibold text-foreground">Tabel Tier Komisi Referral</p>
+                    <p className="font-semibold text-foreground">Detail per Varian:</p>
+                    
+                    {data.subcategories.map((sub, idx) => (
+                      <Collapsible key={sub.id || idx} defaultOpen={idx === 0}>
+                        <CollapsibleTrigger className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:bg-card/80 transition-colors group">
+                          <div className="flex items-center gap-3">
+                            <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180 text-muted-foreground group-data-[state=open]:text-button-hover" />
+                            <span className="font-medium text-button-hover">{sub.name || `Varian ${idx + 1}`}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {sub.game_types?.length > 0 
+                                ? sub.game_types.map((t: string) => GAME_RESTRICTIONS.find(g => g.value === t)?.label || t).join(', ')
+                                : 'Semua Game'}
+                            </Badge>
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            Max: {sub.dinamis_max_claim_unlimited ? '∞' : `Rp ${formatNumber(sub.dinamis_max_claim || 0)}`}
+                          </span>
+                        </CollapsibleTrigger>
                         
-                        <div className="overflow-hidden rounded-lg border border-border">
-                          <table className="w-full text-sm">
-                            <thead className="bg-muted/30">
-                              <tr>
-                                <th className="text-left py-2 px-3 font-medium text-foreground">Tier</th>
-                                <th className="text-left py-2 px-3 font-medium text-foreground">Min Downline</th>
-                                <th className="text-left py-2 px-3 font-medium text-foreground">Komisi</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {data.subcategories.map((sub, idx) => {
-                                // Parse min_downline from name or custom_terms
-                                const nameMatch = sub.name?.match(/(\d+)\s*(id|member|downline)/i);
-                                const minDownline = (sub as any).min_downline || (nameMatch ? parseInt(nameMatch[1], 10) : (idx + 1) * 5);
-                                const commissionPercent = sub.calculation_value || 0;
-                                
-                                return (
-                                  <tr key={sub.id || idx} className="border-t border-border">
-                                    <td className="py-2 px-3 text-button-hover font-medium">
-                                      {sub.name || `Tier ${idx + 1}`}
-                                    </td>
-                                    <td className="py-2 px-3 text-foreground">
-                                      ≥ {minDownline} downline aktif
-                                    </td>
-                                    <td className="py-2 px-3 text-button-hover font-semibold">
-                                      {commissionPercent}%
-                                    </td>
+                        <CollapsibleContent className="mt-2 border border-border rounded-xl overflow-hidden bg-card">
+                          {/* 🔒 EPISTEMIC AUTHORITY: Ilustrasi Perhitungan - ONLY cap if EXPLICIT max_bonus */}
+                          {sub.calculation_method === 'percentage' && sub.calculation_value ? (
+                            <div className="p-4 border-b border-border">
+                              <p className="font-medium text-foreground mb-3 flex items-center gap-2">
+                                <span>📊</span> Ilustrasi Perhitungan
+                              </p>
+                              <table className="w-full text-sm">
+                                <thead className="bg-muted/30">
+                                  <tr>
+                                    <th className="text-left py-1.5 px-3 font-medium text-foreground">
+                                      {getBaseColumnLabel(sub.calculation_base)}
+                                    </th>
+                                    <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">Kalkulasi</th>
+                                    <th className="text-left py-1.5 px-3 font-medium text-foreground">Perkiraan Bonus</th>
                                   </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                        
-                        {/* Disclaimer for referral */}
-                        <p className="text-sm text-amber-500 flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 shrink-0" />
-                          Nilai ini hanya ilustrasi. Nominal akhir diverifikasi oleh Human Agent & sistem.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="font-semibold text-foreground">Detail per Varian:</p>
-                        
-                        {data.subcategories.map((sub, idx) => (
-                          <Collapsible key={sub.id || idx} defaultOpen={idx === 0}>
-                            <CollapsibleTrigger className="w-full flex items-center justify-between p-4 bg-card border border-border rounded-xl hover:bg-card/80 transition-colors group">
-                              <div className="flex items-center gap-3">
-                                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180 text-muted-foreground group-data-[state=open]:text-button-hover" />
-                                <span className="font-medium text-button-hover">{sub.name || `Varian ${idx + 1}`}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {sub.game_types?.length > 0 
-                                    ? sub.game_types.map((t: string) => GAME_RESTRICTIONS.find(g => g.value === t)?.label || t).join(', ')
-                                    : 'Semua Game'}
-                                </Badge>
-                              </div>
-                              <span className="text-sm text-muted-foreground">
-                                Max: {sub.dinamis_max_claim_unlimited ? '∞' : `Rp ${formatNumber(sub.dinamis_max_claim || 0)}`}
-                              </span>
-                            </CollapsibleTrigger>
-                            
-                            <CollapsibleContent className="mt-2 border border-border rounded-xl overflow-hidden bg-card">
-                              {/* 🔒 EPISTEMIC AUTHORITY: Ilustrasi Perhitungan - ONLY cap if EXPLICIT max_bonus */}
-                              {sub.calculation_method === 'percentage' && sub.calculation_value ? (
-                                <div className="p-4 border-b border-border">
-                                  <p className="font-medium text-foreground mb-3 flex items-center gap-2">
-                                    <span>📊</span> Ilustrasi Perhitungan
-                                  </p>
-                                  <table className="w-full text-sm">
-                                    <thead className="bg-muted/30">
-                                      <tr>
-                                        <th className="text-left py-1.5 px-3 font-medium text-foreground">
-                                          {getBaseColumnLabel(sub.calculation_base)}
-                                        </th>
-                                        <th className="text-left py-1.5 px-3 font-medium text-muted-foreground">Kalkulasi</th>
-                                        <th className="text-left py-1.5 px-3 font-medium text-foreground">Perkiraan Bonus</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                    {(() => {
-                                        // 🔧 FIX: Fixed illustration values (minimum_base = min REWARD threshold, bukan base amount!)
-                                        const illustrationAmounts = [1_000_000, 2_000_000, 5_000_000];
-                                        return illustrationAmounts.map((amount, i) => {
-                                          const rawBonus = amount * (sub.calculation_value / 100);
-                                          // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
-                                          const maxClaim = getExplicitMaxBonus(sub);
-                                          const bonus = Math.min(rawBonus, maxClaim);
-                                          const isCapped = bonus < rawBonus;
-                                          // 🔒 ONTOLOGY: Check if bonus is below payout threshold
-                                          const minClaim = sub.dinamis_min_claim || 0;
-                                          const isBelowMinClaim = minClaim > 0 && bonus < minClaim;
-                                          return (
-                                            <tr key={i} className="border-t border-border">
-                                              <td className="py-1.5 px-3">
-                                                <span className={i === 0 ? "text-button-hover font-medium" : "text-foreground"}>
-                                                  Rp {formatNumber(amount)}
-                                                </span>
-                                              </td>
-                                              <td className="py-1.5 px-3 text-muted-foreground">
-                                                {formatNumber(amount)} × {sub.calculation_value}%
-                                              </td>
-                                              <td className="py-1.5 px-3 font-medium text-foreground">
-                                                <span className={isBelowMinClaim ? "text-muted-foreground line-through" : ""}>
-                                                  Rp {formatNumber(bonus)}{isCapped && ' (max)'}
-                                                </span>
-                                                {isBelowMinClaim && (
-                                                  <span className="text-amber-500 text-xs ml-2">*</span>
-                                                )}
-                                              </td>
-                                            </tr>
-                                          );
-                                        });
-                                      })()}
-                                    </tbody>
-                                  </table>
-                                  {/* 🔒 EPISTEMIC: Show "no max" disclaimer if max_bonus is NOT explicit */}
-                                  {!hasExplicitMaxBonus(sub) && !sub.dinamis_max_claim_unlimited && (
-                                    <p className="text-xs text-muted-foreground mt-2 italic">
-                                      ⚠️ Tidak ada batas maksimum yang dinyatakan pada promo ini.
-                                    </p>
-                                  )}
-                                </div>
-                              ) : null}
-                              
-                              {/* Syarat & Ketentuan */}
-                              <div className="p-4">
-                                <p className="font-medium text-foreground mb-3 flex items-center gap-2">
-                                  <span>📋</span> Syarat & Ketentuan
+                                </thead>
+                                <tbody>
+                                {(() => {
+                                    // 🔧 FIX: Fixed illustration values (minimum_base = min REWARD threshold, bukan base amount!)
+                                    const illustrationAmounts = [1_000_000, 2_000_000, 5_000_000];
+                                    return illustrationAmounts.map((amount, i) => {
+                                      const rawBonus = amount * (sub.calculation_value / 100);
+                                      // 🔒 ONLY cap if max_bonus is EXPLICITLY set!
+                                      const maxClaim = getExplicitMaxBonus(sub);
+                                      const bonus = Math.min(rawBonus, maxClaim);
+                                      const isCapped = bonus < rawBonus;
+                                      // 🔒 ONTOLOGY: Check if bonus is below payout threshold
+                                      const minClaim = sub.dinamis_min_claim || 0;
+                                      const isBelowMinClaim = minClaim > 0 && bonus < minClaim;
+                                      return (
+                                        <tr key={i} className="border-t border-border">
+                                          <td className="py-1.5 px-3">
+                                            <span className={i === 0 ? "text-button-hover font-medium" : "text-foreground"}>
+                                              Rp {formatNumber(amount)}
+                                            </span>
+                                          </td>
+                                          <td className="py-1.5 px-3 text-muted-foreground">
+                                            {formatNumber(amount)} × {sub.calculation_value}%
+                                          </td>
+                                          <td className="py-1.5 px-3 font-medium text-foreground">
+                                            <span className={isBelowMinClaim ? "text-muted-foreground line-through" : ""}>
+                                              Rp {formatNumber(bonus)}{isCapped && ' (max)'}
+                                            </span>
+                                            {isBelowMinClaim && (
+                                              <span className="text-amber-500 text-xs ml-2">*</span>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      );
+                                    });
+                                  })()}
+                                </tbody>
+                              </table>
+                              {/* 🔒 EPISTEMIC: Show "no max" disclaimer if max_bonus is NOT explicit */}
+                              {!hasExplicitMaxBonus(sub) && !sub.dinamis_max_claim_unlimited && (
+                                <p className="text-xs text-muted-foreground mt-2 italic">
+                                  ⚠️ Tidak ada batas maksimum yang dinyatakan pada promo ini.
                                 </p>
-                                <ol className="space-y-2 text-sm text-muted-foreground">
-                                  {generateSubcategoryTerms(sub, data).map((term, i) => (
-                                    <li key={i} className="flex gap-2 leading-relaxed">
-                                      <span className="flex-shrink-0">{i + 1}.</span>
-                                      <span>{term}</span>
-                                    </li>
-                                  ))}
-                                </ol>
-                              </div>
-                            </CollapsibleContent>
-                          </Collapsible>
-                        ))}
-                        
-                        {/* Disclaimer */}
-                        {data.reward_mode === 'formula' && data.subcategories.some(s => s.calculation_method === 'percentage' && s.calculation_value) && (
-                          <p className="text-sm text-amber-500 flex items-center gap-2">
-                            <AlertCircle className="h-4 w-4 shrink-0" />
-                            Nilai ilustrasi hanya perkiraan. Nominal akhir diverifikasi oleh Human Agent & sistem.
-                          </p>
-                        )}
-                      </>
+                              )}
+                            </div>
+                          ) : null}
+                          
+                          {/* Syarat & Ketentuan */}
+                          <div className="p-4">
+                            <p className="font-medium text-foreground mb-3 flex items-center gap-2">
+                              <span>📋</span> Syarat & Ketentuan
+                            </p>
+                            <ol className="space-y-2 text-sm text-muted-foreground">
+                              {generateSubcategoryTerms(sub, data).map((term, i) => (
+                                <li key={i} className="flex gap-2 leading-relaxed">
+                                  <span className="flex-shrink-0">{i + 1}.</span>
+                                  <span>{term}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ))}
+                    
+                    {/* Disclaimer */}
+                    {data.reward_mode === 'formula' && data.subcategories.some(s => s.calculation_method === 'percentage' && s.calculation_value) && (
+                      <p className="text-sm text-amber-500 flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        Nilai ilustrasi hanya perkiraan. Nominal akhir diverifikasi oleh Human Agent & sistem.
+                      </p>
                     )}
                     
                     {/* Global Terms - separate section */}
                     <div className="mt-4 pt-4 border-t border-border">
-                      <p className="font-semibold text-foreground mb-3">Syarat & Ketentuan:</p>
+                      <p className="font-semibold text-foreground mb-3">Ketentuan Umum:</p>
                       <ol className="space-y-2 text-sm text-muted-foreground">
                         {generateGlobalTerms(data).map((term, i) => (
                           <li key={i} className="flex gap-2 leading-relaxed">
