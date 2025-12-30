@@ -259,7 +259,7 @@ export function applyKeywordOverrides(
   // REFERRAL → A (commission-based reward program)
   // Referral bonus adalah bonus komisi berdasarkan aktivitas downline
   // Bukan sistem loyalty/tier karena user LANGSUNG dapat value dari rekrutasi
-  if (/referral|ajak\s*teman|undang\s*teman|invite\s*friend|extra\s*cuan.*referral|rekrut|ref\s*bonus/i.test(nameLower)) {
+  if (/referral|referal|refferal|ajak\s*teman|ajak\s*team|undang\s*teman|invite\s*friend|extra\s*cuan.*referral|rekrut|ref\s*bonus/i.test(nameLower)) {
     if (llmCategory !== 'A') {
       console.log('[Classifier] Keyword override: REFERRAL in promo_name, forcing A (was', llmCategory, ')');
       return { category: 'A', wasOverridden: true, overrideReason: 'REFERRAL → Reward Program (commission-based)' };
@@ -306,7 +306,7 @@ export function applyKeywordOverrides(
   }
   
   // promo_type REFERRAL → A (commission-based reward)
-  const hasReferralInType = /referral\s*bonus|ref\s*bonus|referral/i.test(typeLower);
+  const hasReferralInType = /referral\s*bonus|referal|refferal|ref\s*bonus|referral/i.test(typeLower);
   if (hasReferralInType) {
     if (llmCategory !== 'A') {
       console.log('[Classifier] Keyword override: REFERRAL in promo_type, forcing A (was', llmCategory, ')');
