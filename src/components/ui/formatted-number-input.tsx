@@ -41,12 +41,15 @@ export function FormattedNumberInput({
       className={cn(className)}
       onChange={(e) => {
         const raw = e.target.value;
-        // Allow numbers and dots only
+        // Allow numbers and dots only (or empty string)
         if (/^[\d.]*$/.test(raw)) {
           setDisplay(raw);
-          const parsed = parseFormattedNumber(raw);
-          if (!isNaN(parsed) && parsed >= min) {
-            onChange(parsed);
+          // Only update parent if there's actual value
+          if (raw !== '') {
+            const parsed = parseFormattedNumber(raw);
+            if (!isNaN(parsed) && parsed >= min) {
+              onChange(parsed);
+            }
           }
         }
       }}
