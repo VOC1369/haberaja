@@ -45,6 +45,7 @@ interface ClassificationOverrideProps {
   confidence: ClassificationConfidence;
   qualityFlags: QualityFlag[];
   reasoning?: {
+    q0?: QAnswer;  // User-facing check (v2.0.0)
     q1: QAnswer;
     q2: QAnswer;
     q3: QAnswer;
@@ -100,6 +101,7 @@ export function ClassificationOverride({
 
   const getQLabel = (qNum: number) => {
     switch (qNum) {
+      case 0: return 'Q0 (User-Facing Offer)';
       case 1: return 'Q1 (Penalty/Restriction)';
       case 2: return 'Q2 (Ongoing/Accumulation)';
       case 3: return 'Q3 (Instant Reward)';
@@ -149,6 +151,24 @@ export function ClassificationOverride({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="space-y-2 p-3 bg-muted rounded-lg text-xs max-h-48 overflow-y-auto">
+                    {/* Q0 first if available (v2.0.0) */}
+                    {reasoning.q0 && (
+                      <div className="pb-2 border-b border-border">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium">{getQLabel(0)}:</span>
+                          <Badge variant={reasoning.q0.answer === 'ya' ? 'default' : 'outline'} className="text-xs">
+                            {reasoning.q0.answer.toUpperCase()}
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground">{reasoning.q0.reasoning}</p>
+                        {reasoning.q0.evidence && (
+                          <p className="text-foreground mt-1 italic">
+                            Evidence: "{reasoning.q0.evidence}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {/* Q1-Q4 */}
                     {[reasoning.q1, reasoning.q2, reasoning.q3, reasoning.q4].map((q, idx) => (
                       <div key={idx} className="pb-2 border-b border-border last:border-0">
                         <div className="flex items-center gap-2 mb-1">
