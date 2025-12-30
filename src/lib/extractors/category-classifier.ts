@@ -1,10 +1,9 @@
 /**
  * VOC LLM-Based Category Classifier
- * Version: v2.0.0+2025-12-30
+ * Version: v1.0.0+2025-12-21
  * 
  * ARCHITECTURE:
- * - LLM answers Q0-Q4 with evidence
- * - Q0 = USER-FACING CHECK (epistemik baru: promo identity first)
+ * - LLM answers Q1-Q4 with evidence
  * - Category calculated in CODE, not by LLM
  * - Quality gates determine confidence
  * - Human can override, all logged
@@ -13,11 +12,6 @@
  * - AI = First-pass reasoning (menebak)
  * - UI = Authority (menentukan)
  * - Human = Gatekeeper (mengunci kebenaran)
- * 
- * EPISTEMIK BARU (v2.0):
- * - Q0 = "Apakah ini DITAMPILKAN ke user sebagai INSENTIF?" 
- * - Jika Q0=YA → ini PROMO (A atau B), TIDAK BOLEH C
- * - Referral, Rakeback, Lifetime Rebate = PROMO walaupun execution-nya system-derived
  */
 
 import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
@@ -44,8 +38,7 @@ export interface QAnswer {
 }
 
 export interface ClassificationResult {
-  // Q0-Q4 Answers (Q0 = user-facing check - EPISTEMIK BARU)
-  q0: QAnswer;  // USER-FACING CHECK
+  // Q1-Q4 Answers
   q1: QAnswer;
   q2: QAnswer;
   q3: QAnswer;
@@ -81,7 +74,7 @@ export interface ClassificationOverride {
 // CONSTANTS
 // ============================================
 
-export const CLASSIFIER_PROMPT_VERSION = 'v2.0.0+2025-12-30';
+export const CLASSIFIER_PROMPT_VERSION = 'v1.0.0+2025-12-21';
 export const CLASSIFICATION_MODEL = 'gpt-4o-mini';
 
 // ============================================
@@ -92,29 +85,20 @@ const CLASSIFICATION_PROMPT = `
 Kamu adalah REASONING ASSISTANT untuk klasifikasi konten iGaming.
 
 🔒 ATURAN MUTLAK:
-1. Kamu HANYA menjawab Q0-Q4 dengan reasoning dan evidence
+1. Kamu HANYA menjawab Q1-Q4 dengan reasoning dan evidence
 2. Kamu TIDAK BOLEH menentukan kategori final
 3. Kamu TIDAK BOLEH output "final_category", "program_nature", atau "classification"
 4. Evidence HARUS kutipan PERSIS dari content (substring match)
 5. Jika tidak ada bukti eksplisit, evidence = null
 
-📋 PERTANYAAN (jawab SEMUA, urut Q0 → Q4):
-
-Q0: Apakah content ini DITAMPILKAN KE USER sebagai INSENTIF/PENAWARAN? (USER-FACING CHECK)
-    Ciri-ciri: headline promo, banner/visual, persentase "up to X%", CTA contact (WA/Telegram), 
-               contoh perhitungan, ajakan partisipasi, benefit yang dijanjikan ke user
-    PENTING: Jika ada headline + benefit yang terlihat = Q0 YA (ini PROMO, bukan aturan tersembunyi)
-    Referral, Rakeback, Cashback = Q0 YA (promo akuisisi/retensi dengan execution system-derived)
-    Evidence harus menunjukkan elemen user-facing (headline, benefit, ajakan)
+📋 PERTANYAAN (jawab SEMUA, jangan skip):
 
 Q1: Apakah content ini UTAMANYA membahas PENALTI, LARANGAN, atau PEMBATASAN?
     Ciri-ciri: potongan %, suspend, hangus, tidak boleh, larangan, batasan
-    PENTING: Jika Q0=YA dan ada syarat/ketentuan = BUKAN Q1 (syarat dalam promo ≠ penalti murni)
-    Evidence harus mengandung kata-kata terkait penalty/restriction sebagai FOKUS UTAMA
+    Evidence harus mengandung kata-kata terkait penalty/restriction
 
 Q2: Apakah ini SISTEM ONGOING tanpa end date yang membutuhkan AKUMULASI?
     Ciri-ciri: Loyalty Point, LP, EXP, Tier, Level, tukar/exchange, kumpulkan dulu
-    PENTING: Referral/Rakeback = ongoing, tapi Q0 tetap prioritas!
     PENTING: "Hadiah" di exchange table = Q2 YA, bukan event!
     Evidence harus menunjukkan mekanisme akumulasi/penukaran
 
@@ -129,19 +113,13 @@ Q4: Apakah ada KOMPETISI dengan PERIODE TERBATAS dan PEMENANG/UNDIAN?
     Evidence harus menunjukkan periode + winner mechanism
 
 ⚠️ EDGE CASES (WAJIB DIPAHAMI):
-- "EXTRA CUAN! REFERRAL UP TO 15%" = Q0 YA (user-facing promo headline + benefit)
-- "tidak mendapatkan bonus mingguan" = Q1 YA (pembatasan) TAPI jika Q0 YA = ini syarat promo
+- "tidak mendapatkan bonus mingguan" = Q1 YA (pembatasan)
 - "Hadiah Utama 2.5 Juta" di tabel tukar = Q2 YA (exchange, bukan event)
 - "LP = Loyalty Point" = Q2 YA (sistem akumulasi)
 - "Download APK dapat EXP" = Q2 YA (akumulasi, bukan instant reward)
-- Referral dengan tabel komisi = Q0 YA + Q2 YA (promo dengan system-derived execution)
 
 📤 OUTPUT FORMAT (JSON ONLY, tanpa markdown):
 {
-  "q0_answer": "ya" atau "tidak",
-  "q0_reasoning": "penjelasan 40+ karakter yang menyebut elemen user-facing spesifik",
-  "q0_evidence": "kutipan PERSIS dari content" atau null,
-  
   "q1_answer": "ya" atau "tidak",
   "q1_reasoning": "penjelasan 40+ karakter yang menyebut objek+fungsi spesifik",
   "q1_evidence": "kutipan PERSIS dari content" atau null,
@@ -164,53 +142,24 @@ Q4: Apakah ada KOMPETISI dengan PERIODE TERBATAS dan PEMENANG/UNDIAN?
 // CATEGORY CALCULATION (IN CODE, NOT LLM)
 // ============================================
 
-export function calculateCategory(
-  q0: string,  // USER-FACING CHECK (EPISTEMIK BARU)
-  q1: string, 
-  q2: string, 
-  q3: string, 
-  q4: string
-): ProgramCategory {
-  // ============================================
-  // GATE 0: USER-FACING CHECK (EPISTEMIK BARU v2.0)
-  // Jika Q0=YA → ini PROMO, TIDAK BOLEH C (kecuali pure penalty)
-  // ============================================
-  const isUserFacingPromo = q0 === 'ya';
-  
-  // ============================================
-  // PRIORITY ORDER (UPDATED 2025-12-30):
-  // ============================================
-  
-  // 1. Q1 (Penalty/Restriction) → C (Policy)
-  //    TAPI: Jika Q0=YA, syarat/ketentuan dalam promo = BUKAN pure policy
-  //    Hanya pure penalty tanpa user-facing element → C
-  if (q1 === 'ya' && !isUserFacingPromo) {
-    return 'C';
-  }
+export function calculateCategory(q1: string, q2: string, q3: string, q4: string): ProgramCategory {
+  // FIXED PRIORITY ORDER (2025-12-24):
+  // 1. Q1 (Penalty/Restriction) → C (Policy) - MUTLAK
+  if (q1 === 'ya') return 'C';
   
   // 2. Q4 (Event dengan periode + pemenang) → B (Event)
   //    Lucky Spin, Tournament, Undian = Event, BUKAN Policy!
+  //    Q4 harus dicek SEBELUM Q2 agar Event tidak kalah dari Ongoing System
   if (q4 === 'ya') return 'B';
   
   // 3. Q3 (Instant Reward tanpa akumulasi) → A (Reward)
   if (q3 === 'ya') return 'A';
   
-  // 4. Q2 (Ongoing System - loyalty, tier, LP)
-  //    EPISTEMIK BARU: Jika Q0=YA → ini PROMO ongoing (Referral, Rakeback), bukan C!
-  if (q2 === 'ya') {
-    // Jika user-facing promo dengan ongoing mechanism → A (system-derived promo)
-    // Referral, Rakeback, Lifetime Rebate = PROMO, bukan policy
-    if (isUserFacingPromo) {
-      return 'A';
-    }
-    // Pure system rule without user-facing element → C
-    return 'C';
-  }
+  // 4. Q2 (Ongoing System - loyalty, tier, LP) → C (Policy)
+  if (q2 === 'ya') return 'C';
   
-  // 5. Default:
-  //    - Jika Q0=YA tapi tidak lolos Q2-Q4 → A (generic promo)
-  //    - Jika Q0=tidak → C (policy)
-  return isUserFacingPromo ? 'A' : 'C';
+  // 5. Default to Policy (most restrictive)
+  return 'C';
 }
 
 export function getCategoryName(category: ProgramCategory): string {
@@ -227,26 +176,6 @@ export function getCategoryName(category: ProgramCategory): string {
  */
 export function isSystemRule(category: ProgramCategory): boolean {
   return category === 'C';
-}
-
-/**
- * EPISTEMIC GUARD: Validate that Q0 and derived category are consistent
- * RULE: User-facing incentive (Q0=ya) CANNOT be classified as System Rule (C)
- * 
- * @returns { valid: boolean, violation?: string }
- */
-export function validateEpistemicConsistency(
-  q0: string,
-  derivedCategory: ProgramCategory
-): { valid: boolean; violation?: string } {
-  // RULE: User-facing incentive CANNOT be System Rule
-  if (q0 === 'ya' && derivedCategory === 'C') {
-    return {
-      valid: false,
-      violation: 'User-facing incentive (Q0=ya) cannot be classified as System Rule (C)'
-    };
-  }
-  return { valid: true };
 }
 
 /**
@@ -327,25 +256,6 @@ export function applyKeywordOverrides(
     return { category: 'A', wasOverridden: false };
   }
   
-  // REFERRAL → A (acquisition promo - network-based commission)
-  // Walaupun execution-nya system-derived (ongoing), ini tetap USER-FACING PROMO
-  if (/referral|reff?er|ajak\s*teman|undang|invite|rekrut|downline/i.test(nameLower)) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: REFERRAL in promo_name, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'REFERRAL → Reward Program (acquisition promo)' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
-  // RAKEBACK → A (ongoing loss-based reward, tapi tetap promo)
-  if (/rakeback|rake\s*back/i.test(nameLower)) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: RAKEBACK in promo_name, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'RAKEBACK → Reward Program (ongoing rebate)' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
   // DEPOSIT PULSA / INFO → C (informational policy)
   if (/tersedia\s*deposit|deposit\s*pulsa|info\s*deposit/i.test(nameLower)) {
     return { category: 'C', wasOverridden: false };
@@ -384,16 +294,6 @@ export function applyKeywordOverrides(
     return { category: 'A', wasOverridden: false };
   }
   
-  // promo_type REFERRAL → A (acquisition promo)
-  const hasReferralInType = /referral|reff?er|ajak\s*teman/i.test(typeLower);
-  if (hasReferralInType) {
-    if (llmCategory !== 'A') {
-      console.log('[Classifier] Keyword override: REFERRAL in promo_type, forcing A (was', llmCategory, ')');
-      return { category: 'A', wasOverridden: true, overrideReason: 'REFERRAL in promo_type → Reward Program' };
-    }
-    return { category: 'A', wasOverridden: false };
-  }
-  
   // No override needed
   return { category: llmCategory, wasOverridden: false };
 }
@@ -409,26 +309,22 @@ interface QualityAssessment {
 }
 
 function assessQuality(
-  answers: { q0: QAnswer; q1: QAnswer; q2: QAnswer; q3: QAnswer; q4: QAnswer },
+  answers: { q1: QAnswer; q2: QAnswer; q3: QAnswer; q4: QAnswer },
   content: string
 ): QualityAssessment {
   const flags: QualityFlag[] = [];
   let evidenceCount = 0;
   let hasConstraintEvidence = false;
   
-  // Find the deciding question
-  // Q0 + Q2 = system-derived promo (Referral, Rakeback)
-  // Otherwise standard priority
+  // Find the deciding question (first "ya")
   const decidingQ = 
-    (answers.q0.answer === 'ya' && answers.q2.answer === 'ya') ? answers.q0 : // System-derived promo
     answers.q1.answer === 'ya' ? answers.q1 :
-    answers.q4.answer === 'ya' ? answers.q4 :
-    answers.q3.answer === 'ya' ? answers.q3 :
     answers.q2.answer === 'ya' ? answers.q2 :
-    answers.q0.answer === 'ya' ? answers.q0 : null;
+    answers.q3.answer === 'ya' ? answers.q3 :
+    answers.q4.answer === 'ya' ? answers.q4 : null;
   
-  // Count all evidence (include Q0)
-  [answers.q0, answers.q1, answers.q2, answers.q3, answers.q4].forEach(q => {
+  // Count all evidence
+  [answers.q1, answers.q2, answers.q3, answers.q4].forEach(q => {
     if (q.evidence && q.evidence.trim().length > 0) {
       evidenceCount++;
       // Check if evidence contains constraint (angka, %, tanggal, limit)
@@ -558,12 +454,7 @@ export async function classifyContent(content: string): Promise<ClassificationRe
       console.warn('[Classifier] WARNING: LLM returned category (ignored). This violates contract.');
     }
 
-    // Build Q answers (including Q0 - USER-FACING CHECK)
-    const q0: QAnswer = {
-      answer: parsed.q0_answer?.toLowerCase() === 'ya' ? 'ya' : 'tidak',
-      reasoning: parsed.q0_reasoning || '',
-      evidence: parsed.q0_evidence || null,
-    };
+    // Build Q answers
     const q1: QAnswer = {
       answer: parsed.q1_answer?.toLowerCase() === 'ya' ? 'ya' : 'tidak',
       reasoning: parsed.q1_reasoning || '',
@@ -587,21 +478,19 @@ export async function classifyContent(content: string): Promise<ClassificationRe
 
     // ============================================
     // CALCULATE CATEGORY IN CODE (NOT FROM LLM)
-    // Q0 adalah gate pertama - user-facing check
     // ============================================
-    const category = calculateCategory(q0.answer, q1.answer, q2.answer, q3.answer, q4.answer);
+    const category = calculateCategory(q1.answer, q2.answer, q3.answer, q4.answer);
     const categoryName = getCategoryName(category);
 
     // ============================================
     // ASSESS QUALITY & CONFIDENCE
     // ============================================
-    const quality = assessQuality({ q0, q1, q2, q3, q4 }, content);
+    const quality = assessQuality({ q1, q2, q3, q4 }, content);
 
     // ============================================
     // LOG RESULTS
     // ============================================
-    console.log('[Classifier] === CLASSIFICATION RESULT (v2.0 with Q0) ===');
-    console.log('[Classifier] Q0 (User-Facing):', q0.answer, '-', q0.reasoning.substring(0, 50) + '...');
+    console.log('[Classifier] === CLASSIFICATION RESULT ===');
     console.log('[Classifier] Q1 (Penalty):', q1.answer, '-', q1.reasoning.substring(0, 50) + '...');
     console.log('[Classifier] Q2 (Ongoing):', q2.answer, '-', q2.reasoning.substring(0, 50) + '...');
     console.log('[Classifier] Q3 (Instant):', q3.answer, '-', q3.reasoning.substring(0, 50) + '...');
@@ -613,7 +502,7 @@ export async function classifyContent(content: string): Promise<ClassificationRe
     console.log('[Classifier] LATENCY:', latency, 'ms');
 
     return {
-      q0, q1, q2, q3, q4,
+      q1, q2, q3, q4,
       category,
       category_name: categoryName,
       confidence: quality.confidence,

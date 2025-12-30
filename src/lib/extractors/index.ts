@@ -54,7 +54,7 @@ export {
   type VariantSpecificField,
 } from './field-rules';
 
-// LLM-based Category Classifier (v2.0.0+2025-12-30 - Q0 User-Facing Check + Epistemic Sync)
+// LLM-based Category Classifier (v1.0.0+2025-12-21)
 export {
   classifyContent,
   calculateCategory,
@@ -63,8 +63,6 @@ export {
   getConfidenceBadgeVariant,
   formatQualityFlag,
   applyKeywordOverrides,
-  isSystemRule,
-  validateEpistemicConsistency,
   CLASSIFIER_PROMPT_VERSION,
   CLASSIFICATION_MODEL,
   type ProgramCategory,

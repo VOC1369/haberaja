@@ -56,7 +56,6 @@ import {
   type QAnswer,
   type QualityFlag,
 } from "@/lib/openai-extractor";
-import { calculateCategory, getCategoryName } from "@/lib/extractors/category-classifier";
 import { promoKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
 import { formatPromoType } from "@/lib/utils";
@@ -117,31 +116,6 @@ export function PseudoKnowledgeSection() {
   // Extraction state  
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
-  
-  // ============================================
-  // DERIVED CATEGORY (SINGLE SOURCE OF TRUTH)
-  // Always compute from Q0-Q4 answers, NOT from snapshot
-  // ============================================
-  const derivedCategory = useMemo<ProgramCategory | null>(() => {
-    if (!extractedPromo) return null;
-    
-    const { classification_q0, classification_q1, classification_q2, classification_q3, classification_q4 } = extractedPromo;
-    
-    // If we have Q0-Q4 answers, compute category from them (epistemic sync)
-    if (classification_q0 && classification_q1 && classification_q2 && classification_q3 && classification_q4) {
-      return calculateCategory(
-        classification_q0.answer,
-        classification_q1.answer,
-        classification_q2.answer,
-        classification_q3.answer,
-        classification_q4.answer
-      );
-    }
-    
-    // Fallback to snapshot for legacy data without Q0
-    return extractedPromo.program_classification || null;
-  }, [extractedPromo]);
-  
   // Memoized mapped preview (single source of truth for badge + commit)
   const mappedPreview = useMemo<PromoFormData | null>(() => {
     if (!extractedPromo) return null;
@@ -516,10 +490,10 @@ export function PseudoKnowledgeSection() {
     }
     
     // ============================================
-    // SYSTEM RULE GATE: Uses derivedCategory (single source of truth)
-    // C is NOT a promo - cannot be saved to KB
+    // SYSTEM RULE GATE: C is NOT a promo - cannot be saved to KB
+    // Show informational message instead of commit
     // ============================================
-    if (derivedCategory === 'C') {
+    if (extractedPromo.program_classification === 'C') {
       toast.info("Ini adalah System Rule, bukan promo", {
         description: "Aturan sistem tidak disimpan ke Promo KB. Gunakan Copy JSON jika perlu referensi.",
         duration: 5000
@@ -1321,16 +1295,15 @@ export function PseudoKnowledgeSection() {
           {/* RESULT SECTION */}
           {extractedPromo && (
             <>
-              {/* CLASSIFICATION OVERRIDE (LLM Classifier) - Uses derivedCategory */}
-              {derivedCategory && (
+              {/* CLASSIFICATION OVERRIDE (LLM Classifier) */}
+              {extractedPromo.program_classification && (
                 <ClassificationOverride
-                  currentCategory={derivedCategory}
-                  categoryName={getCategoryName(derivedCategory)}
+                  currentCategory={extractedPromo.program_classification}
+                  categoryName={extractedPromo.program_classification_name || 'Unknown'}
                   confidence={extractedPromo.classification_confidence || 'medium'}
                   qualityFlags={extractedPromo.quality_flags || []}
                   reasoning={
                     extractedPromo.classification_q1 ? {
-                      q0: extractedPromo.classification_q0,  // v2.0.0
                       q1: extractedPromo.classification_q1,
                       q2: extractedPromo.classification_q2!,
                       q3: extractedPromo.classification_q3!,
@@ -1338,39 +1311,32 @@ export function PseudoKnowledgeSection() {
                     } : undefined
                   }
                   onOverride={(newCategory, reason) => {
-                    // EPISTEMIC SYNC: Override must also update Q0 if changing from C to A/B
+                    // Apply override and update state
                     const override = {
-                      from: derivedCategory,
+                      from: extractedPromo.program_classification!,
                       to: newCategory,
                       reason,
                       overridden_by: 'anonymous',
                       timestamp: new Date().toISOString(),
                     };
                     
-                    console.log('[ClassificationOverride] Epistemic override applied:', override);
+                    console.log('[ClassificationOverride] Override applied:', override);
                     
-                    // CRITICAL: If overriding from C to A/B, force Q0 to 'ya'
-                    // This ensures derivedCategory will also update on next compute
-                    const shouldForceQ0 = derivedCategory === 'C' && (newCategory === 'A' || newCategory === 'B');
-                    
+                    const categoryNames = { A: 'Reward Program', B: 'Event Program', C: 'System Rule' };
                     setExtractedPromo({
                       ...extractedPromo,
                       program_classification: newCategory,
-                      program_classification_name: getCategoryName(newCategory),
+                      program_classification_name: categoryNames[newCategory],
                       classification_override: override,
-                      // Force Q0 = ya if user says "this IS a promo" (override from C to A/B)
-                      classification_q0: shouldForceQ0 
-                        ? { answer: 'ya', reasoning: `User override: ${reason}`, evidence: null }
-                        : extractedPromo.classification_q0,
                     });
                     
-                    toast.success(`Klasifikasi diubah ke ${getCategoryName(newCategory)}`);
+                    toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
                   }}
                 />
               )}
               
-              {/* SYSTEM RULE WARNING BANNER - Uses derivedCategory */}
-              {derivedCategory === 'C' && !extractedPromo.classification_override && (
+              {/* SYSTEM RULE WARNING BANNER */}
+              {extractedPromo.program_classification === 'C' && (
                 <div className="flex items-start gap-3 p-4 bg-pink-500/10 border border-pink-500/30 rounded-xl">
                   <Info className="w-5 h-5 text-pink-400 flex-shrink-0 mt-0.5" />
                   <div className="space-y-1">

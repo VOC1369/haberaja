@@ -438,14 +438,12 @@ export interface ExtractedPromo {
   client_id_confidence?: ConfidenceLevel;
   
   // ============================================
-  // LLM CLASSIFIER METADATA (v2.0.0+2025-12-30)
+  // LLM CLASSIFIER METADATA (v1.0.0+2025-12-21)
   // Category calculated in CODE, not by LLM
-  // Q0 = User-Facing Check (epistemik baru)
   // ============================================
   program_classification?: ProgramCategory;
   program_classification_name?: string;
   classification_confidence?: ClassificationConfidence;
-  classification_q0?: QAnswer;  // NEW: User-facing check
   classification_q1?: QAnswer;
   classification_q2?: QAnswer;
   classification_q3?: QAnswer;
@@ -2138,7 +2136,6 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       parsed.program_classification = finalCategory;
       parsed.program_classification_name = getCategoryName(finalCategory);
       parsed.classification_confidence = classificationResult.confidence;
-      parsed.classification_q0 = classificationResult.q0;  // NEW: User-facing check
       parsed.classification_q1 = classificationResult.q1;
       parsed.classification_q2 = classificationResult.q2;
       parsed.classification_q3 = classificationResult.q3;
