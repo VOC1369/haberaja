@@ -1202,10 +1202,14 @@ ATURAN PARSING REFERRAL:
    - 10 ID → 10%
    - 15 ID → 15%
 
-4. ⚠️ SAMPLE DATA (BUKAN RULE!) - Extract simulation values dari tabel:
-   - sample_winlose = nilai WINLOSE (contoh input simulasi)
-   - sample_cashback = nilai CASHBACK (contoh potongan)
-   - Ini FAKTA DI PROMO → WAJIB diekstrak jika ada
+4. ⚠️ DATA TABEL PROMO (BUKAN RULE!) - Extract semua nilai dari tabel:
+   - sample_winlose = nilai WINLOSE
+   - sample_cashback = nilai CASHBACK
+   - sample_commission_deduction = nilai COMMISION (potongan komisi)
+   - sample_net_winlose = nilai WINLOSE BERSIH
+   - sample_commission_result = nilai KOMISI Rp (hasil akhir)
+   - referral_admin_fee_percentage = FEE % (dari header atau kolom, contoh: 20)
+   - Ini FAKTA DI TABEL PROMO → WAJIB diekstrak SEMUA jika ada
    - TAPI BUKAN RULE/THRESHOLD!
 
 5. minimum_base = null (TIDAK ADA threshold winlose eksplisit untuk referral)
@@ -1234,6 +1238,9 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
       "min_downline": 5,
       "sample_winlose": 10000000,
       "sample_cashback": 700000,
+      "sample_commission_deduction": 300000,
+      "sample_net_winlose": 8500000,
+      "sample_commission_result": 425000,
       "max_bonus": null,
       "turnover_rule": null,
       "payout_direction": "belakang",
@@ -1255,6 +1262,9 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
       "min_downline": 10,
       "sample_winlose": 50000000,
       "sample_cashback": 3000000,
+      "sample_commission_deduction": 1500000,
+      "sample_net_winlose": 42500000,
+      "sample_commission_result": 4250000,
       "confidence": {
         "calculation_value": "explicit",
         "minimum_base": "not_applicable",
@@ -1271,6 +1281,9 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
       "min_downline": 15,
       "sample_winlose": 100000000,
       "sample_cashback": 7000000,
+      "sample_commission_deduction": 3500000,
+      "sample_net_winlose": 85000000,
+      "sample_commission_result": 12750000,
       "confidence": {
         "calculation_value": "explicit",
         "minimum_base": "not_applicable",
@@ -2834,10 +2847,13 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       tier_label: sub.sub_name || `Tier ${idx + 1}`,
       min_downline: extractMinDownline(sub, extracted.terms_conditions, idx),
       commission_percentage: sub.calculation_value || 0,
-      // SAMPLE DATA - extracted from simulation table (NOT rules!)
+      // ALL SAMPLE DATA from promo table (NOT rules!)
       // Fallback to minimum_base for backward compatibility with old extractions
       sample_winlose: (sub as any).sample_winlose || sub.minimum_base || undefined,
       sample_cashback: (sub as any).sample_cashback || undefined,
+      sample_commission_deduction: (sub as any).sample_commission_deduction || undefined,
+      sample_net_winlose: (sub as any).sample_net_winlose || undefined,
+      sample_commission_result: (sub as any).sample_commission_result || undefined,
     }));
   }
   
