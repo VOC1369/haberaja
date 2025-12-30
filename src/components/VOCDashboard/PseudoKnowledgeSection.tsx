@@ -958,24 +958,48 @@ export function PseudoKnowledgeSection() {
           {/* Subcategories - Conditional for Referral vs Other */}
           {extractedPromo.subcategories.length > 0 && (
             /referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') ? (
-              // REFERRAL: Render as Tier Table (not variant cards)
+              // REFERRAL: Render as Tier Table with ALL simulation columns
               <div>
                 <h4 className="text-base font-semibold text-button-hover mb-4">
                   Detail Tier Komisi Referral
                 </h4>
-                <div className="bg-card rounded-lg overflow-hidden border border-border">
-                  <table className="w-full text-sm">
+                <div className="bg-card rounded-lg overflow-hidden border border-border overflow-x-auto">
+                  <table className="w-full text-sm min-w-[700px]">
                     <thead className="bg-muted/50">
                       <tr>
-                        <th className="text-left py-3 px-4 font-medium text-foreground">Nama Tier</th>
-                        <th className="text-left py-3 px-4 font-medium text-foreground">Min Downline</th>
-                        <th className="text-left py-3 px-4 font-medium text-foreground">
-                          <div className="flex items-center gap-1">
-                            <span>Contoh Winlose</span>
-                            <span className="text-xs text-muted-foreground">(simulasi)</span>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Nama Tier</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Min Downline</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">
+                          <div className="flex flex-col">
+                            <span>Winlose</span>
+                            <span className="text-xs text-muted-foreground font-normal">(simulasi)</span>
                           </div>
                         </th>
-                        <th className="text-left py-3 px-4 font-medium text-foreground">Komisi</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">
+                          <div className="flex flex-col">
+                            <span>Cashback</span>
+                            <span className="text-xs text-muted-foreground font-normal">(simulasi)</span>
+                          </div>
+                        </th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">
+                          <div className="flex flex-col">
+                            <span>Fee</span>
+                            <span className="text-xs text-muted-foreground font-normal">(potongan)</span>
+                          </div>
+                        </th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">
+                          <div className="flex flex-col">
+                            <span>WL Bersih</span>
+                            <span className="text-xs text-muted-foreground font-normal">(simulasi)</span>
+                          </div>
+                        </th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Komisi %</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">
+                          <div className="flex flex-col">
+                            <span>Komisi Rp</span>
+                            <span className="text-xs text-muted-foreground font-normal">(hasil)</span>
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -990,28 +1014,37 @@ export function PseudoKnowledgeSection() {
                           )?.match(/(\d+)\s*(id|member|downline)/i);
                           const minDownline = subMinDownline || nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
                           
-                          // SAMPLE DATA: Extract sample_winlose from simulation table (NOT a rule/threshold!)
-                          // Fallback to minimum_base for backward compat with old extractions
+                          // ALL SAMPLE DATA: Extract from tier (simulation, NOT rules!)
                           const sampleWinlose = (tier as any).sample_winlose || tier.minimum_base;
-                          const sampleWinloseFormatted = sampleWinlose && sampleWinlose > 0
-                            ? `Rp ${new Intl.NumberFormat('id-ID').format(Number(sampleWinlose))}`
+                          const sampleCashback = (tier as any).sample_cashback;
+                          const sampleFee = (tier as any).sample_commission_deduction;
+                          const sampleNetWL = (tier as any).sample_net_winlose;
+                          const sampleKomisi = (tier as any).sample_commission_result;
+                          
+                          // Format helpers
+                          const formatRp = (val: any) => val && Number(val) > 0 
+                            ? `Rp ${new Intl.NumberFormat('id-ID').format(Number(val))}` 
                             : '-';
                           
                           return (
                             <tr key={idx} className="border-t border-border">
-                              <td className="py-3 px-4 text-foreground">{tier.sub_name || `Tier ${idx + 1}`}</td>
-                              <td className="py-3 px-4 text-foreground">{minDownline} ID</td>
-                              <td className="py-3 px-4 text-muted-foreground italic">{sampleWinloseFormatted}</td>
-                              <td className="py-3 px-4 text-button-hover font-semibold">{tier.calculation_value}%</td>
+                              <td className="py-3 px-3 text-foreground font-medium">{tier.sub_name || `Tier ${idx + 1}`}</td>
+                              <td className="py-3 px-3 text-foreground">{minDownline} ID</td>
+                              <td className="py-3 px-3 text-muted-foreground italic">{formatRp(sampleWinlose)}</td>
+                              <td className="py-3 px-3 text-muted-foreground italic">{formatRp(sampleCashback)}</td>
+                              <td className="py-3 px-3 text-muted-foreground italic">{formatRp(sampleFee)}</td>
+                              <td className="py-3 px-3 text-muted-foreground italic">{formatRp(sampleNetWL)}</td>
+                              <td className="py-3 px-3 text-button-hover font-semibold">{tier.calculation_value}%</td>
+                              <td className="py-3 px-3 text-amber-400 font-semibold">{formatRp(sampleKomisi)}</td>
                             </tr>
                           );
                         })}
                     </tbody>
                   </table>
-                  <p className="text-xs text-muted-foreground mt-2 italic">
-                    * Kolom "Contoh Winlose" adalah data simulasi dari promo, bukan syarat kualifikasi tier. Threshold tier hanya berdasarkan jumlah Downline Aktif.
-                  </p>
                 </div>
+                <p className="text-xs text-muted-foreground mt-2 italic px-1">
+                  * Kolom simulasi (Winlose, Cashback, Fee, WL Bersih, Komisi Rp) adalah contoh perhitungan dari promo, bukan syarat kualifikasi. Threshold tier hanya berdasarkan Min Downline.
+                </p>
               </div>
             ) : (
               // NON-REFERRAL: Keep existing variant cards
