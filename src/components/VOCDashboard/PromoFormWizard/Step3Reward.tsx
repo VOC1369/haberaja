@@ -2662,25 +2662,28 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   
                   {/* Col 2: Admin Fee - Toggle + Percentage */}
                   <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Admin Fee</Label>
-                    <div className="flex items-center gap-3">
-                      <Switch
-                        checked={data.referral_admin_fee_enabled ?? true}
-                        onCheckedChange={(checked) => onChange({ referral_admin_fee_enabled: checked })}
-                      />
+                    <div className="flex items-center justify-between">
+                      <Label>Admin Fee</Label>
                       <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={data.referral_admin_fee_enabled !== false ? (data.referral_admin_fee_percentage ?? 20) : ''}
-                          onChange={(e) => onChange({ referral_admin_fee_percentage: parseFloat(e.target.value) || 0 })}
-                          disabled={data.referral_admin_fee_enabled === false}
-                          className="w-20 bg-muted"
-                          placeholder="0"
+                        <span className="text-xs text-muted-foreground">Aktifkan</span>
+                        <Switch
+                          checked={data.referral_admin_fee_enabled ?? true}
+                          onCheckedChange={(checked) => onChange({ referral_admin_fee_enabled: checked })}
                         />
-                        <span className="text-sm text-muted-foreground">%</span>
                       </div>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={data.referral_admin_fee_enabled !== false ? (data.referral_admin_fee_percentage ?? 20) : ''}
+                        onChange={(e) => onChange({ referral_admin_fee_percentage: parseFloat(e.target.value) || 0 })}
+                        placeholder={data.referral_admin_fee_enabled !== false ? "0" : "Tidak aktif"}
+                        disabled={data.referral_admin_fee_enabled === false}
+                        className={cn("pr-8", data.referral_admin_fee_enabled === false && "opacity-50")}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                     </div>
                   </div>
                 </div>
