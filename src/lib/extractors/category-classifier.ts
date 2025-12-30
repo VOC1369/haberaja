@@ -17,6 +17,12 @@
 import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
 
 // ============================================
+// KEYWORD OVERRIDE VERSION (for session invalidation)
+// Update this whenever keyword override rules change
+// ============================================
+export const KEYWORD_OVERRIDE_VERSION = '2025-12-30-v1';
+
+// ============================================
 // TYPES
 // ============================================
 

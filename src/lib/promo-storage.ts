@@ -14,6 +14,7 @@
 import type { PromoFormData, PromoItem } from '@/components/VOCDashboard/PromoFormWizard/types';
 import type { ExtractedPromo } from '@/lib/openai-extractor';
 import { supabase, DEFAULT_CLIENT_ID, generateUUID, logSupabaseError } from '@/lib/supabase-client';
+import { KEYWORD_OVERRIDE_VERSION } from '@/lib/extractors/category-classifier';
 
 // ============================================
 // PRE-SUPABASE MODE CONFIGURATION
@@ -393,12 +394,26 @@ export const extractorSession = {
 
   /**
    * Load session data
+   * Auto-invalidates if keyword override version changed
    */
   load: (): ExtractorSession | null => {
     try {
       const data = sessionStorage.getItem(SESSION_KEY);
       if (!data) return null;
-      return JSON.parse(data) as ExtractorSession;
+      
+      const parsed = JSON.parse(data) as ExtractorSession & { 
+        _keyword_override_version?: string 
+      };
+      
+      // Auto-invalidate if classifier version changed
+      if (parsed._keyword_override_version && parsed._keyword_override_version !== KEYWORD_OVERRIDE_VERSION) {
+        console.log('[extractorSession] Invalidated: classifier version changed from', 
+          parsed._keyword_override_version, 'to', KEYWORD_OVERRIDE_VERSION);
+        sessionStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      
+      return parsed;
     } catch {
       console.error('[extractorSession] Failed to load');
       return null;
