@@ -2769,12 +2769,12 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                   <Input
                                     type="number"
                                     min={0}
-                                    value={tier.min_downline}
+                                    value={tier.min_downline === 0 ? '' : tier.min_downline}
                                     onChange={(e) => {
                                       const updatedTiers = [...(data.referral_tiers || [])];
                                       updatedTiers[index] = {
                                         ...updatedTiers[index],
-                                        min_downline: parseInt(e.target.value) || 0,
+                                        min_downline: e.target.value === '' ? 0 : parseInt(e.target.value, 10),
                                       };
                                       onChange({ referral_tiers: updatedTiers });
                                     }}
@@ -2816,23 +2816,17 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                       Fee {adminFeePercent}%
                                       <span className="ml-1 text-[10px] text-muted-foreground/60">(dari Admin Fee)</span>
                                     </Label>
-                                    <FormattedNumberInput
-                                      value={feeAmount}
-                                      onChange={() => {}}
-                                      placeholder="Rp"
-                                      className="bg-muted opacity-60 cursor-not-allowed"
-                                    />
+                                    <div className="h-10 px-3 py-2 bg-muted/50 border border-input rounded-md flex items-center text-sm text-muted-foreground">
+                                      {formatNumberWithSeparator(feeAmount)}
+                                    </div>
                                   </div>
                                 </TableCell>
                                 <TableCell className="px-4 py-3 w-1/4">
                                   <div className="space-y-1">
                                     <Label className="text-xs text-muted-foreground">Winlose Bersih</Label>
-                                    <FormattedNumberInput
-                                      value={winloseBersih}
-                                      onChange={() => {}}
-                                      placeholder="Rp"
-                                      className="bg-muted opacity-60 cursor-not-allowed"
-                                    />
+                                    <div className="h-10 px-3 py-2 bg-muted/50 border border-input rounded-md flex items-center text-sm text-muted-foreground">
+                                      {formatNumberWithSeparator(winloseBersih)}
+                                    </div>
                                   </div>
                                 </TableCell>
                                 <TableCell className="px-4 py-3 w-1/4">
@@ -2844,12 +2838,12 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                         min={0}
                                         max={100}
                                         step={0.1}
-                                        value={tier.commission_percentage}
+                                        value={tier.commission_percentage === 0 ? '' : tier.commission_percentage}
                                         onChange={(e) => {
                                           const updatedTiers = [...(data.referral_tiers || [])];
                                           updatedTiers[index] = {
                                             ...updatedTiers[index],
-                                            commission_percentage: parseFloat(e.target.value) || 0,
+                                            commission_percentage: e.target.value === '' ? 0 : parseFloat(e.target.value),
                                           };
                                           onChange({ referral_tiers: updatedTiers });
                                         }}
@@ -2863,12 +2857,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                 <TableCell className="px-4 py-3 w-1/4">
                                   <div className="space-y-1">
                                     <Label className="text-xs text-muted-foreground">Komisi</Label>
-                                    <FormattedNumberInput
-                                      value={komisi}
-                                      onChange={() => {}}
-                                      placeholder="Rp"
-                                      className="bg-primary/10 border-primary/20 cursor-not-allowed"
-                                    />
+                                    <div className="h-10 px-3 py-2 bg-primary/10 border border-primary/20 rounded-md flex items-center text-sm font-medium text-foreground">
+                                      {formatNumberWithSeparator(komisi)}
+                                    </div>
                                   </div>
                                 </TableCell>
                               </TableRow>
