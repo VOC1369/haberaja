@@ -306,7 +306,7 @@ const FIELD_STATUS_MATRIX: Record<RewardArchetype, Record<string, FieldStatus>> 
     turnover_rule: 'not_applicable',
     payout_direction: 'required',
     max_bonus: 'optional',
-    minimum_base: 'not_applicable',
+    minimum_base: 'optional',  // For referral: this stores WINLOSE threshold per tier
   },
 };
 
@@ -1200,9 +1200,14 @@ ATURAN PARSING REFERRAL:
    - 10 ID → 10%
    - 15 ID → 15%
 
-4. Tambahkan metadata tier di terms_conditions:
-   - "Tier 5%: Minimal 5 ID aktif dalam sebulan"
-   - "Tier 10%: Minimal 10 ID aktif dalam sebulan"
+4. ⚠️ minimum_base = WINLOSE THRESHOLD dari kolom WINLOSE:
+   - 5 ID row → minimum_base = 10000000
+   - 10 ID row → minimum_base = 50000000
+   - 15 ID row → minimum_base = 100000000
+   
+5. Tambahkan metadata tier di terms_conditions:
+   - "Tier 5%: Minimal 5 ID aktif, Winlose min Rp 10.000.000"
+   - "Tier 10%: Minimal 10 ID aktif, Winlose min Rp 50.000.000"
 
 OUTPUT FORMAT REFERRAL MULTI-TIER:
 {
@@ -1217,33 +1222,50 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
       "calculation_base": "winloss",
       "calculation_method": "percentage",
       "calculation_value": 5,
-      "minimum_base": null,
+      "minimum_base": 10000000,
       "max_bonus": null,
       "turnover_rule": null,
       "payout_direction": "belakang",
       "game_types": ["ALL"],
       "confidence": {
         "calculation_value": "explicit",
-        "minimum_base": "not_applicable",
+        "minimum_base": "explicit",
         "turnover_rule": "not_applicable"
       }
     },
     {
       "sub_name": "Komisi 10%",
+      "calculation_base": "winloss",
+      "calculation_method": "percentage",
       "calculation_value": 10,
+      "minimum_base": 50000000,
+      "confidence": {
+        "calculation_value": "explicit",
+        "minimum_base": "explicit",
+        "turnover_rule": "not_applicable"
+      },
       ...
     },
     {
       "sub_name": "Komisi 15%",
+      "calculation_base": "winloss",
+      "calculation_method": "percentage",
       "calculation_value": 15,
+      "minimum_base": 100000000,
+      "confidence": {
+        "calculation_value": "explicit",
+        "minimum_base": "explicit",
+        "turnover_rule": "not_applicable"
+      },
       ...
     }
   ],
   "terms_conditions": [
-    "Tier 5%: Minimal 5 ID aktif dalam sebulan",
-    "Tier 10%: Minimal 10 ID aktif dalam sebulan",
-    "Tier 15%: Minimal 15 ID aktif dalam sebulan",
-    "Hitungan komisi: Winlose - Commision - Cashback - Admin Fee 20% = hasil x persentase"
+    "Tier 5%: Minimal 5 ID aktif, Winlose min Rp 10.000.000",
+    "Tier 10%: Minimal 10 ID aktif, Winlose min Rp 50.000.000",
+    "Tier 15%: Minimal 15 ID aktif, Winlose min Rp 100.000.000",
+    "Hitungan komisi: Winlose - Commision - Cashback - Admin Fee 20% = hasil x persentase",
+    "Admin Fee: 20%"
   ]
 }
 
@@ -1251,10 +1273,16 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
 - JANGAN merge tier menjadi 1 varian!
 - JANGAN skip tier apapun dari tabel!
 - 3 baris dengan KOMISI berbeda = 3 subcategories!
-- minimum_base = null (not_applicable untuk referral)
+- minimum_base = WINLOSE THRESHOLD dari tabel (BUKAN null!)
+- Jika kolom WINLOSE tidak ada, minimum_base = null dengan confidence "unknown"
 - turnover_rule = null (not_applicable untuk referral)
 - payout_direction = "belakang" (komisi dihitung setelah downline bermain)
 - calculation_base = "winloss" (referral biasanya dari win/loss downline)
+
+INDUSTRY DEFAULTS (isi jika tidak eksplisit disebut):
+- calculation_base = "winloss" (suggested)
+- payout_direction = "belakang" (suggested)
+- Admin Fee biasanya 20% → catat di terms_conditions
 
 
 🚫 BLACKLIST EXTRACTION (PHASE 4 - GAME DIKECUALIKAN)
