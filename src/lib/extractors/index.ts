@@ -54,7 +54,7 @@ export {
   type VariantSpecificField,
 } from './field-rules';
 
-// LLM-based Category Classifier (v1.0.0+2025-12-21)
+// LLM-based Category Classifier (v2.0.0+2025-12-30 - Q0 User-Facing Check)
 export {
   classifyContent,
   calculateCategory,
