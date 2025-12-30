@@ -969,7 +969,12 @@ export function PseudoKnowledgeSection() {
                       <tr>
                         <th className="text-left py-3 px-4 font-medium text-foreground">Nama Tier</th>
                         <th className="text-left py-3 px-4 font-medium text-foreground">Min Downline</th>
-                        <th className="text-left py-3 px-4 font-medium text-foreground">Min Winlose</th>
+                        <th className="text-left py-3 px-4 font-medium text-foreground">
+                          <div className="flex items-center gap-1">
+                            <span>Contoh Winlose</span>
+                            <span className="text-xs text-muted-foreground">(simulasi)</span>
+                          </div>
+                        </th>
                         <th className="text-left py-3 px-4 font-medium text-foreground">Komisi</th>
                       </tr>
                     </thead>
@@ -977,29 +982,35 @@ export function PseudoKnowledgeSection() {
                       {[...extractedPromo.subcategories]
                         .sort((a, b) => (Number(a.calculation_value) || 0) - (Number(b.calculation_value) || 0))
                         .map((tier, idx) => {
-                          // Extract min_downline from sub_name or terms pattern
+                          // Extract min_downline from sub data, sub_name, or terms pattern
+                          const subMinDownline = (tier as any).min_downline;
                           const nameMatch = tier.sub_name?.match(/(\d+)\s*(id|member|downline)/i);
                           const termsMatch = extractedPromo.terms_conditions?.find(t => 
                             t.includes(`${tier.calculation_value}%`) && /(\d+)\s*(id|member|downline)/i.test(t)
                           )?.match(/(\d+)\s*(id|member|downline)/i);
-                          const minDownline = nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
+                          const minDownline = subMinDownline || nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
                           
-                          // Extract min_winlose from minimum_base (used for winlose threshold in referral)
-                          const minWinlose = tier.minimum_base && tier.minimum_base > 0
-                            ? new Intl.NumberFormat('id-ID').format(Number(tier.minimum_base))
+                          // SAMPLE DATA: Extract sample_winlose from simulation table (NOT a rule/threshold!)
+                          // Fallback to minimum_base for backward compat with old extractions
+                          const sampleWinlose = (tier as any).sample_winlose || tier.minimum_base;
+                          const sampleWinloseFormatted = sampleWinlose && sampleWinlose > 0
+                            ? `Rp ${new Intl.NumberFormat('id-ID').format(Number(sampleWinlose))}`
                             : '-';
                           
                           return (
                             <tr key={idx} className="border-t border-border">
                               <td className="py-3 px-4 text-foreground">{tier.sub_name || `Tier ${idx + 1}`}</td>
                               <td className="py-3 px-4 text-foreground">{minDownline} ID</td>
-                              <td className="py-3 px-4 text-foreground">{minWinlose !== '-' ? `Rp ${minWinlose}` : '-'}</td>
+                              <td className="py-3 px-4 text-muted-foreground italic">{sampleWinloseFormatted}</td>
                               <td className="py-3 px-4 text-button-hover font-semibold">{tier.calculation_value}%</td>
                             </tr>
                           );
                         })}
                     </tbody>
                   </table>
+                  <p className="text-xs text-muted-foreground mt-2 italic">
+                    * Kolom "Contoh Winlose" adalah data simulasi dari promo, bukan syarat kualifikasi tier. Threshold tier hanya berdasarkan jumlah Downline Aktif.
+                  </p>
                 </div>
               </div>
             ) : (

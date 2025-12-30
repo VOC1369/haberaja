@@ -306,7 +306,9 @@ const FIELD_STATUS_MATRIX: Record<RewardArchetype, Record<string, FieldStatus>> 
     turnover_rule: 'not_applicable',
     payout_direction: 'required',
     max_bonus: 'optional',
-    minimum_base: 'optional',  // For referral: this stores WINLOSE threshold per tier
+    minimum_base: 'not_applicable',  // Referral: tidak ada threshold nominal (WINLOSE di tabel = SAMPLE, bukan rule)
+    min_downline: 'required',        // Referral: threshold tier = jumlah downline aktif
+    sample_winlose: 'optional',      // Referral: data simulasi dari tabel (jika ada)
   },
 };
 
@@ -1200,14 +1202,20 @@ ATURAN PARSING REFERRAL:
    - 10 ID → 10%
    - 15 ID → 15%
 
-4. ⚠️ minimum_base = WINLOSE THRESHOLD dari kolom WINLOSE:
-   - 5 ID row → minimum_base = 10000000
-   - 10 ID row → minimum_base = 50000000
-   - 15 ID row → minimum_base = 100000000
-   
-5. Tambahkan metadata tier di terms_conditions:
-   - "Tier 5%: Minimal 5 ID aktif, Winlose min Rp 10.000.000"
-   - "Tier 10%: Minimal 10 ID aktif, Winlose min Rp 50.000.000"
+4. ⚠️ SAMPLE DATA (BUKAN RULE!) - Extract simulation values dari tabel:
+   - sample_winlose = nilai WINLOSE (contoh input simulasi)
+   - sample_cashback = nilai CASHBACK (contoh potongan)
+   - Ini FAKTA DI PROMO → WAJIB diekstrak jika ada
+   - TAPI BUKAN RULE/THRESHOLD!
+
+5. minimum_base = null (TIDAK ADA threshold winlose eksplisit untuk referral)
+   - Kolom WINLOSE di tabel = CONTOH SIMULASI, bukan syarat kualifikasi!
+   - Threshold tier sebenarnya = min_downline (5, 10, 15 ID)
+
+6. Tambahkan metadata tier di terms_conditions:
+   - "Tier 5%: Minimal 5 ID aktif"
+   - "Tier 10%: Minimal 10 ID aktif"
+   - "Tabel angka (WINLOSE, FEE, dll) adalah contoh simulasi perhitungan"
 
 OUTPUT FORMAT REFERRAL MULTI-TIER:
 {
@@ -1219,53 +1227,65 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
   "subcategories": [
     {
       "sub_name": "Komisi 5%",
-      "calculation_base": "winloss",
+      "calculation_base": "loss",
       "calculation_method": "percentage",
       "calculation_value": 5,
-      "minimum_base": 10000000,
+      "minimum_base": null,
+      "min_downline": 5,
+      "sample_winlose": 10000000,
+      "sample_cashback": 700000,
       "max_bonus": null,
       "turnover_rule": null,
       "payout_direction": "belakang",
       "game_types": ["ALL"],
       "confidence": {
         "calculation_value": "explicit",
-        "minimum_base": "explicit",
+        "minimum_base": "not_applicable",
+        "min_downline": "explicit",
+        "sample_winlose": "explicit",
         "turnover_rule": "not_applicable"
       }
     },
     {
       "sub_name": "Komisi 10%",
-      "calculation_base": "winloss",
+      "calculation_base": "loss",
       "calculation_method": "percentage",
       "calculation_value": 10,
-      "minimum_base": 50000000,
+      "minimum_base": null,
+      "min_downline": 10,
+      "sample_winlose": 50000000,
+      "sample_cashback": 3000000,
       "confidence": {
         "calculation_value": "explicit",
-        "minimum_base": "explicit",
-        "turnover_rule": "not_applicable"
-      },
-      ...
+        "minimum_base": "not_applicable",
+        "min_downline": "explicit",
+        "sample_winlose": "explicit"
+      }
     },
     {
       "sub_name": "Komisi 15%",
-      "calculation_base": "winloss",
+      "calculation_base": "loss",
       "calculation_method": "percentage",
       "calculation_value": 15,
-      "minimum_base": 100000000,
+      "minimum_base": null,
+      "min_downline": 15,
+      "sample_winlose": 100000000,
+      "sample_cashback": 7000000,
       "confidence": {
         "calculation_value": "explicit",
-        "minimum_base": "explicit",
-        "turnover_rule": "not_applicable"
-      },
-      ...
+        "minimum_base": "not_applicable",
+        "min_downline": "explicit",
+        "sample_winlose": "explicit"
+      }
     }
   ],
   "terms_conditions": [
-    "Tier 5%: Minimal 5 ID aktif, Winlose min Rp 10.000.000",
-    "Tier 10%: Minimal 10 ID aktif, Winlose min Rp 50.000.000",
-    "Tier 15%: Minimal 15 ID aktif, Winlose min Rp 100.000.000",
+    "Tier 5%: Minimal 5 ID aktif",
+    "Tier 10%: Minimal 10 ID aktif",
+    "Tier 15%: Minimal 15 ID aktif",
     "Hitungan komisi: Winlose - Commision - Cashback - Admin Fee 20% = hasil x persentase",
-    "Admin Fee: 20%"
+    "Admin Fee: 20%",
+    "Tabel angka (WINLOSE, CASHBACK, FEE) adalah contoh simulasi perhitungan, bukan syarat kualifikasi"
   ]
 }
 
@@ -1273,14 +1293,16 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
 - JANGAN merge tier menjadi 1 varian!
 - JANGAN skip tier apapun dari tabel!
 - 3 baris dengan KOMISI berbeda = 3 subcategories!
-- minimum_base = WINLOSE THRESHOLD dari tabel (BUKAN null!)
-- Jika kolom WINLOSE tidak ada, minimum_base = null dengan confidence "unknown"
+- minimum_base = null (TIDAK ada threshold nominal eksplisit!)
+- sample_winlose = nilai WINLOSE dari tabel (ini SAMPLE DATA, bukan rule!)
+- Kolom WINLOSE/CASHBACK/FEE di tabel = SIMULASI PERHITUNGAN, bukan syarat!
+- Threshold tier = min_downline SAJA (5, 10, 15 ID)
 - turnover_rule = null (not_applicable untuk referral)
 - payout_direction = "belakang" (komisi dihitung setelah downline bermain)
-- calculation_base = "winloss" (referral biasanya dari win/loss downline)
+- calculation_base = "loss" (iGaming Asia: WINLOSE = kekalahan player = loss)
 
 INDUSTRY DEFAULTS (isi jika tidak eksplisit disebut):
-- calculation_base = "winloss" (suggested)
+- calculation_base = "loss" (bukan "winloss" - itu bukan valid enum!)
 - payout_direction = "belakang" (suggested)
 - Admin Fee biasanya 20% → catat di terms_conditions
 
@@ -2812,6 +2834,10 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       tier_label: sub.sub_name || `Tier ${idx + 1}`,
       min_downline: extractMinDownline(sub, extracted.terms_conditions, idx),
       commission_percentage: sub.calculation_value || 0,
+      // SAMPLE DATA - extracted from simulation table (NOT rules!)
+      // Fallback to minimum_base for backward compatibility with old extractions
+      sample_winlose: (sub as any).sample_winlose || sub.minimum_base || undefined,
+      sample_cashback: (sub as any).sample_cashback || undefined,
     }));
   }
   

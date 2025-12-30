@@ -431,11 +431,22 @@ export interface RedeemItem {
 export interface ReferralCommissionTier {
   id: string;
   tier_label: string;          // Auto-generated: "Tier 1", "Tier 2", etc.
-  min_downline: number;        // Minimal downline aktif (≥)
-  commission_percentage: number; // Persentase komisi (e.g., 5 = 5%)
-  // Simulation fields for preview calculation
-  sample_winlose?: number;     // Contoh nilai winlose untuk simulasi
-  sample_cashback?: number;    // Contoh nilai cashback untuk simulasi
+  
+  // === RULES (threshold kualifikasi tier) ===
+  min_downline: number;              // Syarat: minimal downline aktif (≥)
+  commission_percentage: number;     // Persentase komisi tier ini (e.g., 5 = 5%)
+  
+  // === SAMPLE DATA (contoh simulasi dari promo - ADAPTIVE) ===
+  // Field ini diisi JIKA ada di promo, tidak dipaksa
+  // BUKAN rule/threshold - hanya contoh perhitungan dari tabel promo
+  sample_winlose?: number;            // Contoh nilai winlose (input simulasi)
+  sample_cashback?: number;           // Contoh potongan cashback
+  sample_commission_deduction?: number; // Contoh potongan commission operator
+  sample_net_winlose?: number;        // Contoh winlose bersih (derived)
+  sample_commission_result?: number;  // Contoh hasil komisi (derived)
+  
+  // === METADATA (untuk audit/debugging) ===
+  _sample_source?: 'table' | 'manual' | 'inferred';  // Asal data sample
 }
 
 
@@ -858,6 +869,11 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
       'menang': 'win',
       'kalah': 'loss',
       'kekalahan': 'loss',
+      // iGaming contextual aliases - WINLOSE = LOSS (kekalahan player)
+      'winloss': 'loss',
+      'winlose': 'loss',
+      'win_loss': 'loss',
+      'win-loss': 'loss',
     };
     normalized.calculation_base = baseMapping[lowerBase] || 'turnover';
   }
