@@ -524,6 +524,10 @@ export interface ExtractedPromo {
     propagated_fields: string[];
     ambiguous_blacklists: number;
     extracted_at: string;
+    // Classification override metadata (for image extraction)
+    classification_overridden?: boolean;
+    classification_override_reason?: string;
+    original_llm_category?: string;
   };
   
   // Validation Status
@@ -1789,6 +1793,74 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
       }
     }));
     
+    // ============================================
+    // IMAGE EXTRACTION: RUN CLASSIFIER + KEYWORD OVERRIDE
+    // Same logic as extractPromoFromContent for consistency
+    // ============================================
+    
+    // Step 1: Try LLM Classification (using promo details as proxy content)
+    let classificationResult: ClassificationResult | null = null;
+    const proxyContent = [
+      parsed.promo_name || '',
+      parsed.promo_type || '',
+      ...(parsed.terms_conditions || [])
+    ].join('\n');
+
+    if (proxyContent.length > 50) {
+      try {
+        console.log('[extractPromoFromImage] Running LLM Classification...');
+        classificationResult = await classifyContent(proxyContent);
+        console.log('[extractPromoFromImage] Classification result:', {
+          category: classificationResult.category,
+          confidence: classificationResult.confidence
+        });
+      } catch (classifyError) {
+        console.warn('[extractPromoFromImage] Classification failed, using keyword-only:', classifyError);
+      }
+    }
+
+    // Step 2: Apply keyword override (ALWAYS - even if classification failed)
+    const baseCategory = classificationResult?.category || 'A'; // Default A if no classification
+    const { category: finalCategory, wasOverridden, overrideReason } = applyKeywordOverrides(
+      baseCategory,
+      parsed.promo_name || '',
+      parsed.promo_type
+    );
+
+    // Step 3: Merge classification metadata
+    parsed.program_classification = finalCategory;
+    parsed.program_classification_name = getCategoryName(finalCategory);
+    parsed.classification_confidence = classificationResult?.confidence || 'medium';
+    parsed.classification_q1 = classificationResult?.q1;
+    parsed.classification_q2 = classificationResult?.q2;
+    parsed.classification_q3 = classificationResult?.q3;
+    parsed.classification_q4 = classificationResult?.q4;
+    parsed.quality_flags = classificationResult?.quality_flags || [];
+
+    // Track override metadata (extend existing meta or create with defaults)
+    if (wasOverridden) {
+      const existingMeta = parsed._extraction_meta || {
+        has_rowspan_tables: false,
+        html_was_normalized: false,
+        client_id_source: null,
+        propagated_fields: [],
+        ambiguous_blacklists: 0,
+        extracted_at: new Date().toISOString(),
+      };
+      parsed._extraction_meta = {
+        ...existingMeta,
+        classification_overridden: true,
+        classification_override_reason: overrideReason,
+        original_llm_category: baseCategory,
+      };
+    }
+
+    console.log('[extractPromoFromImage] Final classification:', {
+      category: finalCategory,
+      wasOverridden,
+      overrideReason: overrideReason || 'none'
+    });
+
     // CRITICAL: Force confidence downgrade for image source
     const downgraded = forceConfidenceDowngradeForImage(parsed);
     
