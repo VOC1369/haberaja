@@ -1544,37 +1544,42 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       isBadge
                       badgeVariant="outline"
                     />
-                    <ValueBox label="Satuan Poin" value={data.promo_unit?.toUpperCase() || 'LP'} />
-                    <ValueBox label="Mode EXP" value={data.exp_mode} />
-                    <ValueBox 
-                      label={`Basis Perhitungan ${getPointUnitShort(data.promo_unit)}`}
-                      value={LP_EARN_BASIS_OPTIONS.find(b => b.value === data.lp_earn_basis)?.label || 'Turnover'} 
-                    />
-                    <ValueBox 
-                      label="Earn Rule" 
-                      value={data.lp_earn_amount && data.lp_earn_point_amount 
-                        ? `${data.lp_earn_amount.toLocaleString('id-ID')} ${
-                            LP_EARN_BASIS_OPTIONS.find(b => b.value === data.lp_earn_basis)?.unit || 'TO'
-                          } → ${data.lp_earn_point_amount} ${getPointUnitShort(data.promo_unit)}` 
-                        : '-'
-                      } 
-                    />
-                    <ValueBox label="Jumlah Tier" value={`${data.tiers?.length || 0} tier`} />
-                    
-                    {/* Level Up Rewards (jika ada) */}
-                    {data.level_up_rewards && data.level_up_rewards.length > 0 && (
-                      <ValueBox 
-                        label="Level Up Rewards" 
-                        value={`${data.level_up_rewards.length} reward`} 
-                      />
-                    )}
-                    
-                    {/* Fast EXP Missions (jika ada) */}
-                    {data.fast_exp_missions && data.fast_exp_missions.length > 0 && (
-                      <ValueBox 
-                        label="Fast EXP Missions" 
-                        value={`${data.fast_exp_missions.length} mission`} 
-                      />
+                    {/* Loyalty/System Point fields - HIDE for tier_network (Referral) */}
+                    {data.tier_archetype !== 'tier_network' && (
+                      <>
+                        <ValueBox label="Satuan Poin" value={data.promo_unit?.toUpperCase() || 'LP'} />
+                        <ValueBox label="Mode EXP" value={data.exp_mode} />
+                        <ValueBox 
+                          label={`Basis Perhitungan ${getPointUnitShort(data.promo_unit)}`}
+                          value={LP_EARN_BASIS_OPTIONS.find(b => b.value === data.lp_earn_basis)?.label || 'Turnover'} 
+                        />
+                        <ValueBox 
+                          label="Earn Rule" 
+                          value={data.lp_earn_amount && data.lp_earn_point_amount 
+                            ? `${data.lp_earn_amount.toLocaleString('id-ID')} ${
+                                LP_EARN_BASIS_OPTIONS.find(b => b.value === data.lp_earn_basis)?.unit || 'TO'
+                              } → ${data.lp_earn_point_amount} ${getPointUnitShort(data.promo_unit)}` 
+                            : '-'
+                          } 
+                        />
+                        <ValueBox label="Jumlah Tier" value={`${data.tiers?.length || 0} tier`} />
+                        
+                        {/* Level Up Rewards (jika ada) */}
+                        {data.level_up_rewards && data.level_up_rewards.length > 0 && (
+                          <ValueBox 
+                            label="Level Up Rewards" 
+                            value={`${data.level_up_rewards.length} reward`} 
+                          />
+                        )}
+                        
+                        {/* Fast EXP Missions (jika ada) */}
+                        {data.fast_exp_missions && data.fast_exp_missions.length > 0 && (
+                          <ValueBox 
+                            label="Fast EXP Missions" 
+                            value={`${data.fast_exp_missions.length} mission`} 
+                          />
+                        )}
+                      </>
                     )}
                     
                     {/* Detail Tier Table - Untuk tier_level */}
