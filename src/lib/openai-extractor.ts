@@ -3162,7 +3162,18 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Referral Commission Tiers (tier_network)
     // If multi-tier referral detected, use converted referral_tiers and set tier_archetype
     referral_tiers: referralTiers,
-    referral_calculation_basis: 'turnover',
+    // Auto-detect referral_calculation_basis from subcategory (default: 'loss' for iGaming)
+    referral_calculation_basis: (() => {
+      const firstSubBasis = subcategories[0]?.calculation_base;
+      // Map to valid referral basis enum
+      if (firstSubBasis === 'loss' || firstSubBasis === 'winloss' || firstSubBasis === 'win_loss') {
+        return 'loss';  // Normalize winloss variants to 'loss'
+      }
+      if (firstSubBasis === 'turnover') return 'turnover';
+      if (firstSubBasis === 'deposit') return 'deposit';
+      // Default untuk Referral iGaming Asia = loss
+      return 'loss';
+    })(),
     referral_admin_fee_enabled: isReferralMultiTier ? true : false,
     referral_admin_fee_percentage: 20,
     
