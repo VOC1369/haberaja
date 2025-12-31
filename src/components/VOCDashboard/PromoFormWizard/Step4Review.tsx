@@ -759,7 +759,7 @@ export const generateReferralTerms = (data: PromoFormData): string[] => {
     data.referral_tiers.forEach((tier, idx) => {
       const tierLabel = tier.tier_label || `Tier ${idx + 1}`;
       // REALTIME: min_downline dan commission_percentage dari form
-      terms.push(`• ${tierLabel}: Minimal ${tier.min_downline || 0} ID aktif = Komisi ${tier.commission_percentage || 0}%`);
+      terms.push(`${tierLabel}: Minimal ${tier.min_downline || 0} ID aktif = Komisi ${tier.commission_percentage || 0}%`);
     });
   }
   
@@ -813,9 +813,8 @@ export const getDisplayTerms = (data: PromoFormData): string[] => {
         .map(line => line.replace(/^\d+\.\s*/, ''));
       
       if (customLines.length > 0) {
-        referralTerms.push(''); // Separator
-        referralTerms.push('Ketentuan tambahan:');
-        customLines.forEach(line => referralTerms.push(`• ${line}`));
+        referralTerms.push('Ketentuan tambahan dari situs:');
+        customLines.forEach(line => referralTerms.push(line));
       }
     }
     
