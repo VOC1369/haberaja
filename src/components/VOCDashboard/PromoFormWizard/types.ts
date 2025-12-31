@@ -121,9 +121,9 @@ export const PKB_FIELD_WHITELIST = [
   'deposit_method_providers',
   'deposit_rate',
   
-  // Admin Fee (untuk Referral Bonus)
-  'admin_fee_enabled',
-  'admin_fee_percentage',
+  // Admin Fee (REMOVED - use referral_admin_fee_* for Referral promos)
+  // 'admin_fee_enabled',      // ❌ REMOVED - ambiguous with referral_admin_fee_enabled
+  // 'admin_fee_percentage',   // ❌ REMOVED - ambiguous with referral_admin_fee_percentage
 ] as const;
 
 // ============================================
@@ -748,6 +748,39 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     delete pkbData.vip_multiplier;
     delete pkbData.redeem_items;
     delete pkbData.redeem_jenis_reward;
+  }
+  
+  // ============================================
+  // PATCH 10: Clean tier_network (Referral) - Remove LP/EXP fields, use commission paradigm
+  // ============================================
+  if (data.reward_mode === 'tier' && data.tier_archetype === 'tier_network') {
+    // Referral TIDAK pakai LP/EXP system
+    delete pkbData.promo_unit;
+    delete pkbData.exp_mode;
+    delete pkbData.lp_calc_method;
+    delete pkbData.exp_calc_method;
+    delete pkbData.lp_earn_basis;
+    delete pkbData.lp_earn_amount;
+    delete pkbData.lp_earn_point_amount;
+    delete pkbData.exp_formula;
+    delete pkbData.lp_value;
+    delete pkbData.exp_value;
+    delete pkbData.tiers;              // Referral pakai referral_tiers
+    delete pkbData.fast_exp_missions;
+    delete pkbData.level_up_rewards;
+    delete pkbData.vip_multiplier;
+    delete pkbData.redeem_items;
+    delete pkbData.redeem_jenis_reward;
+    
+    // Clear global admin fee (gunakan referral_admin_fee_* saja)
+    delete pkbData.admin_fee_enabled;
+    delete pkbData.admin_fee_percentage;
+    
+    // Override reward_type untuk Referral
+    pkbData.reward_type = 'commission';
+    
+    // Override trigger_event untuk Referral
+    pkbData.trigger_event = 'Downline Activity';
   }
   
   return pkbData as Partial<PromoFormData>;
@@ -1619,7 +1652,7 @@ export const initialPromoData: PromoFormData = {
   
   // Referral Commission Tiers (untuk tier_network)
   referral_tiers: [],
-  referral_calculation_basis: 'turnover',  // Default: Turnover
+  referral_calculation_basis: 'loss',      // Default: Loss/Winlose (umum untuk iGaming Referral)
   referral_admin_fee_enabled: true,        // Default: aktif
   referral_admin_fee_percentage: 20,       // Default 20%
   
