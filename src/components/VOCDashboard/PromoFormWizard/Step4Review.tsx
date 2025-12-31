@@ -151,6 +151,19 @@ export const getExplicitMaxBonus = (sub: any): number => {
  */
 export const validatePercentageConsistency = (data: PromoFormData): string | null => {
   const promoName = data.promo_name || '';
+  const promoType = data.promo_type || '';
+  
+  // SKIP: Referral promos have tiered percentages (5%, 10%, 15%) - name shows max tier (marketing)
+  const isReferral = /referral|referal|refferal|ajak\s*team/i.test(promoName) ||
+    /referral|referal|refferal/i.test(promoType);
+  if (isReferral) return null;
+  
+  // SKIP: Tier mode with network archetype (multi-tier has varying %)
+  if (data.tier_archetype === 'tier_network' || 
+      (data.referral_tiers && data.referral_tiers.length > 0)) {
+    return null;
+  }
+  
   const formulaValue = data.formula_metadata?.value || 
     data.calculation_value ||
     data.subcategories?.[0]?.calculation_value;
@@ -701,10 +714,69 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
   return terms;
 };
 
-// Legacy helper for backward compatibility
-export const generateTermsList = (data: PromoFormData): string[] => {
+/**
+ * Generate referral-specific terms
+ * Uses referral_tiers data for detailed tier information
+ */
+export const generateReferralTerms = (data: PromoFormData): string[] => {
+  const terms: string[] = [];
+  
+  terms.push('Promo ini adalah program Referral untuk member yang mengajak teman baru bergabung.');
+  
+  // Admin Fee
+  const adminFee = data.referral_admin_fee_percentage ?? 20;
+  if (adminFee > 0) {
+    terms.push(`Admin fee sebesar ${adminFee}% akan dipotong dari basis perhitungan.`);
+  }
+  
+  // Tier Details
+  if (data.referral_tiers && data.referral_tiers.length > 0) {
+    terms.push(`Program ini memiliki ${data.referral_tiers.length} tingkat komisi berdasarkan jumlah downline aktif:`);
+    
+    data.referral_tiers.forEach((tier, idx) => {
+      const tierLabel = tier.tier_label || `Tier ${idx + 1}`;
+      terms.push(`• ${tierLabel}: Minimal ${tier.min_downline} ID aktif = Komisi ${tier.commission_percentage}%`);
+    });
+  }
+  
+  terms.push('Komisi dihitung dari Winlose downline setelah potongan admin fee.');
+  
+  return terms;
+};
+
+/**
+ * Helper to check if promo is a Referral type
+ */
+export const isReferralPromo = (data: PromoFormData): boolean => {
+  return data.tier_archetype === 'tier_network' || 
+    (data.referral_tiers && data.referral_tiers.length > 0) ||
+    /referral|referal|refferal|ajak\s*team/i.test(data.promo_name || '') ||
+    /referral|referal|refferal/i.test(data.promo_type || '');
+};
+
+/**
+ * Get terms to display - prioritize extracted custom_terms over auto-generated
+ * EPISTEMIC AUTHORITY: Extracted terms from client website = source of truth
+ */
+export const getDisplayTerms = (data: PromoFormData): string[] => {
+  // PRIORITY 1: Use custom_terms from extraction if available
+  if (data.custom_terms && data.custom_terms.trim()) {
+    // Parse: split by semicolon or newline, clean up
+    return data.custom_terms
+      .split(/[;\n]+/)
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && !line.match(/^(syarat|ketentuan|s&k)/i))
+      .map(line => line.replace(/^\d+\.\s*/, '')); // Remove number prefix
+  }
+  
+  // PRIORITY 2: Fallback to auto-generated terms
+  // Check if referral
+  if (isReferralPromo(data)) {
+    return [...generateReferralTerms(data), ...generateGlobalTerms(data)];
+  }
+  
+  // Default - use generateTermsList logic
   if (data.has_subcategories && data.subcategories && data.subcategories.length > 0) {
-    // For combo promo, return combined terms (legacy behavior)
     const allTerms: string[] = [];
     allTerms.push(`Promo ini memiliki ${data.subcategories.length} varian bonus.`);
     data.subcategories.forEach((sub, idx) => {
@@ -714,9 +786,13 @@ export const generateTermsList = (data: PromoFormData): string[] => {
     generateGlobalTerms(data).forEach(t => allTerms.push(t));
     return allTerms;
   } else {
-    // Single promo mode
     return [...generateSinglePromoTerms(data), ...generateGlobalTerms(data)];
   }
+};
+
+// Legacy helper for backward compatibility
+export const generateTermsList = (data: PromoFormData): string[] => {
+  return getDisplayTerms(data);
 };
 
 // ============= ScoreRing Component =============
@@ -858,10 +934,20 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
         !!data.dinamis_reward_type
       ];
     } else if (data.reward_mode === 'tier') {
-      step4Fields = [
-        !!data.reward_mode,
-        !!data.promo_unit
-      ];
+      // Check for tier_network (Referral) vs standard tier
+      if (data.tier_archetype === 'tier_network') {
+        step4Fields = [
+          !!data.reward_mode,
+          !!data.tier_archetype,
+          (data.referral_tiers?.length || 0) > 0, // Must have at least 1 tier
+          data.referral_tiers?.every(t => t.min_downline > 0 && t.commission_percentage > 0) || false
+        ];
+      } else {
+        step4Fields = [
+          !!data.reward_mode,
+          !!data.promo_unit
+        ];
+      }
     } else {
       step4Fields = [!!data.reward_mode];
     }
@@ -1949,6 +2035,89 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </ol>
                     </div>
                   </div>
+                ) : isReferralPromo(data) ? (
+                  /* REFERRAL PROMO MODE - Show tier table + S&K */
+                  <div className="space-y-4">
+                    <p className="font-semibold text-foreground">Struktur Komisi Referral</p>
+                    
+                    {/* Admin Fee Banner */}
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-2">
+                      <span className="text-sm text-amber-400">
+                        Admin Fee: {data.referral_admin_fee_percentage ?? 20}% dari basis perhitungan
+                      </span>
+                    </div>
+                    
+                    {/* Tier Table (8-column consistency) */}
+                    {data.referral_tiers && data.referral_tiers.length > 0 && (
+                      <div className="bg-muted rounded-lg overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted/50">
+                            <tr>
+                              <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Nama Tier</th>
+                              <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Min Downline</th>
+                              <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Winlose</th>
+                              <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Cashback</th>
+                              <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Fee</th>
+                              <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">WL Bersih</th>
+                              <th className="text-left py-2 px-3 font-medium text-foreground whitespace-nowrap">Komisi %</th>
+                              <th className="text-left py-2 px-3 font-medium text-amber-400 whitespace-nowrap">Komisi Rp</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.referral_tiers.map((tier, idx) => {
+                              const adminFeePercent = data.referral_admin_fee_percentage ?? 20;
+                              const sampleWinlose = tier.sample_winlose ?? 0;
+                              const sampleCashback = tier.sample_cashback ?? 0;
+                              const feeAmount = tier.sample_commission_deduction ?? Math.round((sampleWinlose * adminFeePercent) / 100);
+                              const wlBersih = tier.sample_net_winlose ?? (sampleWinlose - sampleCashback - feeAmount);
+                              const komisiRp = tier.sample_commission_result ?? Math.round((wlBersih * tier.commission_percentage) / 100);
+                              
+                              return (
+                                <tr key={tier.id || idx} className="border-t border-border">
+                                  <td className="py-2 px-3 text-foreground">{tier.tier_label || `Tier ${idx + 1}`}</td>
+                                  <td className="py-2 px-3 text-foreground">{tier.min_downline?.toLocaleString('id-ID') || 0} ID</td>
+                                  <td className="py-2 px-3 text-foreground">{formatNumber(sampleWinlose)}</td>
+                                  <td className="py-2 px-3 text-foreground">{formatNumber(sampleCashback)}</td>
+                                  <td className="py-2 px-3 text-foreground">{formatNumber(feeAmount)}</td>
+                                  <td className="py-2 px-3 text-foreground">{formatNumber(wlBersih)}</td>
+                                  <td className="py-2 px-3 text-button-hover font-medium">{tier.commission_percentage}%</td>
+                                  <td className="py-2 px-3 text-amber-400 font-semibold">{formatNumber(komisiRp)}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-muted-foreground italic">
+                      * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah data simulasi dari tabel promo.
+                    </p>
+                    
+                    {/* S&K - with source badge */}
+                    <div className="pt-4 border-t border-border">
+                      <div className="flex items-center gap-3 mb-3">
+                        <p className="font-semibold text-foreground">Syarat & Ketentuan:</p>
+                        {data.custom_terms && data.custom_terms.trim() ? (
+                          <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
+                            Dari Website Klien
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
+                            Auto-generated
+                          </Badge>
+                        )}
+                      </div>
+                      <ol className="space-y-2 text-sm text-muted-foreground">
+                        {getDisplayTerms(data).map((term, i) => (
+                          <li key={i} className="flex gap-2 leading-relaxed">
+                            <span className="flex-shrink-0">{i + 1}.</span>
+                            <span>{term}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  </div>
                 ) : data.reward_mode === 'formula' && data.calculation_method === 'percentage' && data.calculation_value ? (
                   /* 🔒 EPISTEMIC AUTHORITY: Single promo mode with ilustrasi - ONLY cap if EXPLICIT */
                   <div className="space-y-4">
@@ -2016,11 +2185,22 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </p>
                     )}
                     
-                    {/* S&K */}
+                    {/* S&K - with source badge */}
                     <div className="pt-4 border-t border-border">
-                      <p className="font-semibold text-foreground mb-3">Syarat & Ketentuan:</p>
+                      <div className="flex items-center gap-3 mb-3">
+                        <p className="font-semibold text-foreground">Syarat & Ketentuan:</p>
+                        {data.custom_terms && data.custom_terms.trim() ? (
+                          <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
+                            Dari Website Klien
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
+                            Auto-generated
+                          </Badge>
+                        )}
+                      </div>
                       <ol className="space-y-2 text-sm text-muted-foreground">
-                        {[...generateSinglePromoTerms(data), ...generateGlobalTerms(data)].map((term, i) => (
+                        {getDisplayTerms(data).map((term, i) => (
                           <li key={i} className="flex gap-2 leading-relaxed">
                             <span className="flex-shrink-0">{i + 1}.</span>
                             <span>{term}</span>
@@ -2030,11 +2210,22 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     </div>
                   </div>
                 ) : (
-                  /* Non-formula mode - just S&K */
+                  /* Non-formula mode - just S&K with source badge */
                   <div className="space-y-3">
-                    <p className="font-semibold text-foreground">Syarat & Ketentuan:</p>
+                    <div className="flex items-center gap-3">
+                      <p className="font-semibold text-foreground">Syarat & Ketentuan:</p>
+                      {data.custom_terms && data.custom_terms.trim() ? (
+                        <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
+                          Dari Website Klien
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">
+                          Auto-generated
+                        </Badge>
+                      )}
+                    </div>
                     <ol className="space-y-2 text-sm text-muted-foreground">
-                      {[...generateSinglePromoTerms(data), ...generateGlobalTerms(data)].map((term, i) => (
+                      {getDisplayTerms(data).map((term, i) => (
                         <li key={i} className="flex gap-2 leading-relaxed">
                           <span className="flex-shrink-0">{i + 1}.</span>
                           <span>{term}</span>
