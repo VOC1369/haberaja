@@ -781,6 +781,20 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     
     // Override trigger_event untuk Referral
     pkbData.trigger_event = 'Downline Activity';
+    
+    // Strip noise fields yang tidak relevan untuk Referral
+    delete pkbData.min_deposit;
+    delete pkbData.turnover_rule;
+    delete pkbData.turnover_rule_enabled;
+    delete pkbData.turnover_rule_format;
+    delete pkbData.turnover_rule_custom;
+    delete pkbData.min_calculation;
+    
+    // Cleanup fixed mode fields
+    delete pkbData.fixed_reward_type;
+    delete pkbData.fixed_calculation_value;
+    delete pkbData.fixed_max_claim;
+    delete pkbData.fixed_min_deposit;
   }
   
   return pkbData as Partial<PromoFormData>;
@@ -1932,7 +1946,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   
   // Referral Commission Tiers (tier_network)
   referral_tiers: [],
-  referral_calculation_basis: 'turnover',
+  referral_calculation_basis: 'loss',  // Default: Loss/Winlose (iGaming Referral standard)
   referral_admin_fee_enabled: true,
   referral_admin_fee_percentage: 20,
 
