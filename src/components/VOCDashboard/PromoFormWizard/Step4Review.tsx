@@ -714,32 +714,61 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
   return terms;
 };
 
+// Referral Basis label mapping for dynamic S&K generation
+const REFERRAL_BASIS_LABELS: Record<string, string> = {
+  'turnover': 'Turnover (TO)',
+  'deposit': 'Deposit',
+  'win': 'Win',
+  'loss': 'Loss / Winlose',
+  'winlose': 'Winlose',
+  'bet_amount': 'Bet Amount',
+  'lp': 'Loyalty Point',
+  'exp': 'Experience Point',
+};
+
+const getReferralBasisLabel = (basis: string | undefined): string => {
+  if (!basis) return 'Winlose';
+  return REFERRAL_BASIS_LABELS[basis.toLowerCase()] || basis;
+};
+
 /**
- * Generate referral-specific terms
- * Uses referral_tiers data for detailed tier information
+ * Generate referral-specific terms - DYNAMICALLY from form data
+ * 🔒 CRITICAL: Uses referral_tiers, referral_admin_fee_*, and referral_calculation_basis
+ *    to ensure S&K always syncs with form edits!
  */
 export const generateReferralTerms = (data: PromoFormData): string[] => {
   const terms: string[] = [];
   
   terms.push('Promo ini adalah program Referral untuk member yang mengajak teman baru bergabung.');
   
-  // Admin Fee
+  // Basis Perhitungan - DYNAMIC from form
+  const basisLabel = getReferralBasisLabel(data.referral_calculation_basis);
+  
+  // Admin Fee - DYNAMIC from form (check enabled flag)
+  const adminFeeEnabled = data.referral_admin_fee_enabled !== false; // Default true
   const adminFee = data.referral_admin_fee_percentage ?? 20;
-  if (adminFee > 0) {
-    terms.push(`Admin fee sebesar ${adminFee}% akan dipotong dari basis perhitungan.`);
+  
+  if (adminFeeEnabled && adminFee > 0) {
+    terms.push(`Admin fee sebesar ${adminFee}% akan dipotong dari ${basisLabel}.`);
   }
   
-  // Tier Details
+  // Tier Details - DYNAMIC from data.referral_tiers (REALTIME FORM DATA!)
   if (data.referral_tiers && data.referral_tiers.length > 0) {
     terms.push(`Program ini memiliki ${data.referral_tiers.length} tingkat komisi berdasarkan jumlah downline aktif:`);
     
     data.referral_tiers.forEach((tier, idx) => {
       const tierLabel = tier.tier_label || `Tier ${idx + 1}`;
-      terms.push(`• ${tierLabel}: Minimal ${tier.min_downline} ID aktif = Komisi ${tier.commission_percentage}%`);
+      // REALTIME: min_downline dan commission_percentage dari form
+      terms.push(`• ${tierLabel}: Minimal ${tier.min_downline || 0} ID aktif = Komisi ${tier.commission_percentage || 0}%`);
     });
   }
   
-  terms.push('Komisi dihitung dari Winlose downline setelah potongan admin fee.');
+  // Conclusion - DYNAMIC based on admin fee status and basis
+  if (adminFeeEnabled && adminFee > 0) {
+    terms.push(`Komisi dihitung dari ${basisLabel} downline setelah potongan admin fee ${adminFee}%.`);
+  } else {
+    terms.push(`Komisi dihitung langsung dari ${basisLabel} downline tanpa potongan.`);
+  }
   
   return terms;
 };
@@ -755,24 +784,51 @@ export const isReferralPromo = (data: PromoFormData): boolean => {
 };
 
 /**
- * Get terms to display - prioritize extracted custom_terms over auto-generated
- * EPISTEMIC AUTHORITY: Extracted terms from client website = source of truth
+ * Get terms to display - HYBRID logic for Referral promos
+ * 🔒 CRITICAL FIX: Referral S&K ALWAYS generated from form data (tier, admin fee, basis)
+ *    to ensure sync when admin edits configuration!
+ *    custom_terms only used for non-tier-related notes (filtered)
  */
 export const getDisplayTerms = (data: PromoFormData): string[] => {
-  // PRIORITY 1: Use custom_terms from extraction if available
+  // REFERRAL: ALWAYS generate core S&K from form data
+  // This ensures S&K syncs with tier/admin fee/basis edits
+  if (isReferralPromo(data)) {
+    const referralTerms = generateReferralTerms(data);
+    
+    // Optional: Append custom_terms ONLY for generic notes (not tier/admin fee details)
+    // Filter out any tier-related or admin fee text to avoid duplication
+    if (data.custom_terms && data.custom_terms.trim()) {
+      const customLines = data.custom_terms
+        .split(/[;\n]+/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        // Filter out tier-related lines (already generated from form)
+        .filter(line => !/downline|aktif.*komisi|tier|id\s*aktif|tingkat\s*komisi/i.test(line))
+        // Filter out admin fee lines (already generated)
+        .filter(line => !/admin\s*fee|potongan|fee.*%/i.test(line))
+        // Filter out basis perhitungan lines
+        .filter(line => !/winlose|turnover|win\s*loss/i.test(line))
+        // Remove number prefixes and S&K headers
+        .filter(line => !line.match(/^(syarat|ketentuan|s&k)/i))
+        .map(line => line.replace(/^\d+\.\s*/, ''));
+      
+      if (customLines.length > 0) {
+        referralTerms.push(''); // Separator
+        referralTerms.push('Ketentuan tambahan:');
+        customLines.forEach(line => referralTerms.push(`• ${line}`));
+      }
+    }
+    
+    return [...referralTerms, ...generateGlobalTerms(data)];
+  }
+  
+  // NON-REFERRAL: Prioritize custom_terms (existing behavior)
   if (data.custom_terms && data.custom_terms.trim()) {
-    // Parse: split by semicolon or newline, clean up
     return data.custom_terms
       .split(/[;\n]+/)
       .map(line => line.trim())
       .filter(line => line.length > 0 && !line.match(/^(syarat|ketentuan|s&k)/i))
       .map(line => line.replace(/^\d+\.\s*/, '')); // Remove number prefix
-  }
-  
-  // PRIORITY 2: Fallback to auto-generated terms
-  // Check if referral
-  if (isReferralPromo(data)) {
-    return [...generateReferralTerms(data), ...generateGlobalTerms(data)];
   }
   
   // Default - use generateTermsList logic
