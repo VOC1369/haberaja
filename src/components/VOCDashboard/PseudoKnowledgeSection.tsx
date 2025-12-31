@@ -696,11 +696,23 @@ export function PseudoKnowledgeSection() {
                     <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
                   ) : (
                     <span className="text-foreground font-medium">
-                      {sub.turnover_rule != null 
-                        ? (isMinRupiahFormat
-                            ? `Rp ${Number(sub.turnover_rule).toLocaleString('id-ID')}`
-                            : `${sub.turnover_rule}x`)
-                        : '-'}
+                      {(() => {
+                        // For min_rupiah format (Rollingan/Cashback): fallback to minimum_base
+                        // This handles the case where semantic fix moved the value from turnover_rule to minimum_base
+                        const displayValue = isMinRupiahFormat
+                          ? (sub.turnover_rule && String(sub.turnover_rule) !== '0' && Number(sub.turnover_rule) !== 0)
+                              ? sub.turnover_rule
+                              : (sub as any).minimum_base || (sub as any).min_calculation
+                          : sub.turnover_rule;
+                        
+                        if (displayValue == null || displayValue === '' || displayValue === '0' || displayValue === 0) {
+                          return '-';
+                        }
+                        
+                        return isMinRupiahFormat
+                          ? `Rp ${Number(displayValue).toLocaleString('id-ID')}`
+                          : `${displayValue}x`;
+                      })()}
                     </span>
                   )}
                 </>
