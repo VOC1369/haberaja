@@ -1273,7 +1273,7 @@ export function PseudoKnowledgeSection() {
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
-        <div className={`p-6 pb-20 max-w-5xl mx-auto ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
+        <div className={`p-6 pb-6 max-w-5xl mx-auto ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
           
           {/* INPUT SECTION - Unified Design */}
           {!extractedPromo && !isExtracting && (
@@ -1550,10 +1550,10 @@ export function PseudoKnowledgeSection() {
         </div>
       </ScrollArea>
 
-      {/* FIXED ACTION BAR - Consistent with other sections */}
+      {/* STICKY ACTION BAR - Inside ScrollArea */}
       {extractedPromo && (
-        <div className="footer-bar">
-          <div className="footer-bar-content">
+        <div className="sticky bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border p-4 z-10">
+          <div className="max-w-5xl mx-auto flex items-center justify-between">
             <Button 
               variant="ghost"
               onClick={handleRestart}
