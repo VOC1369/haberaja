@@ -722,11 +722,26 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Masa Berakhir</Label>
+                    <div className="flex justify-between items-center">
+                      <Label>Masa Berakhir</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Unlimited</span>
+                        <Switch
+                          checked={data.fixed_voucher_valid_unlimited || false}
+                          onCheckedChange={(checked) => onChange({ 
+                            fixed_voucher_valid_unlimited: checked,
+                            fixed_voucher_valid_until: checked ? '' : data.fixed_voucher_valid_until
+                          })}
+                        />
+                      </div>
+                    </div>
                     <Input
                       type="date"
-                      value={data.fixed_voucher_valid_until || ''}
+                      value={data.fixed_voucher_valid_unlimited ? '' : (data.fixed_voucher_valid_until || '')}
                       onChange={(e) => onChange({ fixed_voucher_valid_until: e.target.value })}
+                      disabled={data.fixed_voucher_valid_unlimited}
+                      placeholder={data.fixed_voucher_valid_unlimited ? "Tidak ada kadaluwarsa" : ""}
+                      className={cn(data.fixed_voucher_valid_unlimited && "opacity-50")}
                     />
                   </div>
                 </div>
@@ -1797,11 +1812,26 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Masa Berakhir</Label>
+                    <div className="flex justify-between items-center">
+                      <Label>Masa Berakhir</Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Unlimited</span>
+                        <Switch
+                          checked={data.voucher_valid_unlimited || false}
+                          onCheckedChange={(checked) => onChange({ 
+                            voucher_valid_unlimited: checked,
+                            voucher_valid_until: checked ? '' : data.voucher_valid_until
+                          })}
+                        />
+                      </div>
+                    </div>
                     <Input
                       type="date"
-                      value={data.voucher_valid_until || ''}
+                      value={data.voucher_valid_unlimited ? '' : (data.voucher_valid_until || '')}
                       onChange={(e) => onChange({ voucher_valid_until: e.target.value })}
+                      disabled={data.voucher_valid_unlimited}
+                      placeholder={data.voucher_valid_unlimited ? "Tidak ada kadaluwarsa" : ""}
+                      className={cn(data.voucher_valid_unlimited && "opacity-50")}
                     />
                   </div>
                 </div>
