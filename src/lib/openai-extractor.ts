@@ -19,6 +19,7 @@
 
 import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
 import { generateUUID } from './supabase-client';
+import { enforceFieldApplicability } from './extractors/field-applicability-map';
 
 // ============= CONFIDENCE LEVELS (EXPANDED + NOT_APPLICABLE) =============
 export type ConfidenceLevel = 
@@ -3359,5 +3360,20 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     classification_override: extracted.classification_override,
   };
 
-  return promoData;
+  // ============================================
+  // FIELD APPLICABILITY ENFORCEMENT (Final Layer)
+  // Set non-applicable fields to inert values based on promo_type
+  // ARSITEKTUR: Full-shape JSON dengan inert values, BUKAN delete!
+  // ============================================
+  const { data: enforcedData, inerted_fields } = enforceFieldApplicability(
+    promoData as unknown as Record<string, unknown>,
+    promoData.promo_type
+  );
+  
+  if (inerted_fields.length > 0) {
+    console.log(`[mapExtractedToPromoFormData] Applied inert values to ${inerted_fields.length} fields:`, 
+      inerted_fields.map(f => `${f.field}: ${JSON.stringify(f.from)} → ${JSON.stringify(f.to)}`));
+  }
+
+  return enforcedData as unknown as PromoFormData;
 }

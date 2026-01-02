@@ -1,6 +1,7 @@
 import { PERSONA_BINDING_FIELDS, DROPPED_FIELDS, extractPersonaBindingFields, savePersonaBinding } from '@/lib/promo-persona-binding';
 import { promoKB } from '@/lib/promo-storage';
 import { generateUUID } from '@/lib/supabase-client';
+import { applyInertValuesToPayload } from '@/lib/extractors/field-applicability-map';
 // PKB FIELD WHITELIST
 // ============================================
 
@@ -167,9 +168,9 @@ export interface PromoFormData {
   
   // Fixed mode
   reward_type: string;
-  reward_amount: number;
-  min_deposit: number;  // Fixed mode: Minimal deposit untuk klaim (formerly min_requirement)
-  max_claim: number | null;  // null jika unlimited (canonical form)
+  reward_amount: number | null;  // null = inert (not applicable)
+  min_deposit: number | null;    // null = inert (not applicable)
+  max_claim: number | null;      // null = unlimited OR inert
   turnover_rule: string;
   turnover_rule_format?: 'multiplier' | 'min_rupiah';  // Semantic: multiplier (20x) vs min_rupiah (Rp)
   turnover_rule_enabled: boolean;
@@ -249,16 +250,16 @@ export interface PromoFormData {
   // =============================================
   calculation_base: string;
   calculation_method: string;
-  calculation_value?: number;
-  min_calculation: number;       // Dinamis mode: Min basis perhitungan (Loss/TO/dll) (formerly minimum_base)
+  calculation_value?: number | null;
+  min_calculation: number | null;       // Dinamis mode: Min basis perhitungan (null = inert)
   min_calculation_enabled: boolean;
   
   // Dinamis mode - Reward (UI helper)
   dinamis_reward_type: string;
-  dinamis_reward_amount: number;
-  dinamis_max_claim?: number;
+  dinamis_reward_amount: number | null;
+  dinamis_max_claim?: number | null;
   dinamis_max_claim_unlimited: boolean;
-  dinamis_min_claim: number;
+  dinamis_min_claim: number | null;
   dinamis_min_claim_enabled: boolean;
   
   // Dinamis mode - Text description (goes to PKB)
@@ -678,15 +679,17 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   // ============================================
   // PATCH 4: Clean up - remove empty blacklist arrays & UI-only remnants
   // ============================================
-  // If blacklist arrays are empty, remove them from output for cleaner JSON
+  // If blacklist arrays are empty, set to inert (empty array) - DON'T DELETE
+  // Keep full-shape JSON for consistency
+  // ============================================
   if (Array.isArray(pkbData.game_types_blacklist) && (pkbData.game_types_blacklist as string[]).length === 0) {
-    delete pkbData.game_types_blacklist;
+    pkbData.game_types_blacklist = [];
   }
   if (Array.isArray(pkbData.game_providers_blacklist) && (pkbData.game_providers_blacklist as string[]).length === 0) {
-    delete pkbData.game_providers_blacklist;
+    pkbData.game_providers_blacklist = [];
   }
   if (Array.isArray(pkbData.game_names_blacklist) && (pkbData.game_names_blacklist as string[]).length === 0) {
-    delete pkbData.game_names_blacklist;
+    pkbData.game_names_blacklist = [];
   }
   
   // ============================================
@@ -707,12 +710,11 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   }
   
   // ============================================
-  // PATCH 6: reward_distribution REMOVED from PKB output
+  // PATCH 6: reward_distribution set to inert (NOT deleted)
   // ============================================
   // Claim mechanism (manual vs auto) is a RUNTIME decision controlled by UI toggle,
-  // NOT part of promo data. This prevents "toggle ditabrak data" conflict.
-  // If reward_distribution was copied from whitelist, remove it now.
-  delete pkbData.reward_distribution;
+  // NOT part of promo data. Set to empty string (inert) instead of delete.
+  pkbData.reward_distribution = "";
   
   // ============================================
   // PATCH 7: Normalize geo_restriction → lowercase
@@ -722,59 +724,61 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   }
   
   // ============================================
-  // PATCH 8: Remove legacy game_restriction if game_types[] has data
+  // PATCH 8: game_restriction set to inert if game_types[] has data
   // ============================================
   if (Array.isArray(pkbData.game_types) && (pkbData.game_types as string[]).length > 0) {
-    delete pkbData.game_restriction;
+    pkbData.game_restriction = "";
   }
   
   // ============================================
-  // PATCH 9: Remove tier-only fields from non-tier modes
+  // PATCH 9: Set tier-only fields to INERT for non-tier modes
+  // ARSITEKTUR: Full-shape JSON dengan inert values (BUKAN delete!)
   // ============================================
   if (data.reward_mode !== 'tier') {
-    delete pkbData.promo_unit;
-    delete pkbData.exp_mode;
-    delete pkbData.lp_calc_method;
-    delete pkbData.exp_calc_method;
-    delete pkbData.lp_earn_basis;
-    delete pkbData.lp_earn_amount;
-    delete pkbData.lp_earn_point_amount;
-    delete pkbData.exp_formula;
-    delete pkbData.lp_value;
-    delete pkbData.exp_value;
-    delete pkbData.tiers;
-    delete pkbData.fast_exp_missions;
-    delete pkbData.level_up_rewards;
-    delete pkbData.vip_multiplier;
-    delete pkbData.redeem_items;
-    delete pkbData.redeem_jenis_reward;
+    pkbData.promo_unit = "";
+    pkbData.exp_mode = "";
+    pkbData.lp_calc_method = "";
+    pkbData.exp_calc_method = "";
+    pkbData.lp_earn_basis = "";
+    pkbData.lp_earn_amount = null;
+    pkbData.lp_earn_point_amount = null;
+    pkbData.exp_formula = "";
+    pkbData.lp_value = "";
+    pkbData.exp_value = "";
+    pkbData.tiers = [];
+    pkbData.fast_exp_missions = [];
+    pkbData.level_up_rewards = [];
+    pkbData.vip_multiplier = null;
+    pkbData.redeem_items = [];
+    pkbData.redeem_jenis_reward = "";
   }
   
   // ============================================
-  // PATCH 10: Clean tier_network (Referral) - Remove LP/EXP fields, use commission paradigm
+  // PATCH 10: Clean tier_network (Referral) - Set LP/EXP fields to INERT
+  // ARSITEKTUR: Full-shape JSON dengan inert values (BUKAN delete!)
   // ============================================
   if (data.reward_mode === 'tier' && data.tier_archetype === 'tier_network') {
-    // Referral TIDAK pakai LP/EXP system
-    delete pkbData.promo_unit;
-    delete pkbData.exp_mode;
-    delete pkbData.lp_calc_method;
-    delete pkbData.exp_calc_method;
-    delete pkbData.lp_earn_basis;
-    delete pkbData.lp_earn_amount;
-    delete pkbData.lp_earn_point_amount;
-    delete pkbData.exp_formula;
-    delete pkbData.lp_value;
-    delete pkbData.exp_value;
-    delete pkbData.tiers;              // Referral pakai referral_tiers
-    delete pkbData.fast_exp_missions;
-    delete pkbData.level_up_rewards;
-    delete pkbData.vip_multiplier;
-    delete pkbData.redeem_items;
-    delete pkbData.redeem_jenis_reward;
+    // Referral TIDAK pakai LP/EXP system → set inert
+    pkbData.promo_unit = "";
+    pkbData.exp_mode = "";
+    pkbData.lp_calc_method = "";
+    pkbData.exp_calc_method = "";
+    pkbData.lp_earn_basis = "";
+    pkbData.lp_earn_amount = null;
+    pkbData.lp_earn_point_amount = null;
+    pkbData.exp_formula = "";
+    pkbData.lp_value = "";
+    pkbData.exp_value = "";
+    pkbData.tiers = [];              // Referral pakai referral_tiers
+    pkbData.fast_exp_missions = [];
+    pkbData.level_up_rewards = [];
+    pkbData.vip_multiplier = null;
+    pkbData.redeem_items = [];
+    pkbData.redeem_jenis_reward = "";
     
-    // Clear global admin fee (gunakan referral_admin_fee_* saja)
-    delete pkbData.admin_fee_enabled;
-    delete pkbData.admin_fee_percentage;
+    // Clear global admin fee (gunakan referral_admin_fee_* saja) → set inert
+    pkbData.admin_fee_enabled = false;
+    pkbData.admin_fee_percentage = null;
     
     // Override reward_type untuk Referral
     pkbData.reward_type = 'commission';
@@ -782,22 +786,28 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     // Override trigger_event untuk Referral
     pkbData.trigger_event = 'Downline Activity';
     
-    // Strip noise fields yang tidak relevan untuk Referral
-    delete pkbData.min_deposit;
-    delete pkbData.turnover_rule;
-    delete pkbData.turnover_rule_enabled;
-    delete pkbData.turnover_rule_format;
-    delete pkbData.turnover_rule_custom;
-    delete pkbData.min_calculation;
+    // Noise fields untuk Referral → set inert
+    pkbData.min_deposit = null;
+    pkbData.turnover_rule = "";
+    pkbData.turnover_rule_enabled = false;
+    pkbData.min_calculation = null;
     
-    // Cleanup fixed mode fields
-    delete pkbData.fixed_reward_type;
-    delete pkbData.fixed_calculation_value;
-    delete pkbData.fixed_max_claim;
-    delete pkbData.fixed_min_deposit;
+    // Fixed mode fields → set inert
+    pkbData.fixed_reward_type = "";
+    pkbData.fixed_calculation_value = null;
+    pkbData.fixed_max_claim = null;
   }
   
-  return pkbData as Partial<PromoFormData>;
+  // ============================================
+  // PATCH 11: Apply Field Applicability Rules (Final Guard)
+  // ARSITEKTUR: promo_type → set non-applicable fields to inert
+  // ============================================
+  const finalPayload = applyInertValuesToPayload(
+    pkbData as Record<string, unknown>,
+    data.promo_type
+  );
+  
+  return finalPayload as Partial<PromoFormData>;
 }
 
 /**
@@ -1517,10 +1527,10 @@ export const initialPromoData: PromoFormData = {
   trigger_event: '',
   reward_mode: 'fixed',
   reward_type: '',
-  reward_amount: 0,
-  min_deposit: 0,  // Fixed mode: Min Deposit (formerly min_requirement)
-  max_claim: 0,  // UI default (akan jadi null di PKB jika unlimited)
-  turnover_rule: '',
+  reward_amount: null,  // INERT: null instead of 0 (0 could be valid)
+  min_deposit: null,    // INERT: null = not applicable
+  max_claim: null,      // INERT: null = unlimited
+  turnover_rule: '',    // INERT: empty string
   turnover_rule_enabled: false,
   turnover_rule_custom: '',
   claim_frequency: '',
@@ -1594,14 +1604,14 @@ export const initialPromoData: PromoFormData = {
   // =============================================
   calculation_base: '',
   calculation_method: '',
-  calculation_value: undefined,
-  min_calculation: 0,       // Dinamis mode: Min Calculation (formerly minimum_base)
-  min_calculation_enabled: true,
+  calculation_value: null,  // INERT: null instead of undefined
+  min_calculation: null,    // INERT: null = not applicable
+  min_calculation_enabled: false,
   dinamis_reward_type: '',
-  dinamis_reward_amount: 0,
-  dinamis_max_claim: undefined,
+  dinamis_reward_amount: null,  // INERT: null
+  dinamis_max_claim: null,      // INERT: null
   dinamis_max_claim_unlimited: false,
-  dinamis_min_claim: 0,
+  dinamis_min_claim: null,      // INERT: null
   dinamis_min_claim_enabled: false,
   conversion_formula: '',
   
@@ -1652,7 +1662,7 @@ export const initialPromoData: PromoFormData = {
   global_jenis_hadiah_enabled: true,  // default ON - semua subcategory ikut global
   global_jenis_hadiah: '',
   global_max_bonus_enabled: true,     // default ON - semua subcategory ikut global
-  global_max_bonus: 0,
+  global_max_bonus: null,             // INERT: null instead of 0
   global_payout_direction_enabled: true,   // default ON - semua subcategory ikut global
   global_payout_direction: 'after',
   
@@ -1666,9 +1676,9 @@ export const initialPromoData: PromoFormData = {
   
   // Referral Commission Tiers (untuk tier_network)
   referral_tiers: [],
-  referral_calculation_basis: 'loss',      // Default: Loss/Winlose (umum untuk iGaming Referral)
-  referral_admin_fee_enabled: true,        // Default: aktif
-  referral_admin_fee_percentage: 20,       // Default 20%
+  referral_calculation_basis: '',       // INERT: empty string (was 'loss' - should not have default)
+  referral_admin_fee_enabled: false,    // INERT: false
+  referral_admin_fee_percentage: null,  // INERT: null instead of 20
   
   response_template_offer: '',
   response_template_requirement: '',
