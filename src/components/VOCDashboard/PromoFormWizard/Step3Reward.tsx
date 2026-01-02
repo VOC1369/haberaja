@@ -1693,135 +1693,143 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
               {/* Mode 1: Voucher/Ticket Exchange Table */}
               {data.fixed_ticket_exchange_mode === 'voucher' && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Aturan Penukaran Ticket</Label>
-                  
-                  {/* Table */}
-                  <div className="border border-border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="w-32">Ticket</TableHead>
-                          <TableHead>Hadiah</TableHead>
-                          <TableHead className="w-16"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(data.fixed_ticket_rewards || []).map((item, index) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                min={1}
-                                value={item.ticket}
-                                onChange={(e) => {
-                                  const updated = [...(data.fixed_ticket_rewards || [])];
-                                  updated[index] = { ...item, ticket: parseInt(e.target.value) || 1 };
-                                  onChange({ fixed_ticket_rewards: updated });
-                                }}
-                                className="w-24"
-                                placeholder="1"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={item.reward}
-                                onChange={(e) => {
-                                  const updated = [...(data.fixed_ticket_rewards || [])];
-                                  updated[index] = { ...item, reward: e.target.value };
-                                  onChange({ fixed_ticket_rewards: updated });
-                                }}
-                                placeholder="Contoh: Rp 10.000 atau Honda PCX"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  const updated = (data.fixed_ticket_rewards || []).filter((_, i) => i !== index);
-                                  onChange({ fixed_ticket_rewards: updated });
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-foreground">Tabel Penukaran Ticket</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newItem: TicketReward = {
+                          id: generateUUID(),
+                          ticket: 1,
+                          reward: ''
+                        };
+                        onChange({ 
+                          fixed_ticket_rewards: [...(data.fixed_ticket_rewards || []), newItem] 
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Tambah Tier
+                    </Button>
                   </div>
-                  
-                  {/* Add Row Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const newItem: TicketReward = {
-                        id: generateUUID(),
-                        ticket: 1,
-                        reward: ''
-                      };
-                      onChange({ 
-                        fixed_ticket_rewards: [...(data.fixed_ticket_rewards || []), newItem] 
-                      });
-                    }}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tambah Hadiah
-                  </Button>
+
+                  {(data.fixed_ticket_rewards || []).length > 0 ? (
+                    <div className="rounded-lg border border-border overflow-hidden">
+                      <div className="grid grid-cols-[100px_1fr_48px] bg-muted px-4 py-2 border-b border-border">
+                        <span className="text-xs font-medium text-muted-foreground">Ticket</span>
+                        <span className="text-xs font-medium text-muted-foreground">Hadiah</span>
+                        <span className="text-xs font-medium text-muted-foreground"></span>
+                      </div>
+
+                      {(data.fixed_ticket_rewards || []).map((item, index) => (
+                        <div key={item.id} className="grid grid-cols-[100px_1fr_48px] px-4 py-2 border-b border-border last:border-b-0 items-center gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            value={item.ticket}
+                            onChange={(e) => {
+                              const updated = [...(data.fixed_ticket_rewards || [])];
+                              updated[index] = { ...item, ticket: parseInt(e.target.value) || 1 };
+                              onChange({ fixed_ticket_rewards: updated });
+                            }}
+                            className="bg-muted h-8"
+                            placeholder="1"
+                          />
+                          <Input
+                            value={item.reward}
+                            onChange={(e) => {
+                              const updated = [...(data.fixed_ticket_rewards || [])];
+                              updated[index] = { ...item, reward: e.target.value };
+                              onChange({ fixed_ticket_rewards: updated });
+                            }}
+                            className="bg-muted h-8"
+                            placeholder="Contoh: Rp 10.000 atau Honda PCX"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = (data.fixed_ticket_rewards || []).filter((_, i) => i !== index);
+                              onChange({ fixed_ticket_rewards: updated });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Belum ada tier. Klik "Tambah Tier" untuk menambahkan.
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-yellow-500">
+                    💡 User hanya bisa redeem hadiah dengan Ticket sesuai jumlah yang dimiliki.
+                  </p>
                 </div>
               )}
 
               {/* Mode 2: Lucky Spin Prize List */}
               {data.fixed_ticket_exchange_mode === 'lucky_spin' && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Daftar Hadiah Lucky Spin</Label>
-                  
-                  {/* Prize List */}
-                  <div className="space-y-2">
-                    {(data.fixed_lucky_spin_rewards || []).map((prize, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Input
-                          value={prize}
-                          onChange={(e) => {
-                            const updated = [...(data.fixed_lucky_spin_rewards || [])];
-                            updated[index] = e.target.value;
-                            onChange({ fixed_lucky_spin_rewards: updated });
-                          }}
-                          placeholder="Contoh: Honda PCX / iPhone 16 Pro / Rp 5.000.000"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            const updated = (data.fixed_lucky_spin_rewards || []).filter((_, i) => i !== index);
-                            onChange({ fixed_lucky_spin_rewards: updated });
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-foreground">Daftar Hadiah Lucky Spin</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onChange({ 
+                          fixed_lucky_spin_rewards: [...(data.fixed_lucky_spin_rewards || []), ''] 
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Tambah Hadiah
+                    </Button>
                   </div>
-                  
-                  {/* Add Prize Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      onChange({ 
-                        fixed_lucky_spin_rewards: [...(data.fixed_lucky_spin_rewards || []), ''] 
-                      });
-                    }}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tambah Hadiah
-                  </Button>
-                  
-                  <p className="text-xs text-muted-foreground">
+
+                  {(data.fixed_lucky_spin_rewards || []).length > 0 ? (
+                    <div className="space-y-2">
+                      {(data.fixed_lucky_spin_rewards || []).map((prize, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
+                          <Input
+                            value={prize}
+                            onChange={(e) => {
+                              const updated = [...(data.fixed_lucky_spin_rewards || [])];
+                              updated[index] = e.target.value;
+                              onChange({ fixed_lucky_spin_rewards: updated });
+                            }}
+                            className="bg-muted flex-1"
+                            placeholder="Contoh: Honda PCX / iPhone 16 Pro / Rp 5.000.000"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = (data.fixed_lucky_spin_rewards || []).filter((_, i) => i !== index);
+                              onChange({ fixed_lucky_spin_rewards: updated });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Belum ada hadiah. Klik "Tambah Hadiah" untuk menambahkan.
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-yellow-500">
                     💡 Ticket berfungsi sebagai akses spin. Tidak ada logika exchange.
                   </p>
                 </div>
@@ -3018,135 +3026,143 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
               {/* Mode 1: Voucher/Ticket Exchange Table */}
               {data.ticket_exchange_mode === 'voucher' && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Aturan Penukaran Ticket</Label>
-                  
-                  {/* Table */}
-                  <div className="border border-border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="w-32">Ticket</TableHead>
-                          <TableHead>Hadiah</TableHead>
-                          <TableHead className="w-16"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(data.ticket_rewards || []).map((item, index) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                min={1}
-                                value={item.ticket}
-                                onChange={(e) => {
-                                  const updated = [...(data.ticket_rewards || [])];
-                                  updated[index] = { ...item, ticket: parseInt(e.target.value) || 1 };
-                                  onChange({ ticket_rewards: updated });
-                                }}
-                                className="w-24"
-                                placeholder="1"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={item.reward}
-                                onChange={(e) => {
-                                  const updated = [...(data.ticket_rewards || [])];
-                                  updated[index] = { ...item, reward: e.target.value };
-                                  onChange({ ticket_rewards: updated });
-                                }}
-                                placeholder="Contoh: Rp 10.000 atau Honda PCX"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  const updated = (data.ticket_rewards || []).filter((_, i) => i !== index);
-                                  onChange({ ticket_rewards: updated });
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-foreground">Tabel Penukaran Ticket</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newItem: TicketReward = {
+                          id: generateUUID(),
+                          ticket: 1,
+                          reward: ''
+                        };
+                        onChange({ 
+                          ticket_rewards: [...(data.ticket_rewards || []), newItem] 
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Tambah Tier
+                    </Button>
                   </div>
-                  
-                  {/* Add Row Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const newItem: TicketReward = {
-                        id: generateUUID(),
-                        ticket: 1,
-                        reward: ''
-                      };
-                      onChange({ 
-                        ticket_rewards: [...(data.ticket_rewards || []), newItem] 
-                      });
-                    }}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tambah Hadiah
-                  </Button>
+
+                  {(data.ticket_rewards || []).length > 0 ? (
+                    <div className="rounded-lg border border-border overflow-hidden">
+                      <div className="grid grid-cols-[100px_1fr_48px] bg-muted px-4 py-2 border-b border-border">
+                        <span className="text-xs font-medium text-muted-foreground">Ticket</span>
+                        <span className="text-xs font-medium text-muted-foreground">Hadiah</span>
+                        <span className="text-xs font-medium text-muted-foreground"></span>
+                      </div>
+
+                      {(data.ticket_rewards || []).map((item, index) => (
+                        <div key={item.id} className="grid grid-cols-[100px_1fr_48px] px-4 py-2 border-b border-border last:border-b-0 items-center gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            value={item.ticket}
+                            onChange={(e) => {
+                              const updated = [...(data.ticket_rewards || [])];
+                              updated[index] = { ...item, ticket: parseInt(e.target.value) || 1 };
+                              onChange({ ticket_rewards: updated });
+                            }}
+                            className="bg-muted h-8"
+                            placeholder="1"
+                          />
+                          <Input
+                            value={item.reward}
+                            onChange={(e) => {
+                              const updated = [...(data.ticket_rewards || [])];
+                              updated[index] = { ...item, reward: e.target.value };
+                              onChange({ ticket_rewards: updated });
+                            }}
+                            className="bg-muted h-8"
+                            placeholder="Contoh: Rp 10.000 atau Honda PCX"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = (data.ticket_rewards || []).filter((_, i) => i !== index);
+                              onChange({ ticket_rewards: updated });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Belum ada tier. Klik "Tambah Tier" untuk menambahkan.
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-yellow-500">
+                    💡 User hanya bisa redeem hadiah dengan Ticket sesuai jumlah yang dimiliki.
+                  </p>
                 </div>
               )}
 
               {/* Mode 2: Lucky Spin Prize List */}
               {data.ticket_exchange_mode === 'lucky_spin' && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Daftar Hadiah Lucky Spin</Label>
-                  
-                  {/* Prize List */}
-                  <div className="space-y-2">
-                    {(data.lucky_spin_rewards || []).map((prize, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Input
-                          value={prize}
-                          onChange={(e) => {
-                            const updated = [...(data.lucky_spin_rewards || [])];
-                            updated[index] = e.target.value;
-                            onChange({ lucky_spin_rewards: updated });
-                          }}
-                          placeholder="Contoh: Honda PCX / iPhone 16 Pro / Rp 5.000.000"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            const updated = (data.lucky_spin_rewards || []).filter((_, i) => i !== index);
-                            onChange({ lucky_spin_rewards: updated });
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ))}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-foreground">Daftar Hadiah Lucky Spin</Label>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onChange({ 
+                          lucky_spin_rewards: [...(data.lucky_spin_rewards || []), ''] 
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Tambah Hadiah
+                    </Button>
                   </div>
-                  
-                  {/* Add Prize Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      onChange({ 
-                        lucky_spin_rewards: [...(data.lucky_spin_rewards || []), ''] 
-                      });
-                    }}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tambah Hadiah
-                  </Button>
-                  
-                  <p className="text-xs text-muted-foreground">
+
+                  {(data.lucky_spin_rewards || []).length > 0 ? (
+                    <div className="space-y-2">
+                      {(data.lucky_spin_rewards || []).map((prize, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground w-6">{index + 1}.</span>
+                          <Input
+                            value={prize}
+                            onChange={(e) => {
+                              const updated = [...(data.lucky_spin_rewards || [])];
+                              updated[index] = e.target.value;
+                              onChange({ lucky_spin_rewards: updated });
+                            }}
+                            className="bg-muted flex-1"
+                            placeholder="Contoh: Honda PCX / iPhone 16 Pro / Rp 5.000.000"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = (data.lucky_spin_rewards || []).filter((_, i) => i !== index);
+                              onChange({ lucky_spin_rewards: updated });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border p-4 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Belum ada hadiah. Klik "Tambah Hadiah" untuk menambahkan.
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-yellow-500">
                     💡 Ticket berfungsi sebagai akses spin. Tidak ada logika exchange.
                   </p>
                 </div>
