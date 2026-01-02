@@ -107,7 +107,10 @@ const DEFAULT_VOUCHER_KINDS: SelectOption[] = [
   { value: 'other', label: 'Other' },
 ];
 
-// Reward types yang TIDAK memerlukan Max Bonus (freeze field)
+// Reward types yang memerlukan unit-based claim (bukan nominal uang) - label "Max Claim Reward"
+const UNIT_BASED_REWARDS = ['voucher', 'ticket', 'lucky_spin'];
+
+// Reward types yang TIDAK memerlukan Max Bonus (freeze field) - DEPRECATED, replaced by UNIT_BASED_REWARDS
 const NON_MONETARY_REWARDS = ['voucher', 'lucky_spin', 'hadiah_fisik'];
 
 // Reward types yang memerlukan FULL semantic locking (voucher/ticket)
@@ -636,10 +639,12 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 )}
               </div>
               
-              {/* Max Bonus */}
+              {/* Max Bonus / Max Claim Reward - Dynamic Label based on reward type */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className={NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '') ? 'text-muted-foreground' : ''}>Max Bonus</Label>
+                  <Label>
+                    {UNIT_BASED_REWARDS.includes(data.fixed_reward_type || '') ? 'Max Claim Reward' : 'Max Bonus'}
+                  </Label>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Unlimited</span>
                     <Switch
@@ -648,7 +653,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         fixed_max_claim_unlimited: checked,
                         fixed_max_claim: checked ? undefined : data.fixed_max_claim
                       })}
-                      disabled={NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '')}
                     />
                   </div>
                 </div>
@@ -656,15 +660,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   type="text"
                   value={data.fixed_max_claim_unlimited ? '' : (data.fixed_max_claim ? data.fixed_max_claim.toLocaleString('id-ID') : '')}
                   onChange={(e) => onChange({ fixed_max_claim: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '') ? "Tidak berlaku untuk jenis hadiah ini" : (data.fixed_max_claim_unlimited ? "Unlimited / Tanpa Batas" : "Contoh: 100.000")}
-                  disabled={data.fixed_max_claim_unlimited || NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '')}
-                  className={cn(
-                    (data.fixed_max_claim_unlimited || NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '')) && "opacity-50"
-                  )}
+                  placeholder={data.fixed_max_claim_unlimited ? "Unlimited / Tanpa Batas" : (UNIT_BASED_REWARDS.includes(data.fixed_reward_type || '') ? "Contoh: 10 unit/hari" : "Contoh: 100.000")}
+                  disabled={data.fixed_max_claim_unlimited}
+                  className={cn(data.fixed_max_claim_unlimited && "opacity-50")}
                 />
-                {NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '') && (
-                  <p className="text-xs text-muted-foreground">Tidak berlaku untuk Voucher / Ticket, Lucky Spin, atau Hadiah Fisik</p>
-                )}
               </div>
             </div>
             
@@ -1726,10 +1725,12 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 )}
               </div>
               
-              {/* Max Bonus */}
+              {/* Max Bonus / Max Claim Reward - Dynamic Label based on reward type */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className={NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '') ? 'text-muted-foreground' : ''}>Max Bonus</Label>
+                  <Label>
+                    {UNIT_BASED_REWARDS.includes(data.dinamis_reward_type || '') ? 'Max Claim Reward' : 'Max Bonus'}
+                  </Label>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Unlimited</span>
                     <Switch
@@ -1738,7 +1739,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         dinamis_max_claim_unlimited: checked,
                         dinamis_max_claim: checked ? null : data.dinamis_max_claim
                       })}
-                      disabled={NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '')}
                     />
                   </div>
                 </div>
@@ -1746,15 +1746,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   type="text"
                   value={data.dinamis_max_claim_unlimited ? '' : (data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : '')}
                   onChange={(e) => onChange({ dinamis_max_claim: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '') ? "Tidak berlaku untuk jenis hadiah ini" : (data.dinamis_max_claim_unlimited ? "Unlimited / Tanpa Batas" : "Contoh: 100.000")}
-                  disabled={data.dinamis_max_claim_unlimited || NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '')}
-                  className={cn(
-                    (data.dinamis_max_claim_unlimited || NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '')) && "opacity-50"
-                  )}
+                  placeholder={data.dinamis_max_claim_unlimited ? "Unlimited / Tanpa Batas" : (UNIT_BASED_REWARDS.includes(data.dinamis_reward_type || '') ? "Contoh: 10 unit/hari" : "Contoh: 100.000")}
+                  disabled={data.dinamis_max_claim_unlimited}
+                  className={cn(data.dinamis_max_claim_unlimited && "opacity-50")}
                 />
-                {NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '') && (
-                  <p className="text-xs text-muted-foreground">Tidak berlaku untuk Voucher / Ticket, Lucky Spin, atau Hadiah Fisik</p>
-                )}
               </div>
             </div>
             
