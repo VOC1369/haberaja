@@ -1805,7 +1805,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                               updated[index] = e.target.value;
                               onChange({ fixed_lucky_spin_rewards: updated });
                             }}
-                            className="bg-muted flex-1"
+                            className="bg-muted h-8 flex-1"
                             placeholder="Contoh: Honda PCX / iPhone 16 Pro / Rp 5.000.000"
                           />
                           <Button
@@ -3138,7 +3138,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                               updated[index] = e.target.value;
                               onChange({ lucky_spin_rewards: updated });
                             }}
-                            className="bg-muted flex-1"
+                            className="bg-muted h-8 flex-1"
                             placeholder="Contoh: Honda PCX / iPhone 16 Pro / Rp 5.000.000"
                           />
                           <Button
