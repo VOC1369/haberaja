@@ -110,6 +110,11 @@ const DEFAULT_VOUCHER_KINDS: SelectOption[] = [
 // Reward types yang TIDAK memerlukan Max Bonus (freeze field)
 const NON_MONETARY_REWARDS = ['voucher', 'lucky_spin', 'hadiah_fisik'];
 
+// Reward types yang memerlukan FULL semantic locking (voucher/ticket)
+const VOUCHER_TICKET_REWARDS = ['voucher', 'ticket'];
+const isVoucherTicket = (rewardType: string | undefined) => 
+  VOUCHER_TICKET_REWARDS.includes(rewardType || '');
+
 // Helper untuk format angka ke Rupiah Indonesia (dengan separator titik)
 const formatRupiah = (value: number | undefined): string => {
   if (value === undefined || value === null || isNaN(value)) return '';
@@ -519,6 +524,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       fixed_cash_reward_amount: undefined,
                       fixed_reward_quantity: null,
                       fixed_voucher_kind: '',
+                      fixed_voucher_kind_custom: '',
                       fixed_voucher_valid_from: '',
                       fixed_voucher_valid_until: '',
                       fixed_lucky_spin_enabled: false,
@@ -529,8 +535,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     // Set default untuk field yang relevan
                     if (value === 'hadiah_fisik') {
                       inertUpdates.fixed_reward_quantity = 1;
-                    } else if (value === 'voucher') {
+                    } else if (value === 'voucher' || value === 'ticket') {
                       inertUpdates.fixed_reward_quantity = 1;
+                      // Semantic locking: set semua calculation-based fields ke inert
+                      inertUpdates.fixed_max_claim = null;
+                      inertUpdates.fixed_max_claim_unlimited = false;
+                      inertUpdates.fixed_payout_direction = undefined;
+                      inertUpdates.fixed_admin_fee_enabled = false;
+                      inertUpdates.fixed_admin_fee_percentage = undefined;
+                      inertUpdates.fixed_calculation_base = '';
+                      inertUpdates.fixed_calculation_method = '';
+                      inertUpdates.fixed_calculation_value = undefined;
+                      inertUpdates.fixed_min_calculation_enabled = false;
+                      inertUpdates.fixed_min_calculation = undefined;
                     } else if (value === 'lucky_spin') {
                       inertUpdates.fixed_lucky_spin_enabled = true;
                       inertUpdates.fixed_reward_quantity = 1;
@@ -723,27 +740,31 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="grid grid-cols-2 gap-4">
                 {/* 1a: Payout Direction */}
                 <div className="space-y-2">
-                  <Label>Payout Direction</Label>
+                  <Label className={isVoucherTicket(data.fixed_reward_type) ? 'text-muted-foreground' : ''}>Payout Direction</Label>
                   <RadioGroup
                     value={data.fixed_payout_direction || 'after'}
                     onValueChange={(value: 'before' | 'after') => onChange({ fixed_payout_direction: value })}
-                    className="flex flex-row items-center gap-4 pt-1"
+                    className={cn("flex flex-row items-center gap-4 pt-1", isVoucherTicket(data.fixed_reward_type) && "opacity-50 pointer-events-none")}
+                    disabled={isVoucherTicket(data.fixed_reward_type)}
                   >
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="before" id="fixed-payout-before-global" />
+                      <RadioGroupItem value="before" id="fixed-payout-before-global" disabled={isVoucherTicket(data.fixed_reward_type)} />
                       <Label htmlFor="fixed-payout-before-global" className="cursor-pointer font-normal text-sm">Didepan</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="after" id="fixed-payout-after-global" />
+                      <RadioGroupItem value="after" id="fixed-payout-after-global" disabled={isVoucherTicket(data.fixed_reward_type)} />
                       <Label htmlFor="fixed-payout-after-global" className="cursor-pointer font-normal text-sm">Dibelakang</Label>
                     </div>
                   </RadioGroup>
+                  {isVoucherTicket(data.fixed_reward_type) && (
+                    <p className="text-xs text-muted-foreground">Voucher / Ticket tidak menggunakan payout direction</p>
+                  )}
                 </div>
                 
                 {/* 1b: Admin Fee */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label>Admin Fee</Label>
+                    <Label className={isVoucherTicket(data.fixed_reward_type) ? 'text-muted-foreground' : ''}>Admin Fee</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">Aktifkan</span>
                       <Switch
@@ -752,6 +773,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                           fixed_admin_fee_enabled: checked,
                           fixed_admin_fee_percentage: checked ? (data.fixed_admin_fee_percentage ?? 0) : undefined
                         })}
+                        disabled={isVoucherTicket(data.fixed_reward_type)}
                       />
                     </div>
                   </div>
@@ -762,12 +784,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       max={100}
                       value={data.fixed_admin_fee_enabled ? (data.fixed_admin_fee_percentage ?? 0) : ''}
                       onChange={(e) => onChange({ fixed_admin_fee_percentage: Number(e.target.value) || 0 })}
-                      placeholder={data.fixed_admin_fee_enabled ? "0" : "Tidak aktif"}
-                      disabled={!data.fixed_admin_fee_enabled}
-                      className={cn("pr-8", !data.fixed_admin_fee_enabled && "opacity-50")}
+                      placeholder={isVoucherTicket(data.fixed_reward_type) ? "Tidak berlaku" : (data.fixed_admin_fee_enabled ? "0" : "Tidak aktif")}
+                      disabled={!data.fixed_admin_fee_enabled || isVoucherTicket(data.fixed_reward_type)}
+                      className={cn("pr-8", (!data.fixed_admin_fee_enabled || isVoucherTicket(data.fixed_reward_type)) && "opacity-50")}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                   </div>
+                  {isVoucherTicket(data.fixed_reward_type) && (
+                    <p className="text-xs text-muted-foreground">Admin fee hanya berlaku untuk reward berbasis uang</p>
+                  )}
                 </div>
               </div>
               
@@ -1574,6 +1599,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       cash_reward_amount: undefined,
                       reward_quantity: null,
                       voucher_kind: '',
+                      voucher_kind_custom: '',
                       voucher_valid_from: '',
                       voucher_valid_until: '',
                       lucky_spin_enabled: false,
@@ -1584,8 +1610,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     // Set default untuk field yang relevan
                     if (value === 'hadiah_fisik') {
                       inertUpdates.reward_quantity = 1;
-                    } else if (value === 'voucher') {
+                    } else if (value === 'voucher' || value === 'ticket') {
                       inertUpdates.reward_quantity = 1;
+                      // Semantic locking: set semua calculation-based fields ke inert
+                      inertUpdates.dinamis_max_claim = null;
+                      inertUpdates.dinamis_max_claim_unlimited = false;
+                      inertUpdates.global_payout_direction = undefined;
+                      inertUpdates.admin_fee_enabled = false;
+                      inertUpdates.admin_fee_percentage = 0;
+                      inertUpdates.calculation_base = '';
+                      inertUpdates.calculation_method = '';
+                      inertUpdates.calculation_value = undefined;
+                      inertUpdates.min_calculation_enabled = false;
+                      inertUpdates.min_calculation = 0;
                     } else if (value === 'lucky_spin') {
                       inertUpdates.lucky_spin_enabled = true;
                       inertUpdates.reward_quantity = 1;
@@ -1778,27 +1815,31 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               <div className="grid grid-cols-2 gap-4">
                 {/* 1a: Payout Direction */}
                 <div className="space-y-2">
-                  <Label>Payout Direction</Label>
+                  <Label className={isVoucherTicket(data.dinamis_reward_type) ? 'text-muted-foreground' : ''}>Payout Direction</Label>
                   <RadioGroup
                     value={data.global_payout_direction || 'after'}
                     onValueChange={(value: 'before' | 'after') => onChange({ global_payout_direction: value })}
-                    className="flex flex-row items-center gap-4 pt-1"
+                    className={cn("flex flex-row items-center gap-4 pt-1", isVoucherTicket(data.dinamis_reward_type) && "opacity-50 pointer-events-none")}
+                    disabled={isVoucherTicket(data.dinamis_reward_type)}
                   >
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="before" id="payout-before-global" />
+                      <RadioGroupItem value="before" id="payout-before-global" disabled={isVoucherTicket(data.dinamis_reward_type)} />
                       <Label htmlFor="payout-before-global" className="cursor-pointer font-normal text-sm">Didepan</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="after" id="payout-after-global" />
+                      <RadioGroupItem value="after" id="payout-after-global" disabled={isVoucherTicket(data.dinamis_reward_type)} />
                       <Label htmlFor="payout-after-global" className="cursor-pointer font-normal text-sm">Dibelakang</Label>
                     </div>
                   </RadioGroup>
+                  {isVoucherTicket(data.dinamis_reward_type) && (
+                    <p className="text-xs text-muted-foreground">Voucher / Ticket tidak menggunakan payout direction</p>
+                  )}
                 </div>
                 
                 {/* 1b: Admin Fee */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label>Admin Fee</Label>
+                    <Label className={isVoucherTicket(data.dinamis_reward_type) ? 'text-muted-foreground' : ''}>Admin Fee</Label>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">Aktifkan</span>
                       <Switch
@@ -1807,6 +1848,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                           admin_fee_enabled: checked,
                           admin_fee_percentage: checked ? (data.admin_fee_percentage ?? 0) : 0
                         })}
+                        disabled={isVoucherTicket(data.dinamis_reward_type)}
                       />
                     </div>
                   </div>
@@ -1817,17 +1859,20 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       max={100}
                       value={data.admin_fee_enabled ? (data.admin_fee_percentage ?? 0) : ''}
                       onChange={(e) => onChange({ admin_fee_percentage: Number(e.target.value) || 0 })}
-                      placeholder={data.admin_fee_enabled ? "0" : "Tidak aktif"}
-                      disabled={!data.admin_fee_enabled}
-                      className={cn("pr-10", !data.admin_fee_enabled && "opacity-50")}
+                      placeholder={isVoucherTicket(data.dinamis_reward_type) ? "Tidak berlaku" : (data.admin_fee_enabled ? "0" : "Tidak aktif")}
+                      disabled={!data.admin_fee_enabled || isVoucherTicket(data.dinamis_reward_type)}
+                      className={cn("pr-10", (!data.admin_fee_enabled || isVoucherTicket(data.dinamis_reward_type)) && "opacity-50")}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                   </div>
+                  {isVoucherTicket(data.dinamis_reward_type) && (
+                    <p className="text-xs text-muted-foreground">Admin fee hanya berlaku untuk reward berbasis uang</p>
+                  )}
                 </div>
               </div>
               
               {/* KOLOM 2: Minimum Depo — ONLY for deposit-based calculation */}
-              {data.calculation_base === 'deposit' && (
+              {data.calculation_base === 'deposit' && !isVoucherTicket(data.dinamis_reward_type) && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Minimum Deposit</Label>
@@ -1863,29 +1908,37 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             {/* Row 3: Dasar Perhitungan & Jenis Perhitungan */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Dasar Perhitungan</Label>
+                <Label className={isVoucherTicket(data.dinamis_reward_type) ? 'text-muted-foreground' : ''}>Dasar Perhitungan</Label>
                 <SelectWithAddNew
                   value={data.calculation_base}
                   onValueChange={(value) => onChange({ calculation_base: value })}
                   options={calcBaseOptions}
                   onAddOption={(option) => setCalcBaseOptions([...calcBaseOptions, option])}
                   onDeleteOption={handleDeleteCalcBase}
-                  placeholder="Pilih dasar (TO, Deposit, dll)"
+                  placeholder={isVoucherTicket(data.dinamis_reward_type) ? "Tidak berlaku" : "Pilih dasar (TO, Deposit, dll)"}
+                  disabled={isVoucherTicket(data.dinamis_reward_type)}
                 />
+                {isVoucherTicket(data.dinamis_reward_type) && (
+                  <p className="text-xs text-muted-foreground">Voucher / Ticket tidak menggunakan dasar perhitungan</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label>Jenis Perhitungan</Label>
+                <Label className={isVoucherTicket(data.dinamis_reward_type) ? 'text-muted-foreground' : ''}>Jenis Perhitungan</Label>
                 <SelectWithAddNew
                   value={data.calculation_method}
                   onValueChange={(value) => onChange({ calculation_method: value })}
                   options={calcMethodOptions}
                   onAddOption={(option) => setCalcMethodOptions([...calcMethodOptions, option])}
                   onDeleteOption={handleDeleteCalcMethod}
-                  placeholder="Pilih jenis (%, Fixed)"
+                  placeholder={isVoucherTicket(data.dinamis_reward_type) ? "Tidak berlaku" : "Pilih jenis (%, Fixed)"}
+                  disabled={isVoucherTicket(data.dinamis_reward_type)}
                 />
+                {isVoucherTicket(data.dinamis_reward_type) && (
+                  <p className="text-xs text-muted-foreground">Tidak berlaku untuk Voucher / Ticket</p>
+                )}
               </div>
               <div className="space-y-2">
-                <Label>Nilai Bonus</Label>
+                <Label className={isVoucherTicket(data.dinamis_reward_type) ? 'text-muted-foreground' : ''}>Nilai Bonus</Label>
                 <div className="relative">
                   <Input
                     type="text"
@@ -1907,10 +1960,11 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         setCalcValueInput(String(data.calculation_value).replace('.', ','));
                       }
                     }}
-                    placeholder="Contoh: 0,5"
-                    className="pr-10"
+                    placeholder={isVoucherTicket(data.dinamis_reward_type) ? "Voucher / Ticket tidak memiliki nilai bonus" : "Contoh: 0,5"}
+                    className={cn("pr-10", isVoucherTicket(data.dinamis_reward_type) && "opacity-50")}
+                    disabled={isVoucherTicket(data.dinamis_reward_type)}
                   />
-                  {data.calculation_method === 'percentage' && (
+                  {data.calculation_method === 'percentage' && !isVoucherTicket(data.dinamis_reward_type) && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                   )}
                 </div>
@@ -1919,7 +1973,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               {/* Minimal Perhitungan - Same row as Nilai Bonus */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>{getMinimumBaseLabel()}</Label>
+                  <Label className={isVoucherTicket(data.dinamis_reward_type) ? 'text-muted-foreground' : ''}>{getMinimumBaseLabel()}</Label>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Aktifkan</span>
                     <Switch
@@ -1928,6 +1982,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         min_calculation_enabled: checked,
                         min_calculation: checked ? data.min_calculation : 0
                       })}
+                      disabled={isVoucherTicket(data.dinamis_reward_type)}
                     />
                   </div>
                 </div>
@@ -1935,10 +1990,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   type="text"
                   value={data.min_calculation_enabled && data.min_calculation ? data.min_calculation.toLocaleString('id-ID') : ''}
                   onChange={(e) => onChange({ min_calculation: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={data.min_calculation_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
-                  disabled={!data.min_calculation_enabled}
-                  className={!data.min_calculation_enabled ? "opacity-50" : ""}
+                  placeholder={isVoucherTicket(data.dinamis_reward_type) ? "Tidak berlaku" : (data.min_calculation_enabled ? "Contoh: 1.000.000" : "Tidak aktif")}
+                  disabled={!data.min_calculation_enabled || isVoucherTicket(data.dinamis_reward_type)}
+                  className={cn((!data.min_calculation_enabled || isVoucherTicket(data.dinamis_reward_type)) && "opacity-50")}
                 />
+                {isVoucherTicket(data.dinamis_reward_type) && (
+                  <p className="text-xs text-muted-foreground">Tidak berlaku untuk Voucher / Ticket</p>
+                )}
               </div>
             </div>
             
