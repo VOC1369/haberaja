@@ -96,3 +96,14 @@ export {
   EVENT_EXTRACTION_PROMPT,
   POLICY_EXTRACTION_PROMPT,
 } from './extraction-prompts';
+
+// Field Applicability Map (Full-Shape JSON with Inert Values)
+export {
+  enforceFieldApplicability,
+  applyInertValuesToPayload,
+  getInertValue,
+  INERT_VALUES,
+  FIELD_APPLICABILITY_MAP,
+  type FieldApplicabilityRule,
+  type ApplicabilityResult,
+} from './field-applicability-map';
