@@ -323,6 +323,7 @@ export interface PromoFormData {
   voucher_kind_custom?: string;              // Custom voucher kind (jika voucher_kind === 'other')
   voucher_valid_from?: string;               // Tanggal mulai berlaku voucher (date string, optional)
   voucher_valid_until?: string;              // Masa berakhir voucher (date string, optional)
+  voucher_valid_unlimited?: boolean;         // Voucher tanpa kadaluwarsa (dynamic mode)
   
   // Lucky Spin Fields
   lucky_spin_enabled?: boolean;              // Flag untuk Lucky Spin reward
@@ -335,6 +336,7 @@ export interface PromoFormData {
   fixed_voucher_kind_custom?: string;        // Custom voucher kind (fixed mode, jika voucher_kind === 'other')
   fixed_voucher_valid_from?: string;
   fixed_voucher_valid_until?: string;
+  fixed_voucher_valid_unlimited?: boolean;   // Voucher tanpa kadaluwarsa (fixed mode)
   fixed_lucky_spin_enabled?: boolean;
   fixed_lucky_spin_id?: string;
   fixed_lucky_spin_max_per_day?: number | null;
@@ -1707,6 +1709,7 @@ export const initialPromoData: PromoFormData = {
   voucher_kind_custom: '',
   voucher_valid_from: '',
   voucher_valid_until: '',
+  voucher_valid_unlimited: false,
   lucky_spin_enabled: false,
   lucky_spin_id: '',
   lucky_spin_max_per_day: null,
@@ -1717,6 +1720,7 @@ export const initialPromoData: PromoFormData = {
   fixed_voucher_kind_custom: '',
   fixed_voucher_valid_from: '',
   fixed_voucher_valid_until: '',
+  fixed_voucher_valid_unlimited: false,
   fixed_lucky_spin_enabled: false,
   fixed_lucky_spin_id: '',
   fixed_lucky_spin_max_per_day: null,

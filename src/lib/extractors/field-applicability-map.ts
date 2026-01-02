@@ -78,6 +78,8 @@ export const INERT_VALUES: Record<string, unknown> = {
   voucher_kind_custom: "",
   voucher_valid_from: "",
   voucher_valid_until: "",
+  voucher_valid_unlimited: false,
+  fixed_voucher_valid_unlimited: false,
   fixed_voucher_kind: "",
   fixed_voucher_kind_custom: "",
   fixed_voucher_valid_from: "",
