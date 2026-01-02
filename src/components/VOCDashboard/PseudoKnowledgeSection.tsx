@@ -656,13 +656,20 @@ export function PseudoKnowledgeSection() {
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Max Bonus</span>
             <span className="text-foreground font-medium">
-              {(sub as any).dinamis_max_claim_unlimited || (sub as any).max_bonus_unlimited
-                ? 'Unlimited' 
-                : sub.max_bonus 
-                  ? `Rp ${sub.max_bonus.toLocaleString('id-ID')}` 
-                  : (sub as any).dinamis_max_claim
-                    ? `Rp ${(sub as any).dinamis_max_claim.toLocaleString('id-ID')}`
-                    : "-"}
+              {(() => {
+                // Explicit unlimited flags
+                const isUnlimited = (sub as any).dinamis_max_claim_unlimited || (sub as any).max_bonus_unlimited;
+                if (isUnlimited) return 'Unlimited';
+                
+                // Has explicit max value
+                const maxValue = sub.max_bonus || (sub as any).dinamis_max_claim;
+                if (maxValue && maxValue > 0) {
+                  return `Rp ${maxValue.toLocaleString('id-ID')}`;
+                }
+                
+                // No value + no unlimited flag = effectively unlimited (no cap stated)
+                return 'Unlimited';
+              })()}
             </span>
           </div>
           <div className="bg-muted rounded-lg p-3">
