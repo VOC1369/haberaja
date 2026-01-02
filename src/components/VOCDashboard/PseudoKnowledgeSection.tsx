@@ -1469,8 +1469,9 @@ export function PseudoKnowledgeSection() {
               
               {renderExtractedData()}
 
-              {/* EDIT SECTION */}
-              <Card className="p-4 bg-card border border-border rounded-xl">
+          {/* EDIT SECTION - TEMPORARILY HIDDEN */}
+          {false && (
+          <Card className="p-4 bg-card border border-border rounded-xl">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Terminal className="w-4 h-4 text-button-hover" />
@@ -1544,6 +1545,7 @@ export function PseudoKnowledgeSection() {
                   </div>
                 )}
               </Card>
+          )}
 
             </>
           )}
