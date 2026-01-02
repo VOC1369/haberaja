@@ -555,40 +555,46 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 )}
                 {/* Dynamic Field: Voucher / Ticket */}
                 {data.fixed_reward_type === 'voucher' && (
-                  <div className="grid grid-cols-4 gap-4 mt-2">
-                    <div className="space-y-2">
-                      <Label>Jenis Voucher (opsional)</Label>
-                      <Input
-                        value={data.fixed_voucher_kind || ''}
-                        onChange={(e) => onChange({ fixed_voucher_kind: e.target.value })}
-                        placeholder="Contoh: Deposit"
-                      />
+                  <div className="grid grid-cols-2 gap-6 mt-2">
+                    {/* Left column - dibawah Jenis Hadiah */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Jenis Voucher (opsional)</Label>
+                        <Input
+                          value={data.fixed_voucher_kind || ''}
+                          onChange={(e) => onChange({ fixed_voucher_kind: e.target.value })}
+                          placeholder="Contoh: Deposit"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Jumlah Reward</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={data.fixed_reward_quantity ?? 1}
+                          onChange={(e) => onChange({ fixed_reward_quantity: parseInt(e.target.value) || 1 })}
+                          placeholder="1"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Jumlah Reward</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={data.fixed_reward_quantity ?? 1}
-                        onChange={(e) => onChange({ fixed_reward_quantity: parseInt(e.target.value) || 1 })}
-                        placeholder="1"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Masa Berlaku Dimulai</Label>
-                      <Input
-                        type="date"
-                        value={data.fixed_voucher_valid_from || ''}
-                        onChange={(e) => onChange({ fixed_voucher_valid_from: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Masa Berakhir</Label>
-                      <Input
-                        type="date"
-                        value={data.fixed_voucher_valid_until || ''}
-                        onChange={(e) => onChange({ fixed_voucher_valid_until: e.target.value })}
-                      />
+                    {/* Right column - dibawah Max Bonus */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Masa Berlaku Dimulai</Label>
+                        <Input
+                          type="date"
+                          value={data.fixed_voucher_valid_from || ''}
+                          onChange={(e) => onChange({ fixed_voucher_valid_from: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Masa Berakhir</Label>
+                        <Input
+                          type="date"
+                          value={data.fixed_voucher_valid_until || ''}
+                          onChange={(e) => onChange({ fixed_voucher_valid_until: e.target.value })}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1578,40 +1584,46 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 )}
                 {/* Dynamic Field: Voucher / Ticket */}
                 {data.dinamis_reward_type === 'voucher' && (
-                  <div className="grid grid-cols-4 gap-4 mt-2">
-                    <div className="space-y-2">
-                      <Label>Jenis Voucher (opsional)</Label>
-                      <Input
-                        value={data.voucher_kind || ''}
-                        onChange={(e) => onChange({ voucher_kind: e.target.value })}
-                        placeholder="Contoh: Deposit"
-                      />
+                  <div className="grid grid-cols-2 gap-6 mt-2">
+                    {/* Left column - dibawah Jenis Hadiah */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Jenis Voucher (opsional)</Label>
+                        <Input
+                          value={data.voucher_kind || ''}
+                          onChange={(e) => onChange({ voucher_kind: e.target.value })}
+                          placeholder="Contoh: Deposit"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Jumlah Reward</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={data.reward_quantity ?? 1}
+                          onChange={(e) => onChange({ reward_quantity: parseInt(e.target.value) || 1 })}
+                          placeholder="1"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Jumlah Reward</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={data.reward_quantity ?? 1}
-                        onChange={(e) => onChange({ reward_quantity: parseInt(e.target.value) || 1 })}
-                        placeholder="1"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Masa Berlaku Dimulai</Label>
-                      <Input
-                        type="date"
-                        value={data.voucher_valid_from || ''}
-                        onChange={(e) => onChange({ voucher_valid_from: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Masa Berakhir</Label>
-                      <Input
-                        type="date"
-                        value={data.voucher_valid_until || ''}
-                        onChange={(e) => onChange({ voucher_valid_until: e.target.value })}
-                      />
+                    {/* Right column - dibawah Max Bonus */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Masa Berlaku Dimulai</Label>
+                        <Input
+                          type="date"
+                          value={data.voucher_valid_from || ''}
+                          onChange={(e) => onChange({ voucher_valid_from: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Masa Berakhir</Label>
+                        <Input
+                          type="date"
+                          value={data.voucher_valid_until || ''}
+                          onChange={(e) => onChange({ voucher_valid_until: e.target.value })}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
