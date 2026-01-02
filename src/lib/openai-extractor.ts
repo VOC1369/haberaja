@@ -2753,6 +2753,60 @@ export function getStatusLabel(status: 'draft' | 'ready'): string {
 import type { PromoFormData, PromoSubCategory } from '@/components/VOCDashboard/PromoFormWizard/types';
 
 /**
+ * Ensure calculation_base is semantically consistent with promo_type.
+ * This is a defensive layer to catch LLM extraction errors.
+ * 
+ * RULES:
+ * - Cashback (Loss-based) → calculation_base MUST be 'loss' or 'winloss'
+ * - Rollingan (Turnover-based) → calculation_base MUST be 'turnover'
+ * - Deposit Bonus → calculation_base MUST be 'deposit'
+ */
+function ensureCalculationBaseConsistency(data: PromoFormData): PromoFormData {
+  const lowerType = data.promo_type?.toLowerCase() || '';
+  const result = { ...data };
+  
+  // Cashback = Loss-based
+  if (lowerType.includes('cashback') && lowerType.includes('loss')) {
+    if (result.calculation_base !== 'loss' && result.calculation_base !== 'winloss' && result.calculation_base !== 'win_loss') {
+      console.log(`[SemanticFix] Cashback (Loss-based) requires loss-based calculation. Fixing: ${result.calculation_base} → winloss`);
+      result.calculation_base = 'winloss';
+    }
+    // Also fix subcategories
+    if (result.subcategories?.length) {
+      result.subcategories = result.subcategories.map((sub: PromoSubCategory) => ({
+        ...sub,
+        calculation_base: sub.calculation_base === 'turnover' ? 'winloss' : sub.calculation_base
+      }));
+    }
+  }
+  
+  // Rollingan = Turnover-based
+  if (lowerType.includes('rollingan')) {
+    if (result.calculation_base !== 'turnover') {
+      console.log(`[SemanticFix] Rollingan (Turnover-based) requires turnover. Fixing: ${result.calculation_base} → turnover`);
+      result.calculation_base = 'turnover';
+    }
+    // Also fix subcategories
+    if (result.subcategories?.length) {
+      result.subcategories = result.subcategories.map((sub: PromoSubCategory) => ({
+        ...sub,
+        calculation_base: sub.calculation_base === 'loss' || sub.calculation_base === 'winloss' ? 'turnover' : sub.calculation_base
+      }));
+    }
+  }
+  
+  // Deposit Bonus = Deposit-based
+  if (lowerType.includes('deposit') && lowerType.includes('bonus')) {
+    if (result.calculation_base !== 'deposit') {
+      console.log(`[SemanticFix] Deposit Bonus requires deposit base. Fixing: ${result.calculation_base} → deposit`);
+      result.calculation_base = 'deposit';
+    }
+  }
+  
+  return result;
+}
+
+/**
  * Maps ExtractedPromo to PromoFormData for form/storage use.
  * 
  * IMPORTANT: This mapper MUST be pure.
@@ -2914,7 +2968,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   // ============================================
   const getTriggerEventDefault = (promoType: string): string => {
     const lowerType = promoType?.toLowerCase() || '';
-    if (lowerType.includes('rollingan') || lowerType.includes('cashback')) return 'Turnover';
+    // ✅ FIX: Cashback = Loss-based, Rollingan = Turnover-based
+    if (lowerType.includes('cashback')) return 'Loss';
+    if (lowerType.includes('rollingan') || lowerType.includes('rebate')) return 'Turnover';
     if (lowerType.includes('referral')) return 'Referral';
     if (lowerType.includes('loyalty')) return 'Turnover';
     if (lowerType.includes('event') || lowerType.includes('level')) return 'Mission Completed';
@@ -3144,16 +3200,16 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Keep raw subcategories for audit/debug (hidden from UI)
     _raw_subcategories: extracted.subcategories,
     
-    // Fixed mode defaults
+    // Fixed mode defaults - using INERT VALUES (null, not 0)
     reward_type: 'freechip',  // lowercase to match enum
-    reward_amount: 0,
-    min_deposit: 0,
+    reward_amount: null,      // ✅ FIX: null = inert (not 0)
+    min_deposit: null,        // ✅ FIX: null = inert (not 0)
     max_claim: null,
-    // ✅ FIX: Map turnover_rule from first subcategory (not hardcoded '0x')
-    turnover_rule: subcategories[0]?.turnover_rule || '0x',
-    turnover_rule_enabled: subcategories[0]?.turnover_rule_enabled ?? (subcategories[0]?.turnover_rule && subcategories[0]?.turnover_rule !== '0x'),
+    // ✅ FIX: turnover_rule default "" (inert), not "0x"
+    turnover_rule: subcategories[0]?.turnover_rule || '',
+    turnover_rule_enabled: subcategories[0]?.turnover_rule_enabled ?? (subcategories[0]?.turnover_rule && subcategories[0]?.turnover_rule !== '' && subcategories[0]?.turnover_rule !== '0x'),
     turnover_rule_custom: subcategories[0]?.turnover_rule_custom || '',
-    // ⚠️ FIX: claim_frequency dari extracted, atau infer dari promo_type
+    // claim_frequency dari extracted, atau infer dari promo_type
     claim_frequency: extracted.claim_frequency || 
       (['cashback', 'rebate', 'rollingan', 'rollingan cashback'].includes(extracted.promo_type?.toLowerCase() || '') 
         ? 'mingguan' 
@@ -3323,8 +3379,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Referral Commission Tiers (tier_network)
     // If multi-tier referral detected, use converted referral_tiers and set tier_archetype
     referral_tiers: referralTiers,
-    // Auto-detect referral_calculation_basis from subcategory (default: 'loss' for iGaming)
-    referral_calculation_basis: (() => {
+    // ✅ FIX: referral_calculation_basis ONLY for referral promos, otherwise INERT ("")
+    referral_calculation_basis: isReferralMultiTier ? (() => {
       const firstSubBasis = subcategories[0]?.calculation_base;
       // Map to valid referral basis enum
       if (firstSubBasis === 'loss' || firstSubBasis === 'winloss' || firstSubBasis === 'win_loss') {
@@ -3334,9 +3390,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       if (firstSubBasis === 'deposit') return 'deposit';
       // Default untuk Referral iGaming Asia = loss
       return 'loss';
-    })(),
-    referral_admin_fee_enabled: isReferralMultiTier ? true : false,
-    referral_admin_fee_percentage: 20,
+    })() : '',  // ✅ INERT: "" for non-referral promos
+    referral_admin_fee_enabled: isReferralMultiTier,
+    referral_admin_fee_percentage: isReferralMultiTier ? 20 : null,  // ✅ INERT: null for non-referral
     
     // Override for referral multi-tier: switch to tier mode with tier_network archetype
     ...(isReferralMultiTier && {
@@ -3361,13 +3417,19 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   };
 
   // ============================================
+  // SEMANTIC CONSISTENCY ENFORCEMENT
+  // Ensure calculation_base matches promo_type semantics
+  // ============================================
+  const ensuredPromoData = ensureCalculationBaseConsistency(promoData);
+
+  // ============================================
   // FIELD APPLICABILITY ENFORCEMENT (Final Layer)
   // Set non-applicable fields to inert values based on promo_type
   // ARSITEKTUR: Full-shape JSON dengan inert values, BUKAN delete!
   // ============================================
   const { data: enforcedData, inerted_fields } = enforceFieldApplicability(
-    promoData as unknown as Record<string, unknown>,
-    promoData.promo_type
+    ensuredPromoData as unknown as Record<string, unknown>,
+    ensuredPromoData.promo_type
   );
   
   if (inerted_fields.length > 0) {
