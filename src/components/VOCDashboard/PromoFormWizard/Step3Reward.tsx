@@ -97,6 +97,19 @@ const DEFAULT_HADIAH_TYPES: SelectOption[] = [
   { value: 'uang_tunai', label: 'Uang Tunai' },
 ];
 
+// Jenis Voucher ENUM (standarisasi)
+const DEFAULT_VOUCHER_KINDS: SelectOption[] = [
+  { value: 'deposit', label: 'Deposit' },
+  { value: 'lucky_spin', label: 'Lucky Spin' },
+  { value: 'event_entry', label: 'Event Entry' },
+  { value: 'discount', label: 'Discount' },
+  { value: 'free_play', label: 'Free Play' },
+  { value: 'other', label: 'Other' },
+];
+
+// Reward types yang TIDAK memerlukan Max Bonus (freeze field)
+const NON_MONETARY_REWARDS = ['voucher', 'lucky_spin', 'hadiah_fisik'];
+
 // Helper untuk format angka ke Rupiah Indonesia (dengan separator titik)
 const formatRupiah = (value: number | undefined): string => {
   if (value === undefined || value === null || isNaN(value)) return '';
@@ -609,7 +622,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               {/* Max Bonus */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Max Bonus</Label>
+                  <Label className={NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '') ? 'text-muted-foreground' : ''}>Max Bonus</Label>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Unlimited</span>
                     <Switch
@@ -618,6 +631,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         fixed_max_claim_unlimited: checked,
                         fixed_max_claim: checked ? undefined : data.fixed_max_claim
                       })}
+                      disabled={NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '')}
                     />
                   </div>
                 </div>
@@ -625,10 +639,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   type="text"
                   value={data.fixed_max_claim_unlimited ? '' : (data.fixed_max_claim ? data.fixed_max_claim.toLocaleString('id-ID') : '')}
                   onChange={(e) => onChange({ fixed_max_claim: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={data.fixed_max_claim_unlimited ? "Unlimited / Tanpa Batas" : "Contoh: 100.000"}
-                  disabled={data.fixed_max_claim_unlimited}
-                  className={data.fixed_max_claim_unlimited ? "opacity-50" : ""}
+                  placeholder={NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '') ? "Tidak berlaku untuk jenis hadiah ini" : (data.fixed_max_claim_unlimited ? "Unlimited / Tanpa Batas" : "Contoh: 100.000")}
+                  disabled={data.fixed_max_claim_unlimited || NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '')}
+                  className={cn(
+                    (data.fixed_max_claim_unlimited || NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '')) && "opacity-50"
+                  )}
                 />
+                {NON_MONETARY_REWARDS.includes(data.fixed_reward_type || '') && (
+                  <p className="text-xs text-muted-foreground">Tidak berlaku untuk Voucher / Ticket, Lucky Spin, atau Hadiah Fisik</p>
+                )}
               </div>
             </div>
             
@@ -638,12 +657,31 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 {/* Left column - dibawah Jenis Hadiah */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Jenis Voucher (opsional)</Label>
-                    <Input
+                    <Label>Jenis Voucher</Label>
+                    <Select
                       value={data.fixed_voucher_kind || ''}
-                      onChange={(e) => onChange({ fixed_voucher_kind: e.target.value })}
-                      placeholder="Contoh: Deposit"
-                    />
+                      onValueChange={(value) => onChange({ 
+                        fixed_voucher_kind: value,
+                        fixed_voucher_kind_custom: value === 'other' ? (data.fixed_voucher_kind_custom || '') : ''
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih jenis voucher" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DEFAULT_VOUCHER_KINDS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {data.fixed_voucher_kind === 'other' && (
+                      <Input
+                        value={data.fixed_voucher_kind_custom || ''}
+                        onChange={(e) => onChange({ fixed_voucher_kind_custom: e.target.value })}
+                        placeholder="Tulis jenis voucher custom..."
+                        className="mt-2"
+                      />
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Jumlah Reward</Label>
@@ -1639,15 +1677,16 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               {/* Max Bonus */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Max Bonus</Label>
+                  <Label className={NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '') ? 'text-muted-foreground' : ''}>Max Bonus</Label>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Unlimited</span>
                     <Switch
                       checked={data.dinamis_max_claim_unlimited ?? false}
                       onCheckedChange={(checked) => onChange({ 
                         dinamis_max_claim_unlimited: checked,
-                        dinamis_max_claim: checked ? 0 : data.dinamis_max_claim
+                        dinamis_max_claim: checked ? null : data.dinamis_max_claim
                       })}
+                      disabled={NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '')}
                     />
                   </div>
                 </div>
@@ -1655,10 +1694,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   type="text"
                   value={data.dinamis_max_claim_unlimited ? '' : (data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : '')}
                   onChange={(e) => onChange({ dinamis_max_claim: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={data.dinamis_max_claim_unlimited ? "Unlimited / Tanpa Batas" : "Contoh: 100.000"}
-                  disabled={data.dinamis_max_claim_unlimited}
-                  className={data.dinamis_max_claim_unlimited ? "opacity-50" : ""}
+                  placeholder={NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '') ? "Tidak berlaku untuk jenis hadiah ini" : (data.dinamis_max_claim_unlimited ? "Unlimited / Tanpa Batas" : "Contoh: 100.000")}
+                  disabled={data.dinamis_max_claim_unlimited || NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '')}
+                  className={cn(
+                    (data.dinamis_max_claim_unlimited || NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '')) && "opacity-50"
+                  )}
                 />
+                {NON_MONETARY_REWARDS.includes(data.dinamis_reward_type || '') && (
+                  <p className="text-xs text-muted-foreground">Tidak berlaku untuk Voucher / Ticket, Lucky Spin, atau Hadiah Fisik</p>
+                )}
               </div>
             </div>
             
@@ -1668,12 +1712,31 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 {/* Left column - dibawah Jenis Hadiah */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Jenis Voucher (opsional)</Label>
-                    <Input
+                    <Label>Jenis Voucher</Label>
+                    <Select
                       value={data.voucher_kind || ''}
-                      onChange={(e) => onChange({ voucher_kind: e.target.value })}
-                      placeholder="Contoh: Deposit"
-                    />
+                      onValueChange={(value) => onChange({ 
+                        voucher_kind: value,
+                        voucher_kind_custom: value === 'other' ? (data.voucher_kind_custom || '') : ''
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih jenis voucher" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DEFAULT_VOUCHER_KINDS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {data.voucher_kind === 'other' && (
+                      <Input
+                        value={data.voucher_kind_custom || ''}
+                        onChange={(e) => onChange({ voucher_kind_custom: e.target.value })}
+                        placeholder="Tulis jenis voucher custom..."
+                        className="mt-2"
+                      />
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Jumlah Reward</Label>
