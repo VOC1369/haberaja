@@ -506,6 +506,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       fixed_cash_reward_amount: undefined,
                       fixed_reward_quantity: null,
                       fixed_voucher_kind: '',
+                      fixed_voucher_valid_from: '',
                       fixed_voucher_valid_until: '',
                       fixed_lucky_spin_enabled: false,
                       fixed_lucky_spin_id: '',
@@ -554,13 +555,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 )}
                 {/* Dynamic Field: Voucher / Ticket */}
                 {data.fixed_reward_type === 'voucher' && (
-                  <div className="grid grid-cols-3 gap-4 mt-2">
+                  <div className="grid grid-cols-4 gap-4 mt-2">
                     <div className="space-y-2">
                       <Label>Jenis Voucher (opsional)</Label>
                       <Input
                         value={data.fixed_voucher_kind || ''}
                         onChange={(e) => onChange({ fixed_voucher_kind: e.target.value })}
-                        placeholder="Contoh: Deposit, Freechip"
+                        placeholder="Contoh: Deposit"
                       />
                     </div>
                     <div className="space-y-2">
@@ -570,11 +571,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         min={1}
                         value={data.fixed_reward_quantity ?? 1}
                         onChange={(e) => onChange({ fixed_reward_quantity: parseInt(e.target.value) || 1 })}
-                        placeholder="Jumlah voucher"
+                        placeholder="1"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Masa Berlaku (opsional)</Label>
+                      <Label>Masa Berlaku Dimulai</Label>
+                      <Input
+                        type="date"
+                        value={data.fixed_voucher_valid_from || ''}
+                        onChange={(e) => onChange({ fixed_voucher_valid_from: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Masa Berakhir</Label>
                       <Input
                         type="date"
                         value={data.fixed_voucher_valid_until || ''}
@@ -1520,6 +1529,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       cash_reward_amount: undefined,
                       reward_quantity: null,
                       voucher_kind: '',
+                      voucher_valid_from: '',
                       voucher_valid_until: '',
                       lucky_spin_enabled: false,
                       lucky_spin_id: '',
@@ -1568,13 +1578,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 )}
                 {/* Dynamic Field: Voucher / Ticket */}
                 {data.dinamis_reward_type === 'voucher' && (
-                  <div className="grid grid-cols-3 gap-4 mt-2">
+                  <div className="grid grid-cols-4 gap-4 mt-2">
                     <div className="space-y-2">
                       <Label>Jenis Voucher (opsional)</Label>
                       <Input
                         value={data.voucher_kind || ''}
                         onChange={(e) => onChange({ voucher_kind: e.target.value })}
-                        placeholder="Contoh: Deposit, Freechip"
+                        placeholder="Contoh: Deposit"
                       />
                     </div>
                     <div className="space-y-2">
@@ -1584,11 +1594,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         min={1}
                         value={data.reward_quantity ?? 1}
                         onChange={(e) => onChange({ reward_quantity: parseInt(e.target.value) || 1 })}
-                        placeholder="Jumlah voucher"
+                        placeholder="1"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Masa Berlaku (opsional)</Label>
+                      <Label>Masa Berlaku Dimulai</Label>
+                      <Input
+                        type="date"
+                        value={data.voucher_valid_from || ''}
+                        onChange={(e) => onChange({ voucher_valid_from: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Masa Berakhir</Label>
                       <Input
                         type="date"
                         value={data.voucher_valid_until || ''}
