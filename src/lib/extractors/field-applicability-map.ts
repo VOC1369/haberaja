@@ -373,12 +373,15 @@ export function enforceFieldApplicability(
   const result = { ...data };
   const inerted_fields: Array<{ field: string; from: unknown; to: unknown }> = [];
   
+  console.log(`[FieldApplicability] Processing promo_type: "${promoType}"`);
+  
   // Get applicability rule for this promo type
   const rule = FIELD_APPLICABILITY_MAP[promoType];
   
   if (!rule) {
     // No specific rule for this promo_type - return as-is
-    console.log(`[FieldApplicability] No rule for promo_type: "${promoType}", returning data as-is`);
+    console.warn(`[FieldApplicability] NO RULE FOUND for: "${promoType}"`);
+    console.log(`[FieldApplicability] Available types:`, Object.keys(FIELD_APPLICABILITY_MAP));
     return { data: result, inerted_fields };
   }
   
