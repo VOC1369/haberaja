@@ -313,6 +313,28 @@ export interface PromoFormData {
   // Cash Reward (untuk Uang Tunai)
   cash_reward_amount?: number;  // Nominal uang tunai (contoh: 50000000 = Rp 50.000.000)
 
+  // =============================================
+  // Universal Reward Fields (untuk semua jenis hadiah)
+  // =============================================
+  reward_quantity?: number | null;           // Jumlah reward (tiket, spin, unit fisik, dll)
+  
+  // Voucher / Ticket Fields
+  voucher_kind?: string;                     // Jenis voucher (optional) - e.g., "Deposit", "Freechip"
+  voucher_valid_until?: string;              // Masa berlaku voucher (date string, optional)
+  
+  // Lucky Spin Fields
+  lucky_spin_enabled?: boolean;              // Flag untuk Lucky Spin reward
+  lucky_spin_id?: string;                    // ID Lucky Spin
+  lucky_spin_max_per_day?: number | null;    // Max spin per hari (optional)
+  
+  // Fixed Mode Variants
+  fixed_reward_quantity?: number | null;
+  fixed_voucher_kind?: string;
+  fixed_voucher_valid_until?: string;
+  fixed_lucky_spin_enabled?: boolean;
+  fixed_lucky_spin_id?: string;
+  fixed_lucky_spin_max_per_day?: number | null;
+
   // Contact Channel
   contact_channel_enabled: boolean;
   contact_channel: string;
@@ -395,6 +417,13 @@ export interface TierReward {
   physical_reward_name?: string;
   physical_reward_quantity?: number;  // Jumlah unit hadiah fisik
   cash_reward_amount?: number;  // Nominal uang tunai
+  // Universal reward fields
+  reward_quantity?: number | null;
+  voucher_kind?: string;
+  voucher_valid_until?: string;
+  lucky_spin_enabled?: boolean;
+  lucky_spin_id?: string;
+  lucky_spin_max_per_day?: number | null;
 }
 
 export interface FastExpMission {
@@ -1518,11 +1547,13 @@ export const CALCULATION_METHODS = [
 ];
 
 export const DINAMIS_REWARD_TYPES = [
-  { value: 'freechip', label: 'Freechip' },
   { value: 'saldo', label: 'Saldo' },
-  { value: 'cashback', label: 'Cashback' },
   { value: 'credit_game', label: 'Credit Game' },
+  { value: 'cashback', label: 'Cashback' },
+  { value: 'freechip', label: 'Freechip' },
   { value: 'lp', label: 'Loyalty Points' },
+  { value: 'voucher', label: 'Voucher / Ticket' },
+  { value: 'lucky_spin', label: 'Lucky Spin' },
   { value: 'hadiah_fisik', label: 'Hadiah Fisik' },
   { value: 'uang_tunai', label: 'Uang Tunai' },
 ];
@@ -1665,6 +1696,22 @@ export const initialPromoData: PromoFormData = {
   
   // Cash Reward
   cash_reward_amount: undefined,
+  
+  // Universal Reward Fields
+  reward_quantity: null,
+  voucher_kind: '',
+  voucher_valid_until: '',
+  lucky_spin_enabled: false,
+  lucky_spin_id: '',
+  lucky_spin_max_per_day: null,
+  
+  // Fixed Mode Variants
+  fixed_reward_quantity: null,
+  fixed_voucher_kind: '',
+  fixed_voucher_valid_until: '',
+  fixed_lucky_spin_enabled: false,
+  fixed_lucky_spin_id: '',
+  fixed_lucky_spin_max_per_day: null,
   
   contact_channel_enabled: false,
   contact_channel: '',

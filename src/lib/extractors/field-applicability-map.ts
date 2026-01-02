@@ -45,6 +45,11 @@ export const INERT_VALUES: Record<string, unknown> = {
   lp_earn_amount: null,
   lp_earn_point_amount: null,
   admin_fee_percentage: null,
+  // Universal Reward Fields
+  reward_quantity: null,
+  fixed_reward_quantity: null,
+  lucky_spin_max_per_day: null,
+  fixed_lucky_spin_max_per_day: null,
   
   // === Strings → "" ===
   turnover_rule: "",
@@ -68,6 +73,13 @@ export const INERT_VALUES: Record<string, unknown> = {
   lp_earn_basis: "",
   redeem_jenis_reward: "",
   dinamis_reward_type: "",
+  // Voucher & Lucky Spin
+  voucher_kind: "",
+  voucher_valid_until: "",
+  fixed_voucher_kind: "",
+  fixed_voucher_valid_until: "",
+  lucky_spin_id: "",
+  fixed_lucky_spin_id: "",
   
   // === Booleans → false ===
   turnover_rule_enabled: false,
@@ -82,6 +94,9 @@ export const INERT_VALUES: Record<string, unknown> = {
   min_reward_claim_enabled: false,   // Standardized from dinamis_min_claim_enabled
   admin_fee_enabled: false,
   has_subcategories: false,
+  // Lucky Spin
+  lucky_spin_enabled: false,
+  fixed_lucky_spin_enabled: false,
   
   // === Arrays → [] ===
   referral_tiers: [],
