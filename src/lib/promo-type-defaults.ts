@@ -30,7 +30,7 @@ export interface PromoTypeDefaultConfig {
 }
 
 export const PROMO_TYPE_DEFAULTS: Record<string, PromoTypeDefaultConfig> = {
-  // Rollingan / Cashback
+  // Rollingan (Turnover-based)
   'Rollingan / Cashback': {
     reward_mode: 'formula',
     calculation_base: 'turnover',
@@ -39,10 +39,25 @@ export const PROMO_TYPE_DEFAULTS: Record<string, PromoTypeDefaultConfig> = {
     game_restriction: 'semua',
     claim_frequency: 'mingguan',
     intent_category: 'Retention',
-    target_segment: 'Semua',        // Rollingan untuk semua player
-    trigger_event: 'Turnover',      // Trigger by playing activity, bukan deposit
-    valid_until_unlimited: true,    // Rollingan biasanya ongoing tanpa batas waktu
-    geo_restriction: 'indonesia',   // Default wilayah
+    target_segment: 'Semua',
+    trigger_event: 'Turnover',      // Rollingan = Turnover-based
+    valid_until_unlimited: true,
+    geo_restriction: 'indonesia',
+  },
+  
+  // Cashback (Loss-based) - DISTINCT from Rollingan!
+  'Cashback (Loss-based)': {
+    reward_mode: 'formula',
+    calculation_base: 'loss',       // ✅ Dihitung dari KEKALAHAN
+    calculation_method: 'percentage',
+    turnover_rule_enabled: false,   // Cashback tidak ada WD multiplier
+    game_restriction: 'semua',
+    claim_frequency: 'mingguan',
+    intent_category: 'Retention',
+    target_segment: 'Semua',
+    trigger_event: 'Loss',          // ✅ WAJIB Loss, bukan Turnover!
+    valid_until_unlimited: true,
+    geo_restriction: 'indonesia',
   },
   
   // Welcome Bonus
