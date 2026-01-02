@@ -865,7 +865,7 @@ export function createInitialSubCategory(index: number): PromoSubCategory {
     dinamis_reward_amount: 0,
     dinamis_max_claim: 0,
     dinamis_max_claim_unlimited: false,
-    dinamis_min_claim: 0,
-    dinamis_min_claim_enabled: false
+    min_reward_claim: null,
+    min_reward_claim_enabled: false
   };
 }

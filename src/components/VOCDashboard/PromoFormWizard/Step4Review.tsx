@@ -566,14 +566,14 @@ export const generateSubcategoryTerms = (sub: any, data: PromoFormData): string[
     terms.push(`Bonus ${sub.calculation_value}% dari ${baseLabel}.`);
   }
   
-  // 🔒 ONTOLOGY FIX: Eligibility threshold (minimum_base) vs Payout threshold (dinamis_min_claim)
+  // 🔒 ONTOLOGY FIX: Eligibility threshold (minimum_base) vs Payout threshold (min_reward_claim)
   // minimum_base = EXPLICIT threshold to QUALIFY for promo
-  // dinamis_min_claim = minimum BONUS amount to be CLAIMED
+  // min_reward_claim = minimum BONUS amount to be CLAIMED
   // These are COMPLETELY DIFFERENT concepts!
   
-  // 🔒 ANTI-DUPLICATE: Jika minimum_base === dinamis_min_claim, ini LEGACY DATA salah mapping
-  // Prioritas: dinamis_min_claim (payout) → IGNORE minimum_base yang sama
-  const minClaimValue = sub.dinamis_min_claim || 0;
+  // 🔒 ANTI-DUPLICATE: Jika minimum_base === min_reward_claim, ini LEGACY DATA salah mapping
+  // Prioritas: min_reward_claim (payout) → IGNORE minimum_base yang sama
+  const minClaimValue = sub.min_reward_claim || 0;
   const minBaseValue = sub.minimum_base || 0;
   const isDuplicateValue = minBaseValue > 0 && minClaimValue > 0 && minBaseValue === minClaimValue;
   
@@ -681,9 +681,9 @@ export const generateSinglePromoTerms = (data: PromoFormData): string[] => {
     terms.push(`Bonus ini berlaku untuk semua jenis permainan.`);
   }
   
-  // 🔒 ONTOLOGY FIX: Eligibility threshold (min_calculation) vs Payout threshold (dinamis_min_claim)
-  // ANTI-DUPLICATE: Jika min_calculation === dinamis_min_claim, ini LEGACY DATA salah mapping
-  const singleMinClaim = data.dinamis_min_claim || 0;
+  // 🔒 ONTOLOGY FIX: Eligibility threshold (min_calculation) vs Payout threshold (min_reward_claim)
+  // ANTI-DUPLICATE: Jika min_calculation === min_reward_claim, ini LEGACY DATA salah mapping
+  const singleMinClaim = data.min_reward_claim || 0;
   const singleMinBase = data.min_calculation || 0;
   const singleIsDuplicate = singleMinBase > 0 && singleMinClaim > 0 && singleMinBase === singleMinClaim;
   
@@ -2021,7 +2021,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                       const bonus = Math.min(rawBonus, maxClaim);
                                       const isCapped = bonus < rawBonus;
                                       // 🔒 ONTOLOGY: Check if bonus is below payout threshold
-                                      const minClaim = sub.dinamis_min_claim || 0;
+                                      const minClaim = sub.min_reward_claim || 0;
                                       const isBelowMinClaim = minClaim > 0 && bonus < minClaim;
                                       return (
                                         <tr key={i} className="border-t border-border">
@@ -2206,7 +2206,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                               const bonus = Math.min(rawBonus, maxClaim);
                               const isCapped = bonus < rawBonus;
                               // 🔒 ONTOLOGY: Check if bonus is below payout threshold
-                              const minClaim = data.dinamis_min_claim || 0;
+                              const minClaim = data.min_reward_claim || 0;
                               const isBelowMinClaim = minClaim > 0 && bonus < minClaim;
                               return (
                                 <tr key={index} className="border-t border-border">
