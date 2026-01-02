@@ -1350,7 +1350,19 @@ export const TELCO_OPERATORS = [
 ] as const;
 export const INTENT_CATEGORIES = ['Acquisition', 'Retention', 'Reactivation', 'VIP'];
 export const TARGET_SEGMENTS = ['Baru', 'Existing', 'VIP', 'Dormant', 'Semua'];
-export const TRIGGER_EVENTS = ['First Deposit', 'Login', 'Loss Streak', 'APK Download', 'Turnover', 'Mission Completed'];
+export const TRIGGER_EVENTS = [
+  'First Deposit',    // Welcome Bonus, Deposit Bonus
+  'Deposit',          // Next/Daily Deposit, Reload Bonus
+  'Turnover',         // Rollingan, Rebate (TO-based)
+  'Loss',             // Cashback (Loss-based)
+  'Bet',              // Betting-triggered promos
+  'Referral',         // Referral Bonus
+  'Login',            // Daily Login Bonus
+  'Claim',            // Manual claim promos
+  'Mission Completed',// Event/Level Up promos
+  'Loss Streak',      // Loss Streak protection
+  'APK Download',     // APK promo
+];
 export const REWARD_TYPES = [
   { value: 'lp', label: 'Loyalty Points (LP)' },
   { value: 'exp', label: 'Experience Points (EXP)' },

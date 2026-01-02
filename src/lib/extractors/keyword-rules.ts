@@ -52,7 +52,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     defaults: {
       reward_mode: 'formula',
       calculation_base: 'loss',
-      trigger_event: 'Turnover',
+      trigger_event: 'Loss',  // ✅ Cashback = Loss-based, NOT Turnover!
       target_segment: 'Semua',
       intent_category: 'Retention',
     },
