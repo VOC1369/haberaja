@@ -553,51 +553,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     </div>
                   </div>
                 )}
-                {/* Dynamic Field: Voucher / Ticket */}
-                {data.fixed_reward_type === 'voucher' && (
-                  <div className="grid grid-cols-2 gap-6 mt-2">
-                    {/* Left column - dibawah Jenis Hadiah */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Jenis Voucher (opsional)</Label>
-                        <Input
-                          value={data.fixed_voucher_kind || ''}
-                          onChange={(e) => onChange({ fixed_voucher_kind: e.target.value })}
-                          placeholder="Contoh: Deposit"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Jumlah Reward</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={data.fixed_reward_quantity ?? 1}
-                          onChange={(e) => onChange({ fixed_reward_quantity: parseInt(e.target.value) || 1 })}
-                          placeholder="1"
-                        />
-                      </div>
-                    </div>
-                    {/* Right column - dibawah Max Bonus */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Masa Berlaku Dimulai</Label>
-                        <Input
-                          type="date"
-                          value={data.fixed_voucher_valid_from || ''}
-                          onChange={(e) => onChange({ fixed_voucher_valid_from: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Masa Berakhir</Label>
-                        <Input
-                          type="date"
-                          value={data.fixed_voucher_valid_until || ''}
-                          onChange={(e) => onChange({ fixed_voucher_valid_until: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
                 {/* Dynamic Field: Lucky Spin */}
                 {data.fixed_reward_type === 'lucky_spin' && (
                   <div className="grid grid-cols-3 gap-4 mt-2">
@@ -676,6 +631,52 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 />
               </div>
             </div>
+            
+            {/* Row 1.1: Voucher / Ticket Fields (hanya muncul jika fixed_reward_type === 'voucher') */}
+            {data.fixed_reward_type === 'voucher' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Left column - dibawah Jenis Hadiah */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Jenis Voucher (opsional)</Label>
+                    <Input
+                      value={data.fixed_voucher_kind || ''}
+                      onChange={(e) => onChange({ fixed_voucher_kind: e.target.value })}
+                      placeholder="Contoh: Deposit"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Jumlah Reward</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={data.fixed_reward_quantity ?? 1}
+                      onChange={(e) => onChange({ fixed_reward_quantity: parseInt(e.target.value) || 1 })}
+                      placeholder="1"
+                    />
+                  </div>
+                </div>
+                {/* Right column - dibawah Max Bonus */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Masa Berlaku Dimulai</Label>
+                    <Input
+                      type="date"
+                      value={data.fixed_voucher_valid_from || ''}
+                      onChange={(e) => onChange({ fixed_voucher_valid_from: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Masa Berakhir</Label>
+                    <Input
+                      type="date"
+                      value={data.fixed_voucher_valid_until || ''}
+                      onChange={(e) => onChange({ fixed_voucher_valid_until: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Row 2: 2 kolom utama - Kolom 1 (Payout + Admin Fee), Kolom 2 (Minimum Depo) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -1582,51 +1583,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     </div>
                   </div>
                 )}
-                {/* Dynamic Field: Voucher / Ticket */}
-                {data.dinamis_reward_type === 'voucher' && (
-                  <div className="grid grid-cols-2 gap-6 mt-2">
-                    {/* Left column - dibawah Jenis Hadiah */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Jenis Voucher (opsional)</Label>
-                        <Input
-                          value={data.voucher_kind || ''}
-                          onChange={(e) => onChange({ voucher_kind: e.target.value })}
-                          placeholder="Contoh: Deposit"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Jumlah Reward</Label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={data.reward_quantity ?? 1}
-                          onChange={(e) => onChange({ reward_quantity: parseInt(e.target.value) || 1 })}
-                          placeholder="1"
-                        />
-                      </div>
-                    </div>
-                    {/* Right column - dibawah Max Bonus */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Masa Berlaku Dimulai</Label>
-                        <Input
-                          type="date"
-                          value={data.voucher_valid_from || ''}
-                          onChange={(e) => onChange({ voucher_valid_from: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Masa Berakhir</Label>
-                        <Input
-                          type="date"
-                          value={data.voucher_valid_until || ''}
-                          onChange={(e) => onChange({ voucher_valid_until: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
                 {/* Dynamic Field: Lucky Spin */}
                 {data.dinamis_reward_type === 'lucky_spin' && (
                   <div className="grid grid-cols-3 gap-4 mt-2">
@@ -1705,6 +1661,52 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 />
               </div>
             </div>
+            
+            {/* Row 1.1: Voucher / Ticket Fields (hanya muncul jika dinamis_reward_type === 'voucher') */}
+            {data.dinamis_reward_type === 'voucher' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Left column - dibawah Jenis Hadiah */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Jenis Voucher (opsional)</Label>
+                    <Input
+                      value={data.voucher_kind || ''}
+                      onChange={(e) => onChange({ voucher_kind: e.target.value })}
+                      placeholder="Contoh: Deposit"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Jumlah Reward</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={data.reward_quantity ?? 1}
+                      onChange={(e) => onChange({ reward_quantity: parseInt(e.target.value) || 1 })}
+                      placeholder="1"
+                    />
+                  </div>
+                </div>
+                {/* Right column - dibawah Max Bonus */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Masa Berlaku Dimulai</Label>
+                    <Input
+                      type="date"
+                      value={data.voucher_valid_from || ''}
+                      onChange={(e) => onChange({ voucher_valid_from: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Masa Berakhir</Label>
+                    <Input
+                      type="date"
+                      value={data.voucher_valid_until || ''}
+                      onChange={(e) => onChange({ voucher_valid_until: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             
             {/* Row 2: 2 kolom utama - Kolom 1 (Payout + Admin Fee), Kolom 2 (Minimum Depo) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
