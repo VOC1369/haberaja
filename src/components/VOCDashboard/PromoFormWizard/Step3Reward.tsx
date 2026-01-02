@@ -118,6 +118,18 @@ const VOUCHER_TICKET_REWARDS = ['voucher', 'ticket'];
 const isVoucherTicket = (rewardType: string | undefined) => 
   VOUCHER_TICKET_REWARDS.includes(rewardType || '');
 
+// Helper untuk cek apakah reward type memerlukan eligibility-based logic (bukan calculation-based)
+const isEligibilityBasedReward = (rewardType: string | undefined) =>
+  UNIT_BASED_REWARDS.includes(rewardType || '');
+
+// Opsi eligibility untuk Voucher/Ticket/Lucky Spin (syarat mendapatkan ticket)
+const TICKET_ELIGIBILITY_OPTIONS: SelectOption[] = [
+  { value: 'deposit', label: 'Deposit' },
+  { value: 'turnover', label: 'Turnover (TO)' },
+  { value: 'loss', label: 'Loss (WL)' },
+  { value: 'manual', label: 'Manual / Event' },
+];
+
 // Helper untuk format angka ke Rupiah Indonesia (dengan separator titik)
 const formatRupiah = (value: number | undefined): string => {
   if (value === undefined || value === null || isNaN(value)) return '';
@@ -540,20 +552,22 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       inertUpdates.fixed_reward_quantity = 1;
                     } else if (value === 'voucher' || value === 'ticket') {
                       inertUpdates.fixed_reward_quantity = 1;
-                      // Semantic locking: set semua calculation-based fields ke inert
-                      inertUpdates.fixed_max_claim = null;
-                      inertUpdates.fixed_max_claim_unlimited = false;
+                      // Eligibility-based: HANYA disable calculation fields, BUKAN eligibility fields
+                      // fixed_calculation_base & fixed_min_calculation TETAP AKTIF untuk syarat eligibility
                       inertUpdates.fixed_payout_direction = undefined;
                       inertUpdates.fixed_admin_fee_enabled = false;
                       inertUpdates.fixed_admin_fee_percentage = undefined;
-                      inertUpdates.fixed_calculation_base = '';
                       inertUpdates.fixed_calculation_method = '';
                       inertUpdates.fixed_calculation_value = undefined;
-                      inertUpdates.fixed_min_calculation_enabled = false;
-                      inertUpdates.fixed_min_calculation = undefined;
                     } else if (value === 'lucky_spin') {
                       inertUpdates.fixed_lucky_spin_enabled = true;
                       inertUpdates.fixed_reward_quantity = 1;
+                      // Eligibility-based: HANYA disable calculation fields
+                      inertUpdates.fixed_payout_direction = undefined;
+                      inertUpdates.fixed_admin_fee_enabled = false;
+                      inertUpdates.fixed_admin_fee_percentage = undefined;
+                      inertUpdates.fixed_calculation_method = '';
+                      inertUpdates.fixed_calculation_value = undefined;
                     }
                     
                     onChange(inertUpdates);
@@ -835,82 +849,125 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
             
             {/* Row 3: Dasar Perhitungan & Jenis Perhitungan */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Dasar Perhitungan</Label>
-                <SelectWithAddNew
-                  value={data.fixed_calculation_base || ''}
-                  onValueChange={(value) => onChange({ fixed_calculation_base: value })}
-                  options={calcBaseOptions}
-                  onAddOption={(option) => setCalcBaseOptions([...calcBaseOptions, option])}
-                  onDeleteOption={handleDeleteCalcBase}
-                  placeholder="Pilih dasar (TO, Deposit, dll)"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Jenis Perhitungan</Label>
-                <SelectWithAddNew
-                  value={data.fixed_calculation_method || ''}
-                  onValueChange={(value) => onChange({ fixed_calculation_method: value })}
-                  options={calcMethodOptions}
-                  onAddOption={(option) => setCalcMethodOptions([...calcMethodOptions, option])}
-                  onDeleteOption={handleDeleteCalcMethod}
-                  placeholder="Pilih jenis (%, Fixed)"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Nilai Bonus</Label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={data.fixed_calculation_value !== undefined && data.fixed_calculation_value !== null 
-                      ? String(data.fixed_calculation_value).replace('.', ',') 
-                      : ''}
-                    onChange={(e) => {
-                      const rawValue = e.target.value.replace(/[^0-9.,]/g, '');
-                      const normalizedValue = rawValue.replace(',', '.');
-                      const numValue = parseFloat(normalizedValue);
-                      if (!isNaN(numValue)) {
-                        onChange({ fixed_calculation_value: numValue });
-                      } else if (rawValue === '' || rawValue === '0' || rawValue === '0,' || rawValue === '0.') {
-                        onChange({ fixed_calculation_value: 0 });
-                      }
-                    }}
-                    placeholder="Contoh: 0,5"
-                    className="pr-10"
-                  />
-                  {data.fixed_calculation_method === 'percentage' && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-                  )}
-                </div>
-              </div>
+            {(() => {
+              const isEligibilityMode = isEligibilityBasedReward(data.fixed_reward_type);
+              const isManualEligibility = isEligibilityMode && data.fixed_calculation_base === 'manual';
               
-              {/* Minimal Perhitungan - Same row as Nilai Bonus */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Minimal Perhitungan {calcBaseOptions.find(c => c.value === data.fixed_calculation_base)?.label || ''}</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Aktifkan</span>
-                    <Switch
-                      checked={data.fixed_min_calculation_enabled ?? false}
-                      onCheckedChange={(checked) => onChange({ 
-                        fixed_min_calculation_enabled: checked,
-                        fixed_min_calculation: checked ? data.fixed_min_calculation : undefined
-                      })}
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Dasar Perhitungan / Syarat Mendapatkan Ticket */}
+                  <div className="space-y-2">
+                    <Label>{isEligibilityMode ? 'Syarat Mendapatkan Ticket' : 'Dasar Perhitungan'}</Label>
+                    <SelectWithAddNew
+                      value={data.fixed_calculation_base || ''}
+                      onValueChange={(value) => {
+                        const updates: Partial<PromoFormData> = { fixed_calculation_base: value };
+                        
+                        // Set trigger_event untuk mapping yang benar
+                        if (value === 'turnover') updates.trigger_event = 'turnover';
+                        else if (value === 'loss') updates.trigger_event = 'loss';
+                        else if (value === 'deposit') updates.trigger_event = 'deposit';
+                        else if (value === 'manual') updates.trigger_event = 'event';
+                        
+                        // Jika Manual/Event, disable min_calculation
+                        if (isEligibilityMode && value === 'manual') {
+                          updates.fixed_min_calculation_enabled = false;
+                          updates.fixed_min_calculation = undefined;
+                        }
+                        
+                        onChange(updates);
+                      }}
+                      options={isEligibilityMode ? TICKET_ELIGIBILITY_OPTIONS : calcBaseOptions}
+                      onAddOption={isEligibilityMode ? undefined : (option) => setCalcBaseOptions([...calcBaseOptions, option])}
+                      onDeleteOption={isEligibilityMode ? undefined : handleDeleteCalcBase}
+                      placeholder={isEligibilityMode ? "Pilih syarat (Deposit, TO, Loss, Manual)" : "Pilih dasar (TO, Deposit, dll)"}
                     />
                   </div>
+                  
+                  {/* Jenis Perhitungan - DISABLED untuk eligibility-based rewards */}
+                  <div className="space-y-2">
+                    <Label className={isEligibilityMode ? 'text-muted-foreground' : ''}>Jenis Perhitungan</Label>
+                    <SelectWithAddNew
+                      value={data.fixed_calculation_method || ''}
+                      onValueChange={(value) => onChange({ fixed_calculation_method: value })}
+                      options={calcMethodOptions}
+                      onAddOption={(option) => setCalcMethodOptions([...calcMethodOptions, option])}
+                      onDeleteOption={handleDeleteCalcMethod}
+                      placeholder={isEligibilityMode ? "Tidak berlaku untuk ticket" : "Pilih jenis (%, Fixed)"}
+                      disabled={isEligibilityMode}
+                    />
+                    {isEligibilityMode && (
+                      <p className="text-xs text-muted-foreground">Ticket tidak menggunakan kalkulasi %/fixed</p>
+                    )}
+                  </div>
+                  
+                  {/* Nilai Bonus - DISABLED untuk eligibility-based rewards */}
+                  <div className="space-y-2">
+                    <Label className={isEligibilityMode ? 'text-muted-foreground' : ''}>Nilai Bonus</Label>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={data.fixed_calculation_value !== undefined && data.fixed_calculation_value !== null 
+                          ? String(data.fixed_calculation_value).replace('.', ',') 
+                          : ''}
+                        onChange={(e) => {
+                          const rawValue = e.target.value.replace(/[^0-9.,]/g, '');
+                          const normalizedValue = rawValue.replace(',', '.');
+                          const numValue = parseFloat(normalizedValue);
+                          if (!isNaN(numValue)) {
+                            onChange({ fixed_calculation_value: numValue });
+                          } else if (rawValue === '' || rawValue === '0' || rawValue === '0,' || rawValue === '0.') {
+                            onChange({ fixed_calculation_value: 0 });
+                          }
+                        }}
+                        placeholder={isEligibilityMode ? "Tidak berlaku untuk ticket" : "Contoh: 0,5"}
+                        className={cn("pr-10", isEligibilityMode && "opacity-50")}
+                        disabled={isEligibilityMode}
+                      />
+                      {data.fixed_calculation_method === 'percentage' && !isEligibilityMode && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Minimal Perhitungan / Ambang Syarat - AKTIF untuk eligibility, disabled jika Manual */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className={isManualEligibility ? 'text-muted-foreground' : ''}>
+                        {isEligibilityMode 
+                          ? 'Ambang Syarat' 
+                          : `Minimal Perhitungan ${calcBaseOptions.find(c => c.value === data.fixed_calculation_base)?.label || ''}`}
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Aktifkan</span>
+                        <Switch
+                          checked={data.fixed_min_calculation_enabled ?? false}
+                          onCheckedChange={(checked) => onChange({ 
+                            fixed_min_calculation_enabled: checked,
+                            fixed_min_calculation: checked ? data.fixed_min_calculation : undefined
+                          })}
+                          disabled={isManualEligibility}
+                        />
+                      </div>
+                    </div>
+                    <Input
+                      type="text"
+                      value={data.fixed_min_calculation_enabled && data.fixed_min_calculation ? data.fixed_min_calculation.toLocaleString('id-ID') : ''}
+                      onChange={(e) => onChange({ fixed_min_calculation: Number(e.target.value.replace(/\D/g, '')) })}
+                      placeholder={isManualEligibility 
+                        ? "Manual / Event tidak memerlukan ambang" 
+                        : (data.fixed_min_calculation_enabled ? "Contoh: 1.000.000" : "Tidak aktif")}
+                      disabled={!data.fixed_min_calculation_enabled || isManualEligibility}
+                      className={(!data.fixed_min_calculation_enabled || isManualEligibility) ? "opacity-50" : ""}
+                    />
+                    {isManualEligibility && (
+                      <p className="text-xs text-muted-foreground">Syarat manual tidak memerlukan nilai ambang</p>
+                    )}
+                  </div>
                 </div>
-                <Input
-                  type="text"
-                  value={data.fixed_min_calculation_enabled && data.fixed_min_calculation ? data.fixed_min_calculation.toLocaleString('id-ID') : ''}
-                  onChange={(e) => onChange({ fixed_min_calculation: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={data.fixed_min_calculation_enabled ? "Contoh: 1.000.000" : "Tidak aktif"}
-                  disabled={!data.fixed_min_calculation_enabled}
-                  className={!data.fixed_min_calculation_enabled ? "opacity-50" : ""}
-                />
-              </div>
-            </div>
+              );
+            })()}
             
             {/* Ilustrasi Perhitungan - Collapsible */}
             {data.fixed_calculation_method === 'percentage' && (data.fixed_calculation_value ?? 0) > 0 && (
@@ -1626,20 +1683,22 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       inertUpdates.reward_quantity = 1;
                     } else if (value === 'voucher' || value === 'ticket') {
                       inertUpdates.reward_quantity = 1;
-                      // Semantic locking: set semua calculation-based fields ke inert
-                      inertUpdates.dinamis_max_claim = null;
-                      inertUpdates.dinamis_max_claim_unlimited = false;
+                      // Eligibility-based: HANYA disable calculation fields, BUKAN eligibility fields
+                      // calculation_base & min_calculation TETAP AKTIF untuk syarat eligibility
                       inertUpdates.global_payout_direction = undefined;
                       inertUpdates.admin_fee_enabled = false;
                       inertUpdates.admin_fee_percentage = 0;
-                      inertUpdates.calculation_base = '';
                       inertUpdates.calculation_method = '';
                       inertUpdates.calculation_value = undefined;
-                      inertUpdates.min_calculation_enabled = false;
-                      inertUpdates.min_calculation = 0;
                     } else if (value === 'lucky_spin') {
                       inertUpdates.lucky_spin_enabled = true;
                       inertUpdates.reward_quantity = 1;
+                      // Eligibility-based: HANYA disable calculation fields
+                      inertUpdates.global_payout_direction = undefined;
+                      inertUpdates.admin_fee_enabled = false;
+                      inertUpdates.admin_fee_percentage = 0;
+                      inertUpdates.calculation_method = '';
+                      inertUpdates.calculation_value = undefined;
                     }
                     
                     onChange(inertUpdates);
@@ -1931,99 +1990,129 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
             
             {/* Row 3: Dasar Perhitungan & Jenis Perhitungan */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className={isVoucherTicket(data.dinamis_reward_type) ? 'text-muted-foreground' : ''}>Dasar Perhitungan</Label>
-                <SelectWithAddNew
-                  value={data.calculation_base}
-                  onValueChange={(value) => onChange({ calculation_base: value })}
-                  options={calcBaseOptions}
-                  onAddOption={(option) => setCalcBaseOptions([...calcBaseOptions, option])}
-                  onDeleteOption={handleDeleteCalcBase}
-                  placeholder={isVoucherTicket(data.dinamis_reward_type) ? "Tidak berlaku" : "Pilih dasar (TO, Deposit, dll)"}
-                  disabled={isVoucherTicket(data.dinamis_reward_type)}
-                />
-                {isVoucherTicket(data.dinamis_reward_type) && (
-                  <p className="text-xs text-muted-foreground">Voucher / Ticket tidak menggunakan dasar perhitungan</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label className={isVoucherTicket(data.dinamis_reward_type) ? 'text-muted-foreground' : ''}>Jenis Perhitungan</Label>
-                <SelectWithAddNew
-                  value={data.calculation_method}
-                  onValueChange={(value) => onChange({ calculation_method: value })}
-                  options={calcMethodOptions}
-                  onAddOption={(option) => setCalcMethodOptions([...calcMethodOptions, option])}
-                  onDeleteOption={handleDeleteCalcMethod}
-                  placeholder={isVoucherTicket(data.dinamis_reward_type) ? "Tidak berlaku" : "Pilih jenis (%, Fixed)"}
-                  disabled={isVoucherTicket(data.dinamis_reward_type)}
-                />
-                {isVoucherTicket(data.dinamis_reward_type) && (
-                  <p className="text-xs text-muted-foreground">Tidak berlaku untuk Voucher / Ticket</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label className={isVoucherTicket(data.dinamis_reward_type) ? 'text-muted-foreground' : ''}>Nilai Bonus</Label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={calcValueInput}
-                    onChange={(e) => {
-                      const rawValue = e.target.value.replace(/[^0-9.,]/g, '');
-                      setCalcValueInput(rawValue);
-                      const normalizedValue = rawValue.replace(',', '.');
-                      const numValue = parseFloat(normalizedValue);
-                      if (!isNaN(numValue)) {
-                        onChange({ calculation_value: numValue });
-                      } else if (rawValue === '' || rawValue === '0' || rawValue === '0,' || rawValue === '0.') {
-                        onChange({ calculation_value: 0 });
-                      }
-                    }}
-                    onBlur={() => {
-                      if (data.calculation_value !== undefined && data.calculation_value !== null) {
-                        setCalcValueInput(String(data.calculation_value).replace('.', ','));
-                      }
-                    }}
-                    placeholder={isVoucherTicket(data.dinamis_reward_type) ? "Voucher / Ticket tidak memiliki nilai bonus" : "Contoh: 0,5"}
-                    className={cn("pr-10", isVoucherTicket(data.dinamis_reward_type) && "opacity-50")}
-                    disabled={isVoucherTicket(data.dinamis_reward_type)}
-                  />
-                  {data.calculation_method === 'percentage' && !isVoucherTicket(data.dinamis_reward_type) && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-                  )}
-                </div>
-              </div>
+            {(() => {
+              const isEligibilityMode = isEligibilityBasedReward(data.dinamis_reward_type);
+              const isManualEligibility = isEligibilityMode && data.calculation_base === 'manual';
               
-              {/* Minimal Perhitungan - Same row as Nilai Bonus */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className={isVoucherTicket(data.dinamis_reward_type) ? 'text-muted-foreground' : ''}>{getMinimumBaseLabel()}</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Aktifkan</span>
-                    <Switch
-                      checked={data.min_calculation_enabled}
-                      onCheckedChange={(checked) => onChange({ 
-                        min_calculation_enabled: checked,
-                        min_calculation: checked ? data.min_calculation : 0
-                      })}
-                      disabled={isVoucherTicket(data.dinamis_reward_type)}
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Dasar Perhitungan / Syarat Mendapatkan Ticket */}
+                  <div className="space-y-2">
+                    <Label>{isEligibilityMode ? 'Syarat Mendapatkan Ticket' : 'Dasar Perhitungan'}</Label>
+                    <SelectWithAddNew
+                      value={data.calculation_base}
+                      onValueChange={(value) => {
+                        const updates: Partial<PromoFormData> = { calculation_base: value };
+                        
+                        // Set trigger_event untuk mapping yang benar
+                        if (value === 'turnover') updates.trigger_event = 'turnover';
+                        else if (value === 'loss') updates.trigger_event = 'loss';
+                        else if (value === 'deposit') updates.trigger_event = 'deposit';
+                        else if (value === 'manual') updates.trigger_event = 'event';
+                        
+                        // Jika Manual/Event, disable min_calculation
+                        if (isEligibilityMode && value === 'manual') {
+                          updates.min_calculation_enabled = false;
+                          updates.min_calculation = 0;
+                        }
+                        
+                        onChange(updates);
+                      }}
+                      options={isEligibilityMode ? TICKET_ELIGIBILITY_OPTIONS : calcBaseOptions}
+                      onAddOption={isEligibilityMode ? undefined : (option) => setCalcBaseOptions([...calcBaseOptions, option])}
+                      onDeleteOption={isEligibilityMode ? undefined : handleDeleteCalcBase}
+                      placeholder={isEligibilityMode ? "Pilih syarat (Deposit, TO, Loss, Manual)" : "Pilih dasar (TO, Deposit, dll)"}
                     />
                   </div>
+                  
+                  {/* Jenis Perhitungan - DISABLED untuk eligibility-based rewards */}
+                  <div className="space-y-2">
+                    <Label className={isEligibilityMode ? 'text-muted-foreground' : ''}>Jenis Perhitungan</Label>
+                    <SelectWithAddNew
+                      value={data.calculation_method}
+                      onValueChange={(value) => onChange({ calculation_method: value })}
+                      options={calcMethodOptions}
+                      onAddOption={(option) => setCalcMethodOptions([...calcMethodOptions, option])}
+                      onDeleteOption={handleDeleteCalcMethod}
+                      placeholder={isEligibilityMode ? "Tidak berlaku untuk ticket" : "Pilih jenis (%, Fixed)"}
+                      disabled={isEligibilityMode}
+                    />
+                    {isEligibilityMode && (
+                      <p className="text-xs text-muted-foreground">Ticket tidak menggunakan kalkulasi %/fixed</p>
+                    )}
+                  </div>
+                  
+                  {/* Nilai Bonus - DISABLED untuk eligibility-based rewards */}
+                  <div className="space-y-2">
+                    <Label className={isEligibilityMode ? 'text-muted-foreground' : ''}>Nilai Bonus</Label>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={calcValueInput}
+                        onChange={(e) => {
+                          const rawValue = e.target.value.replace(/[^0-9.,]/g, '');
+                          setCalcValueInput(rawValue);
+                          const normalizedValue = rawValue.replace(',', '.');
+                          const numValue = parseFloat(normalizedValue);
+                          if (!isNaN(numValue)) {
+                            onChange({ calculation_value: numValue });
+                          } else if (rawValue === '' || rawValue === '0' || rawValue === '0,' || rawValue === '0.') {
+                            onChange({ calculation_value: 0 });
+                          }
+                        }}
+                        onBlur={() => {
+                          if (data.calculation_value !== undefined && data.calculation_value !== null) {
+                            setCalcValueInput(String(data.calculation_value).replace('.', ','));
+                          }
+                        }}
+                        placeholder={isEligibilityMode ? "Tidak berlaku untuk ticket" : "Contoh: 0,5"}
+                        className={cn("pr-10", isEligibilityMode && "opacity-50")}
+                        disabled={isEligibilityMode}
+                      />
+                      {data.calculation_method === 'percentage' && !isEligibilityMode && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Minimal Perhitungan / Ambang Syarat - AKTIF untuk eligibility, disabled jika Manual */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className={isManualEligibility ? 'text-muted-foreground' : ''}>
+                        {isEligibilityMode 
+                          ? 'Ambang Syarat' 
+                          : getMinimumBaseLabel()}
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Aktifkan</span>
+                        <Switch
+                          checked={data.min_calculation_enabled}
+                          onCheckedChange={(checked) => onChange({ 
+                            min_calculation_enabled: checked,
+                            min_calculation: checked ? data.min_calculation : 0
+                          })}
+                          disabled={isManualEligibility}
+                        />
+                      </div>
+                    </div>
+                    <Input
+                      type="text"
+                      value={data.min_calculation_enabled && data.min_calculation ? data.min_calculation.toLocaleString('id-ID') : ''}
+                      onChange={(e) => onChange({ min_calculation: Number(e.target.value.replace(/\D/g, '')) })}
+                      placeholder={isManualEligibility 
+                        ? "Manual / Event tidak memerlukan ambang" 
+                        : (data.min_calculation_enabled ? "Contoh: 1.000.000" : "Tidak aktif")}
+                      disabled={!data.min_calculation_enabled || isManualEligibility}
+                      className={(!data.min_calculation_enabled || isManualEligibility) ? "opacity-50" : ""}
+                    />
+                    {isManualEligibility && (
+                      <p className="text-xs text-muted-foreground">Syarat manual tidak memerlukan nilai ambang</p>
+                    )}
+                  </div>
                 </div>
-                <Input
-                  type="text"
-                  value={data.min_calculation_enabled && data.min_calculation ? data.min_calculation.toLocaleString('id-ID') : ''}
-                  onChange={(e) => onChange({ min_calculation: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={isVoucherTicket(data.dinamis_reward_type) ? "Tidak berlaku" : (data.min_calculation_enabled ? "Contoh: 1.000.000" : "Tidak aktif")}
-                  disabled={!data.min_calculation_enabled || isVoucherTicket(data.dinamis_reward_type)}
-                  className={cn((!data.min_calculation_enabled || isVoucherTicket(data.dinamis_reward_type)) && "opacity-50")}
-                />
-                {isVoucherTicket(data.dinamis_reward_type) && (
-                  <p className="text-xs text-muted-foreground">Tidak berlaku untuk Voucher / Ticket</p>
-                )}
-              </div>
-            </div>
+              );
+            })()}
             
             {/* Ilustrasi Perhitungan - Collapsible like SubCategoryCard */}
             {data.calculation_method === 'percentage' && data.calculation_value > 0 && (
