@@ -1273,7 +1273,7 @@ export function PseudoKnowledgeSection() {
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
-        <div className={`p-6 pb-8 max-w-5xl mx-auto ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
+        <div className={`p-6 pb-24 max-w-5xl mx-auto ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
           
           {/* INPUT SECTION - Unified Design */}
           {!extractedPromo && !isExtracting && (
@@ -1545,64 +1545,67 @@ export function PseudoKnowledgeSection() {
                 )}
               </Card>
 
-              {/* ACTION BUTTONS */}
-              <div className="flex items-center justify-between pt-4 border-t border-border">
-                <Button 
-                  variant="ghost"
-                  onClick={handleRestart}
-                  className="gap-2 text-muted-foreground hover:text-foreground rounded-full"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Restart
-                </Button>
-                
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline"
-                    onClick={handleCopyJSON}
-                    className="gap-2 rounded-full"
-                  >
-                    <Copy className="w-4 h-4" />
-                    Copy JSON
-                  </Button>
-                  
-                  {/* System Rule (C) cannot be saved to promo KB */}
-                  {extractedPromo.program_classification === 'C' ? (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            variant="outline"
-                            disabled
-                            className="gap-2 rounded-full opacity-50 cursor-not-allowed"
-                          >
-                            <Ban className="w-4 h-4" />
-                            Bukan Promo
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p>System Rule tidak dapat disimpan ke Promo KB. Ini adalah aturan sistem, bukan promo yang bisa diklaim.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ) : (
-                    <Button 
-                      onClick={handleCommitPromo}
-                      variant="golden"
-                      className="gap-2 rounded-full"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      Gunakan Promo
-                    </Button>
-                  )}
-                </div>
-              </div>
             </>
           )}
-          
-          <div ref={scrollBottomRef} />
         </div>
       </ScrollArea>
+
+      {/* FIXED ACTION BAR - Consistent with other sections */}
+      {extractedPromo && (
+        <div className="footer-bar">
+          <div className="footer-bar-content">
+            <Button 
+              variant="ghost"
+              onClick={handleRestart}
+              className="gap-2 text-muted-foreground hover:text-foreground rounded-full"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Restart
+            </Button>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={handleCopyJSON}
+                className="gap-2 rounded-full"
+              >
+                <Copy className="w-4 h-4" />
+                Copy JSON
+              </Button>
+              
+              {/* System Rule (C) cannot be saved to promo KB */}
+              {extractedPromo.program_classification === 'C' ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="outline"
+                        disabled
+                        className="gap-2 rounded-full opacity-50 cursor-not-allowed"
+                      >
+                        <Ban className="w-4 h-4" />
+                        Bukan Promo
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p>System Rule tidak dapat disimpan ke Promo KB. Ini adalah aturan sistem, bukan promo yang bisa diklaim.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button 
+                  onClick={handleCommitPromo}
+                  variant="golden"
+                  className="gap-2 rounded-full"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Gunakan Promo
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Leave Warning Dialog */}
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
