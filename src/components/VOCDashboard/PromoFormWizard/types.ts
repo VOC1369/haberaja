@@ -320,7 +320,8 @@ export interface PromoFormData {
   
   // Voucher / Ticket Fields
   voucher_kind?: string;                     // Jenis voucher (optional) - e.g., "Deposit", "Freechip"
-  voucher_valid_until?: string;              // Masa berlaku voucher (date string, optional)
+  voucher_valid_from?: string;               // Tanggal mulai berlaku voucher (date string, optional)
+  voucher_valid_until?: string;              // Masa berakhir voucher (date string, optional)
   
   // Lucky Spin Fields
   lucky_spin_enabled?: boolean;              // Flag untuk Lucky Spin reward
@@ -330,6 +331,7 @@ export interface PromoFormData {
   // Fixed Mode Variants
   fixed_reward_quantity?: number | null;
   fixed_voucher_kind?: string;
+  fixed_voucher_valid_from?: string;
   fixed_voucher_valid_until?: string;
   fixed_lucky_spin_enabled?: boolean;
   fixed_lucky_spin_id?: string;
