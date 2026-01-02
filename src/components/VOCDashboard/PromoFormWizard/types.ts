@@ -152,6 +152,13 @@ export { PERSONA_BINDING_FIELDS, DROPPED_FIELDS };
 // INTERFACES
 // ============================================
 
+// Ticket Reward (Exchange Mode) - Section 6
+export interface TicketReward {
+  id: string;
+  ticket: number;
+  reward: string;
+}
+
 export interface PromoFormData {
   // Step 1 - Identitas Promo
   client_id: string;
@@ -340,6 +347,20 @@ export interface PromoFormData {
   fixed_lucky_spin_enabled?: boolean;
   fixed_lucky_spin_id?: string;
   fixed_lucky_spin_max_per_day?: number | null;
+
+  // =============================================
+  // Section 6: Ticket Exchange / Lucky Spin (Optional)
+  // =============================================
+  ticket_exchange_enabled?: boolean;           // Master toggle
+  ticket_exchange_mode?: 'voucher' | 'lucky_spin' | '';  // Mode selection
+  ticket_rewards?: TicketReward[];             // Voucher/Ticket exchange table
+  lucky_spin_rewards?: string[];               // Lucky spin prize list
+  
+  // Fixed Mode Variants
+  fixed_ticket_exchange_enabled?: boolean;
+  fixed_ticket_exchange_mode?: 'voucher' | 'lucky_spin' | '';
+  fixed_ticket_rewards?: TicketReward[];
+  fixed_lucky_spin_rewards?: string[];
 
   // Contact Channel
   contact_channel_enabled: boolean;
@@ -1724,6 +1745,16 @@ export const initialPromoData: PromoFormData = {
   fixed_lucky_spin_enabled: false,
   fixed_lucky_spin_id: '',
   fixed_lucky_spin_max_per_day: null,
+  
+  // Section 6: Ticket Exchange / Lucky Spin (Optional)
+  ticket_exchange_enabled: false,
+  ticket_exchange_mode: '',
+  ticket_rewards: [],
+  lucky_spin_rewards: [],
+  fixed_ticket_exchange_enabled: false,
+  fixed_ticket_exchange_mode: '',
+  fixed_ticket_rewards: [],
+  fixed_lucky_spin_rewards: [],
   
   contact_channel_enabled: false,
   contact_channel: '',

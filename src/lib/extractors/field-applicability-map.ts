@@ -111,6 +111,18 @@ export const INERT_VALUES: Record<string, unknown> = {
   redeem_items: [],
   fast_exp_missions: [],
   level_up_rewards: [],
+  ticket_rewards: [],
+  lucky_spin_rewards: [],
+  fixed_ticket_rewards: [],
+  fixed_lucky_spin_rewards: [],
+  
+  // === Booleans (Section 6) → false ===
+  ticket_exchange_enabled: false,
+  fixed_ticket_exchange_enabled: false,
+  
+  // === Strings (Section 6) → "" ===
+  ticket_exchange_mode: '',
+  fixed_ticket_exchange_mode: '',
   
   // === Objects → null ===
   formula_metadata: null,

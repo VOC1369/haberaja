@@ -25,7 +25,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, X, ChevronDown, Settings, Zap, Trophy, Star, Target, Trash2, CalendarIcon, Calculator, AlertTriangle, Clock, Save, Phone, Gamepad2, Layers, Gift, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, X, ChevronDown, Settings, Zap, Trophy, Star, Target, Trash2, CalendarIcon, Calculator, AlertTriangle, Clock, Save, Phone, Gamepad2, Layers, Gift, CheckCircle2, XCircle, Ticket } from "lucide-react";
 import { GameWhitelistBlacklist } from "./GameWhitelistBlacklist";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, formatNumberWithSeparator } from "@/lib/utils";
@@ -38,6 +38,7 @@ import {
   TierReward,
   FastExpMission,
   LevelUpReward,
+  TicketReward,
   REWARD_TYPES,
   TURNOVER_RULES,
   CLAIM_FREQUENCIES,
@@ -1630,6 +1631,203 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </p>
             </div>
           )}
+
+          {/* Section 6 - Penukaran Hadiah / Lucky Spin (Opsional) */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch
+              checked={data.fixed_ticket_exchange_enabled || false}
+              onCheckedChange={(checked) => onChange({ 
+                fixed_ticket_exchange_enabled: checked,
+                // Reset data jika OFF
+                ...(checked ? {} : { 
+                  fixed_ticket_exchange_mode: '',
+                  fixed_ticket_rewards: [],
+                  fixed_lucky_spin_rewards: []
+                })
+              })}
+            />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover flex items-center gap-2">
+                <Gift className="h-4 w-4" />
+                6. Penukaran Hadiah / Lucky Spin (Opsional)
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Untuk promo berbasis Ticket atau Lucky Spin. Tidak wajib diaktifkan.
+              </p>
+            </div>
+          </div>
+
+          {data.fixed_ticket_exchange_enabled && (
+            <div className="p-4 bg-muted rounded-lg space-y-4">
+              {/* Mode Selection */}
+              <div className="space-y-2">
+                <Label>Mode Reward</Label>
+                <Select
+                  value={data.fixed_ticket_exchange_mode || ''}
+                  onValueChange={(value) => onChange({ 
+                    fixed_ticket_exchange_mode: value as 'voucher' | 'lucky_spin',
+                    // Reset data saat mode berubah
+                    fixed_ticket_rewards: [],
+                    fixed_lucky_spin_rewards: []
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih mode reward" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="voucher">
+                      <div className="flex items-center gap-2">
+                        <Ticket className="h-4 w-4" />
+                        Voucher / Ticket (Tukar Hadiah)
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="lucky_spin">
+                      <div className="flex items-center gap-2">
+                        <Gamepad2 className="h-4 w-4" />
+                        Lucky Spin (Acak / Spin)
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Mode 1: Voucher/Ticket Exchange Table */}
+              {data.fixed_ticket_exchange_mode === 'voucher' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Aturan Penukaran Ticket</Label>
+                  
+                  {/* Table */}
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="w-32">Ticket</TableHead>
+                          <TableHead>Hadiah</TableHead>
+                          <TableHead className="w-16"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(data.fixed_ticket_rewards || []).map((item, index) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min={1}
+                                value={item.ticket}
+                                onChange={(e) => {
+                                  const updated = [...(data.fixed_ticket_rewards || [])];
+                                  updated[index] = { ...item, ticket: parseInt(e.target.value) || 1 };
+                                  onChange({ fixed_ticket_rewards: updated });
+                                }}
+                                className="w-24"
+                                placeholder="1"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={item.reward}
+                                onChange={(e) => {
+                                  const updated = [...(data.fixed_ticket_rewards || [])];
+                                  updated[index] = { ...item, reward: e.target.value };
+                                  onChange({ fixed_ticket_rewards: updated });
+                                }}
+                                placeholder="Contoh: Rp 10.000 atau Honda PCX"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  const updated = (data.fixed_ticket_rewards || []).filter((_, i) => i !== index);
+                                  onChange({ fixed_ticket_rewards: updated });
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {/* Add Row Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newItem: TicketReward = {
+                        id: generateUUID(),
+                        ticket: 1,
+                        reward: ''
+                      };
+                      onChange({ 
+                        fixed_ticket_rewards: [...(data.fixed_ticket_rewards || []), newItem] 
+                      });
+                    }}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Tambah Hadiah
+                  </Button>
+                </div>
+              )}
+
+              {/* Mode 2: Lucky Spin Prize List */}
+              {data.fixed_ticket_exchange_mode === 'lucky_spin' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Daftar Hadiah Lucky Spin</Label>
+                  
+                  {/* Prize List */}
+                  <div className="space-y-2">
+                    {(data.fixed_lucky_spin_rewards || []).map((prize, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Input
+                          value={prize}
+                          onChange={(e) => {
+                            const updated = [...(data.fixed_lucky_spin_rewards || [])];
+                            updated[index] = e.target.value;
+                            onChange({ fixed_lucky_spin_rewards: updated });
+                          }}
+                          placeholder="Contoh: Honda PCX / iPhone 16 Pro / Rp 5.000.000"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const updated = (data.fixed_lucky_spin_rewards || []).filter((_, i) => i !== index);
+                            onChange({ fixed_lucky_spin_rewards: updated });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Add Prize Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onChange({ 
+                        fixed_lucky_spin_rewards: [...(data.fixed_lucky_spin_rewards || []), ''] 
+                      });
+                    }}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Tambah Hadiah
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground">
+                    💡 Ticket berfungsi sebagai akses spin. Tidak ada logika exchange.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -2756,6 +2954,203 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   : '💡 Kontak ini akan ditampilkan di akhir respons AI saat menjelaskan promo.'
                 }
               </p>
+            </div>
+          )}
+
+          {/* Section 6 - Penukaran Hadiah / Lucky Spin (Opsional) - Dynamic Mode */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch
+              checked={data.ticket_exchange_enabled || false}
+              onCheckedChange={(checked) => onChange({ 
+                ticket_exchange_enabled: checked,
+                // Reset data jika OFF
+                ...(checked ? {} : { 
+                  ticket_exchange_mode: '',
+                  ticket_rewards: [],
+                  lucky_spin_rewards: []
+                })
+              })}
+            />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover flex items-center gap-2">
+                <Gift className="h-4 w-4" />
+                6. Penukaran Hadiah / Lucky Spin (Opsional)
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Untuk promo berbasis Ticket atau Lucky Spin. Tidak wajib diaktifkan.
+              </p>
+            </div>
+          </div>
+
+          {data.ticket_exchange_enabled && (
+            <div className="p-4 bg-muted rounded-lg space-y-4">
+              {/* Mode Selection */}
+              <div className="space-y-2">
+                <Label>Mode Reward</Label>
+                <Select
+                  value={data.ticket_exchange_mode || ''}
+                  onValueChange={(value) => onChange({ 
+                    ticket_exchange_mode: value as 'voucher' | 'lucky_spin',
+                    // Reset data saat mode berubah
+                    ticket_rewards: [],
+                    lucky_spin_rewards: []
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih mode reward" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="voucher">
+                      <div className="flex items-center gap-2">
+                        <Ticket className="h-4 w-4" />
+                        Voucher / Ticket (Tukar Hadiah)
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="lucky_spin">
+                      <div className="flex items-center gap-2">
+                        <Gamepad2 className="h-4 w-4" />
+                        Lucky Spin (Acak / Spin)
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Mode 1: Voucher/Ticket Exchange Table */}
+              {data.ticket_exchange_mode === 'voucher' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Aturan Penukaran Ticket</Label>
+                  
+                  {/* Table */}
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="w-32">Ticket</TableHead>
+                          <TableHead>Hadiah</TableHead>
+                          <TableHead className="w-16"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(data.ticket_rewards || []).map((item, index) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min={1}
+                                value={item.ticket}
+                                onChange={(e) => {
+                                  const updated = [...(data.ticket_rewards || [])];
+                                  updated[index] = { ...item, ticket: parseInt(e.target.value) || 1 };
+                                  onChange({ ticket_rewards: updated });
+                                }}
+                                className="w-24"
+                                placeholder="1"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={item.reward}
+                                onChange={(e) => {
+                                  const updated = [...(data.ticket_rewards || [])];
+                                  updated[index] = { ...item, reward: e.target.value };
+                                  onChange({ ticket_rewards: updated });
+                                }}
+                                placeholder="Contoh: Rp 10.000 atau Honda PCX"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  const updated = (data.ticket_rewards || []).filter((_, i) => i !== index);
+                                  onChange({ ticket_rewards: updated });
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {/* Add Row Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newItem: TicketReward = {
+                        id: generateUUID(),
+                        ticket: 1,
+                        reward: ''
+                      };
+                      onChange({ 
+                        ticket_rewards: [...(data.ticket_rewards || []), newItem] 
+                      });
+                    }}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Tambah Hadiah
+                  </Button>
+                </div>
+              )}
+
+              {/* Mode 2: Lucky Spin Prize List */}
+              {data.ticket_exchange_mode === 'lucky_spin' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Daftar Hadiah Lucky Spin</Label>
+                  
+                  {/* Prize List */}
+                  <div className="space-y-2">
+                    {(data.lucky_spin_rewards || []).map((prize, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Input
+                          value={prize}
+                          onChange={(e) => {
+                            const updated = [...(data.lucky_spin_rewards || [])];
+                            updated[index] = e.target.value;
+                            onChange({ lucky_spin_rewards: updated });
+                          }}
+                          placeholder="Contoh: Honda PCX / iPhone 16 Pro / Rp 5.000.000"
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            const updated = (data.lucky_spin_rewards || []).filter((_, i) => i !== index);
+                            onChange({ lucky_spin_rewards: updated });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Add Prize Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      onChange({ 
+                        lucky_spin_rewards: [...(data.lucky_spin_rewards || []), ''] 
+                      });
+                    }}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Tambah Hadiah
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground">
+                    💡 Ticket berfungsi sebagai akses spin. Tidak ada logika exchange.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </>
