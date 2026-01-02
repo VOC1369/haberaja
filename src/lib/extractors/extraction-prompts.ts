@@ -85,6 +85,27 @@ JANGAN BINGUNG:
 - "Minimal turnover" → turnover_rule ✅ (BUKAN minimum_base!)
 - "Syarat TO" → turnover_rule ✅
 
+⚠️ ATURAN JENIS HADIAH (reward_type) — CRITICAL:
+
+DEFAULT RULES berdasarkan promo_type:
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Cashback / Rebate / Rollingan  → reward_type: "credit_game" (BUKAN "uang_tunai"!)  │
+│ Welcome Bonus / Deposit Bonus  → reward_type: "credit_game"                        │
+│ Freebet / Freechip             → reward_type: "credit_game"                        │
+│ Referral Bonus                 → reward_type: "credit_game"                        │
+│ Turnover Bonus                 → reward_type: "credit_game"                        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+EXCEPTION untuk "uang_tunai":
+- HANYA jika ada kata EKSPLISIT: "tarik tunai langsung", "withdraw langsung", "transfer bank"
+- "Cash Prize" di tournament/event bisa = uang_tunai
+
+⛔ JANGAN SALAH PAHAM:
+- "Cashback" ≠ "Cash" (uang tunai)!
+- Cashback di iGaming = bonus credit yang DIKEMBALIKAN ke saldo game
+- Rebate = persentase turnover yang dikreditkan ke akun
+- Rollingan = sama dengan Rebate
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama promo",
