@@ -1697,8 +1697,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium text-foreground">Tabel Penukaran Ticket</Label>
                     <Button
-                      variant="outline"
+                      type="button"
+                      variant="ghost"
                       size="sm"
+                      className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
                       onClick={() => {
                         const newItem: TicketReward = {
                           id: generateUUID(),
@@ -1710,8 +1712,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         });
                       }}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Tambah Tier
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Row
                     </Button>
                   </div>
 
@@ -1748,27 +1750,27 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                             placeholder="Contoh: Rp 10.000 atau Honda PCX"
                           />
                           <Button
+                            type="button"
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => {
                               const updated = (data.fixed_ticket_rewards || []).filter((_, i) => i !== index);
                               onChange({ fixed_ticket_rewards: updated });
                             }}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-border p-6 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Belum ada tier. Klik "Tambah Tier" untuk menambahkan.
-                      </p>
+                    <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-lg">
+                      Belum ada hadiah. Klik "Add Row" untuk menambahkan.
                     </div>
                   )}
 
-                  <p className="text-xs text-yellow-500">
+                  <p className="text-xs text-muted-foreground">
                     💡 User hanya bisa redeem hadiah dengan Ticket sesuai jumlah yang dimiliki.
                   </p>
                 </div>
@@ -1780,16 +1782,18 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium text-foreground">Daftar Hadiah Lucky Spin</Label>
                     <Button
-                      variant="outline"
+                      type="button"
+                      variant="ghost"
                       size="sm"
+                      className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
                       onClick={() => {
                         onChange({ 
                           fixed_lucky_spin_rewards: [...(data.fixed_lucky_spin_rewards || []), ''] 
                         });
                       }}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Tambah Hadiah
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Row
                     </Button>
                   </div>
 
@@ -1809,27 +1813,27 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                             placeholder="Contoh: Honda PCX / iPhone 16 Pro / Rp 5.000.000"
                           />
                           <Button
+                            type="button"
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => {
                               const updated = (data.fixed_lucky_spin_rewards || []).filter((_, i) => i !== index);
                               onChange({ fixed_lucky_spin_rewards: updated });
                             }}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-border p-4 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Belum ada hadiah. Klik "Tambah Hadiah" untuk menambahkan.
-                      </p>
+                    <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-lg">
+                      Belum ada hadiah. Klik "Add Row" untuk menambahkan.
                     </div>
                   )}
 
-                  <p className="text-xs text-yellow-500">
+                  <p className="text-xs text-muted-foreground">
                     💡 Ticket berfungsi sebagai akses spin. Tidak ada logika exchange.
                   </p>
                 </div>
@@ -3030,8 +3034,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium text-foreground">Tabel Penukaran Ticket</Label>
                     <Button
-                      variant="outline"
+                      type="button"
+                      variant="ghost"
                       size="sm"
+                      className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
                       onClick={() => {
                         const newItem: TicketReward = {
                           id: generateUUID(),
@@ -3043,8 +3049,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         });
                       }}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Tambah Tier
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Row
                     </Button>
                   </div>
 
@@ -3081,27 +3087,27 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                             placeholder="Contoh: Rp 10.000 atau Honda PCX"
                           />
                           <Button
+                            type="button"
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => {
                               const updated = (data.ticket_rewards || []).filter((_, i) => i !== index);
                               onChange({ ticket_rewards: updated });
                             }}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-border p-6 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Belum ada tier. Klik "Tambah Tier" untuk menambahkan.
-                      </p>
+                    <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-lg">
+                      Belum ada hadiah. Klik "Add Row" untuk menambahkan.
                     </div>
                   )}
 
-                  <p className="text-xs text-yellow-500">
+                  <p className="text-xs text-muted-foreground">
                     💡 User hanya bisa redeem hadiah dengan Ticket sesuai jumlah yang dimiliki.
                   </p>
                 </div>
@@ -3113,16 +3119,18 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium text-foreground">Daftar Hadiah Lucky Spin</Label>
                     <Button
-                      variant="outline"
+                      type="button"
+                      variant="ghost"
                       size="sm"
+                      className="h-8 px-3 bg-muted text-muted-foreground hover:bg-button-hover hover:text-button-hover-foreground"
                       onClick={() => {
                         onChange({ 
                           lucky_spin_rewards: [...(data.lucky_spin_rewards || []), ''] 
                         });
                       }}
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Tambah Hadiah
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Row
                     </Button>
                   </div>
 
@@ -3142,27 +3150,27 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                             placeholder="Contoh: Honda PCX / iPhone 16 Pro / Rp 5.000.000"
                           />
                           <Button
+                            type="button"
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => {
                               const updated = (data.lucky_spin_rewards || []).filter((_, i) => i !== index);
                               onChange({ lucky_spin_rewards: updated });
                             }}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-border p-4 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Belum ada hadiah. Klik "Tambah Hadiah" untuk menambahkan.
-                      </p>
+                    <div className="text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-lg">
+                      Belum ada hadiah. Klik "Add Row" untuk menambahkan.
                     </div>
                   )}
 
-                  <p className="text-xs text-yellow-500">
+                  <p className="text-xs text-muted-foreground">
                     💡 Ticket berfungsi sebagai akses spin. Tidak ada logika exchange.
                   </p>
                 </div>
