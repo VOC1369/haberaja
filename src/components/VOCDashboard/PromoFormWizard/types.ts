@@ -319,7 +319,8 @@ export interface PromoFormData {
   reward_quantity?: number | null;           // Jumlah reward (tiket, spin, unit fisik, dll)
   
   // Voucher / Ticket Fields
-  voucher_kind?: string;                     // Jenis voucher (optional) - e.g., "Deposit", "Freechip"
+  voucher_kind?: string;                     // Jenis voucher ENUM - 'deposit' | 'lucky_spin' | 'event_entry' | 'discount' | 'free_play' | 'other'
+  voucher_kind_custom?: string;              // Custom voucher kind (jika voucher_kind === 'other')
   voucher_valid_from?: string;               // Tanggal mulai berlaku voucher (date string, optional)
   voucher_valid_until?: string;              // Masa berakhir voucher (date string, optional)
   
@@ -330,7 +331,8 @@ export interface PromoFormData {
   
   // Fixed Mode Variants
   fixed_reward_quantity?: number | null;
-  fixed_voucher_kind?: string;
+  fixed_voucher_kind?: string;               // Jenis voucher ENUM (fixed mode)
+  fixed_voucher_kind_custom?: string;        // Custom voucher kind (fixed mode, jika voucher_kind === 'other')
   fixed_voucher_valid_from?: string;
   fixed_voucher_valid_until?: string;
   fixed_lucky_spin_enabled?: boolean;
@@ -1702,6 +1704,8 @@ export const initialPromoData: PromoFormData = {
   // Universal Reward Fields
   reward_quantity: null,
   voucher_kind: '',
+  voucher_kind_custom: '',
+  voucher_valid_from: '',
   voucher_valid_until: '',
   lucky_spin_enabled: false,
   lucky_spin_id: '',
@@ -1710,6 +1714,8 @@ export const initialPromoData: PromoFormData = {
   // Fixed Mode Variants
   fixed_reward_quantity: null,
   fixed_voucher_kind: '',
+  fixed_voucher_kind_custom: '',
+  fixed_voucher_valid_from: '',
   fixed_voucher_valid_until: '',
   fixed_lucky_spin_enabled: false,
   fixed_lucky_spin_id: '',

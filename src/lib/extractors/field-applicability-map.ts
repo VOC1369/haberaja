@@ -75,9 +75,11 @@ export const INERT_VALUES: Record<string, unknown> = {
   dinamis_reward_type: "",
   // Voucher & Lucky Spin
   voucher_kind: "",
+  voucher_kind_custom: "",
   voucher_valid_from: "",
   voucher_valid_until: "",
   fixed_voucher_kind: "",
+  fixed_voucher_kind_custom: "",
   fixed_voucher_valid_from: "",
   fixed_voucher_valid_until: "",
   lucky_spin_id: "",
