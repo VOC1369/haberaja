@@ -483,10 +483,19 @@ export interface ExtractedPromoSubCategory {
   payout_direction: 'depan' | 'belakang';
   
   // NEW: Jenis Hadiah Detection (v1.1)
-  reward_type?: 'hadiah_fisik' | 'uang_tunai' | 'credit_game' | 'voucher' | 'other';
+  reward_type?: 'hadiah_fisik' | 'uang_tunai' | 'credit_game' | 'voucher' | 'ticket' | 'lucky_spin' | 'other';
   physical_reward_name?: string;   // e.g., "MITSUBISHI PAJERO SPORT 2025"
   physical_reward_quantity?: number; // e.g., 2 (untuk "2 unit")
   cash_reward_amount?: number;     // e.g., 15000000 (untuk Rp 15.000.000)
+  
+  // Voucher / Ticket / Lucky Spin specific fields (v1.2)
+  reward_quantity?: number;          // e.g., 10 (untuk "10 tiket per hari")
+  voucher_kind?: string;             // 'deposit' | 'lucky_spin' | 'event_entry' | 'discount' | 'free_play' | 'other'
+  voucher_valid_from?: string;       // YYYY-MM-DD
+  voucher_valid_until?: string;      // YYYY-MM-DD
+  voucher_valid_unlimited?: boolean; // true = tidak ada kadaluwarsa
+  lucky_spin_id?: string;            // ID dari lucky spin yang terkait
+  lucky_spin_max_per_day?: number;   // Max spin per hari
   
   // Game Scope
   game_types: string[];            // e.g., ["sabung_ayam"] or ["ALL"]
@@ -3203,7 +3212,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Fixed mode defaults - using INERT VALUES (null, not 0)
     reward_type: 'freechip',  // lowercase to match enum
     reward_amount: null,      // ✅ FIX: null = inert (not 0)
-    min_deposit: null,        // ✅ FIX: null = inert (not 0)
+    // ✅ FIX: Map min_deposit from extracted (for voucher/ticket/lucky_spin promos)
+    min_deposit: extracted.min_deposit ?? null,
     max_claim: null,
     // ✅ FIX: turnover_rule default "" (inert), not "0x"
     turnover_rule: subcategories[0]?.turnover_rule || '',
@@ -3264,6 +3274,27 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       ? `${extracted.subcategories[0].turnover_rule || 0}x`
       : '',
     fixed_turnover_rule_custom: '',
+    
+    // Fixed Mode - Voucher / Ticket / Lucky Spin fields (WAJIB DIISI dari extraction)
+    fixed_reward_quantity: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].reward_quantity || 1)
+      : 1,
+    fixed_voucher_kind: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].voucher_kind || '')
+      : '',
+    fixed_voucher_kind_custom: '',
+    fixed_voucher_valid_from: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].voucher_valid_from || '')
+      : '',
+    fixed_voucher_valid_until: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].voucher_valid_until || '')
+      : '',
+    fixed_voucher_valid_unlimited: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].voucher_valid_unlimited || false)
+      : false,
+    fixed_lucky_spin_max_per_day: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].lucky_spin_max_per_day ?? null)
+      : null,
 
     // Tier mode defaults
     promo_unit: 'lp',
@@ -3323,6 +3354,16 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     min_reward_claim: subcategories[0]?.min_reward_claim ?? null,  // ✅ null instead of 0
     min_reward_claim_enabled: (subcategories[0]?.min_reward_claim ?? 0) > 0,
     conversion_formula: '',
+    
+    // Dinamis Mode - Voucher / Ticket / Lucky Spin fields (WAJIB DIISI dari extraction)
+    reward_quantity: extracted.subcategories[0]?.reward_quantity || 1,
+    voucher_kind: extracted.subcategories[0]?.voucher_kind || '',
+    voucher_kind_custom: '',
+    voucher_valid_from: extracted.subcategories[0]?.voucher_valid_from || '',
+    voucher_valid_until: extracted.subcategories[0]?.voucher_valid_until || '',
+    voucher_valid_unlimited: extracted.subcategories[0]?.voucher_valid_unlimited || false,
+    lucky_spin_max_per_day: extracted.subcategories[0]?.lucky_spin_max_per_day ?? null,
+    lucky_spin_id: extracted.subcategories[0]?.lucky_spin_id || '',
 
     // Step 2 - Batasan & Akses
     platform_access: 'semua',

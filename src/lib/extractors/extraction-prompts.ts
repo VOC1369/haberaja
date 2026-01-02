@@ -119,8 +119,10 @@ EXCEPTION untuk "uang_tunai":
   
   "minimum_base": number | null,
   "max_bonus": number | null,
+  "min_deposit": number | null,
   "turnover_rule": "format: NxBO/NxDP atau 'min [angka]' untuk minimal turnover" | null,
   "payout_direction": "balance" | "withdrawable" | null,
+  "claim_frequency": "sekali" | "harian" | "mingguan" | "bulanan" | null,
   
   "game_types": ["sabung_ayam", "slots", "casino", "sportsbook", ...] | null,
   "eligible_providers": ["SV388", "WS168", "Pragmatic Play", ...] | [],
@@ -146,19 +148,45 @@ EXCEPTION untuk "uang_tunai":
       "eligible_providers": string[],
       "game_providers": string[],
       "blacklist": { "enabled": boolean, "games": string[], "providers": string[], "rules": string[] },
-      "reward_type": "hadiah_fisik" | "uang_tunai" | "credit_game" | "voucher" | "other",
+      "reward_type": "hadiah_fisik" | "uang_tunai" | "credit_game" | "voucher" | "ticket" | "lucky_spin" | "other",
       "physical_reward_name": "nama hadiah fisik" | null,
       "physical_reward_quantity": number | null,
-      "cash_reward_amount": number | null
+      "cash_reward_amount": number | null,
+      "reward_quantity": number | null,
+      "voucher_kind": "deposit" | "lucky_spin" | "event_entry" | "discount" | "free_play" | "other" | null,
+      "voucher_valid_from": "YYYY-MM-DD" | null,
+      "voucher_valid_until": "YYYY-MM-DD" | null,
+      "voucher_valid_unlimited": boolean | null,
+      "lucky_spin_id": "ID lucky spin" | null,
+      "lucky_spin_max_per_day": number | null
     }
   ] | null
 }
+
+🎫 VOUCHER / TICKET / LUCKY SPIN DETECTION:
+Jika reward adalah voucher, ticket, atau lucky spin, WAJIB extract:
+
+PATTERN - VOUCHER/TICKET:
+- "Dapat 5 tiket per hari" → reward_type: "ticket", reward_quantity: 5
+- "Bonus 10 voucher deposit" → reward_type: "voucher", voucher_kind: "deposit", reward_quantity: 10
+- "Voucher berlaku 7 hari" → voucher_valid_until: [hitung dari valid_from + 7 hari]
+- "Voucher tidak ada masa kadaluwarsa" → voucher_valid_unlimited: true
+
+PATTERN - LUCKY SPIN:
+- "Dapatkan 3 spin gratis" → reward_type: "lucky_spin", reward_quantity: 3
+- "Max 5 spin per hari" → lucky_spin_max_per_day: 5
+
+⚠️ WALAUPUN reward_type bukan uang (voucher/ticket/lucky_spin):
+- TETAP extract max_bonus jika ada limit (e.g., "Max 10 tiket" → max_bonus: 10)
+- max_bonus untuk voucher/ticket/lucky_spin = batas jumlah unit klaim
+- min_deposit TETAP diisi jika ada syarat deposit
 
 🚫 ATURAN:
 1. Jika data tidak eksplisit → null
 2. JANGAN mengarang angka
 3. calculation_value harus angka, bukan string "%"
 4. Jika ada tabel dengan multiple baris → has_subcategories = true
+5. Untuk voucher/ticket/lucky_spin, reward_quantity WAJIB diisi jika ada di teks
 
 📤 OUTPUT: JSON VALID saja, tanpa markdown.
 `;
@@ -254,10 +282,15 @@ min_deposit adalah ANGKA (number), bukan string.
       "rank": "1", 
       "prize": "deskripsi hadiah", 
       "value": number | null,
-      "reward_type": "hadiah_fisik" | "uang_tunai" | "credit_game" | "voucher" | "other",
+      "reward_type": "hadiah_fisik" | "uang_tunai" | "credit_game" | "voucher" | "ticket" | "lucky_spin" | "other",
       "physical_reward_name": "MITSUBISHI PAJERO SPORT 2025" | null,
       "physical_reward_quantity": 1 | null,
-      "cash_reward_amount": 15000000 | null
+      "cash_reward_amount": 15000000 | null,
+      "reward_quantity": number | null,
+      "voucher_kind": "deposit" | "lucky_spin" | "event_entry" | "discount" | "free_play" | "other" | null,
+      "voucher_valid_until": "YYYY-MM-DD" | null,
+      "voucher_valid_unlimited": boolean | null,
+      "lucky_spin_max_per_day": number | null
     }
   ] | null,
   "winner_count": number | null,
@@ -274,11 +307,23 @@ min_deposit adalah ANGKA (number), bukan string.
   "subcategories": [] | null
 }
 
+🎫 VOUCHER / TICKET / LUCKY SPIN DETECTION (untuk Event):
+Jika hadiah event adalah voucher, ticket, atau lucky spin, WAJIB extract:
+
+PATTERN - VOUCHER/TICKET:
+- "Hadiah 5 tiket undian" → reward_type: "ticket", reward_quantity: 5
+- "Hadiah voucher deposit" → reward_type: "voucher", voucher_kind: "deposit"
+
+PATTERN - LUCKY SPIN:
+- "Hadiah 10 spin gratis" → reward_type: "lucky_spin", reward_quantity: 10
+- "Max 5 spin per hari" → lucky_spin_max_per_day: 5
+
 🚫 ATURAN:
 1. Jika data tidak eksplisit → null
 2. JANGAN mengarang tanggal atau hadiah
 3. prizes harus array of objects dengan struktur di atas
 4. Event HARUS punya valid_from atau valid_until (periode)
+5. Untuk voucher/ticket/lucky_spin, reward_quantity WAJIB diisi jika ada di teks
 
 📤 OUTPUT: JSON VALID saja, tanpa markdown.
 `;
