@@ -38,6 +38,19 @@ export type RewardArchetype =
   | 'tiered_fixed'     // Point redemption, Loyalty tiers
   | 'referral';        // Referral bonus
 
+// ============= REWARD DIMENSION SYSTEM (v2 - Context-Aware Field Resolution) =============
+// Replaces rigid archetype-based field status with dimension-based resolution
+export type RewardNature = 'bonus' | 'cashback' | 'referral' | 'reward' | 'event';
+export type CalculationBasis = 'deposit' | 'turnover' | 'loss' | 'win' | 'level' | 'none';
+export type DistributionType = 'instant' | 'periodic' | 'on_demand' | 'milestone';
+
+export interface RewardDimensions {
+  reward_nature: RewardNature;
+  calculation_basis: CalculationBasis;
+  payout_direction: 'depan' | 'belakang';
+  distribution_type: DistributionType;
+}
+
 // ============= GAME DOMAIN SYSTEM (v1) =============
 // System-derived - NOT user editable
 export type GameDomain = 'slot' | 'casino' | 'togel' | 'sports' | 'general';
@@ -312,9 +325,111 @@ const FIELD_STATUS_MATRIX: Record<RewardArchetype, Record<string, FieldStatus>> 
   },
 };
 
-// Get field status for archetype (exported for UI use)
+// Get field status for archetype (exported for UI use) - LEGACY, use resolveFieldApplicability for new code
 export function getFieldStatus(field: string, archetype: RewardArchetype): FieldStatus {
   return FIELD_STATUS_MATRIX[archetype]?.[field] || 'optional';
+}
+
+// ============= DIMENSION-BASED FIELD APPLICABILITY RESOLVER (v2) =============
+// Context-aware field resolution based on reward dimensions, not rigid archetypes
+
+/**
+ * Detect reward dimensions from extracted promo data
+ * Returns dimension object for context-aware field applicability
+ */
+export function detectRewardDimensions(data: { promo_name?: string; promo_type?: string; subcategories?: ExtractedPromoSubCategory[] }): RewardDimensions {
+  const promoType = (data.promo_type || '').toLowerCase();
+  const promoName = (data.promo_name || '').toLowerCase();
+  const combined = promoType + ' ' + promoName;
+  const calcBase = data.subcategories?.[0]?.calculation_base || '';
+  const payoutDir = data.subcategories?.[0]?.payout_direction || 'belakang';
+  
+  // Detect reward_nature
+  let reward_nature: RewardNature = 'bonus';
+  if (/cashback|rebate|rollingan|turnover\s*bonus|komisi/i.test(combined)) {
+    reward_nature = 'cashback';
+  } else if (/referral|ajak\s*teman|referal/i.test(combined)) {
+    reward_nature = 'referral';
+  } else if (/event|level|naik|milestone|leaderboard|tournament|lucky\s*spin|gacha/i.test(combined)) {
+    reward_nature = 'event';
+  } else if (/loyalty|point|redeem|merchandise/i.test(combined)) {
+    reward_nature = 'reward';
+  }
+  
+  // Detect calculation_basis
+  let calculation_basis: CalculationBasis = 'deposit';
+  if (calcBase === 'win_loss' || /loss|kekalahan/i.test(combined)) {
+    calculation_basis = 'loss';
+  } else if (calcBase === 'turnover' || /rollingan|turnover/i.test(combined)) {
+    calculation_basis = 'turnover';
+  } else if (/level|tier/i.test(combined)) {
+    calculation_basis = 'level';
+  } else if (/win|kemenangan/i.test(combined)) {
+    calculation_basis = 'win';
+  }
+  
+  // Detect distribution_type
+  let distribution_type: DistributionType = 'instant';
+  if (/mingguan|weekly|bulanan|monthly/i.test(combined)) {
+    distribution_type = 'periodic';
+  } else if (/claim|redeem|klaim/i.test(combined)) {
+    distribution_type = 'on_demand';
+  } else if (/level|milestone|naik/i.test(combined)) {
+    distribution_type = 'milestone';
+  }
+  
+  return {
+    reward_nature,
+    calculation_basis,
+    payout_direction: payoutDir as 'depan' | 'belakang',
+    distribution_type,
+  };
+}
+
+/**
+ * Resolve field applicability based on reward dimensions
+ * Returns field status map (required/optional/not_applicable)
+ */
+export function resolveFieldApplicability(dims: RewardDimensions): Record<string, FieldStatus> {
+  const result: Record<string, FieldStatus> = {
+    calculation_value: 'required',
+    turnover_rule: 'required',
+    payout_direction: 'required',
+    max_bonus: 'optional',
+    minimum_base: 'optional',
+  };
+  
+  // RULE 1: Cashback/Rebate + loss-based = NO turnover requirement
+  if (dims.reward_nature === 'cashback' && dims.calculation_basis === 'loss') {
+    result.turnover_rule = 'not_applicable';
+    result.max_bonus = 'optional'; // Often unlimited
+  }
+  
+  // RULE 2: Cashback + turnover-based (rollingan) = NO turnover requirement
+  if (dims.reward_nature === 'cashback' && dims.calculation_basis === 'turnover') {
+    result.turnover_rule = 'not_applicable';
+    result.max_bonus = 'optional';
+  }
+  
+  // RULE 3: Referral = NO minimum_base (threshold = min_downline, not nominal)
+  if (dims.reward_nature === 'referral') {
+    result.minimum_base = 'not_applicable';
+    result.turnover_rule = 'not_applicable';
+  }
+  
+  // RULE 4: Event/Milestone = NO calculation_value
+  if (dims.reward_nature === 'event') {
+    result.calculation_value = 'not_applicable';
+    result.turnover_rule = 'not_applicable';
+  }
+  
+  // RULE 5: Reward/Loyalty = NO turnover
+  if (dims.reward_nature === 'reward') {
+    result.turnover_rule = 'not_applicable';
+    result.calculation_value = 'not_applicable';
+  }
+  
+  return result;
 }
 
 // Promo types yang tidak memiliki konsep turnover (legacy - kept for backward compat)
@@ -562,8 +677,10 @@ const REQUIRED_SUB_FIELDS = [
 export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
   const warnings: string[] = [];
   
-  // PHASE 1: Detect archetype (system-derived)
-  const archetype = detectRewardArchetype(data);
+  // PHASE 1: Detect reward dimensions (context-aware) AND archetype (legacy compat)
+  const dimensions = detectRewardDimensions(data);
+  const fieldApplicability = resolveFieldApplicability(dimensions);
+  const archetype = detectRewardArchetype(data); // Keep for legacy UI
   
   // Rule 1: Multi-variant tapi hanya 1 sub → WARNING (not blocking)
   if (data.promo_mode === 'multi' && data.subcategories.length < 2) {
@@ -575,15 +692,16 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
     warnings.push(`Jumlah sub kategori (${data.subcategories.length}) tidak sesuai dengan baris tabel (${data.expected_subcategory_count}) — dapat diedit manual`);
   }
   
-  // Rule 3: Check setiap sub kategori with ARCHETYPE-AWARE validation
+  // Rule 3: Check setiap sub kategori with DIMENSION-AWARE validation
   data.subcategories.forEach((sub, idx) => {
     const subLabel = sub.sub_name || `Sub ${idx + 1}`;
     
-    // Fields to validate - only check REQUIRED fields for this archetype
+    // Fields to validate - use dimension-based applicability
     const fieldsToCheck = ['calculation_value', 'turnover_rule', 'payout_direction'];
     
     fieldsToCheck.forEach(field => {
-      const status = getFieldStatus(field, archetype);
+      // Use dimension-aware field status (new system)
+      const status = fieldApplicability[field] || 'optional';
       const value = sub[field as keyof ExtractedPromoSubCategory];
       const isEmpty = value === undefined || value === null || (typeof value === 'string' && value === '');
       
@@ -595,39 +713,42 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
       }
     });
     
-    // Phase 1: Check minimum_base === max_bonus (likely extraction error)
-    // Only for formula_based archetype where these fields matter
-    if (archetype === 'formula_based') {
+    // SWAP Detection - Only for bonus + deposit-based (standard deposit/welcome bonus)
+    // Skip for cashback/rebate (different field semantics)
+    if (dimensions.reward_nature === 'bonus' && dimensions.calculation_basis === 'deposit') {
+      // Check minimum_base === max_bonus (likely extraction error)
       if (sub.minimum_base != null && sub.max_bonus != null && sub.minimum_base === sub.max_bonus) {
         warnings.push(`${subLabel}: Min Deposit (Rp ${sub.minimum_base.toLocaleString('id-ID')}) sama dengan Max Bonus — perlu verifikasi`);
       }
       
-      // Phase 5: SWAP Detection Warning - minimum_base tinggi + max_bonus null = likely swapped
+      // SWAP Detection Warning - minimum_base tinggi + max_bonus null = likely swapped
       if (sub.minimum_base != null && sub.minimum_base >= 100000 && sub.max_bonus === null) {
         warnings.push(`${subLabel}: Min Deposit tinggi tapi Max Bonus null — kemungkinan field tertukar`);
       }
     }
     
-    // Special handling for max_bonus: null is valid if confidence = explicit_from_terms
-    // Only check for formula_based archetype
-    if (archetype === 'formula_based' && sub.max_bonus === null) {
-      if (sub.confidence?.max_bonus === 'explicit_from_terms') {
-        // Valid - explicitly unlimited from terms, just info
-        warnings.push(`${subLabel}: Max bonus unlimited (dari S&K)`);
-      } else if (sub.confidence?.max_bonus !== 'explicit' && sub.confidence?.max_bonus !== 'not_applicable') {
-        warnings.push(`${subLabel}: Max bonus tidak terdeteksi — dapat diisi manual`);
+    // Max Bonus Warning - Skip for cashback (often unlimited by design)
+    // Only warn for bonus types where max_bonus matters
+    if (dimensions.reward_nature !== 'cashback' && dimensions.reward_nature !== 'event' && dimensions.reward_nature !== 'reward') {
+      if (sub.max_bonus === null) {
+        if (sub.confidence?.max_bonus === 'explicit_from_terms') {
+          // Valid - explicitly unlimited from terms, just info (but don't warn)
+          // Remove this warning - it's noise for user
+        } else if (sub.confidence?.max_bonus !== 'explicit' && sub.confidence?.max_bonus !== 'not_applicable') {
+          warnings.push(`${subLabel}: Max bonus tidak terdeteksi — dapat diisi manual`);
+        }
       }
     }
     
-    // Check confidence — only for REQUIRED fields based on archetype
+    // Check confidence — only for REQUIRED fields based on dimension applicability
     fieldsToCheck.forEach(field => {
-      const fieldStatus = getFieldStatus(field, archetype);
+      const status = fieldApplicability[field] || 'optional';
       
       // Skip confidence check for not_applicable fields
-      if (fieldStatus === 'not_applicable') return;
+      if (status === 'not_applicable') return;
       
       const conf = sub.confidence?.[field as keyof typeof sub.confidence];
-      if (conf && fieldStatus === 'required') {
+      if (conf && status === 'required') {
         // explicit dan explicit_from_terms = trusted sources
         if (conf === 'explicit' || conf === 'explicit_from_terms') {
           // OK - trusted source
