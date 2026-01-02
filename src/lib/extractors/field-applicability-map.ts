@@ -39,7 +39,7 @@ export const INERT_VALUES: Record<string, unknown> = {
   fixed_min_depo: null,
   fixed_cash_reward_amount: null,
   dinamis_max_claim: null,
-  dinamis_min_claim: null,
+  min_reward_claim: null,         // Standardized from dinamis_min_claim
   dinamis_reward_amount: null,
   global_max_bonus: null,
   lp_earn_amount: null,
@@ -79,7 +79,7 @@ export const INERT_VALUES: Record<string, unknown> = {
   fixed_min_depo_enabled: false,
   min_calculation_enabled: false,
   dinamis_max_claim_unlimited: false,
-  dinamis_min_claim_enabled: false,
+  min_reward_claim_enabled: false,   // Standardized from dinamis_min_claim_enabled
   admin_fee_enabled: false,
   has_subcategories: false,
   
@@ -213,7 +213,7 @@ export const FIELD_APPLICABILITY_MAP: Record<string, FieldApplicabilityRule> = {
       'fast_exp_missions', 'level_up_rewards', 'vip_multiplier', 'redeem_jenis_reward',
       // Dinamis fields
       'dinamis_reward_type', 'dinamis_reward_amount', 'dinamis_max_claim', 'dinamis_max_claim_unlimited',
-      'dinamis_min_claim', 'dinamis_min_claim_enabled', 'conversion_formula', 'formula_metadata',
+      'min_reward_claim', 'min_reward_claim_enabled', 'conversion_formula', 'formula_metadata',
       // Fixed mode fields
       'fixed_reward_type', 'fixed_calculation_base', 'fixed_calculation_method', 'fixed_calculation_value',
       'fixed_max_claim', 'fixed_max_claim_unlimited', 'fixed_admin_fee_enabled', 'fixed_admin_fee_percentage',
@@ -287,7 +287,7 @@ export const FIELD_APPLICABILITY_MAP: Record<string, FieldApplicabilityRule> = {
       'fixed_min_depo', 'fixed_min_depo_enabled',
       // Dinamis mode
       'dinamis_reward_type', 'dinamis_reward_amount', 'dinamis_max_claim', 'dinamis_max_claim_unlimited',
-      'dinamis_min_claim', 'dinamis_min_claim_enabled', 'conversion_formula', 'formula_metadata',
+      'min_reward_claim', 'min_reward_claim_enabled', 'conversion_formula', 'formula_metadata',
     ],
   },
 
@@ -317,7 +317,7 @@ export const FIELD_APPLICABILITY_MAP: Record<string, FieldApplicabilityRule> = {
       'fixed_min_depo', 'fixed_min_depo_enabled',
       // Dinamis mode
       'dinamis_reward_type', 'dinamis_reward_amount', 'dinamis_max_claim', 'dinamis_max_claim_unlimited',
-      'dinamis_min_claim', 'dinamis_min_claim_enabled', 'conversion_formula', 'formula_metadata',
+      'min_reward_claim', 'min_reward_claim_enabled', 'conversion_formula', 'formula_metadata',
     ],
   },
 };

@@ -627,7 +627,7 @@ export function PseudoKnowledgeSection() {
                 archetype?.toLowerCase().includes('cashback');
               
               if (isRollinganArchetype) {
-                const minClaim = (sub as any).dinamis_min_claim || (sub as any).min_claim;
+                const minClaim = (sub as any).min_reward_claim || (sub as any).min_claim;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Min Bonus Cair</span>

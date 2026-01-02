@@ -79,7 +79,7 @@ export const PKB_FIELD_WHITELIST = [
   // Dinamis mode - NON-EXECUTABLE wrapper
   'formula_metadata',       // NEW: wrapper untuk fakta formula (base, method, value, period, timezone)
   'conversion_formula',     // Deskripsi tekstual (read-only untuk AI)
-  'dinamis_min_claim',
+  'min_reward_claim',       // Minimal bonus yang bisa diklaim (payout threshold)
   
   // Sub Kategori (Combo Promo)
   // 'has_subcategories', // ❌ REMOVED - UI-only toggle (subcategories array presence = has subcategories)
@@ -259,8 +259,8 @@ export interface PromoFormData {
   dinamis_reward_amount: number | null;
   dinamis_max_claim?: number | null;
   dinamis_max_claim_unlimited: boolean;
-  dinamis_min_claim: number | null;
-  dinamis_min_claim_enabled: boolean;
+  min_reward_claim: number | null;
+  min_reward_claim_enabled: boolean;
   
   // Dinamis mode - Text description (goes to PKB)
   conversion_formula: string;
@@ -506,8 +506,8 @@ export interface PromoSubCategory {
   dinamis_reward_amount: number;
   dinamis_max_claim: number;
   dinamis_max_claim_unlimited: boolean;
-  dinamis_min_claim: number;
-  dinamis_min_claim_enabled: boolean;
+  min_reward_claim: number | null;       // Minimal bonus yang bisa dicairkan (payout threshold)
+  min_reward_claim_enabled: boolean;
   
   // Physical Reward (untuk Hadiah Fisik)
   physical_reward_name?: string;  // Nama hadiah fisik manual
@@ -632,8 +632,8 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     }
     
     // 3. Min Claim (bonus minimal yang bisa diklaim)
-    if (data.dinamis_min_claim && data.dinamis_min_claim_enabled) {
-      pkbData.min_claim = data.dinamis_min_claim;
+    if (data.min_reward_claim && data.min_reward_claim_enabled) {
+      pkbData.min_claim = data.min_reward_claim;
     }
     
     // 4. Normalize max_claim: null jika unlimited (canonical form)
@@ -1623,8 +1623,8 @@ export const initialPromoData: PromoFormData = {
   dinamis_reward_amount: null,  // INERT: null
   dinamis_max_claim: null,      // INERT: null
   dinamis_max_claim_unlimited: false,
-  dinamis_min_claim: null,      // INERT: null
-  dinamis_min_claim_enabled: false,
+  min_reward_claim: null,       // INERT: null (payout threshold)
+  min_reward_claim_enabled: false,
   conversion_formula: '',
   
   // PKB OUTPUT: formula_metadata tidak perlu initial value (optional, constructed saat save)
@@ -1794,8 +1794,8 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   dinamis_reward_amount: 0,
   dinamis_max_claim: 2000000,
   dinamis_max_claim_unlimited: false,
-  dinamis_min_claim: 0,
-  dinamis_min_claim_enabled: false,
+  min_reward_claim: null,
+  min_reward_claim_enabled: false,
   conversion_formula: 'Bonus = Deposit × 100% (maksimal sesuai kategori produk)',
   
   formula_metadata: {
@@ -1883,8 +1883,8 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       dinamis_reward_amount: 0,
       dinamis_max_claim: 0,
       dinamis_max_claim_unlimited: false,
-      dinamis_min_claim: 0,
-      dinamis_min_claim_enabled: false,
+      min_reward_claim: null,
+      min_reward_claim_enabled: false,
     },
     {
       id: 'sub_wbcas50',
@@ -1920,8 +1920,8 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       dinamis_reward_amount: 0,
       dinamis_max_claim: 0,
       dinamis_max_claim_unlimited: false,
-      dinamis_min_claim: 0,
-      dinamis_min_claim_enabled: false,
+      min_reward_claim: null,
+      min_reward_claim_enabled: false,
     },
     {
       id: 'sub_wbspt50',
@@ -1957,8 +1957,8 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
       dinamis_reward_amount: 0,
       dinamis_max_claim: 0,
       dinamis_max_claim_unlimited: false,
-      dinamis_min_claim: 0,
-      dinamis_min_claim_enabled: false,
+      min_reward_claim: null,
+      min_reward_claim_enabled: false,
     },
   ],
   

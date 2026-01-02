@@ -2950,12 +2950,12 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       dinamis_max_claim: sub.max_bonus ?? 0,
       // null max_bonus = unlimited
       dinamis_max_claim_unlimited: sub.max_bonus === null,
-      // 🔒 ONTOLOGY FIX: Map min_claim (payout threshold) ke dinamis_min_claim
-      // dinamis_min_claim = minimal bonus untuk DICAIRKAN (bukan syarat kualifikasi)
+      // 🔒 ONTOLOGY FIX: Map min_claim (payout threshold) ke min_reward_claim
+      // min_reward_claim = minimal bonus untuk DICAIRKAN (bukan syarat kualifikasi)
       // minimum_base = syarat minimal untuk IKUT promo (eligibility)
       // Ini adalah 2 field BERBEDA!
-      dinamis_min_claim: sub.min_claim || sub.payout_threshold || 0,
-      dinamis_min_claim_enabled: !!(sub.min_claim || sub.payout_threshold),
+      min_reward_claim: sub.min_claim || sub.payout_threshold || null,  // ✅ null instead of 0
+      min_reward_claim_enabled: !!(sub.min_claim || sub.payout_threshold),
     };
   });
 
@@ -3317,11 +3317,11 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     dinamis_max_claim_unlimited: hasUnlimitedMaxBonus,
     // ✅ ONTOLOGY FIX: Read payout threshold from subcategory BEFORE it gets emptied
     // Truth must flow from extraction → mapping → UI
-    // dinamis_min_claim = payout threshold ("minimal bonus yang bisa dicairkan")
+    // min_reward_claim = payout threshold ("minimal bonus yang bisa dicairkan")
     // DO NOT confuse with minimum_base = eligibility threshold ("minimal kekalahan")
     // Use nullish coalescing (??) not logical OR (||) to preserve explicit 0 values
-    dinamis_min_claim: subcategories[0]?.dinamis_min_claim ?? 0,
-    dinamis_min_claim_enabled: (subcategories[0]?.dinamis_min_claim ?? 0) > 0,
+    min_reward_claim: subcategories[0]?.min_reward_claim ?? null,  // ✅ null instead of 0
+    min_reward_claim_enabled: (subcategories[0]?.min_reward_claim ?? 0) > 0,
     conversion_formula: '',
 
     // Step 2 - Batasan & Akses
