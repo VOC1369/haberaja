@@ -1273,7 +1273,7 @@ export function PseudoKnowledgeSection() {
   return (
     <div className="flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
-        <div className={`p-6 pb-6 max-w-5xl mx-auto ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
+        <div className={`p-6 pb-20 max-w-5xl mx-auto ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
           
           {/* INPUT SECTION - Unified Design */}
           {!extractedPromo && !isExtracting && (
@@ -1550,29 +1550,27 @@ export function PseudoKnowledgeSection() {
         </div>
       </ScrollArea>
 
-      {/* STICKY ACTION BAR - Inside ScrollArea */}
+      {/* FIXED ACTION BAR - Consistent with APBESummaryReview */}
       {extractedPromo && (
-        <div className="sticky bottom-0 left-0 right-0 bg-card/95 backdrop-blur-sm border-t border-border p-4 z-10">
-          <div className="max-w-5xl mx-auto flex items-center justify-between">
-            <Button 
-              variant="ghost"
-              onClick={handleRestart}
-              className="gap-2 text-muted-foreground hover:text-foreground rounded-full"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Restart
-            </Button>
-            
-            <div className="flex gap-2">
+        <div className="footer-bar">
+          <div className="footer-bar-content">
+            {/* Left: Back/Restart */}
+            <div className="flex items-center gap-2">
               <Button 
                 variant="outline"
-                onClick={handleCopyJSON}
-                className="gap-2 rounded-full"
+                onClick={handleRestart}
+                className="h-11 px-6 gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
               >
-                <Copy className="w-4 h-4" />
-                Copy JSON
+                <RotateCcw className="w-4 h-4" />
+                Restart
               </Button>
-              
+            </div>
+            
+            {/* Center: Empty */}
+            <div className="flex items-center gap-3" />
+            
+            {/* Right: Primary Action */}
+            <div className="flex items-center gap-3">
               {/* System Rule (C) cannot be saved to promo KB */}
               {extractedPromo.program_classification === 'C' ? (
                 <TooltipProvider>
@@ -1581,7 +1579,7 @@ export function PseudoKnowledgeSection() {
                       <Button 
                         variant="outline"
                         disabled
-                        className="gap-2 rounded-full opacity-50 cursor-not-allowed"
+                        className="h-11 px-6 gap-2 opacity-50 cursor-not-allowed"
                       >
                         <Ban className="w-4 h-4" />
                         Bukan Promo
@@ -1596,7 +1594,7 @@ export function PseudoKnowledgeSection() {
                 <Button 
                   onClick={handleCommitPromo}
                   variant="golden"
-                  className="gap-2 rounded-full"
+                  className="h-11 px-6 gap-2"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   Gunakan Promo
