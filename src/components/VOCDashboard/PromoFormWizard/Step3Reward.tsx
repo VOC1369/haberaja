@@ -85,10 +85,14 @@ const DEFAULT_TIER_REWARD_TYPES: SelectOption[] = [
 ];
 
 const DEFAULT_HADIAH_TYPES: SelectOption[] = [
+  { value: 'saldo', label: 'Saldo' },
   { value: 'credit_game', label: 'Credit Game' },
+  { value: 'cashback', label: 'Cashback' },
   { value: 'freechip', label: 'Freechip' },
   { value: 'lp', label: 'Loyalty Points (LP)' },
   { value: 'exp', label: 'Experience Points (EXP)' },
+  { value: 'voucher', label: 'Voucher / Ticket' },
+  { value: 'lucky_spin', label: 'Lucky Spin' },
   { value: 'hadiah_fisik', label: 'Hadiah Fisik' },
   { value: 'uang_tunai', label: 'Uang Tunai' },
 ];
@@ -492,17 +496,40 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 <Label>Jenis Hadiah</Label>
                 <SelectWithAddNew
                   value={data.fixed_reward_type || ''}
-                  onValueChange={(value) => onChange({ 
-                    fixed_reward_type: value,
-                    fixed_physical_reward_name: value === 'hadiah_fisik' ? data.fixed_physical_reward_name : '',
-                    fixed_cash_reward_amount: value === 'uang_tunai' ? data.fixed_cash_reward_amount : undefined
-                  })}
+                  onValueChange={(value) => {
+                    // Set inert values untuk field yang tidak relevan
+                    const inertUpdates: Partial<PromoFormData> = {
+                      fixed_reward_type: value,
+                      // Reset semua field reward ke inert
+                      fixed_physical_reward_name: '',
+                      fixed_physical_reward_quantity: undefined,
+                      fixed_cash_reward_amount: undefined,
+                      fixed_reward_quantity: null,
+                      fixed_voucher_kind: '',
+                      fixed_voucher_valid_until: '',
+                      fixed_lucky_spin_enabled: false,
+                      fixed_lucky_spin_id: '',
+                      fixed_lucky_spin_max_per_day: null,
+                    };
+                    
+                    // Set default untuk field yang relevan
+                    if (value === 'hadiah_fisik') {
+                      inertUpdates.fixed_reward_quantity = 1;
+                    } else if (value === 'voucher') {
+                      inertUpdates.fixed_reward_quantity = 1;
+                    } else if (value === 'lucky_spin') {
+                      inertUpdates.fixed_lucky_spin_enabled = true;
+                      inertUpdates.fixed_reward_quantity = 1;
+                    }
+                    
+                    onChange(inertUpdates);
+                  }}
                   options={dinamisRewardTypeOptions}
                   onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
                   onDeleteOption={handleDeleteDinamisRewardType}
                   placeholder="Pilih jenis"
                 />
-                {/* Conditional field untuk Hadiah Fisik */}
+                {/* Dynamic Field: Hadiah Fisik */}
                 {data.fixed_reward_type === 'hadiah_fisik' && (
                   <div className="grid grid-cols-3 gap-4 mt-2">
                     <div className="col-span-2 space-y-2">
@@ -512,27 +539,87 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         onChange={(e) => onChange({ fixed_physical_reward_name: e.target.value })}
                         placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Masukkan nama hadiah fisik yang akan diberikan kepada player
-                      </p>
                     </div>
                     <div className="space-y-2">
-                      <Label>Jumlah Unit</Label>
+                      <Label>Jumlah Reward</Label>
                       <Input
                         type="number"
                         min={1}
-                        value={data.fixed_physical_reward_quantity || 1}
-                        onChange={(e) => onChange({ fixed_physical_reward_quantity: parseInt(e.target.value) || 1 })}
+                        value={data.fixed_reward_quantity ?? 1}
+                        onChange={(e) => onChange({ fixed_reward_quantity: parseInt(e.target.value) || 1 })}
                         placeholder="1"
-                        className="w-full"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Unit hadiah
-                      </p>
                     </div>
                   </div>
                 )}
-                {/* Conditional field untuk Uang Tunai */}
+                {/* Dynamic Field: Voucher / Ticket */}
+                {data.fixed_reward_type === 'voucher' && (
+                  <div className="grid grid-cols-3 gap-4 mt-2">
+                    <div className="space-y-2">
+                      <Label>Jenis Voucher (opsional)</Label>
+                      <Input
+                        value={data.fixed_voucher_kind || ''}
+                        onChange={(e) => onChange({ fixed_voucher_kind: e.target.value })}
+                        placeholder="Contoh: Deposit, Freechip"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Jumlah Reward</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={data.fixed_reward_quantity ?? 1}
+                        onChange={(e) => onChange({ fixed_reward_quantity: parseInt(e.target.value) || 1 })}
+                        placeholder="Jumlah voucher"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Masa Berlaku (opsional)</Label>
+                      <Input
+                        type="date"
+                        value={data.fixed_voucher_valid_until || ''}
+                        onChange={(e) => onChange({ fixed_voucher_valid_until: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
+                {/* Dynamic Field: Lucky Spin */}
+                {data.fixed_reward_type === 'lucky_spin' && (
+                  <div className="grid grid-cols-3 gap-4 mt-2">
+                    <div className="space-y-2">
+                      <Label>ID Lucky Spin</Label>
+                      <Input
+                        value={data.fixed_lucky_spin_id || ''}
+                        onChange={(e) => onChange({ 
+                          fixed_lucky_spin_id: e.target.value,
+                          fixed_lucky_spin_enabled: true
+                        })}
+                        placeholder="Contoh: SPIN-2024-001"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Jumlah Reward</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={data.fixed_reward_quantity ?? 1}
+                        onChange={(e) => onChange({ fixed_reward_quantity: parseInt(e.target.value) || 1 })}
+                        placeholder="Jumlah spin"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Max Spin/Hari (opsional)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={data.fixed_lucky_spin_max_per_day ?? ''}
+                        onChange={(e) => onChange({ fixed_lucky_spin_max_per_day: e.target.value ? parseInt(e.target.value) : null })}
+                        placeholder="Contoh: 3"
+                      />
+                    </div>
+                  </div>
+                )}
+                {/* Dynamic Field: Uang Tunai */}
                 {data.fixed_reward_type === 'uang_tunai' && (
                   <div className="space-y-2 mt-2">
                     <Label>Nominal Uang Tunai</Label>
@@ -545,9 +632,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         placeholder="50.000.000"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Masukkan nominal uang tunai (format: 10.000.000)
-                    </p>
                   </div>
                 )}
               </div>
@@ -1426,17 +1510,40 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 <Label>Jenis Hadiah</Label>
                 <SelectWithAddNew
                   value={data.dinamis_reward_type || ''}
-                  onValueChange={(value) => onChange({ 
-                    dinamis_reward_type: value,
-                    physical_reward_name: value === 'hadiah_fisik' ? data.physical_reward_name : '',
-                    cash_reward_amount: value === 'uang_tunai' ? data.cash_reward_amount : undefined
-                  })}
+                  onValueChange={(value) => {
+                    // Set inert values untuk field yang tidak relevan
+                    const inertUpdates: Partial<PromoFormData> = {
+                      dinamis_reward_type: value,
+                      // Reset semua field reward ke inert
+                      physical_reward_name: '',
+                      physical_reward_quantity: undefined,
+                      cash_reward_amount: undefined,
+                      reward_quantity: null,
+                      voucher_kind: '',
+                      voucher_valid_until: '',
+                      lucky_spin_enabled: false,
+                      lucky_spin_id: '',
+                      lucky_spin_max_per_day: null,
+                    };
+                    
+                    // Set default untuk field yang relevan
+                    if (value === 'hadiah_fisik') {
+                      inertUpdates.reward_quantity = 1;
+                    } else if (value === 'voucher') {
+                      inertUpdates.reward_quantity = 1;
+                    } else if (value === 'lucky_spin') {
+                      inertUpdates.lucky_spin_enabled = true;
+                      inertUpdates.reward_quantity = 1;
+                    }
+                    
+                    onChange(inertUpdates);
+                  }}
                   options={dinamisRewardTypeOptions}
                   onAddOption={(option) => setDinamisRewardTypeOptions([...dinamisRewardTypeOptions, option])}
                   onDeleteOption={handleDeleteDinamisRewardType}
                   placeholder="Pilih jenis"
                 />
-                {/* Conditional field untuk Hadiah Fisik */}
+                {/* Dynamic Field: Hadiah Fisik */}
                 {data.dinamis_reward_type === 'hadiah_fisik' && (
                   <div className="grid grid-cols-3 gap-4 mt-2">
                     <div className="col-span-2 space-y-2">
@@ -1446,27 +1553,87 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         onChange={(e) => onChange({ physical_reward_name: e.target.value })}
                         placeholder="Contoh: MITSUBISHI PAJERO SPORT DAKAR 2025"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Masukkan nama hadiah fisik yang akan diberikan kepada player
-                      </p>
                     </div>
                     <div className="space-y-2">
-                      <Label>Jumlah Unit</Label>
+                      <Label>Jumlah Reward</Label>
                       <Input
                         type="number"
                         min={1}
-                        value={data.physical_reward_quantity || 1}
-                        onChange={(e) => onChange({ physical_reward_quantity: Number(e.target.value) || 1 })}
+                        value={data.reward_quantity ?? 1}
+                        onChange={(e) => onChange({ reward_quantity: parseInt(e.target.value) || 1 })}
                         placeholder="1"
-                        className="w-full"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Unit hadiah
-                      </p>
                     </div>
                   </div>
                 )}
-                {/* Conditional field untuk Uang Tunai */}
+                {/* Dynamic Field: Voucher / Ticket */}
+                {data.dinamis_reward_type === 'voucher' && (
+                  <div className="grid grid-cols-3 gap-4 mt-2">
+                    <div className="space-y-2">
+                      <Label>Jenis Voucher (opsional)</Label>
+                      <Input
+                        value={data.voucher_kind || ''}
+                        onChange={(e) => onChange({ voucher_kind: e.target.value })}
+                        placeholder="Contoh: Deposit, Freechip"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Jumlah Reward</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={data.reward_quantity ?? 1}
+                        onChange={(e) => onChange({ reward_quantity: parseInt(e.target.value) || 1 })}
+                        placeholder="Jumlah voucher"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Masa Berlaku (opsional)</Label>
+                      <Input
+                        type="date"
+                        value={data.voucher_valid_until || ''}
+                        onChange={(e) => onChange({ voucher_valid_until: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                )}
+                {/* Dynamic Field: Lucky Spin */}
+                {data.dinamis_reward_type === 'lucky_spin' && (
+                  <div className="grid grid-cols-3 gap-4 mt-2">
+                    <div className="space-y-2">
+                      <Label>ID Lucky Spin</Label>
+                      <Input
+                        value={data.lucky_spin_id || ''}
+                        onChange={(e) => onChange({ 
+                          lucky_spin_id: e.target.value,
+                          lucky_spin_enabled: true
+                        })}
+                        placeholder="Contoh: SPIN-2024-001"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Jumlah Reward</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={data.reward_quantity ?? 1}
+                        onChange={(e) => onChange({ reward_quantity: parseInt(e.target.value) || 1 })}
+                        placeholder="Jumlah spin"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Max Spin/Hari (opsional)</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={data.lucky_spin_max_per_day ?? ''}
+                        onChange={(e) => onChange({ lucky_spin_max_per_day: e.target.value ? parseInt(e.target.value) : null })}
+                        placeholder="Contoh: 3"
+                      />
+                    </div>
+                  </div>
+                )}
+                {/* Dynamic Field: Uang Tunai */}
                 {data.dinamis_reward_type === 'uang_tunai' && (
                   <div className="space-y-2 mt-2">
                     <Label>Nominal Uang Tunai</Label>
@@ -1479,9 +1646,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         placeholder="50.000.000"
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Masukkan nominal uang tunai (format: 10.000.000)
-                    </p>
                   </div>
                 )}
               </div>
