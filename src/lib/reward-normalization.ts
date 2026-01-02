@@ -24,10 +24,30 @@ export type RewardType = 'hadiah_fisik' | 'credit_game' | 'uang_tunai';
 // Extended type that includes all enum values (for internal matching)
 type ExtendedRewardType = RewardTypeEnum;
 
-// Promo types yang default reward-nya adalah credit game
-const CREDIT_GAME_PROMO_TYPES = [
+// ============================================
+// PROMO TYPE → REWARD TYPE MAPPING (LOGIC-BASED)
+// ============================================
+
+/**
+ * FORCE CREDIT GAME TYPES
+ * These promo types MUST ALWAYS return 'credit_game' regardless of other fields.
+ * This is the PRIORITY 0 override - highest precedence!
+ * 
+ * Rationale:
+ * - Cashback = bonus credit returned to game balance (NOT withdrawable cash)
+ * - Rebate = percentage of turnover credited to account
+ * - Rollingan = same as Rebate (Indonesian term)
+ * - Turnover Bonus = rewards based on betting volume
+ */
+const FORCE_CREDIT_GAME_TYPES = [
   'cashback',
-  'rollingan', 
+  'rebate',
+  'rollingan',
+  'turnover_bonus',
+] as const;
+
+// Promo types yang default reward-nya adalah credit game (lower priority)
+const CREDIT_GAME_PROMO_TYPES = [
   'deposit_bonus',
   'welcome_bonus',
   'referral',
@@ -35,8 +55,6 @@ const CREDIT_GAME_PROMO_TYPES = [
   'freechip',
   'bonus_deposit',
   'bonus_new_member',
-  'turnover_bonus',
-  'rebate',
   'scatter_bonus',
   'level_up',
   'event_bonus',
@@ -49,6 +67,38 @@ const CASH_PROMO_TYPES = [
   'cash_prize',
   'tournament_cash',
 ];
+
+/**
+ * Check if promo type is in FORCE_CREDIT_GAME_TYPES
+ * These types ALWAYS return credit_game unless explicit cash withdrawal is mentioned
+ */
+function isForceCreditGameType(promoType: string): boolean {
+  const normalized = promoType.toLowerCase().replace(/[-_\s]/g, '');
+  return FORCE_CREDIT_GAME_TYPES.some(t => normalized.includes(t.replace(/[-_\s]/g, '')));
+}
+
+/**
+ * Check for explicit cash withdrawal indicators
+ * These are the ONLY exceptions that can override FORCE_CREDIT_GAME_TYPES
+ */
+function hasExplicitCashWithdrawal(sub: Record<string, any>): boolean {
+  const textFields = [
+    sub.name,
+    sub.sub_name,
+    sub.reward_description,
+    sub.payout_note,
+  ].filter(Boolean).join(' ').toLowerCase();
+  
+  // Only these EXPLICIT phrases can trigger cash override
+  const cashPatterns = [
+    /tarik\s+tunai\s+langsung/i,
+    /withdraw\s+langsung/i,
+    /transfer\s+bank\s+langsung/i,
+    /wd\s+langsung/i,
+  ];
+  
+  return cashPatterns.some(p => p.test(textFields));
+}
 
 /**
  * Normalize extended reward type to canonical 3-type system
@@ -75,6 +125,15 @@ function isValidRewardType(value: string): value is ExtendedRewardType {
 /**
  * Infer reward type berdasarkan structured data (REASONING, bukan keyword)
  * 
+ * Priority Order:
+ * 0. FORCE: Cashback/Rebate/Rollingan → ALWAYS credit_game (unless explicit cash withdrawal)
+ * 1. Explicit reward_type field (dari ekstraksi AI)
+ * 2. Physical reward indicators
+ * 3. jenis_hadiah legacy field
+ * 4. dinamis_reward_type legacy field
+ * 5. Promo archetype inference
+ * 6. Cash reward amount fallback
+ * 
  * @param sub - Subcategory data
  * @param promo - Parent promo data (optional, untuk archetype inference)
  */
@@ -82,6 +141,22 @@ export function inferRewardType(
   sub: Record<string, any>,
   promo?: Record<string, any>
 ): RewardType | null {
+  // ============================================
+  // PRIORITY 0: FORCE OVERRIDE for Cashback/Rebate/Rollingan
+  // These promo types ALWAYS return credit_game!
+  // Exception: explicit "tarik tunai langsung" / "withdraw langsung"
+  // ============================================
+  if (promo?.promo_type && isForceCreditGameType(promo.promo_type)) {
+    // Check for explicit cash withdrawal exception
+    if (hasExplicitCashWithdrawal(sub)) {
+      console.log(`[inferRewardType] ${promo.promo_type} with explicit cash withdrawal → uang_tunai`);
+      return 'uang_tunai';
+    }
+    // Force credit_game for cashback/rebate/rollingan
+    console.log(`[inferRewardType] FORCE: ${promo.promo_type} → credit_game`);
+    return 'credit_game';
+  }
+
   // PRIORITY 1: Explicit reward_type field dari AI extraction
   if (sub.reward_type) {
     const rt = String(sub.reward_type).toLowerCase();

@@ -2401,6 +2401,45 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       }
     }
 
+    // ============================================
+    // FIX 6: ENFORCE REWARD_TYPE BY PROMO_TYPE (POST-EXTRACTION)
+    // Cashback/Rebate/Rollingan MUST be credit_game
+    // This is the FINAL override before validation
+    // ============================================
+    const FORCE_CREDIT_GAME_PROMO_TYPES = ['cashback', 'rebate', 'rollingan', 'turnover_bonus'];
+    const normalizedPromoType = (parsed.promo_type || '').toLowerCase().replace(/[-_\s]/g, '');
+    const isForceCreditGamePromo = FORCE_CREDIT_GAME_PROMO_TYPES.some(t => 
+      normalizedPromoType.includes(t.replace(/[-_\s]/g, ''))
+    );
+    
+    if (isForceCreditGamePromo) {
+      console.log(`[Extractor] FORCE reward_type: ${parsed.promo_type} → credit_game for all subcategories`);
+      
+      // Check for explicit cash withdrawal patterns (ONLY exception)
+      const hasCashWithdrawal = /tarik\s+tunai\s+langsung|withdraw\s+langsung|transfer\s+bank\s+langsung|wd\s+langsung/i.test(rawText);
+      
+      if (!hasCashWithdrawal) {
+        // Override all subcategories to credit_game
+        parsed.subcategories = parsed.subcategories?.map((sub: any) => {
+          if (sub.reward_type !== 'credit_game') {
+            console.log(`[Extractor] Override ${sub.sub_name}: ${sub.reward_type || 'undefined'} → credit_game`);
+          }
+          return {
+            ...sub,
+            reward_type: 'credit_game',
+          };
+        }) || [];
+        
+        // Also set at root level if exists
+        if ((parsed as any).reward_type && (parsed as any).reward_type !== 'credit_game') {
+          console.log(`[Extractor] Override root reward_type: ${(parsed as any).reward_type} → credit_game`);
+          (parsed as any).reward_type = 'credit_game';
+        }
+      } else {
+        console.log(`[Extractor] ${parsed.promo_type} has explicit cash withdrawal → keeping uang_tunai`);
+      }
+    }
+
     // Ensure each subcategory has blacklist and confidence
     parsed.subcategories = parsed.subcategories.map(sub => ({
       ...sub,
