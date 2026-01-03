@@ -3888,9 +3888,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* Col 2: Rate Progress */}
+                  {/* Col 2: Per Aktivitas (Rp) */}
                   <div className="space-y-1">
-                    <Label className="text-xs">Rate Progress</Label>
+                    <Label className="text-xs">Per Aktivitas (Rp)</Label>
                     <FormattedNumberInput
                       value={data.lp_earn_amount || 0}
                       onChange={(val) => onChange({ lp_earn_amount: val })}
@@ -3898,9 +3898,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       min={1}
                     />
                   </div>
-                  {/* Col 3: LP per Rate */}
+                  {/* Col 3: LP Didapat */}
                   <div className="space-y-1">
-                    <Label className="text-xs">LP per Rate</Label>
+                    <Label className="text-xs">LP Didapat</Label>
                     <Input
                       type="number"
                       min={1}
