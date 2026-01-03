@@ -13,6 +13,7 @@ import { PromoFormData } from '@/components/VOCDashboard/PromoFormWizard/types';
 
 export interface PromoTypeDefaultConfig {
   reward_mode?: 'fixed' | 'tier' | 'formula';
+  tier_archetype?: 'tier_level' | 'tier_point_store' | 'tier_network';  // NEW: For tier mode
   calculation_base?: string;
   calculation_method?: string;
   turnover_rule_enabled?: boolean;
@@ -140,18 +141,19 @@ export const PROMO_TYPE_DEFAULTS: Record<string, PromoTypeDefaultConfig> = {
   },
   
   // Referral Bonus
+  // KONTRAK: reward_mode = 'tier' + tier_archetype = 'tier_network'
+  // Root fields (reward_type, reward_amount, max_claim) = INERT
+  // Truth = referral_tiers[] array
   'Referral Bonus': {
-    reward_mode: 'formula',
-    calculation_base: 'deposit',
-    calculation_method: 'percentage',
-    turnover_rule_enabled: true,
-    turnover_rule: '1x',
+    reward_mode: 'tier',                    // ✅ TIER MODE, bukan formula!
+    // tier_archetype di-set di PromoTypeDefaultConfig + enforced di extraction
+    turnover_rule_enabled: false,           // Referral tidak pakai turnover
     game_restriction: 'semua',
     claim_frequency: 'unlimited',
     target_segment: 'Semua',
-    trigger_event: 'Referral',      // Trigger by referral activity
-    intent_category: 'Acquisition',
-    valid_until_unlimited: true,    // Referral biasanya ongoing
+    trigger_event: 'Downline Activity',     // Trigger by downline activity
+    intent_category: 'Retention',           // Retention-focused
+    valid_until_unlimited: true,
     geo_restriction: 'indonesia',
   },
   
