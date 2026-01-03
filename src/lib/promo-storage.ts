@@ -15,6 +15,7 @@ import type { PromoFormData, PromoItem } from '@/components/VOCDashboard/PromoFo
 import type { ExtractedPromo } from '@/lib/openai-extractor';
 import { supabase, DEFAULT_CLIENT_ID, generateUUID, logSupabaseError } from '@/lib/supabase-client';
 import { KEYWORD_OVERRIDE_VERSION } from '@/lib/extractors/category-classifier';
+import { normalizeToStandard, normalizePromoArray } from '@/lib/promo-field-normalizer';
 
 // ============================================
 // PRE-SUPABASE MODE CONFIGURATION
@@ -36,9 +37,10 @@ export const promoKB = {
     if (!USE_SUPABASE) {
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        const promos = stored ? JSON.parse(stored) : [];
+        const promos: PromoItem[] = stored ? JSON.parse(stored) : [];
         console.log('[promoKB] Loaded from localStorage:', promos.length, 'promos');
-        return promos;
+        // Normalize legacy dinamis_* fields to canonical base fields
+        return normalizePromoArray(promos);
       } catch (error) {
         console.error('[promoKB] Failed to load from localStorage:', error);
         return [];
@@ -58,20 +60,24 @@ export const promoKB = {
         return [];
       }
 
-      return (data || []).map(row => ({
-        ...row.promo_data,
-        id: row.id,
-        promo_name: row.promo_name,
-        promo_type: row.promo_type,
-        intent_category: row.intent_category,
-        status: row.status,
-        is_active: row.is_active,
-        version: row.version,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        updated_by: row.updated_by,
-        program_classification: row.program_classification,
-      }));
+      return (data || []).map(row => {
+        const promo = {
+          ...row.promo_data,
+          id: row.id,
+          promo_name: row.promo_name,
+          promo_type: row.promo_type,
+          intent_category: row.intent_category,
+          status: row.status,
+          is_active: row.is_active,
+          version: row.version,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          updated_by: row.updated_by,
+          program_classification: row.program_classification,
+        };
+        // Normalize legacy dinamis_* fields to canonical base fields
+        return normalizeToStandard(promo);
+      });
     } catch (error) {
       logSupabaseError('promoKB.getAll', error);
       return [];
@@ -87,7 +93,9 @@ export const promoKB = {
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
         const promos: PromoItem[] = stored ? JSON.parse(stored) : [];
-        return promos.find(p => p.id === id) || null;
+        const found = promos.find(p => p.id === id) || null;
+        // Normalize legacy dinamis_* fields to canonical base fields
+        return found ? normalizeToStandard(found) : null;
       } catch (error) {
         console.error('[promoKB] Failed to get by id from localStorage:', error);
         return null;
@@ -107,7 +115,7 @@ export const promoKB = {
         return null;
       }
 
-      return {
+      const promo = {
         ...data.promo_data,
         id: data.id,
         promo_name: data.promo_name,
@@ -121,6 +129,8 @@ export const promoKB = {
         updated_by: data.updated_by,
         program_classification: data.program_classification,
       };
+      // Normalize legacy dinamis_* fields to canonical base fields
+      return normalizeToStandard(promo);
     } catch (error) {
       logSupabaseError('promoKB.getById', error);
       return null;

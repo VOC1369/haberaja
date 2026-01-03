@@ -1,0 +1,325 @@
+/**
+ * PROMO FIELD RESOLVER
+ * 
+ * Context-aware value resolution for promo fields.
+ * Resolvers determine the "effective" value based on mode, context, and hierarchy.
+ * 
+ * RESOLUTION HIERARCHY:
+ * 1. Subcategory-specific value (if applicable)
+ * 2. Global toggle value (if enabled)
+ * 3. Fixed mode override (if reward_mode === 'fixed')
+ * 4. Base/dynamic field (canonical source)
+ * 
+ * IMPORTANT:
+ * - Resolvers are READ-ONLY - they do not modify data
+ * - Used by UI to display effective values
+ * - Used by export/AI to get final computed values
+ */
+
+import type { PromoFormData, PromoSubCategory } from '@/components/VOCDashboard/PromoFormWizard/types';
+import { isInert } from './promo-field-normalizer';
+
+// ============================================
+// REWARD TYPE RESOLVER
+// ============================================
+
+/**
+ * Get effective reward type based on mode and context
+ * 
+ * Resolution order:
+ * 1. Fixed mode: fixed_reward_type
+ * 2. Subcategory (if provided): subcategory.reward_type
+ * 3. Base field: reward_type (or dinamis_reward_type as fallback)
+ */
+export function getEffectiveRewardType(
+  data: Partial<PromoFormData>,
+  subcategory?: PromoSubCategory
+): string {
+  // Fixed mode uses fixed_ prefix
+  if (data.reward_mode === 'fixed') {
+    if (!isInert(data.fixed_reward_type)) {
+      return data.fixed_reward_type!;
+    }
+  }
+  
+  // Subcategory-specific (if provided and not following global)
+  if (subcategory) {
+    if (!subcategory.jenis_hadiah_same_as_global && !isInert(subcategory.reward_type)) {
+      return subcategory.reward_type!;
+    }
+    // Check legacy jenis_hadiah
+    if (!subcategory.jenis_hadiah_same_as_global && !isInert(subcategory.jenis_hadiah)) {
+      return subcategory.jenis_hadiah;
+    }
+  }
+  
+  // Global toggle (for subcategories using global)
+  if (data.global_jenis_hadiah_enabled && !isInert(data.global_jenis_hadiah)) {
+    return data.global_jenis_hadiah!;
+  }
+  
+  // Base field (canonical)
+  if (!isInert(data.reward_type)) {
+    return data.reward_type!;
+  }
+  
+  // Legacy fallback
+  if (!isInert(data.dinamis_reward_type)) {
+    return data.dinamis_reward_type!;
+  }
+  
+  return '';
+}
+
+// ============================================
+// MAX CLAIM RESOLVER
+// ============================================
+
+/**
+ * Get effective max claim value based on mode and context
+ * 
+ * Resolution order:
+ * 1. Check unlimited flag first
+ * 2. Fixed mode: fixed_max_claim
+ * 3. Subcategory (if provided): subcategory.max_bonus
+ * 4. Global toggle: global_max_bonus
+ * 5. Base field: max_claim (or dinamis_max_claim as fallback)
+ * 
+ * Returns null if unlimited
+ */
+export function getEffectiveMaxClaim(
+  data: Partial<PromoFormData>,
+  subcategory?: PromoSubCategory
+): number | null {
+  // Fixed mode
+  if (data.reward_mode === 'fixed') {
+    if (data.fixed_max_claim_unlimited) return null;
+    if (!isInert(data.fixed_max_claim)) {
+      return data.fixed_max_claim!;
+    }
+  }
+  
+  // Subcategory-specific (if provided and not following global)
+  if (subcategory) {
+    if (subcategory.max_bonus_unlimited) return null;
+    if (!subcategory.max_bonus_same_as_global && !isInert(subcategory.max_bonus)) {
+      return subcategory.max_bonus;
+    }
+  }
+  
+  // Global toggle (for subcategories using global)
+  if (data.global_max_bonus_enabled && !isInert(data.global_max_bonus)) {
+    return data.global_max_bonus!;
+  }
+  
+  // Base field - check unlimited first (dinamis mode only has dinamis_max_claim_unlimited)
+  if (data.dinamis_max_claim_unlimited) {
+    return null;
+  }
+  
+  // Base field (canonical)
+  if (!isInert(data.max_claim)) {
+    return data.max_claim!;
+  }
+  
+  // Legacy fallback
+  if (!isInert(data.dinamis_max_claim)) {
+    return data.dinamis_max_claim!;
+  }
+  
+  return null;
+}
+
+/**
+ * Check if max claim is unlimited
+ */
+export function isMaxClaimUnlimited(
+  data: Partial<PromoFormData>,
+  subcategory?: PromoSubCategory
+): boolean {
+  if (data.reward_mode === 'fixed') {
+    return !!data.fixed_max_claim_unlimited;
+  }
+  
+  if (subcategory) {
+    if (!subcategory.max_bonus_same_as_global) {
+      return !!subcategory.max_bonus_unlimited;
+    }
+  }
+  
+  return !!data.dinamis_max_claim_unlimited;
+}
+
+// ============================================
+// CALCULATION BASE RESOLVER
+// ============================================
+
+/**
+ * Get effective calculation base based on mode
+ * 
+ * Resolution order:
+ * 1. Fixed mode: fixed_calculation_base
+ * 2. Subcategory (if provided): subcategory.calculation_base
+ * 3. Base field: calculation_base
+ */
+export function getEffectiveCalculationBase(
+  data: Partial<PromoFormData>,
+  subcategory?: PromoSubCategory
+): string {
+  if (data.reward_mode === 'fixed') {
+    if (!isInert(data.fixed_calculation_base)) {
+      return data.fixed_calculation_base!;
+    }
+  }
+  
+  if (subcategory && !isInert(subcategory.calculation_base)) {
+    return subcategory.calculation_base;
+  }
+  
+  return data.calculation_base || '';
+}
+
+// ============================================
+// CALCULATION VALUE RESOLVER
+// ============================================
+
+/**
+ * Get effective calculation value (percentage/amount) based on mode
+ */
+export function getEffectiveCalculationValue(
+  data: Partial<PromoFormData>,
+  subcategory?: PromoSubCategory
+): number | null {
+  if (data.reward_mode === 'fixed') {
+    if (!isInert(data.fixed_calculation_value)) {
+      return data.fixed_calculation_value!;
+    }
+  }
+  
+  if (subcategory && !isInert(subcategory.calculation_value)) {
+    return subcategory.calculation_value;
+  }
+  
+  return data.calculation_value ?? null;
+}
+
+// ============================================
+// TURNOVER RULE RESOLVER
+// ============================================
+
+/**
+ * Get effective turnover rule based on mode and context
+ */
+export function getEffectiveTurnoverRule(
+  data: Partial<PromoFormData>,
+  subcategory?: PromoSubCategory
+): string {
+  // Fixed mode
+  if (data.reward_mode === 'fixed') {
+    if (data.fixed_turnover_rule_enabled && !isInert(data.fixed_turnover_rule)) {
+      return data.fixed_turnover_rule!;
+    }
+    return '';
+  }
+  
+  // Subcategory-specific
+  if (subcategory) {
+    if (subcategory.turnover_rule_enabled && !isInert(subcategory.turnover_rule)) {
+      return subcategory.turnover_rule;
+    }
+    return '';
+  }
+  
+  // Base field
+  if (data.turnover_rule_enabled && !isInert(data.turnover_rule)) {
+    return data.turnover_rule!;
+  }
+  
+  return '';
+}
+
+// ============================================
+// PAYOUT DIRECTION RESOLVER
+// ============================================
+
+/**
+ * Get effective payout direction based on mode and context
+ */
+export function getEffectivePayoutDirection(
+  data: Partial<PromoFormData>,
+  subcategory?: PromoSubCategory
+): 'before' | 'after' {
+  // Fixed mode
+  if (data.reward_mode === 'fixed') {
+    return data.fixed_payout_direction || 'before';
+  }
+  
+  // Subcategory-specific
+  if (subcategory) {
+    if (!subcategory.payout_direction_same_as_global) {
+      return subcategory.payout_direction || 'before';
+    }
+  }
+  
+  // Global toggle
+  if (data.global_payout_direction_enabled) {
+    return data.global_payout_direction || 'before';
+  }
+  
+  return 'before';
+}
+
+// ============================================
+// MIN DEPOSIT RESOLVER
+// ============================================
+
+/**
+ * Get effective minimum deposit based on mode
+ */
+export function getEffectiveMinDeposit(
+  data: Partial<PromoFormData>
+): number | null {
+  if (data.reward_mode === 'fixed') {
+    if (data.fixed_min_depo_enabled && !isInert(data.fixed_min_depo)) {
+      return data.fixed_min_depo!;
+    }
+  }
+  
+  if (!isInert(data.min_deposit)) {
+    return data.min_deposit!;
+  }
+  
+  return null;
+}
+
+// ============================================
+// REWARD AMOUNT RESOLVER
+// ============================================
+
+/**
+ * Get effective reward amount based on mode
+ */
+export function getEffectiveRewardAmount(
+  data: Partial<PromoFormData>,
+  subcategory?: PromoSubCategory
+): number | null {
+  if (data.reward_mode === 'fixed') {
+    if (!isInert(data.reward_amount)) {
+      return data.reward_amount!;
+    }
+  }
+  
+  if (subcategory && !isInert(subcategory.dinamis_reward_amount)) {
+    return subcategory.dinamis_reward_amount;
+  }
+  
+  if (!isInert(data.reward_amount)) {
+    return data.reward_amount!;
+  }
+  
+  if (!isInert(data.dinamis_reward_amount)) {
+    return data.dinamis_reward_amount!;
+  }
+  
+  return null;
+}
