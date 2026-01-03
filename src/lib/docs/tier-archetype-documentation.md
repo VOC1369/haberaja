@@ -468,3 +468,78 @@ Untuk mencegah bug nondeterministic dimana semua tier menunjukkan persentase yan
 | 1.1 | 2025-01-25 | Added Point Store & Level/Milestone config sections |
 | 1.2 | 2026-01-03 | Added tier_network (Referral) semantic contract, INERT field rules, custom_terms cleaner |
 | 1.3 | 2026-01-03 | Added Field Definitions, Derived Fields Policy, Deduction Semantics, Commission Backstop |
+| 1.4 | 2026-01-03 | Added Calculator Contract - DERIVED fields now calculated ONLY by referral-tier-calculator.ts |
+
+---
+
+## Calculator Contract (LOCKED)
+
+### Separation of Concerns
+
+| Layer   | Responsibility           | Who              |
+|---------|--------------------------|------------------|
+| RULE    | Raw data from table      | Extractor        |
+| FORMULA | Math rules (metadata)    | Extractor        |
+| DERIVED | Calculated results       | Calculator ONLY  |
+
+### Rule of Authority
+
+1. **Extractor** ONLY saves RULE fields + FORMULA metadata
+2. **Derived fields** MUST be `null` during extraction
+3. **Calculator** (`referral-tier-calculator.ts`) is the ONLY entity allowed to calculate derived
+4. **LLM** is NEVER trusted for business arithmetic
+
+### Formula Contract (Referral tier_network)
+
+```
+net_winlose = winlose - cashback_deduction_amount - admin_fee_deduction_amount
+commission_result = net_winlose * commission_percentage / 100
+```
+
+**Calculated by:** `src/lib/referral-tier-calculator.ts`  
+**NOT by:** Extractor, LLM, or UI
+
+### Calculation Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        EXTRACTION PHASE                         │
+├─────────────────────────────────────────────────────────────────┤
+│  Extractor reads promo table/text                               │
+│  ↓                                                              │
+│  Saves RULE fields: winlose, cashback_deduction_amount,         │
+│                     admin_fee_deduction_amount, commission_%    │
+│  ↓                                                              │
+│  Sets DERIVED fields: net_winlose = null, commission_result = null │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                        SAVE PHASE (buildPKBPayload)             │
+├─────────────────────────────────────────────────────────────────┤
+│  Calls calculateAllReferralTiers() from referral-tier-calculator│
+│  ↓                                                              │
+│  Calculator computes:                                           │
+│    net_winlose = winlose - cashback - admin_fee                 │
+│    commission_result = net_winlose * commission% / 100          │
+│  ↓                                                              │
+│  DERIVED fields now populated with deterministic values         │
+│  ↓                                                              │
+│  Adds audit trail: _calculated_by = 'calculator'                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Field Naming (v1.4)
+
+| Old Name | New Name | Purpose |
+|----------|----------|---------|
+| `cashback_deduction` | `cashback_deduction_amount` | Cashback deduction from WL |
+| `fee_deduction` | `admin_fee_deduction_amount` | Admin fee deduction from WL |
+
+Both old and new names are supported for backward compatibility.
+
+### Validation Contract
+
+Before calculation, the validator (`referral-tier-validator.ts`) checks:
+1. ✅ RULE fields exist and are valid
+2. ✅ DERIVED fields are `null` (not pre-calculated by extractor)
+3. ⚠️ Logs warnings if derived fields were already populated (contract violation)

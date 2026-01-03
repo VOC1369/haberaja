@@ -498,23 +498,33 @@ export interface ReferralCommissionTier {
   id: string;
   tier_label: string;          // Auto-generated: "Tier 1", "Tier 2", etc.
   
-  // === RULES: Threshold Kualifikasi Tier ===
+  // === RULE FIELDS: Threshold Kualifikasi Tier ===
   min_downline: number;              // Syarat: minimal downline aktif (≥)
   commission_percentage: number;     // Persentase komisi tier ini (e.g., 5 = 5%)
   
-  // === CALCULATION RULES: Formula Resmi dari Tabel Promo ===
-  // ⚠️ KONTRAK SEMANTIK:
-  // Angka-angka ini adalah ATURAN FINAL promo, BUKAN contoh/sample!
-  // Jika tabel promo TIDAK ada kata "misalkan" atau "contoh",
-  // maka nilai ini adalah HUKUM YANG MENGIKAT.
-  winlose?: number;                   // Nilai Winlose (basis perhitungan)
-  cashback_deduction?: number;        // Potongan Cashback
-  fee_deduction?: number;             // Potongan Fee/Commission operator
-  net_winlose?: number;               // Winlose Bersih (after deductions)
-  commission_result?: number;         // Hasil Komisi Rp (final payout)
+  // === RULE FIELDS: Calculation Values from Promo Table ===
+  // ⚠️ SEMANTIC CONTRACT:
+  // These values are FINAL RULES from the promo table, NOT samples!
+  // If the table does NOT contain "misalkan" or "contoh",
+  // these values are BINDING RULES.
+  winlose?: number | null;                        // Winlose value (calculation basis)
+  cashback_deduction_amount?: number | null;      // Cashback deduction (from WL)
+  admin_fee_deduction_amount?: number | null;     // Admin fee deduction (from WL)
+  // Legacy field names (for backward compatibility)
+  cashback_deduction?: number | null;
+  fee_deduction?: number | null;
   
-  // === METADATA (untuk audit/debugging) ===
-  _rule_source?: 'table' | 'manual' | 'inferred';  // Asal data rules
+  // === DERIVED FIELDS (CALCULATOR CONTRACT) ===
+  // ⚠️ THESE MUST BE NULL AFTER EXTRACTION!
+  // Only referral-tier-calculator.ts is allowed to calculate these.
+  net_winlose?: number | null;           // = winlose - cashback_deduction - admin_fee_deduction
+  commission_result?: number | null;     // = net_winlose * commission_percentage / 100
+  
+  // === AUDIT METADATA ===
+  _rule_source?: 'table' | 'manual' | 'inferred';  // Source of RULE data
+  _commission_source?: string;                      // How commission_percentage was determined
+  _commission_fix_applied?: boolean;                // Was backstop applied?
+  _calculated_by?: 'calculator';                    // Audit trail for derived fields
 }
 
 
@@ -835,6 +845,30 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   // Truth = referral_tiers[] array (BUKAN root fields!)
   // ============================================
   if (data.reward_mode === 'tier' && data.tier_archetype === 'tier_network') {
+    // ============================================
+    // CALCULATOR CONTRACT: Calculate DERIVED fields before save
+    // Only referral-tier-calculator.ts is allowed to calculate these!
+    // ============================================
+    if (data.referral_tiers && data.referral_tiers.length > 0) {
+      // Import synchronously (module is already loaded)
+      const { calculateAllReferralTiers, getDefaultReferralFormulaMetadata } = require('@/lib/referral-tier-calculator');
+      
+      // Build formula metadata from promo data
+      const calculationBasis = (data.referral_calculation_basis === 'loss' || data.referral_calculation_basis === 'turnover') 
+        ? data.referral_calculation_basis 
+        : 'loss';
+      const formulaMetadata = getDefaultReferralFormulaMetadata(
+        calculationBasis,
+        data.referral_admin_fee_percentage || 0
+      );
+      
+      // Calculate derived fields (ONLY place this happens!)
+      const calculatedTiers = calculateAllReferralTiers(data.referral_tiers, formulaMetadata);
+      pkbData.referral_tiers = calculatedTiers;
+      
+      console.log('[PKB] Referral tiers calculated by referral-tier-calculator.ts');
+    }
+    
     // ============================================
     // ROOT FIELDS = INERT (reward info ada di tier array)
     // ============================================

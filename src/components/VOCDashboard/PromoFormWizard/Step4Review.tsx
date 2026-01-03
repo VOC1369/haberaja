@@ -1685,11 +1685,14 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                 <tbody>
                                   {data.referral_tiers?.slice(0, 5).map((tier, idx) => {
                                     const adminFeePercent = data.referral_admin_fee_percentage ?? 20;
-                                    // CALCULATION RULES: Ini ATURAN FINAL, bukan sample!
+                                    // RULE fields (from table/extractor)
                                     const ruleWinlose = tier?.winlose ?? 0;
-                                    const ruleCashback = tier?.cashback_deduction ?? 0;
-                                    const feeAmount = tier?.fee_deduction ?? Math.round((ruleWinlose * adminFeePercent) / 100);
-                                    const wlBersih = tier?.net_winlose ?? (ruleWinlose - ruleCashback - feeAmount);
+                                    const ruleCashback = tier?.cashback_deduction_amount ?? tier?.cashback_deduction ?? 0;
+                                    const ruleFee = tier?.admin_fee_deduction_amount ?? tier?.fee_deduction ?? Math.round((ruleWinlose * adminFeePercent) / 100);
+                                    
+                                    // DERIVED fields (from calculator or fallback)
+                                    const isCalculated = (tier as any)?._calculated_by === 'calculator';
+                                    const wlBersih = tier?.net_winlose ?? (ruleWinlose - ruleCashback - ruleFee);
                                     const komisiRp = tier?.commission_result ?? Math.round((wlBersih * (tier?.commission_percentage ?? 0)) / 100);
                                     
                                     return (
@@ -1698,10 +1701,16 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                         <td className="py-2 px-3 text-foreground">{tier?.min_downline?.toLocaleString('id-ID') || 0} ID</td>
                                         <td className="py-2 px-3 text-foreground">{formatNumber(ruleWinlose)}</td>
                                         <td className="py-2 px-3 text-foreground">{formatNumber(ruleCashback)}</td>
-                                        <td className="py-2 px-3 text-foreground">{formatNumber(feeAmount)}</td>
-                                        <td className="py-2 px-3 text-foreground">{formatNumber(wlBersih)}</td>
+                                        <td className="py-2 px-3 text-foreground">{formatNumber(ruleFee)}</td>
+                                        <td className="py-2 px-3 text-foreground">
+                                          {formatNumber(wlBersih)}
+                                          {isCalculated && <span className="ml-1 text-[10px] text-primary">✓</span>}
+                                        </td>
                                         <td className="py-2 px-3 text-button-hover font-medium">{tier?.commission_percentage ?? 0}%</td>
-                                        <td className="py-2 px-3 text-amber-400 font-semibold">{formatNumber(komisiRp)}</td>
+                                        <td className="py-2 px-3 text-amber-400 font-semibold">
+                                          {formatNumber(komisiRp)}
+                                          {isCalculated && <span className="ml-1 text-[10px] text-primary">✓</span>}
+                                        </td>
                                       </tr>
                                     );
                                   })}
@@ -1716,7 +1725,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                               </table>
                             </div>
                             <p className="text-xs text-muted-foreground mt-2 px-1">
-                              * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah ATURAN FINAL dari tabel promo.
+                              * Kolom Winlose, Cashback, Fee adalah RULE dari tabel promo. WL Bersih dan Komisi Rp dihitung oleh Calculator (✓).
                             </p>
                           </div>
                         )}
@@ -2126,11 +2135,14 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           <tbody>
                             {data.referral_tiers.map((tier, idx) => {
                               const adminFeePercent = data.referral_admin_fee_percentage ?? 20;
-                              // CALCULATION RULES: Ini ATURAN FINAL, bukan sample!
+                              // RULE fields (from table/extractor)
                               const ruleWinlose = tier.winlose ?? 0;
-                              const ruleCashback = tier.cashback_deduction ?? 0;
-                              const feeAmount = tier.fee_deduction ?? Math.round((ruleWinlose * adminFeePercent) / 100);
-                              const wlBersih = tier.net_winlose ?? (ruleWinlose - ruleCashback - feeAmount);
+                              const ruleCashback = tier.cashback_deduction_amount ?? tier.cashback_deduction ?? 0;
+                              const ruleFee = tier.admin_fee_deduction_amount ?? tier.fee_deduction ?? Math.round((ruleWinlose * adminFeePercent) / 100);
+                              
+                              // DERIVED fields (from calculator or fallback)
+                              const isCalculated = (tier as any)?._calculated_by === 'calculator';
+                              const wlBersih = tier.net_winlose ?? (ruleWinlose - ruleCashback - ruleFee);
                               const komisiRp = tier.commission_result ?? Math.round((wlBersih * tier.commission_percentage) / 100);
                               
                               return (
@@ -2139,10 +2151,16 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                   <td className="py-2 px-3 text-foreground">{tier.min_downline?.toLocaleString('id-ID') || 0} ID</td>
                                   <td className="py-2 px-3 text-foreground">{formatNumber(ruleWinlose)}</td>
                                   <td className="py-2 px-3 text-foreground">{formatNumber(ruleCashback)}</td>
-                                  <td className="py-2 px-3 text-foreground">{formatNumber(feeAmount)}</td>
-                                  <td className="py-2 px-3 text-foreground">{formatNumber(wlBersih)}</td>
+                                  <td className="py-2 px-3 text-foreground">{formatNumber(ruleFee)}</td>
+                                  <td className="py-2 px-3 text-foreground">
+                                    {formatNumber(wlBersih)}
+                                    {isCalculated && <span className="ml-1 text-[10px] text-primary">✓</span>}
+                                  </td>
                                   <td className="py-2 px-3 text-button-hover font-medium">{tier.commission_percentage}%</td>
-                                  <td className="py-2 px-3 text-amber-400 font-semibold">{formatNumber(komisiRp)}</td>
+                                  <td className="py-2 px-3 text-amber-400 font-semibold">
+                                    {formatNumber(komisiRp)}
+                                    {isCalculated && <span className="ml-1 text-[10px] text-primary">✓</span>}
+                                  </td>
                                 </tr>
                               );
                             })}
@@ -2152,7 +2170,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     )}
                     
                     <p className="text-xs text-muted-foreground italic">
-                      * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah data simulasi dari tabel promo.
+                      * Kolom Winlose, Cashback, Fee adalah RULE dari tabel promo. WL Bersih dan Komisi Rp dihitung oleh Calculator (✓).
                     </p>
                     
                     {/* S&K - with source badge */}
