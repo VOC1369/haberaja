@@ -870,10 +870,10 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     // ============================================
     // ROOT FIELDS = INERT (reward info ada di tier array)
     // ============================================
-    pkbData.reward_type = null;            // ✅ INERT - truth is in referral_tiers[n].reward_type
+    pkbData.reward_type = "";              // ✅ INERT - truth is in referral_tiers[n] (empty string for consistency)
     pkbData.reward_amount = null;          // ✅ INERT - truth is in referral_tiers[n].commission_percentage
     pkbData.max_claim = null;              // ✅ INERT - no concept of max_claim for referral
-    pkbData.max_claim_unlimited = false;   // ✅ INERT
+    pkbData.max_claim_unlimited = true;    // ✅ SEMANTIC: Referral = unlimited claims (komisi per downline activity)
     
     // Referral TIDAK pakai LP/EXP system → set inert
     pkbData.promo_unit = "";

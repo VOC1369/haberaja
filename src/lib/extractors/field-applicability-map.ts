@@ -127,6 +127,18 @@ export const INERT_VALUES: Record<string, unknown> = {
   // === Objects → null ===
   formula_metadata: null,
   vip_multiplier: null,
+  
+  // === Calculation Period (for Cashback/Rollingan) → "" ===
+  calculation_period_start: "",
+  calculation_period_end: "",
+  calculation_period_note: "",
+  distribution_day: "",
+  
+  // === Reward Type (explicit inert) → "" ===
+  reward_type: "",
+  
+  // === Max Claim Unlimited → false (default, but true for Referral) ===
+  max_claim_unlimited: false,
 };
 
 // ============================================
@@ -153,9 +165,11 @@ export const FIELD_APPLICABILITY_MAP: Record<string, FieldApplicabilityRule> = {
   'Cashback (Loss-based)': {
     applicable: [
       'calculation_base', 'calculation_value', 'min_calculation', 'min_calculation_enabled',
-      'claim_frequency', 'distribution_day', 'max_claim', 'subcategories', 'has_subcategories',
+      'claim_frequency', 'distribution_day', 'max_claim', 'max_claim_unlimited', 'subcategories', 'has_subcategories',
       'dinamis_reward_type', 'dinamis_max_claim', 'dinamis_max_claim_unlimited',
       'formula_metadata', 'conversion_formula',
+      // Calculation Period (for weekly promo)
+      'calculation_period_start', 'calculation_period_end', 'calculation_period_note',
     ],
     not_applicable: [
       // Deposit/Turnover Rule — Cashback tidak punya WD requirement
@@ -180,9 +194,11 @@ export const FIELD_APPLICABILITY_MAP: Record<string, FieldApplicabilityRule> = {
   'Rollingan (Turnover-based)': {
     applicable: [
       'calculation_base', 'calculation_value', 'min_calculation', 'min_calculation_enabled',
-      'claim_frequency', 'distribution_day', 'max_claim', 'subcategories', 'has_subcategories',
+      'claim_frequency', 'distribution_day', 'max_claim', 'max_claim_unlimited', 'subcategories', 'has_subcategories',
       'dinamis_reward_type', 'dinamis_max_claim', 'dinamis_max_claim_unlimited',
       'formula_metadata', 'conversion_formula',
+      // Calculation Period (for weekly promo)
+      'calculation_period_start', 'calculation_period_end', 'calculation_period_note',
     ],
     not_applicable: [
       // Sama dengan Cashback — tidak ada WD requirement
@@ -207,9 +223,11 @@ export const FIELD_APPLICABILITY_MAP: Record<string, FieldApplicabilityRule> = {
   'Rollingan / Cashback': {
     applicable: [
       'calculation_base', 'calculation_value', 'min_calculation', 'min_calculation_enabled',
-      'claim_frequency', 'distribution_day', 'max_claim', 'subcategories', 'has_subcategories',
+      'claim_frequency', 'distribution_day', 'max_claim', 'max_claim_unlimited', 'subcategories', 'has_subcategories',
       'dinamis_reward_type', 'dinamis_max_claim', 'dinamis_max_claim_unlimited',
       'formula_metadata', 'conversion_formula',
+      // Calculation Period (for weekly promo)
+      'calculation_period_start', 'calculation_period_end', 'calculation_period_note',
     ],
     not_applicable: [
       'min_deposit', 'turnover_rule', 'turnover_rule_enabled', 'turnover_rule_custom',
@@ -231,6 +249,7 @@ export const FIELD_APPLICABILITY_MAP: Record<string, FieldApplicabilityRule> = {
     applicable: [
       'referral_tiers', 'referral_calculation_basis',
       'referral_admin_fee_enabled', 'referral_admin_fee_percentage',
+      'max_claim_unlimited',  // ✅ Referral = semantically unlimited
     ],
     not_applicable: [
       // Deposit/WD fields — Referral tidak pakai deposit/turnover rule
