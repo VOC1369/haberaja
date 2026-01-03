@@ -2401,7 +2401,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
             {/* Syarat Main Sebelum WD - Styled like SubCategoryCard */}
             {(() => {
-              const isVoucherTicket = data.reward_type === 'Voucher / Ticket';
+              const isVoucherTicket = data.dinamis_reward_type === 'voucher' || data.dinamis_reward_type === 'ticket';
               return (
                 <div className="pt-4">
                   <div className={`flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-2 ${isVoucherTicket ? 'opacity-50' : ''}`}>
