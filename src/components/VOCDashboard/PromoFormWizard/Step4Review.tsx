@@ -1220,7 +1220,13 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
   const isStep1Complete = data.client_id && data.promo_name && data.promo_type;
   const isStep2Complete = data.reward_mode && (
     (data.reward_mode === 'fixed' && data.reward_type && data.reward_amount > 0) ||
-    (data.reward_mode === 'tier' && data.promo_unit) ||
+    // Tier mode: Pisahkan validasi tier_network (Referral) vs standard tier
+    (data.reward_mode === 'tier' && (
+      data.tier_archetype === 'tier_network' 
+        ? ((data.referral_tiers?.length || 0) > 0 && 
+           data.referral_tiers?.every(t => t.min_downline > 0 && t.commission_percentage > 0))
+        : !!data.promo_unit
+    )) ||
     (data.reward_mode === 'formula' && 
       data.calculation_base && 
       data.calculation_method && 
