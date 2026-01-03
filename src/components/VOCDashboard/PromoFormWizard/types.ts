@@ -48,6 +48,7 @@ export const PKB_FIELD_WHITELIST = [
   'calculation_period_note',    // Catatan periode untuk AI (e.g., "7 hari rolling, proses Selasa")
   
   // Tier mode
+  'tier_archetype',       // 'tier_level' | 'tier_point_store' | 'tier_network' (Referral)
   'promo_unit',
   'exp_mode',
   'lp_calc_method',
