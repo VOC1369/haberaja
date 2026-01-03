@@ -2400,46 +2400,62 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             )}
 
             {/* Syarat Main Sebelum WD - Styled like SubCategoryCard */}
-            <div className="pt-4">
-              <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-2">
-                <Switch
-                  checked={data.turnover_rule_enabled === true}
-                  onCheckedChange={(checked) => onChange({ turnover_rule_enabled: checked })}
-                />
-                <div>
-                  <div className="font-medium text-sm text-button-hover">Syarat Main Sebelum WD</div>
-                  <p className="text-xs text-muted-foreground">
-                    Aktifkan jika promo memiliki syarat kelipatan main (turnover) sebelum withdrawal
-                  </p>
-                </div>
-              </div>
-              
-              {data.turnover_rule_enabled && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Kelipatan Main Bonus (TO)</Label>
-                    <SelectWithAddNew
-                      value={data.turnover_rule}
-                      onValueChange={(value) => onChange({ turnover_rule: value })}
-                      options={turnoverRuleOptions}
-                      onAddOption={(option) => setTurnoverRuleOptions([...turnoverRuleOptions, option])}
-                      onDeleteOption={handleDeleteTurnoverRule}
-                      placeholder="Pilih kelipatan main"
+            {(() => {
+              const isVoucherTicket = data.reward_type === 'Voucher / Ticket';
+              return (
+                <div className="pt-4">
+                  <div className={`flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-2 ${isVoucherTicket ? 'opacity-50' : ''}`}>
+                    <Switch
+                      checked={isVoucherTicket ? false : data.turnover_rule_enabled === true}
+                      onCheckedChange={(checked) => {
+                        if (!isVoucherTicket) {
+                          onChange({ turnover_rule_enabled: checked });
+                        }
+                      }}
+                      disabled={isVoucherTicket}
                     />
+                    <div>
+                      <div className={`font-medium text-sm ${isVoucherTicket ? 'text-muted-foreground' : 'text-button-hover'}`}>Syarat Main Sebelum WD</div>
+                      {isVoucherTicket ? (
+                        <p className="text-xs text-muted-foreground italic">
+                          Tidak berlaku untuk Voucher / Ticket
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Aktifkan jika promo memiliki syarat kelipatan main (turnover) sebelum withdrawal
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Nilai Custom</Label>
-                    <Input
-                      value={data.turnover_rule_custom || ''}
-                      onChange={(e) => onChange({ turnover_rule_custom: e.target.value })}
-                      placeholder="Contoh: 3x, 10x, 12x"
-                      disabled={data.turnover_rule !== 'custom'}
-                      className={data.turnover_rule !== 'custom' ? 'opacity-50' : ''}
-                    />
-                  </div>
+                  
+                  {!isVoucherTicket && data.turnover_rule_enabled && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Kelipatan Main Bonus (TO)</Label>
+                        <SelectWithAddNew
+                          value={data.turnover_rule}
+                          onValueChange={(value) => onChange({ turnover_rule: value })}
+                          options={turnoverRuleOptions}
+                          onAddOption={(option) => setTurnoverRuleOptions([...turnoverRuleOptions, option])}
+                          onDeleteOption={handleDeleteTurnoverRule}
+                          placeholder="Pilih kelipatan main"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nilai Custom</Label>
+                        <Input
+                          value={data.turnover_rule_custom || ''}
+                          onChange={(e) => onChange({ turnover_rule_custom: e.target.value })}
+                          placeholder="Contoh: 3x, 10x, 12x"
+                          disabled={data.turnover_rule !== 'custom'}
+                          className={data.turnover_rule !== 'custom' ? 'opacity-50' : ''}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
             </CollapsibleContent>
           </Collapsible>
 
