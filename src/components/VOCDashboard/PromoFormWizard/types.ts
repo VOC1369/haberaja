@@ -498,21 +498,23 @@ export interface ReferralCommissionTier {
   id: string;
   tier_label: string;          // Auto-generated: "Tier 1", "Tier 2", etc.
   
-  // === RULES (threshold kualifikasi tier) ===
+  // === RULES: Threshold Kualifikasi Tier ===
   min_downline: number;              // Syarat: minimal downline aktif (≥)
   commission_percentage: number;     // Persentase komisi tier ini (e.g., 5 = 5%)
   
-  // === SAMPLE DATA (contoh simulasi dari promo - ADAPTIVE) ===
-  // Field ini diisi JIKA ada di promo, tidak dipaksa
-  // BUKAN rule/threshold - hanya contoh perhitungan dari tabel promo
-  sample_winlose?: number;            // Contoh nilai winlose (input simulasi)
-  sample_cashback?: number;           // Contoh potongan cashback
-  sample_commission_deduction?: number; // Contoh potongan commission operator
-  sample_net_winlose?: number;        // Contoh winlose bersih (derived)
-  sample_commission_result?: number;  // Contoh hasil komisi (derived)
+  // === CALCULATION RULES: Formula Resmi dari Tabel Promo ===
+  // ⚠️ KONTRAK SEMANTIK:
+  // Angka-angka ini adalah ATURAN FINAL promo, BUKAN contoh/sample!
+  // Jika tabel promo TIDAK ada kata "misalkan" atau "contoh",
+  // maka nilai ini adalah HUKUM YANG MENGIKAT.
+  winlose?: number;                   // Nilai Winlose (basis perhitungan)
+  cashback_deduction?: number;        // Potongan Cashback
+  fee_deduction?: number;             // Potongan Fee/Commission operator
+  net_winlose?: number;               // Winlose Bersih (after deductions)
+  commission_result?: number;         // Hasil Komisi Rp (final payout)
   
   // === METADATA (untuk audit/debugging) ===
-  _sample_source?: 'table' | 'manual' | 'inferred';  // Asal data sample
+  _rule_source?: 'table' | 'manual' | 'inferred';  // Asal data rules
 }
 
 

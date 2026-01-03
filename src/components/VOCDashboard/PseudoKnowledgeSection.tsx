@@ -1007,12 +1007,12 @@ export function PseudoKnowledgeSection() {
                           )?.match(/(\d+)\s*(id|member|downline)/i);
                           const minDownline = subMinDownline || nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
                           
-                          // ALL SAMPLE DATA: Extract from tier (simulation, NOT rules!)
-                          const sampleWinlose = (tier as any).sample_winlose || tier.minimum_base;
-                          const sampleCashback = (tier as any).sample_cashback;
-                          const sampleFee = (tier as any).sample_commission_deduction;
-                          const sampleNetWL = (tier as any).sample_net_winlose;
-                          const sampleKomisi = (tier as any).sample_commission_result;
+                          // CALCULATION RULES: Ini ATURAN FINAL dari tabel promo, bukan sample!
+                          const ruleWinlose = (tier as any).winlose || (tier as any).sample_winlose || tier.minimum_base;
+                          const ruleCashback = (tier as any).cashback_deduction || (tier as any).sample_cashback;
+                          const ruleFee = (tier as any).fee_deduction || (tier as any).sample_commission_deduction;
+                          const ruleNetWL = (tier as any).net_winlose || (tier as any).sample_net_winlose;
+                          const ruleKomisi = (tier as any).commission_result || (tier as any).sample_commission_result;
                           
                           // Format helpers
                           const formatRp = (val: any) => val && Number(val) > 0 
@@ -1023,12 +1023,12 @@ export function PseudoKnowledgeSection() {
                             <tr key={idx} className="border-t border-border">
                               <td className="py-3 px-3 text-foreground font-medium">{tier.sub_name || `Tier ${idx + 1}`}</td>
                               <td className="py-3 px-3 text-foreground">{minDownline} ID</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(sampleWinlose)}</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(sampleCashback)}</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(sampleFee)}</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(sampleNetWL)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(ruleWinlose)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(ruleCashback)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(ruleFee)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(ruleNetWL)}</td>
                               <td className="py-3 px-3 text-button-hover font-semibold">{tier.calculation_value}%</td>
-                              <td className="py-3 px-3 text-amber-400 font-semibold">{formatRp(sampleKomisi)}</td>
+                              <td className="py-3 px-3 text-amber-400 font-semibold">{formatRp(ruleKomisi)}</td>
                             </tr>
                           );
                         })}
@@ -1036,7 +1036,7 @@ export function PseudoKnowledgeSection() {
                   </table>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 px-1">
-                  * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah data tabel promo. Threshold tier hanya berdasarkan Min Downline.
+                  * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah ATURAN FINAL dari tabel promo. Threshold tier berdasarkan Min Downline.
                 </p>
               </div>
             ) : (
