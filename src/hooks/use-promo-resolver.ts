@@ -3,7 +3,21 @@
  * 
  * READ-ONLY hook for displaying effective values based on context.
  * 
- * GUARDRAILS (LOCKED):
+ * ============================================
+ * RESOLVER TRUTH HIERARCHY (FINAL - LOCKED)
+ * ============================================
+ * 
+ * Priority order (highest to lowest):
+ * 1. FIXED - explicit override (reward_mode === 'fixed')
+ * 2. SUBCATEGORY - scoped intent (within subcategory context)
+ * 3. GLOBAL - context inheritance (global_* enabled)
+ * 4. BASE - canonical source (direct field)
+ * 5. LEGACY - deprecated dinamis_* fallback (BADGE ORANGE)
+ * 
+ * ============================================
+ * GUARDRAILS (LOCKED)
+ * ============================================
+ * 
  * 1. READ-ONLY - Never modifies form state, only returns computed display values
  * 2. BASE VALUE VISIBLE - Returns both effective AND base values for comparison
  * 3. NO BYPASS OF NORMALIZER - Works with already-normalized data
@@ -21,13 +35,14 @@ import type { PromoFormData, PromoSubCategory } from '@/components/VOCDashboard/
 import {
   getEffectiveRewardType,
   getEffectiveMaxClaim,
-  isMaxClaimUnlimited,
+  getMaxClaimUnlimitedWithSource,
   getEffectiveCalculationBase,
   getEffectiveCalculationValue,
   getEffectiveTurnoverRule,
   getEffectivePayoutDirection,
   getEffectiveMinDeposit,
   getEffectiveRewardAmount,
+  RESOLVER_HIERARCHY_ORDER,
 } from '@/lib/promo-field-resolver';
 import { isInert } from '@/lib/promo-field-normalizer';
 
@@ -64,6 +79,9 @@ export interface ResolvedValue<T> {
 export interface PromoResolvedState {
   rewardType: ResolvedValue<string>;
   maxClaim: ResolvedValue<number | null>;
+  /** Max claim unlimited with full source info for proper badging */
+  maxClaimUnlimited: ResolvedValue<boolean>;
+  /** @deprecated Use maxClaimUnlimited.effective instead */
   isMaxClaimUnlimited: boolean;
   calculationBase: ResolvedValue<string>;
   calculationValue: ResolvedValue<number | null>;
@@ -71,6 +89,8 @@ export interface PromoResolvedState {
   payoutDirection: ResolvedValue<'before' | 'after'>;
   minDeposit: ResolvedValue<number | null>;
   rewardAmount: ResolvedValue<number | null>;
+  /** Hierarchy order for documentation */
+  hierarchyOrder: typeof RESOLVER_HIERARCHY_ORDER;
 }
 
 /**
@@ -167,7 +187,13 @@ export function usePromoResolver(
     const effectiveMaxClaim = getEffectiveMaxClaim(data, subcategory);
     const baseMaxClaim = data.max_claim ?? null;
     const maxClaimSource = determineMaxClaimSource(data, subcategory);
-    const unlimitedFlag = isMaxClaimUnlimited(data, subcategory);
+    
+    // Max Claim Unlimited - with proper source detection for LEGACY badging
+    const unlimitedResult = getMaxClaimUnlimitedWithSource(data, subcategory);
+    const unlimitedSource: ValueSource = unlimitedResult.source === 'legacy' ? 'legacy' : 
+      unlimitedResult.source === 'fixed' ? 'fixed' :
+      unlimitedResult.source === 'subcategory' ? 'subcategory' : 'base';
+    const baseUnlimited = !!data.dinamis_max_claim_unlimited; // Legacy is the only source
     
     // Calculation Base
     const effectiveCalcBase = getEffectiveCalculationBase(data, subcategory);
@@ -231,7 +257,18 @@ export function usePromoResolver(
         isInherited: maxClaimSource !== 'base' && maxClaimSource !== 'default',
         sourceLabel: getSourceLabel(maxClaimSource, mode),
       },
-      isMaxClaimUnlimited: unlimitedFlag,
+      // Full unlimited info with source for proper LEGACY/ORANGE badging
+      maxClaimUnlimited: {
+        effective: unlimitedResult.isUnlimited,
+        base: baseUnlimited,
+        source: unlimitedSource,
+        isInherited: unlimitedSource === 'legacy' || unlimitedSource === 'fixed' || unlimitedSource === 'subcategory',
+        sourceLabel: unlimitedSource === 'legacy' 
+          ? 'Legacy (dinamis_max_claim_unlimited)' 
+          : getSourceLabel(unlimitedSource, mode),
+      },
+      // Deprecated: use maxClaimUnlimited.effective
+      isMaxClaimUnlimited: unlimitedResult.isUnlimited,
       calculationBase: {
         effective: effectiveCalcBase,
         base: baseCalcBase,
@@ -275,6 +312,8 @@ export function usePromoResolver(
         isInherited: rewardAmtSource !== 'base' && rewardAmtSource !== 'default',
         sourceLabel: getSourceLabel(rewardAmtSource, mode),
       },
+      // Expose hierarchy order for documentation/debugging
+      hierarchyOrder: RESOLVER_HIERARCHY_ORDER,
     };
   }, [data, subcategory]);
 }
