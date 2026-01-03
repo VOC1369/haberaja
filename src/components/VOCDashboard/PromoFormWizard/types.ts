@@ -261,10 +261,18 @@ export interface PromoFormData {
   min_calculation: number | null;       // Dinamis mode: Min basis perhitungan (null = inert)
   min_calculation_enabled: boolean;
   
+  // =============================================
   // Dinamis mode - Reward (UI helper)
+  // @deprecated These fields are legacy aliases. Use base fields instead.
+  // See: src/lib/promo-field-normalizer.ts for mapping.
+  // =============================================
+  /** @deprecated Use `reward_type` instead. Normalized on load. */
   dinamis_reward_type: string;
+  /** @deprecated Use `reward_amount` instead. Normalized on load. */
   dinamis_reward_amount: number | null;
+  /** @deprecated Use `max_claim` instead. Normalized on load. */
   dinamis_max_claim?: number | null;
+  /** @deprecated No base equivalent. Check via isMaxClaimUnlimited() resolver. */
   dinamis_max_claim_unlimited: boolean;
   min_reward_claim: number | null;
   min_reward_claim_enabled: boolean;
@@ -557,10 +565,18 @@ export interface PromoSubCategory {
   game_names_blacklist: string[];
   game_exclusion_rules: string[];
   
+  // =============================================
   // Bonus (Legacy - kept for backward compatibility)
-  dinamis_reward_type: string;  // @deprecated - use reward_type instead
+  // @deprecated These subcategory fields are legacy aliases.
+  // See: src/lib/promo-field-normalizer.ts for documentation.
+  // =============================================
+  /** @deprecated Use `reward_type` instead */
+  dinamis_reward_type: string;
+  /** @deprecated Use `reward_amount` in base or calculation_value in subcategory */
   dinamis_reward_amount: number;
+  /** @deprecated Use max_bonus or resolver getEffectiveMaxClaim() */
   dinamis_max_claim: number;
+  /** @deprecated Check via subcategory.max_bonus_unlimited */
   dinamis_max_claim_unlimited: boolean;
   min_reward_claim: number | null;       // Minimal bonus yang bisa dicairkan (payout threshold)
   min_reward_claim_enabled: boolean;
