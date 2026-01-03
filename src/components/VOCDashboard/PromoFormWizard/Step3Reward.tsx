@@ -25,7 +25,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, X, ChevronDown, Settings, Zap, Trophy, Star, Target, Trash2, CalendarIcon, Calculator, AlertTriangle, Clock, Save, Phone, Gamepad2, Layers, Gift, CheckCircle2, XCircle, Ticket } from "lucide-react";
+import { Plus, X, ChevronDown, Settings, Zap, Trophy, Star, Target, Trash2, CalendarIcon, Calculator, AlertTriangle, Clock, Save, Phone, Gamepad2, Layers, Gift, CheckCircle2, XCircle, Ticket, Download } from "lucide-react";
 import { GameWhitelistBlacklist } from "./GameWhitelistBlacklist";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, formatNumberWithSeparator } from "@/lib/utils";
@@ -1119,15 +1119,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
           {/* Section 3 - Hadiah dan Waktu */}
           <Collapsible>
-            <CollapsibleTrigger className="collapsible-trigger w-full">
+            <CollapsibleTrigger className="collapsible-trigger w-full group">
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
                   <div className="text-sm font-semibold text-foreground">3. Hadiah dan Waktu</div>
-                  <div className="text-xs text-muted-foreground">Jenis hadiah, waktu claim, dan periode pembagian</div>
+                  <div className="text-xs text-muted-foreground">Periode klaim dan distribusi reward</div>
                 </div>
               </div>
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content">
               {/* Periode Klaim & Waktu Pembagian Bonus */}
@@ -1443,15 +1443,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
           {/* Section 4 - Syarat Khusus (Badge-based) */}
           <Collapsible>
-            <CollapsibleTrigger className="collapsible-trigger w-full">
+            <CollapsibleTrigger className="collapsible-trigger w-full group">
               <div className="flex items-center gap-3">
                 <Zap className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
                   <div className="text-sm font-semibold text-foreground">4. Syarat Khusus</div>
-                  <div className="text-xs text-muted-foreground">Ketentuan tambahan</div>
+                  <div className="text-xs text-muted-foreground">Ketentuan tambahan untuk promo</div>
                 </div>
               </div>
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content">
               <div className="space-y-4">
@@ -1559,20 +1559,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           </CollapsibleContent>
           </Collapsible>
 
-          {/* Toggle - Wajib Download APK */}
-          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
-            <Switch
-              checked={data.require_apk || false}
-              onCheckedChange={(checked) => onChange({ require_apk: checked })}
-            />
-            <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">Wajib Download APK untuk Promo Ini</div>
-              <p className="text-xs text-muted-foreground">
-                User wajib download APK terlebih dahulu untuk claim reward promo ini
-              </p>
-            </div>
-          </div>
-
           {/* Section 5 - Manual Claim & Contact Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch
@@ -1582,9 +1568,12 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               })}
             />
             <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">5. Manual Claim & Contact Official</div>
+              <div className="font-medium text-sm text-button-hover flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                5. Manual Claim & Contact Official
+              </div>
               <p className="text-xs text-muted-foreground">
-                Bonus diklaim manual via CS. Info kontak akan ditampilkan di respons AI.
+                Info kontak untuk klaim bonus via CS
               </p>
             </div>
           </div>
@@ -1649,10 +1638,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <div className="flex-1">
               <div className="font-medium text-sm text-button-hover flex items-center gap-2">
                 <Gift className="h-4 w-4" />
-                6. Penukaran Hadiah / Lucky Spin (Opsional)
+                6. Penukaran Hadiah / Lucky Spin
               </div>
               <p className="text-xs text-muted-foreground">
-                Untuk promo berbasis Ticket atau Lucky Spin. Tidak wajib diaktifkan.
+                Untuk promo berbasis Ticket atau Lucky Spin (opsional)
               </p>
             </div>
           </div>
@@ -1858,6 +1847,23 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               )}
             </div>
           )}
+
+          {/* Toggle - Wajib Download APK (Selalu di paling bawah) */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch
+              checked={data.require_apk || false}
+              onCheckedChange={(checked) => onChange({ require_apk: checked })}
+            />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Wajib Download APK
+              </div>
+              <p className="text-xs text-muted-foreground">
+                User wajib download APK terlebih dahulu untuk claim reward
+              </p>
+            </div>
+          </div>
         </>
       )}
 
@@ -2490,17 +2496,17 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           </Collapsible>
             </>
 
-          {/* Section 4 - Hadiah dan Waktu */}
+          {/* Section 3 - Hadiah dan Waktu */}
           <Collapsible>
-            <CollapsibleTrigger className="collapsible-trigger w-full">
+            <CollapsibleTrigger className="collapsible-trigger w-full group">
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
                   <div className="text-sm font-semibold text-foreground">3. Hadiah dan Waktu</div>
-                  <div className="text-xs text-muted-foreground">Jenis hadiah, waktu claim, dan periode pembagian</div>
+                  <div className="text-xs text-muted-foreground">Periode klaim dan distribusi reward</div>
                 </div>
               </div>
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content">
               {/* Periode Klaim & Waktu Pembagian Bonus */}
@@ -2816,15 +2822,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
           {/* Section 4 - Syarat Khusus (Badge-based) */}
           <Collapsible>
-            <CollapsibleTrigger className="collapsible-trigger w-full">
+            <CollapsibleTrigger className="collapsible-trigger w-full group">
               <div className="flex items-center gap-3">
                 <Zap className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
                   <div className="text-sm font-semibold text-foreground">4. Syarat Khusus</div>
-                  <div className="text-xs text-muted-foreground">Ketentuan tambahan</div>
+                  <div className="text-xs text-muted-foreground">Ketentuan tambahan untuk promo</div>
                 </div>
               </div>
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content">
               {/* Guard Rule Hint */}
@@ -2913,20 +2919,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Toggle - Wajib Download APK */}
-          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
-            <Switch
-              checked={data.require_apk || false}
-              onCheckedChange={(checked) => onChange({ require_apk: checked })}
-            />
-            <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">Wajib Download APK untuk Promo Ini</div>
-              <p className="text-xs text-muted-foreground">
-                User wajib download APK terlebih dahulu untuk claim reward promo ini
-              </p>
-            </div>
-          </div>
-
           {/* Section 5 - Manual Claim & Contact Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch
@@ -2936,9 +2928,12 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               })}
             />
             <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">5. Manual Claim & Contact Official</div>
+              <div className="font-medium text-sm text-button-hover flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                5. Manual Claim & Contact Official
+              </div>
               <p className="text-xs text-muted-foreground">
-                Bonus diklaim manual via CS. Info kontak akan ditampilkan di respons AI.
+                Info kontak untuk klaim bonus via CS
               </p>
             </div>
           </div>
@@ -3004,10 +2999,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             <div className="flex-1">
               <div className="font-medium text-sm text-button-hover flex items-center gap-2">
                 <Gift className="h-4 w-4" />
-                6. Penukaran Hadiah / Lucky Spin (Opsional)
+                6. Penukaran Hadiah / Lucky Spin
               </div>
               <p className="text-xs text-muted-foreground">
-                Untuk promo berbasis Ticket atau Lucky Spin. Tidak wajib diaktifkan.
+                Untuk promo berbasis Ticket atau Lucky Spin (opsional)
               </p>
             </div>
           </div>
@@ -3213,6 +3208,23 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               )}
             </div>
           )}
+
+          {/* Toggle - Wajib Download APK (Selalu di paling bawah) */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch
+              checked={data.require_apk || false}
+              onCheckedChange={(checked) => onChange({ require_apk: checked })}
+            />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Wajib Download APK
+              </div>
+              <p className="text-xs text-muted-foreground">
+                User wajib download APK terlebih dahulu untuk claim reward
+              </p>
+            </div>
+          </div>
         </>
       )}
 
@@ -4139,15 +4151,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
           {/* Section 3 - Hadiah dan Waktu */}
           <Collapsible>
-            <CollapsibleTrigger className="collapsible-trigger w-full">
+            <CollapsibleTrigger className="collapsible-trigger w-full group">
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
                   <div className="text-sm font-semibold text-foreground">3. Hadiah dan Waktu {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
-                  <div className="text-xs text-muted-foreground">Jenis hadiah, waktu claim, dan periode pembagian</div>
+                  <div className="text-xs text-muted-foreground">Periode klaim dan distribusi reward</div>
                 </div>
               </div>
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content">
               <div className="space-y-4">
@@ -4446,15 +4458,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
           {/* Section 4 - Syarat Khusus */}
           <Collapsible>
-            <CollapsibleTrigger className="collapsible-trigger w-full">
+            <CollapsibleTrigger className="collapsible-trigger w-full group">
               <div className="flex items-center gap-3">
                 <Zap className="h-5 w-5 text-button-hover" />
                 <div className="text-left">
                   <div className="text-sm font-semibold text-foreground">4. Syarat Khusus {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
-                  <div className="text-xs text-muted-foreground">Ketentuan tambahan</div>
+                  <div className="text-xs text-muted-foreground">Ketentuan tambahan untuk promo</div>
                 </div>
               </div>
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content">
               <div className="space-y-3">
@@ -4477,23 +4489,15 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Toggle - Wajib Download APK */}
-          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
-            <Switch checked={data.require_apk || false} onCheckedChange={(checked) => onChange({ require_apk: checked })} />
-            <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">Wajib Download APK untuk Promo Ini {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
-              <p className="text-xs text-muted-foreground">User wajib download APK terlebih dahulu untuk claim reward</p>
-            </div>
-          </div>
-
           {/* Section 5 - Manual Claim & Contact Official */}
-          {/* NOTE: Toggle ONLY controls contact_channel_enabled, NOT reward_distribution! */}
-          {/* Claim mechanism (manual vs auto) is a RUNTIME decision, not stored in promo data */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch checked={data.contact_channel_enabled || false} onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })} />
             <div className="flex-1">
-              <div className="font-medium text-sm text-button-hover">5. Manual Claim & Contact Official {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}</div>
-              <p className="text-xs text-muted-foreground">Bonus diklaim manual via CS. Info kontak ditampilkan di respons AI.</p>
+              <div className="font-medium text-sm text-button-hover flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                5. Manual Claim & Contact Official {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}
+              </div>
+              <p className="text-xs text-muted-foreground">Info kontak untuk klaim bonus via CS</p>
             </div>
           </div>
 
@@ -4513,6 +4517,18 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
             </div>
           )}
+
+          {/* Toggle - Wajib Download APK (Selalu di paling bawah) */}
+          <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+            <Switch checked={data.require_apk || false} onCheckedChange={(checked) => onChange({ require_apk: checked })} />
+            <div className="flex-1">
+              <div className="font-medium text-sm text-button-hover flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Wajib Download APK {data.has_subcategories && <span className="text-xs font-normal text-muted-foreground">(Global)</span>}
+              </div>
+              <p className="text-xs text-muted-foreground">User wajib download APK terlebih dahulu untuk claim reward</p>
+            </div>
+          </div>
             </>
             );
           })()}
