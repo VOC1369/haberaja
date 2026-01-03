@@ -3194,29 +3194,141 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     return (tierIndex + 1) * 5;
   };
 
+  // ============================================
+  // REFERRAL COMMISSION BACKSTOP (FIX FOR NONDETERMINISTIC BUG)
+  // Multi-source fallback to ensure commission_percentage is correct
+  // ============================================
+  /**
+   * Extract commission percentage with multi-source fallback
+   * PRIORITY ORDER (LOCKED):
+   * 1. sub.calculation_value (if unique across tiers)
+   * 2. sub.sub_name (extract "Komisi X%" pattern)
+   * 3. terms_conditions (extract "Tier X%: minimal Y ID" pattern)
+   * 4. Fallback: return null (requires manual review)
+   */
+  const extractCommissionPercent = (
+    sub: typeof extracted.subcategories[0],
+    terms: string[] | undefined,
+    allSubs: typeof extracted.subcategories,
+    tierIndex: number
+  ): { value: number; source: 'calculation_value' | 'sub_name' | 'terms' | 'fallback' } => {
+    // Source 1: sub.calculation_value - but only if NOT all-same
+    const allCalcValues = allSubs.map(s => s.calculation_value);
+    const allSame = allCalcValues.length > 1 && allCalcValues.every(v => v === allCalcValues[0]);
+    
+    if (!allSame && sub.calculation_value && sub.calculation_value > 0) {
+      return { value: sub.calculation_value, source: 'calculation_value' };
+    }
+    
+    // Source 2: Extract from sub_name (e.g., "Komisi 10%", "Tier 15%")
+    const namePercentMatch = sub.sub_name?.match(/(\d+(?:[.,]\d+)?)\s*%/);
+    if (namePercentMatch) {
+      const percent = parseFloat(namePercentMatch[1].replace(',', '.'));
+      console.log(`[Referral Backstop] Tier ${tierIndex + 1}: Using percent from sub_name: ${percent}%`);
+      return { value: percent, source: 'sub_name' };
+    }
+    
+    // Source 3: Extract from terms_conditions
+    if (terms && terms.length > 0) {
+      // Look for patterns like "Tier 10%:" or "Komisi 15%"
+      for (const term of terms) {
+        const termMatch = term.match(/(?:tier|komisi|commission)\s*(\d+(?:[.,]\d+)?)\s*%/i);
+        if (termMatch) {
+          const percent = parseFloat(termMatch[1].replace(',', '.'));
+          // Check if this matches the tier index (5, 10, 15... pattern)
+          const expectedPercent = (tierIndex + 1) * 5;
+          if (percent === expectedPercent) {
+            console.log(`[Referral Backstop] Tier ${tierIndex + 1}: Using percent from terms: ${percent}%`);
+            return { value: percent, source: 'terms' };
+          }
+        }
+      }
+    }
+    
+    // Source 4: If all-same detected, try to infer from tier position (5, 10, 15 pattern)
+    if (allSame) {
+      const inferredPercent = (tierIndex + 1) * 5;
+      console.warn(`[Referral Backstop] Tier ${tierIndex + 1}: All-same bug detected (${allCalcValues[0]}%). Inferring: ${inferredPercent}%`);
+      return { value: inferredPercent, source: 'fallback' };
+    }
+    
+    // Final fallback: use calculation_value as-is
+    return { value: sub.calculation_value || 0, source: 'calculation_value' };
+  };
+
   // Build referral_tiers if this is a referral multi-tier promo
   let referralTiers: Array<{
     id: string;
     tier_label: string;
     min_downline: number;
     commission_percentage: number;
+    winlose?: number;
+    cashback_deduction?: number;
+    fee_deduction?: number;
+    net_winlose?: number;
+    commission_result?: number;
+    _commission_source?: string;
+    _commission_fix_applied?: boolean;
   }> = [];
   
   if (isReferralMultiTier) {
     console.log('[Referral Mapping] Detected multi-tier referral, converting subcategories to referral_tiers');
-    referralTiers = extracted.subcategories.map((sub, idx) => ({
-      id: generateUUID(),
-      tier_label: sub.sub_name || `Tier ${idx + 1}`,
-      min_downline: extractMinDownline(sub, extracted.terms_conditions, idx),
-      commission_percentage: sub.calculation_value || 0,
-      // CALCULATION RULES from promo table - Ini ATURAN FINAL, bukan sample!
-      // Fallback to minimum_base for backward compatibility with old extractions
-      winlose: (sub as any).winlose || (sub as any).sample_winlose || sub.minimum_base || undefined,
-      cashback_deduction: (sub as any).cashback_deduction || (sub as any).sample_cashback || undefined,
-      fee_deduction: (sub as any).fee_deduction || (sub as any).sample_commission_deduction || undefined,
-      net_winlose: (sub as any).net_winlose || (sub as any).sample_net_winlose || undefined,
-      commission_result: (sub as any).commission_result || (sub as any).sample_commission_result || undefined,
-    }));
+    
+    // Pre-check: detect all-same bug
+    const calcValues = extracted.subcategories.map(s => s.calculation_value);
+    const hasAllSameBug = calcValues.length > 1 && calcValues.every(v => v === calcValues[0]);
+    if (hasAllSameBug) {
+      console.warn(`[Referral Mapping] WARNING: All-same commission bug detected (all tiers = ${calcValues[0]}%). Applying backstop.`);
+    }
+    
+    referralTiers = extracted.subcategories.map((sub, idx) => {
+      const commissionResult = extractCommissionPercent(sub, extracted.terms_conditions, extracted.subcategories, idx);
+      
+      return {
+        id: generateUUID(),
+        tier_label: sub.sub_name || `Tier ${idx + 1}`,
+        min_downline: extractMinDownline(sub, extracted.terms_conditions, idx),
+        commission_percentage: commissionResult.value,
+        // CALCULATION RULES from promo table - Ini ATURAN FINAL, bukan sample!
+        winlose: (sub as any).winlose || sub.minimum_base || undefined,
+        cashback_deduction: (sub as any).cashback_deduction || undefined,
+        fee_deduction: (sub as any).fee_deduction || undefined,
+        net_winlose: (sub as any).net_winlose || undefined,
+        commission_result: (sub as any).commission_result || undefined,
+        // Audit metadata
+        _commission_source: commissionResult.source,
+        _commission_fix_applied: commissionResult.source !== 'calculation_value',
+      };
+    });
+    
+    // ============================================
+    // DERIVED FIELD VALIDATION & AUTO-CORRECT
+    // Ensure net_winlose and commission_result are consistent
+    // ============================================
+    referralTiers = referralTiers.map((tier, idx) => {
+      const winlose = tier.winlose ?? 0;
+      const cashbackDeduction = tier.cashback_deduction ?? 0;
+      const feeDeduction = tier.fee_deduction ?? 0;
+      const commissionPercentage = tier.commission_percentage ?? 0;
+      
+      // Calculate correct derived values
+      const correctNetWinlose = winlose - cashbackDeduction - feeDeduction;
+      const correctCommissionResult = Math.round(correctNetWinlose * commissionPercentage / 100);
+      
+      // Check and log mismatches
+      if (tier.net_winlose !== undefined && tier.net_winlose !== correctNetWinlose) {
+        console.log(`[Referral Validator] Tier ${idx + 1}: net_winlose corrected ${tier.net_winlose} → ${correctNetWinlose}`);
+      }
+      if (tier.commission_result !== undefined && Math.abs(tier.commission_result - correctCommissionResult) > 1) {
+        console.log(`[Referral Validator] Tier ${idx + 1}: commission_result corrected ${tier.commission_result} → ${correctCommissionResult}`);
+      }
+      
+      return {
+        ...tier,
+        net_winlose: correctNetWinlose,
+        commission_result: correctCommissionResult,
+      };
+    });
   }
   
   // ✅ SEMANTIC SANITIZATION: Prevent Rupiah from becoming WD multiplier

@@ -376,6 +376,90 @@ The `isTierNetworkPromo()` helper function in `promo-field-resolver.ts` guards a
 
 ---
 
+## Field Definitions (LOCKED)
+
+### Referral Tier Fields
+
+| Field | Type | Definition |
+|-------|------|------------|
+| `winlose` | **RULE** | Nilai Winlose mentah (basis perhitungan komisi) |
+| `cashback_deduction` | **RULE** | Potongan cashback yang mengurangi base winlose sebelum perhitungan komisi |
+| `fee_deduction` | **RULE** | Potongan admin fee yang mengurangi base winlose sebelum perhitungan komisi |
+| `commission_percentage` | **RULE** | Persentase komisi untuk tier ini (e.g., 5 = 5%) |
+| `min_downline` | **RULE** | Syarat minimal jumlah downline aktif untuk tier ini |
+| `net_winlose` | **DERIVED** | = `winlose - cashback_deduction - fee_deduction` |
+| `commission_result` | **DERIVED** | = `net_winlose * commission_percentage / 100` |
+
+### Derived Fields Policy (LOCKED)
+
+**Decision**: Derived fields **disimpan DAN divalidasi** (auto-correct jika mismatch).
+
+**Alasan**:
+1. Menyimpan derived values memudahkan display di UI tanpa recalc
+2. Validator memastikan konsistensi dengan RULE fields
+3. Auto-correct mencegah data corruption dari extraction errors
+
+**Validator Contract**:
+```typescript
+// RUMUS WAJIB (tidak bisa ditawar)
+net_winlose = winlose - cashback_deduction - fee_deduction
+commission_result = net_winlose * commission_percentage / 100
+
+// Jika mismatch:
+// 1. Log warning untuk audit
+// 2. Auto-correct ke nilai yang benar
+// 3. Simpan nilai yang sudah dikoreksi
+```
+
+### Deduction Semantics (LOCKED)
+
+**Definition**: `cashback_deduction` dan `fee_deduction` adalah **POTONGAN DARI BASE WINLOSE** sebelum persentase komisi dihitung.
+
+**Formula Flow**:
+```
+Winlose (dari downline)
+  └── minus: cashback_deduction (potongan untuk program cashback)
+  └── minus: fee_deduction (potongan admin fee operator)
+  = Net Winlose
+  └── kali: commission_percentage%
+  = Commission Result (yang diterima referrer)
+```
+
+**UI Label Contract**:
+- "Cashback (potongan dari WL)" 
+- "Admin Fee (potongan dari WL)"
+- "Winlose Bersih (setelah potongan)"
+
+---
+
+## _rule_source Enum (LOCKED)
+
+Valid values:
+- `table` - Data dari tabel promo yang terstruktur
+- `manual` - Input manual oleh user
+- `inferred` - Disimpulkan dari konteks/pattern
+
+**TIDAK BOLEH** ada string bebas. Enum ini harus terbatas.
+
+---
+
+## Commission Backstop (NEW)
+
+Untuk mencegah bug nondeterministic dimana semua tier menunjukkan persentase yang sama (contoh: semua 5%):
+
+**Multi-Source Fallback Priority**:
+1. `calculation_value` dari LLM (jika unik antar tier)
+2. `sub_name` pattern (contoh: "Komisi 10%" → 10)
+3. `terms_conditions` pattern
+4. Positional inference (tier 1 = 5%, tier 2 = 10%, tier 3 = 15%)
+
+**Detection**: Jika semua `commission_percentage` sama pada multi-tier promo, sistem akan:
+1. Log warning: `[Referral Backstop] All-same bug detected`
+2. Apply backstop dari sub_name atau positional pattern
+3. Set audit metadata: `_commission_fix_applied: true`
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
@@ -383,3 +467,4 @@ The `isTierNetworkPromo()` helper function in `promo-field-resolver.ts` guards a
 | 1.0 | 2025-01-01 | Initial tier archetype system |
 | 1.1 | 2025-01-25 | Added Point Store & Level/Milestone config sections |
 | 1.2 | 2026-01-03 | Added tier_network (Referral) semantic contract, INERT field rules, custom_terms cleaner |
+| 1.3 | 2026-01-03 | Added Field Definitions, Derived Fields Policy, Deduction Semantics, Commission Backstop |
