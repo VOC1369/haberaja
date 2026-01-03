@@ -25,7 +25,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, X, ChevronDown, Settings, Zap, Trophy, Star, Target, Trash2, CalendarIcon, Calculator, AlertTriangle, Clock, Save, Phone, Gamepad2, Layers, Gift, CheckCircle2, XCircle, Ticket, Download } from "lucide-react";
+import { Plus, X, ChevronDown, Settings, Zap, Trophy, Star, Target, Trash2, CalendarIcon, Calculator, AlertTriangle, Clock, Save, Phone, Gamepad2, Layers, Gift, CheckCircle2, XCircle, Ticket, Download, Info } from "lucide-react";
 import { GameWhitelistBlacklist } from "./GameWhitelistBlacklist";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, formatNumberWithSeparator } from "@/lib/utils";
@@ -58,6 +58,12 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { generateUUID } from "@/lib/supabase-client";
 import { SelectWithAddNew, SelectOption } from "./SelectWithAddNew";
 import { SubCategoryCard, createInitialSubCategory } from "./SubCategoryCard";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface Step3Props {
   data: PromoFormData;
@@ -66,6 +72,8 @@ interface Step3Props {
   onSaveAndReturn?: () => void;
   stepNumber?: number;
   stepTitle?: string;
+  targetSection?: string | null;
+  onSectionScrolled?: () => void;
 }
 
 const DEFAULT_PROMO_UNITS: SelectOption[] = [
@@ -159,7 +167,7 @@ const REFERRAL_BASIS_OPTIONS: SelectOption[] = [
   { value: 'exp', label: 'Experience Point' },
 ];
 
-export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndReturn, stepNumber = 3, stepTitle = "Konfigurasi Reward" }: Step3Props) {
+export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndReturn, stepNumber = 3, stepTitle = "Konfigurasi Reward", targetSection, onSectionScrolled }: Step3Props) {
   // State for new requirement input
   const [newRequirement, setNewRequirement] = useState("");
   
@@ -241,7 +249,21 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
   // Referral Basis options state
   const [referralBasisOptions, setReferralBasisOptions] = useState<SelectOption[]>([...REFERRAL_BASIS_OPTIONS]);
 
-  // Dynamic label helpers based on calculation_base
+  // Auto-scroll to target section when navigating from Review
+  useEffect(() => {
+    if (targetSection) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        const element = document.getElementById(targetSection);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Clear the target after scrolling
+          onSectionScrolled?.();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [targetSection, onSectionScrolled]);
   const getMinimumBaseLabel = () => {
     const baseOption = calcBaseOptions.find(c => c.value === data.calculation_base);
     if (baseOption) {
@@ -3864,7 +3886,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
           {data.tier_archetype === 'tier_level' && (
             <>
               {/* Card 1: Aturan Progress Level (Simple, not accordion) */}
-              <div className="p-4 bg-card border border-border rounded-xl space-y-4">
+              <div id="section-lp-rules" className="p-4 bg-card border border-border rounded-xl space-y-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Settings className="h-5 w-5 text-button-hover" />
                   <span className="font-semibold text-sm">Aturan Progress LP (Loyalty Point)</span>
@@ -3872,7 +3894,22 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 <div className="grid grid-cols-4 gap-4">
                   {/* Col 1: Basis Progress */}
                   <div className="space-y-1">
-                    <Label className="text-xs">Basis Progress</Label>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs">Basis Progress</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-sm max-w-xs">
+                              Aktivitas apa yang digunakan untuk menghitung perolehan LP. 
+                              Contoh: Turnover berarti LP dihitung dari total taruhan.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Select
                       value={data.lp_earn_basis || 'turnover'}
                       onValueChange={(val) => onChange({ lp_earn_basis: val as 'turnover' | 'win' | 'lose' | 'deposit' })}
@@ -3890,7 +3927,22 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </div>
                   {/* Col 2: Per Aktivitas (Rp) */}
                   <div className="space-y-1">
-                    <Label className="text-xs">Per Aktivitas (Rp)</Label>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs">Per Aktivitas (Rp)</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-sm max-w-xs">
+                              Nilai Rupiah dari aktivitas yang diperlukan untuk mendapat LP.
+                              Contoh: 1.000 berarti setiap Rp 1.000 aktivitas = LP yang ditentukan.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <FormattedNumberInput
                       value={data.lp_earn_amount || 0}
                       onChange={(val) => onChange({ lp_earn_amount: val })}
@@ -3900,7 +3952,22 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </div>
                   {/* Col 3: LP Didapat */}
                   <div className="space-y-1">
-                    <Label className="text-xs">LP Didapat</Label>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs">LP Didapat</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-sm max-w-xs">
+                              Jumlah LP yang didapat setiap mencapai threshold "Per Aktivitas".
+                              Contoh: 1 berarti setiap Rp 1.000 turnover → dapat 1 LP.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Input
                       type="number"
                       min={1}
@@ -3911,7 +3978,22 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </div>
                   {/* Col 4: Mode Claim */}
                   <div className="space-y-1">
-                    <Label className="text-xs">Mode Claim</Label>
+                    <div className="flex items-center gap-1">
+                      <Label className="text-xs">Mode Claim</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-sm max-w-xs">
+                              Cara LP masuk ke akun member. Otomatis = langsung masuk. 
+                              Manual = member harus klaim sendiri.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Select
                       value={data.tier_claim_mode || 'otomatis'}
                       onValueChange={(val) => onChange({ tier_claim_mode: val as 'otomatis' | 'manual' })}
@@ -3934,7 +4016,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
 
               {/* Card 2: Tabel Level Reward */}
-              <div className="p-4 bg-card border border-border rounded-xl space-y-4">
+              <div id="section-tier-level" className="p-4 bg-card border border-border rounded-xl space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-button-hover" />

@@ -1109,7 +1109,7 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
 
 interface Step4Props {
   data: PromoFormData;
-  onGoToStep?: (step: number) => void;
+  onGoToStep?: (step: number, sectionId?: string) => void;
 }
 
 interface ValueBoxProps {
@@ -1144,7 +1144,8 @@ interface CollapsibleSectionProps {
   title: string;
   complete: boolean;
   stepNumber: number;
-  onEdit?: (step: number) => void;
+  sectionId?: string;
+  onEdit?: (step: number, sectionId?: string) => void;
   children: React.ReactNode;
 }
 
@@ -1152,6 +1153,7 @@ const CollapsibleSection = ({
   title, 
   complete, 
   stepNumber,
+  sectionId,
   onEdit,
   children 
 }: CollapsibleSectionProps) => {
@@ -1182,7 +1184,7 @@ const CollapsibleSection = ({
             {onEdit && (
               <Button 
                 variant="outline" 
-                onClick={() => onEdit(stepNumber)}
+                onClick={() => onEdit(stepNumber, sectionId)}
                 className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
               >
                 <Edit2 className="h-4 w-4" />
@@ -1331,6 +1333,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
             title="Konfigurasi Reward" 
             complete={!!isStep2Complete}
             stepNumber={4}
+            sectionId={data.tier_archetype === 'tier_level' ? 'section-lp-rules' : undefined}
             onEdit={onGoToStep}
           >
             <ValueBox label="Mode" value={data.reward_mode === 'formula' ? 'Dinamis' : data.reward_mode} isBadge badgeVariant="outline" />
@@ -1805,7 +1808,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                 </div>
                 <Button 
                   variant="outline" 
-                  onClick={() => onGoToStep?.(4)}
+                  onClick={() => onGoToStep?.(4, data.tier_archetype === 'tier_level' ? 'section-tier-level' : 'section-subcategories')}
                   className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
                 >
                   <Edit2 className="h-4 w-4" />
