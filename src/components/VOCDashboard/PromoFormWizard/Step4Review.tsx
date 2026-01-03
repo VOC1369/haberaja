@@ -1619,6 +1619,46 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </div>
                     )}
                     
+                    {/* Level Up Rewards Table - Untuk tier_level (BONUS NALEN dll) */}
+                    {data.level_up_rewards && data.level_up_rewards.length > 0 && data.tier_archetype === 'tier_level' && (
+                      <div className="col-span-full mt-2">
+                        <p className="text-muted-foreground text-xs mb-2">Tabel Level Reward</p>
+                        <div className="bg-muted rounded-lg overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead className="bg-muted/50">
+                              <tr>
+                                <th className="text-left py-2 px-3 font-medium text-foreground">Level</th>
+                                <th className="text-right py-2 px-3 font-medium text-foreground">Unlock (History Deposit)</th>
+                                <th className="text-right py-2 px-3 font-medium text-foreground">Reward</th>
+                                <th className="text-left py-2 px-3 font-medium text-foreground">Tipe</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {data.level_up_rewards.slice(0, 8).map((level, idx) => (
+                                <tr key={level?.id || idx} className="border-t border-border">
+                                  <td className="py-2 px-3 font-medium text-foreground">{level?.tier || `Level ${idx + 1}`}</td>
+                                  <td className="py-2 px-3 text-right text-foreground">
+                                    {level?.min_exp ? `Rp ${level.min_exp.toLocaleString('id-ID')}` : '-'}
+                                  </td>
+                                  <td className="py-2 px-3 text-right font-semibold text-button-hover">
+                                    Rp {(typeof level?.reward === 'number' ? level.reward : 0).toLocaleString('id-ID')}
+                                  </td>
+                                  <td className="py-2 px-3 text-foreground">{level?.type || 'credit_game'}</td>
+                                </tr>
+                              ))}
+                              {data.level_up_rewards.length > 8 && (
+                                <tr className="border-t border-border bg-muted/30">
+                                  <td colSpan={4} className="py-2 px-3 text-center text-muted-foreground">
+                                    +{data.level_up_rewards.length - 8} level lainnya
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* Redeem Items Table - Untuk tier_point_store */}
                     {data.tier_archetype === 'tier_point_store' && data.redeem_items && data.redeem_items.length > 0 && (
                       <div className="col-span-full mt-2">

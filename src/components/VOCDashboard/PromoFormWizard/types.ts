@@ -922,6 +922,44 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   }
   
   // ============================================
+  // PATCH 11B: tier_level (Event Level Up / BONUS NALEN) Semantic Rules
+  // Root calculation fields = INERT, truth is in level_up_rewards[]
+  // ============================================
+  if (data.tier_archetype === 'tier_level') {
+    console.log('[buildPKBPayload] Applying tier_level (Event Level Up) semantic rules');
+    
+    // Event Level Up: Root calculation fields = INERT
+    pkbData.min_deposit = null;          // Tidak ada min deposit per klaim (unlock via history)
+    pkbData.turnover_rule = "";          // Tidak ada TO requirement
+    pkbData.turnover_rule_enabled = false;
+    pkbData.calculation_value = null;    // Truth is in level_up_rewards[]
+    pkbData.calculation_base = "";
+    pkbData.calculation_method = "";
+    
+    // Claim semantics
+    pkbData.claim_frequency = "sekali";  // 1x per level naik
+    pkbData.max_claim_unlimited = false;
+    
+    // Subcategories = INERT (data is in level_up_rewards)
+    pkbData.subcategories = [];
+    pkbData.has_subcategories = false;
+    
+    // Fixed mode fields = INERT
+    pkbData.fixed_reward_type = "";
+    pkbData.fixed_calculation_value = null;
+    pkbData.fixed_max_claim = null;
+    
+    // Referral fields = INERT
+    pkbData.referral_tiers = [];
+    pkbData.referral_calculation_basis = "";
+    pkbData.referral_admin_fee_enabled = false;
+    pkbData.referral_admin_fee_percentage = null;
+    
+    // Ensure tier_archetype is set
+    pkbData.tier_archetype = 'tier_level';
+  }
+  
+  // ============================================
   // PATCH 11: Apply Field Applicability Rules (Final Guard)
   // ARSITEKTUR: promo_type → set non-applicable fields to inert
   // ============================================

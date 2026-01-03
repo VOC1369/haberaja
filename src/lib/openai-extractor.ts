@@ -3169,6 +3169,18 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   const isReferralMultiTier = 
     /referral|referal|refferal|ajak.*teman|ajak.*team/i.test(extracted.promo_type || '') && 
     extracted.subcategories?.length > 1;
+  
+  // ============================================
+  // EVENT LEVEL UP DETECTION
+  // Detect promos like "BONUS NALEN", "Kejar Level", "Level Up Event"
+  // ============================================
+  const isEventLevelUp = 
+    /level\s*up|nalen|kejar\s*level|naik\s*level|event\s*level/i.test(extracted.promo_type || '') ||
+    /level\s*up|nalen|kejar\s*level|naik\s*level/i.test(extracted.promo_name || '');
+  
+  if (isEventLevelUp) {
+    console.log('[Event Level Up] Detected Level Up promo, will map to level_up_rewards[]');
+  }
 
   // Helper: Extract min_downline from terms or pattern
   const extractMinDownline = (
@@ -3255,6 +3267,83 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Final fallback: use calculation_value as-is
     return { value: sub.calculation_value || 0, source: 'calculation_value' };
   };
+
+  // ============================================
+  // LEVEL UP REWARD HELPER: Extract unlock_condition
+  // This is NOT min_deposit - it's the cumulative threshold to unlock the tier
+  // ============================================
+  const extractUnlockCondition = (
+    sub: typeof extracted.subcategories[0],
+    terms: string[] | undefined,
+    tierIndex: number
+  ): number => {
+    // Source 1: Check if sub has explicit unlock value
+    if ((sub as any).unlock_condition || (sub as any).unlock_value) {
+      return (sub as any).unlock_condition || (sub as any).unlock_value;
+    }
+    
+    // Source 2: Extract from sub_name (e.g., "Level 1 - Deposit 100rb")
+    const depositMatch = sub.sub_name?.match(/(?:deposit|depo|history)\s*(?:rp\.?\s*)?([\d.,]+)/i);
+    if (depositMatch) {
+      const numStr = depositMatch[1].replace(/\./g, '').replace(',', '');
+      const num = parseInt(numStr);
+      // Handle "rb" suffix (ribu = thousands)
+      if (sub.sub_name?.toLowerCase().includes('rb')) {
+        return num * 1000;
+      }
+      return num > 1000 ? num : num * 1000; // Assume thousands if small
+    }
+    
+    // Source 3: Extract from terms_conditions (Pattern: "History Deposit Rp X")
+    if (terms && terms.length > 0) {
+      for (const term of terms) {
+        const historyMatch = term.match(/history\s*deposit\s*(?:rp\.?\s*)?([\d.,]+)/i);
+        if (historyMatch) {
+          const numStr = historyMatch[1].replace(/\./g, '').replace(',', '');
+          const baseValue = parseInt(numStr);
+          // If it's a per-tier condition, multiply by tier index
+          return baseValue * (tierIndex + 1);  // Cumulative progression
+        }
+      }
+    }
+    
+    // Fallback: infer from tier position (common pattern: 100k, 200k, 500k, 1M)
+    const COMMON_MILESTONES = [100000, 200000, 500000, 1000000, 2500000, 5000000, 10000000, 25000000];
+    return COMMON_MILESTONES[tierIndex] || (tierIndex + 1) * 100000;
+  };
+  
+  // ============================================
+  // BUILD LEVEL_UP_REWARDS ARRAY (for Event Level Up promos)
+  // ============================================
+  let levelUpRewards: Array<{
+    id: string;
+    tier: string;
+    min_exp: number;
+    reward: number;
+    reward_type: 'fixed' | 'percentage';
+    type: string;
+  }> = [];
+  
+  if (isEventLevelUp && extracted.subcategories?.length > 0) {
+    console.log('[Event Level Up Mapping] Converting subcategories to level_up_rewards');
+    
+    levelUpRewards = extracted.subcategories.map((sub, idx) => {
+      const unlockValue = extractUnlockCondition(sub, extracted.terms_conditions, idx);
+      const rewardValue = sub.max_bonus || sub.calculation_value || (sub as any).reward || 0;
+      
+      return {
+        id: generateUUID(),
+        tier: sub.sub_name || `Level ${idx + 1}`,
+        min_exp: unlockValue,  // Progress gate, NOT min_deposit
+        reward: typeof rewardValue === 'number' ? rewardValue : 0,
+        reward_type: 'fixed' as const,
+        type: ((sub as any).reward_type || (sub as any).jenis_hadiah || 'credit_game').toLowerCase(),
+      };
+    });
+    
+    console.log(`[Event Level Up] Mapped ${levelUpRewards.length} level rewards:`, 
+      levelUpRewards.map(l => `${l.tier}: unlock=${l.min_exp}, reward=${l.reward}`));
+  }
 
   // Build referral_tiers if this is a referral multi-tier promo
   let referralTiers: Array<{
@@ -3598,6 +3687,20 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       tier_archetype: 'tier_network' as const,
       has_subcategories: false,  // Disable combo subcategories mode
       subcategories: [],         // Clear generic subcategories
+    }),
+    
+    // Override for Event Level Up: switch to tier mode with tier_level archetype
+    ...(isEventLevelUp && {
+      reward_mode: 'tier' as const,
+      tier_archetype: 'tier_level' as const,
+      level_up_rewards: levelUpRewards,
+      has_subcategories: false,  // Data is in level_up_rewards, not subcategories
+      subcategories: [],         // Clear generic subcategories
+      // Event Level Up tidak pakai deposit/turnover rules
+      min_deposit: null,
+      turnover_rule: '',
+      turnover_rule_enabled: false,
+      claim_frequency: 'sekali',  // 1x per level naik
     }),
 
     // Step 4 - AI Templates (empty defaults)
