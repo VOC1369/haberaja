@@ -1526,13 +1526,6 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         />
                       );
                     })()}
-                    {/* Minimal Perhitungan - Independent display */}
-                    {data.min_calculation_enabled && data.min_calculation > 0 && (
-                      <ValueBox 
-                        label={`Minimal ${CALCULATION_BASES.find(c => c.value === data.calculation_base)?.label || 'Perhitungan'}`}
-                        value={`Rp ${Number(data.min_calculation).toLocaleString('id-ID')}`}
-                      />
-                    )}
                   </>
                 )}
                 {data.reward_mode === 'tier' && (
