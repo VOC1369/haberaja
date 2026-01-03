@@ -1590,26 +1590,30 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                             <thead className="bg-muted/50">
                               <tr>
                                 <th className="text-left py-2 px-3 font-medium text-foreground">Level</th>
-                                <th className="text-left py-2 px-3 font-medium text-foreground">Min Point</th>
-                                <th className="text-left py-2 px-3 font-medium text-foreground">Reward</th>
+                                <th className="text-right py-2 px-3 font-medium text-foreground">Syarat Unlock</th>
+                                <th className="text-left py-2 px-3 font-medium text-foreground">Jenis</th>
+                                <th className="text-right py-2 px-3 font-medium text-foreground">Reward</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {data.tiers?.slice(0, 5).map((tier, idx) => (
+                              {data.tiers?.slice(0, 8).map((tier, idx) => (
                                 <tr key={tier?.id || idx} className="border-t border-border">
-                                  <td className="py-2 px-3 text-foreground">{tier?.type || `Tier ${idx + 1}`}</td>
-                                  <td className="py-2 px-3 text-foreground">{tier?.minimal_point?.toLocaleString('id-ID') || 0}</td>
-                                  <td className="py-2 px-3 text-button-hover font-medium">
+                                  <td className="py-2 px-3 text-foreground">{tier?.type || `Level ${idx + 1}`}</td>
+                                  <td className="py-2 px-3 text-right text-foreground">
+                                    {tier?.minimal_point ? `Rp ${tier.minimal_point.toLocaleString('id-ID')}` : '-'}
+                                  </td>
+                                  <td className="py-2 px-3 text-foreground">{tier?.jenis_hadiah || 'credit_game'}</td>
+                                  <td className="py-2 px-3 text-right text-button-hover font-medium">
                                     {tier?.reward_type === 'percentage' 
                                       ? `${tier?.reward ?? 0}%` 
                                       : `Rp ${Number(tier?.reward ?? 0).toLocaleString('id-ID')}`}
                                   </td>
                                 </tr>
                               ))}
-                              {(data.tiers?.length ?? 0) > 5 && (
+                              {(data.tiers?.length ?? 0) > 8 && (
                                 <tr className="border-t border-border bg-muted/30">
-                                  <td colSpan={3} className="py-2 px-3 text-center text-muted-foreground">
-                                    +{(data.tiers?.length ?? 0) - 5} tier lainnya
+                                  <td colSpan={4} className="py-2 px-3 text-center text-muted-foreground">
+                                    +{(data.tiers?.length ?? 0) - 8} tier lainnya
                                   </td>
                                 </tr>
                               )}
@@ -1619,10 +1623,11 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </div>
                     )}
                     
-                    {/* Level Up Rewards Table - Untuk tier_level (BONUS NALEN dll) */}
-                    {data.level_up_rewards && data.level_up_rewards.length > 0 && data.tier_archetype === 'tier_level' && (
+                    {/* Level Up Rewards Table - DEPRECATED, now using tiers[] above */}
+                    {/* Kept for backward compatibility with old data */}
+                    {data.level_up_rewards && data.level_up_rewards.length > 0 && data.tier_archetype === 'tier_level' && !data.tiers?.length && (
                       <div className="col-span-full mt-2">
-                        <p className="text-muted-foreground text-xs mb-2">Tabel Level Reward</p>
+                        <p className="text-muted-foreground text-xs mb-2">Tabel Level Reward (Legacy)</p>
                         <div className="bg-muted rounded-lg overflow-hidden">
                           <table className="w-full text-sm">
                             <thead className="bg-muted/50">
