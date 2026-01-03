@@ -1589,21 +1589,21 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                               </tr>
                             </thead>
                             <tbody>
-                              {data.tiers.slice(0, 5).map((tier, idx) => (
-                                <tr key={tier.id || idx} className="border-t border-border">
-                                  <td className="py-2 px-3 text-foreground">{tier.type || `Tier ${idx + 1}`}</td>
-                                  <td className="py-2 px-3 text-foreground">{tier.minimal_point?.toLocaleString('id-ID') || 0}</td>
+                              {data.tiers?.slice(0, 5).map((tier, idx) => (
+                                <tr key={tier?.id || idx} className="border-t border-border">
+                                  <td className="py-2 px-3 text-foreground">{tier?.type || `Tier ${idx + 1}`}</td>
+                                  <td className="py-2 px-3 text-foreground">{tier?.minimal_point?.toLocaleString('id-ID') || 0}</td>
                                   <td className="py-2 px-3 text-button-hover font-medium">
-                                    {tier.reward_type === 'percentage' 
-                                      ? `${tier.reward}%` 
-                                      : `Rp ${Number(tier.reward).toLocaleString('id-ID')}`}
+                                    {tier?.reward_type === 'percentage' 
+                                      ? `${tier?.reward ?? 0}%` 
+                                      : `Rp ${Number(tier?.reward ?? 0).toLocaleString('id-ID')}`}
                                   </td>
                                 </tr>
                               ))}
-                              {data.tiers.length > 5 && (
+                              {(data.tiers?.length ?? 0) > 5 && (
                                 <tr className="border-t border-border bg-muted/30">
                                   <td colSpan={3} className="py-2 px-3 text-center text-muted-foreground">
-                                    +{data.tiers.length - 5} tier lainnya
+                                    +{(data.tiers?.length ?? 0) - 5} tier lainnya
                                   </td>
                                 </tr>
                               )}
@@ -1627,11 +1627,11 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                               </tr>
                             </thead>
                             <tbody>
-                              {data.redeem_items.slice(0, 5).map((item, idx) => (
-                                <tr key={item.id || idx} className="border-t border-border">
-                                  <td className="py-2 px-3 text-foreground">{item.nama_hadiah}</td>
-                                  <td className="py-2 px-3 text-foreground">Rp {item.nilai_hadiah?.toLocaleString('id-ID') || 0}</td>
-                                  <td className="py-2 px-3 text-button-hover font-medium">{item.biaya_lp?.toLocaleString('id-ID') || 0} {getPointUnitShort(data.promo_unit)}</td>
+                              {data.redeem_items?.slice(0, 5).map((item, idx) => (
+                                <tr key={item?.id || idx} className="border-t border-border">
+                                  <td className="py-2 px-3 text-foreground">{item?.nama_hadiah || '-'}</td>
+                                  <td className="py-2 px-3 text-foreground">Rp {item?.nilai_hadiah?.toLocaleString('id-ID') || 0}</td>
+                                  <td className="py-2 px-3 text-button-hover font-medium">{item?.biaya_lp?.toLocaleString('id-ID') || 0} {getPointUnitShort(data.promo_unit)}</td>
                                 </tr>
                               ))}
                               {data.redeem_items.length > 5 && (
@@ -1677,31 +1677,31 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {data.referral_tiers.slice(0, 5).map((tier, idx) => {
+                                  {data.referral_tiers?.slice(0, 5).map((tier, idx) => {
                                     const adminFeePercent = data.referral_admin_fee_percentage ?? 20;
-                                    const sampleWinlose = tier.sample_winlose ?? 0;
-                                    const sampleCashback = tier.sample_cashback ?? 0;
-                                    const feeAmount = tier.sample_commission_deduction ?? Math.round((sampleWinlose * adminFeePercent) / 100);
-                                    const wlBersih = tier.sample_net_winlose ?? (sampleWinlose - sampleCashback - feeAmount);
-                                    const komisiRp = tier.sample_commission_result ?? Math.round((wlBersih * tier.commission_percentage) / 100);
+                                    const sampleWinlose = tier?.sample_winlose ?? 0;
+                                    const sampleCashback = tier?.sample_cashback ?? 0;
+                                    const feeAmount = tier?.sample_commission_deduction ?? Math.round((sampleWinlose * adminFeePercent) / 100);
+                                    const wlBersih = tier?.sample_net_winlose ?? (sampleWinlose - sampleCashback - feeAmount);
+                                    const komisiRp = tier?.sample_commission_result ?? Math.round((wlBersih * (tier?.commission_percentage ?? 0)) / 100);
                                     
                                     return (
-                                      <tr key={tier.id || idx} className="border-t border-border">
-                                        <td className="py-2 px-3 text-foreground">{tier.tier_label || `Tier ${idx + 1}`}</td>
-                                        <td className="py-2 px-3 text-foreground">{tier.min_downline?.toLocaleString('id-ID') || 0} ID</td>
+                                      <tr key={tier?.id || idx} className="border-t border-border">
+                                        <td className="py-2 px-3 text-foreground">{tier?.tier_label || `Tier ${idx + 1}`}</td>
+                                        <td className="py-2 px-3 text-foreground">{tier?.min_downline?.toLocaleString('id-ID') || 0} ID</td>
                                         <td className="py-2 px-3 text-foreground">{formatNumber(sampleWinlose)}</td>
                                         <td className="py-2 px-3 text-foreground">{formatNumber(sampleCashback)}</td>
                                         <td className="py-2 px-3 text-foreground">{formatNumber(feeAmount)}</td>
                                         <td className="py-2 px-3 text-foreground">{formatNumber(wlBersih)}</td>
-                                        <td className="py-2 px-3 text-button-hover font-medium">{tier.commission_percentage}%</td>
+                                        <td className="py-2 px-3 text-button-hover font-medium">{tier?.commission_percentage ?? 0}%</td>
                                         <td className="py-2 px-3 text-amber-400 font-semibold">{formatNumber(komisiRp)}</td>
                                       </tr>
                                     );
                                   })}
-                                  {data.referral_tiers.length > 5 && (
+                                  {(data.referral_tiers?.length ?? 0) > 5 && (
                                     <tr className="border-t border-border bg-muted/30">
                                       <td colSpan={8} className="py-2 px-3 text-center text-muted-foreground">
-                                        +{data.referral_tiers.length - 5} tier lainnya
+                                        +{(data.referral_tiers?.length ?? 0) - 5} tier lainnya
                                       </td>
                                     </tr>
                                   )}
@@ -1720,7 +1720,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                 {data.vip_multiplier?.enabled && (
                   <ValueBox 
                     label="VIP Multiplier" 
-                    value={data.vip_multiplier.tiers?.map(t => `${t.name} ${t.bonus_percent}%`).join(', ') || '-'} 
+                    value={data.vip_multiplier?.tiers?.map(t => `${t?.name ?? ''} ${t?.bonus_percent ?? 0}%`).join(', ') || '-'} 
                   />
                 )}
               </>
@@ -2395,7 +2395,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                             </Badge>
                           </div>
                           <span className="text-xs text-muted-foreground font-mono">
-                            id: {sub.id?.substring(0, 12)}...
+                            id: {sub.id ? `${sub.id.substring(0, 12)}...` : 'new'}
                           </span>
                         </CollapsibleTrigger>
                         
