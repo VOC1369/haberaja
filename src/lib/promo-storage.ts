@@ -16,6 +16,7 @@ import type { ExtractedPromo } from '@/lib/openai-extractor';
 import { supabase, DEFAULT_CLIENT_ID, generateUUID, logSupabaseError } from '@/lib/supabase-client';
 import { KEYWORD_OVERRIDE_VERSION } from '@/lib/extractors/category-classifier';
 import { normalizeToStandard, normalizePromoArray } from '@/lib/promo-field-normalizer';
+import { validateWriteIntent, type WriteIntent } from '@/lib/promo-write-contract';
 
 // ============================================
 // PRE-SUPABASE MODE CONFIGURATION
@@ -224,8 +225,11 @@ export const promoKB = {
 
   /**
    * Update existing promo
+   * @param id - Promo ID to update
+   * @param updates - Partial updates to apply
+   * @param writeIntent - Optional explicit write intent for validation (audit-safe)
    */
-  update: async (id: string, updates: Partial<PromoFormData>): Promise<boolean> => {
+  update: async (id: string, updates: Partial<PromoFormData>, writeIntent?: WriteIntent): Promise<boolean> => {
     // PRE-SUPABASE: Use localStorage
     if (!USE_SUPABASE) {
       try {
@@ -238,6 +242,17 @@ export const promoKB = {
           return false;
         }
         
+        // Validate Write Intent if provided (audit-safe writes)
+        if (writeIntent) {
+          const validation = validateWriteIntent(promos[index], writeIntent);
+          if (!validation.valid) {
+            console.error('[promoKB] Write validation failed:', validation.error);
+            console.error('[promoKB] Intent:', writeIntent);
+            return false;
+          }
+          console.log('[promoKB] Write intent validated:', writeIntent.target, '->', validation.resolvedField);
+        }
+        
         promos[index] = {
           ...promos[index],
           ...updates,
@@ -247,7 +262,7 @@ export const promoKB = {
         
         localStorage.setItem(STORAGE_KEY, JSON.stringify(promos));
         window.dispatchEvent(new CustomEvent('promo-storage-updated'));
-        console.log('[promoKB] Updated promo (localStorage):', id);
+        console.log('[promoKB] Updated promo (localStorage):', id, writeIntent?.target || 'unspecified');
         
         return true;
       } catch (error) {

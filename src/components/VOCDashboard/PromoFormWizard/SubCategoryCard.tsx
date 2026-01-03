@@ -8,10 +8,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { ChevronDown, Save, Trash2, AlertTriangle, Calculator, X, Plus, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PromoSubCategory, CALCULATION_BASES, CALCULATION_METHODS, DINAMIS_REWARD_TYPES, GAME_RESTRICTIONS, GAME_PROVIDERS, GAME_NAMES, TURNOVER_RULES } from "./types";
+import { PromoFormData, PromoSubCategory, CALCULATION_BASES, CALCULATION_METHODS, DINAMIS_REWARD_TYPES, GAME_RESTRICTIONS, GAME_PROVIDERS, GAME_NAMES, TURNOVER_RULES } from "./types";
 import { SelectWithAddNew, SelectOption } from "./SelectWithAddNew";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
+import { InheritedBadge } from "@/components/ui/inherited-badge";
+import { usePromoResolver } from "@/hooks/use-promo-resolver";
 // Helper untuk format angka ke Rupiah Indonesia (dengan separator titik)
 const formatRupiah = (value: number | undefined): string => {
   if (value === undefined || value === null || isNaN(value)) return '';
@@ -75,6 +76,8 @@ interface SubCategoryCardProps {
   onChange: (updates: Partial<PromoSubCategory>) => void;
   onDelete: () => void;
   onSave: () => void;
+  // Parent form data for resolver context
+  parentFormData?: Partial<PromoFormData>;
   // Global toggles from parent - for display/info only now
   globalJenisHadiahEnabled?: boolean;
   globalMaxBonusEnabled?: boolean;
@@ -90,6 +93,7 @@ export function SubCategoryCard({
   onChange,
   onDelete,
   onSave,
+  parentFormData,
   globalJenisHadiahEnabled = true,
   globalMaxBonusEnabled = true,
   globalPayoutDirectionEnabled = true,
@@ -97,6 +101,8 @@ export function SubCategoryCard({
   onInvertGlobalMaxBonus,
   onInvertGlobalPayoutDirection
 }: SubCategoryCardProps) {
+  // Resolver for inheritance badge display
+  const resolved = usePromoResolver(parentFormData || {}, subCategory);
   const [isOpen, setIsOpen] = useState(false);
   // Helper to format number with thousand separators (Indonesian format: dots)
   const formatThousands = (num: number): string => {
@@ -408,7 +414,14 @@ export function SubCategoryCard({
           {/* Jenis Hadiah */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Jenis Hadiah</Label>
+              <div className="flex items-center gap-1.5">
+                <Label>Jenis Hadiah</Label>
+                <InheritedBadge
+                  source={resolved.rewardType.source}
+                  sourceLabel={resolved.rewardType.sourceLabel}
+                  isInherited={resolved.rewardType.isInherited}
+                />
+              </div>
               {/* Toggle On/Off untuk field */}
               <div className="flex items-center gap-2">
                 <Switch checked={!subCategory.jenis_hadiah_same_as_global} onCheckedChange={checked => {
@@ -471,13 +484,29 @@ export function SubCategoryCard({
           {/* Max Bonus */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Max Bonus</Label>
+              <div className="flex items-center gap-1.5">
+                <Label>Max Bonus</Label>
+                <InheritedBadge
+                  source={resolved.maxClaim.source}
+                  sourceLabel={resolved.maxClaim.sourceLabel}
+                  isInherited={resolved.maxClaim.isInherited}
+                />
+                {/* Badge khusus jika unlimited dari legacy */}
+                {resolved.maxClaimUnlimited.effective && resolved.maxClaimUnlimited.source === 'legacy' && (
+                  <InheritedBadge
+                    source="legacy"
+                    sourceLabel="Unlimited dari dinamis_max_claim_unlimited (legacy)"
+                    isInherited={true}
+                    showOnlyWhenInherited={false}
+                  />
+                )}
+              </div>
               <div className="flex items-center gap-3">
                 {/* Toggle Unlimited */}
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">Unlimited</span>
                   <Switch 
-                    checked={subCategory.max_bonus_unlimited ?? false} 
+                    checked={subCategory.max_bonus_unlimited ?? resolved.maxClaimUnlimited.effective} 
                     onCheckedChange={checked => {
                       onChange({
                         max_bonus_unlimited: checked,
@@ -491,7 +520,7 @@ export function SubCategoryCard({
                 <div className="flex items-center gap-2">
                   <Switch 
                     checked={!subCategory.max_bonus_same_as_global} 
-                    disabled={subCategory.max_bonus_unlimited}
+                    disabled={subCategory.max_bonus_unlimited || resolved.maxClaimUnlimited.effective}
                     onCheckedChange={checked => {
                       onChange({
                         max_bonus_same_as_global: !checked,
@@ -505,7 +534,7 @@ export function SubCategoryCard({
             <Input 
               type="text" 
               inputMode="numeric"
-              value={subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global ? '' : maxBonusInput} 
+              value={subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global || resolved.maxClaimUnlimited.effective ? '' : maxBonusInput} 
               onChange={e => {
                 const rawValue = e.target.value.replace(/[^0-9.]/g, '');
                 setMaxBonusInput(rawValue);
@@ -513,15 +542,19 @@ export function SubCategoryCard({
                 onChange({ max_bonus: numValue });
               }}
               onBlur={() => {
-                if (subCategory.max_bonus > 0 && !subCategory.max_bonus_unlimited && !subCategory.max_bonus_same_as_global) {
+                if (subCategory.max_bonus > 0 && !subCategory.max_bonus_unlimited && !subCategory.max_bonus_same_as_global && !resolved.maxClaimUnlimited.effective) {
                   setMaxBonusInput(formatThousands(subCategory.max_bonus));
                 } else {
                   setMaxBonusInput('');
                 }
               }}
-              placeholder={subCategory.max_bonus_unlimited ? "Unlimited / Tanpa Batas" : (subCategory.max_bonus_same_as_global ? "-" : "Contoh: 100.000")} 
-              disabled={subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global} 
-              className={(subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global) ? "opacity-50" : ""} 
+              placeholder={
+                (subCategory.max_bonus_unlimited || resolved.maxClaimUnlimited.effective) 
+                  ? "Unlimited / Tanpa Batas" 
+                  : (subCategory.max_bonus_same_as_global ? "-" : "Contoh: 100.000")
+              } 
+              disabled={subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global || resolved.maxClaimUnlimited.effective} 
+              className={(subCategory.max_bonus_unlimited || subCategory.max_bonus_same_as_global || resolved.maxClaimUnlimited.effective) ? "opacity-50" : ""} 
             />
           </div>
         </div>
@@ -531,7 +564,14 @@ export function SubCategoryCard({
           {/* Payout Direction - Kolom Kiri */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Payout Direction</Label>
+              <div className="flex items-center gap-1.5">
+                <Label>Payout Direction</Label>
+                <InheritedBadge
+                  source={resolved.payoutDirection.source}
+                  sourceLabel={resolved.payoutDirection.sourceLabel}
+                  isInherited={resolved.payoutDirection.isInherited}
+                />
+              </div>
               {/* Toggle On/Off untuk field */}
               <div className="flex items-center gap-2">
                 <Switch checked={!subCategory.payout_direction_same_as_global} onCheckedChange={checked => {
@@ -764,8 +804,15 @@ export function SubCategoryCard({
                   turnover_rule_enabled: checked
                 })} 
               />
-              <div>
-                <div className="font-medium text-sm text-button-hover">Syarat Main Sebelum WD</div>
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-sm text-button-hover">Syarat Main Sebelum WD</span>
+                  <InheritedBadge
+                    source={resolved.turnoverRule.source}
+                    sourceLabel={resolved.turnoverRule.sourceLabel}
+                    isInherited={resolved.turnoverRule.isInherited}
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Aktifkan jika promo memiliki syarat kelipatan main (turnover) sebelum withdrawal
                 </p>
