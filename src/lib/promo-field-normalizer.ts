@@ -94,7 +94,8 @@ export function normalizeToStandard<T extends Partial<PromoFormData>>(data: T): 
     // 2. Canonical is inert (empty/null)
     if (hasMeaningfulValue(legacyValue) && isInert(canonicalValue)) {
       normalized[canonicalField as string] = legacyValue;
-      console.log(`[normalizer] Copied ${legacyField} → ${canonicalField}:`, legacyValue);
+      // Dev-only audit log for detecting legacy data usage
+      console.debug(`[Normalizer] ${legacyField} → ${canonicalField}`, { legacyValue });
     }
   }
   
