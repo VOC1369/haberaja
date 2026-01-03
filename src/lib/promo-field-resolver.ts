@@ -58,6 +58,24 @@ import type { PromoFormData, PromoSubCategory } from '@/components/VOCDashboard/
 import { isInert } from './promo-field-normalizer';
 
 // ============================================
+// TIER_NETWORK (REFERRAL) TYPE GUARD
+// ============================================
+/**
+ * Check if promo is a tier_network (Referral) promo
+ * 
+ * SEMANTIC CONTRACT:
+ * - tier_network = Referral Bonus (multi-tier commission)
+ * - Tier metric: min_downline (NOT nominal)
+ * - Tier reward: commission_percentage (NOT reward_amount)
+ * - Calculation: PROGRAM-LEVEL via referral_calculation_basis
+ * - Admin fee: PROGRAM-LEVEL via referral_admin_fee_percentage
+ * - Generic fields (calculation_*, admin_fee_*): MUST BE INERT
+ */
+export function isTierNetworkPromo(data: Partial<PromoFormData>): boolean {
+  return data.reward_mode === 'tier' && data.tier_archetype === 'tier_network';
+}
+
+// ============================================
 // REWARD TYPE RESOLVER
 // ============================================
 
@@ -258,14 +276,23 @@ export function isMaxClaimUnlimited(
  * Get effective calculation base based on mode
  * 
  * Resolution order:
- * 1. Fixed mode: fixed_calculation_base
- * 2. Subcategory (if provided): subcategory.calculation_base
- * 3. Base field: calculation_base
+ * 1. tier_network guard: return empty (use referral_calculation_basis instead)
+ * 2. Fixed mode: fixed_calculation_base
+ * 3. Subcategory (if provided): subcategory.calculation_base
+ * 4. Base field: calculation_base
  */
 export function getEffectiveCalculationBase(
   data: Partial<PromoFormData>,
   subcategory?: PromoSubCategory
 ): string {
+  // ============================================
+  // TIER_NETWORK GUARD: Use referral_calculation_basis instead
+  // Generic calculation_base is INERT for tier_network
+  // ============================================
+  if (isTierNetworkPromo(data)) {
+    return ''; // INERT - truth is in referral_calculation_basis
+  }
+  
   if (data.reward_mode === 'fixed') {
     if (!isInert(data.fixed_calculation_base)) {
       return data.fixed_calculation_base!;
@@ -285,11 +312,21 @@ export function getEffectiveCalculationBase(
 
 /**
  * Get effective calculation value (percentage/amount) based on mode
+ * 
+ * tier_network: return null (use referral_tiers[].commission_percentage instead)
  */
 export function getEffectiveCalculationValue(
   data: Partial<PromoFormData>,
   subcategory?: PromoSubCategory
 ): number | null {
+  // ============================================
+  // TIER_NETWORK GUARD: Use referral_tiers instead
+  // Generic calculation_value is INERT for tier_network
+  // ============================================
+  if (isTierNetworkPromo(data)) {
+    return null; // INERT - truth is in referral_tiers[].commission_percentage
+  }
+  
   if (data.reward_mode === 'fixed') {
     if (!isInert(data.fixed_calculation_value)) {
       return data.fixed_calculation_value!;
@@ -309,11 +346,20 @@ export function getEffectiveCalculationValue(
 
 /**
  * Get effective turnover rule based on mode and context
+ * 
+ * tier_network: return empty (turnover rule not applicable for referral)
  */
 export function getEffectiveTurnoverRule(
   data: Partial<PromoFormData>,
   subcategory?: PromoSubCategory
 ): string {
+  // ============================================
+  // TIER_NETWORK GUARD: Turnover not applicable for referral
+  // ============================================
+  if (isTierNetworkPromo(data)) {
+    return ''; // INERT - referral doesn't use turnover rule
+  }
+  
   // Fixed mode
   if (data.reward_mode === 'fixed') {
     if (data.fixed_turnover_rule_enabled && !isInert(data.fixed_turnover_rule)) {
@@ -398,11 +444,21 @@ export function getEffectiveMinDeposit(
 
 /**
  * Get effective reward amount based on mode
+ * 
+ * tier_network: return null (use referral_tiers[].commission_percentage instead)
  */
 export function getEffectiveRewardAmount(
   data: Partial<PromoFormData>,
   subcategory?: PromoSubCategory
 ): number | null {
+  // ============================================
+  // TIER_NETWORK GUARD: Use referral_tiers instead
+  // Generic reward_amount is INERT for tier_network
+  // ============================================
+  if (isTierNetworkPromo(data)) {
+    return null; // INERT - truth is in referral_tiers[].commission_percentage
+  }
+  
   if (data.reward_mode === 'fixed') {
     if (!isInert(data.reward_amount)) {
       return data.reward_amount!;
@@ -419,6 +475,33 @@ export function getEffectiveRewardAmount(
   
   if (!isInert(data.dinamis_reward_amount)) {
     return data.dinamis_reward_amount!;
+  }
+  
+  return null;
+}
+
+// ============================================
+// ADMIN FEE RESOLVER
+// ============================================
+
+/**
+ * Get effective admin fee percentage
+ * 
+ * tier_network: return null (use referral_admin_fee_percentage instead)
+ */
+export function getEffectiveAdminFee(
+  data: Partial<PromoFormData>
+): number | null {
+  // ============================================
+  // TIER_NETWORK GUARD: Use referral_admin_fee_percentage instead
+  // Generic admin_fee_percentage is INERT for tier_network
+  // ============================================
+  if (isTierNetworkPromo(data)) {
+    return null; // INERT - truth is in referral_admin_fee_percentage
+  }
+  
+  if (data.admin_fee_enabled && !isInert(data.admin_fee_percentage)) {
+    return data.admin_fee_percentage!;
   }
   
   return null;
