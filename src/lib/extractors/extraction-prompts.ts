@@ -318,12 +318,47 @@ PATTERN - LUCKY SPIN:
 - "Hadiah 10 spin gratis" → reward_type: "lucky_spin", reward_quantity: 10
 - "Max 5 spin per hari" → lucky_spin_max_per_day: 5
 
+🔹 EVENT LEVEL UP / BONUS NALEN — SPECIFIC EXTRACTION:
+
+Untuk promo dengan keyword "Level Up", "Nalen", "Kejar Level", "Naik Level":
+
+EXTRACT ke subcategories dengan format khusus:
+{
+  "subcategories": [
+    {
+      "sub_name": "Bronze → Silver",
+      "max_bonus": 50000,
+      "unlock_condition": 100000,
+      "reward_type": "credit_game",
+      "minimum_base": null,
+      "turnover_rule": null
+    }
+  ]
+}
+
+ATURAN KRITIS LEVEL UP:
+1. "History Deposit Rp X" → unlock_condition: X (BUKAN min_deposit!)
+2. Reward value → max_bonus (langsung dapat setelah unlock)
+3. minimum_base = null (tidak ada syarat deposit per klaim)
+4. turnover_rule = null (tidak ada TO untuk hadiah level)
+
+CONTOH PARSING:
+Input: "Level 1 (Bronze → Silver): Rp 50.000 - Syarat: History Deposit Rp 100.000"
+Output:
+{
+  "sub_name": "Bronze → Silver",
+  "max_bonus": 50000,
+  "unlock_condition": 100000,
+  "reward_type": "credit_game"
+}
+
 🚫 ATURAN:
 1. Jika data tidak eksplisit → null
 2. JANGAN mengarang tanggal atau hadiah
 3. prizes harus array of objects dengan struktur di atas
 4. Event HARUS punya valid_from atau valid_until (periode)
 5. Untuk voucher/ticket/lucky_spin, reward_quantity WAJIB diisi jika ada di teks
+6. Untuk Level Up, unlock_condition WAJIB diisi dari "History Deposit" atau sejenisnya
 
 📤 OUTPUT: JSON VALID saja, tanpa markdown.
 `;
