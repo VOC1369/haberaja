@@ -298,9 +298,84 @@ const showFormulaFields = tierArchetype === 'tier_formula' || tierArchetype === 
 
 ---
 
+## tier_network Semantic Contract (Referral Bonus)
+
+### Overview
+`tier_archetype: 'tier_network'` is exclusively for **Referral Bonus** promos where the tier metric is based on **network size** (number of active downlines), NOT financial amounts.
+
+### Data Contract
+
+| Aspect | Field | Source |
+|--------|-------|--------|
+| Tier Metric | `min_downline` | `referral_tiers[n].min_downline` |
+| Tier Reward | `commission_percentage` | `referral_tiers[n].commission_percentage` |
+| Calculation Basis | `loss` / `turnover` / `deposit` | `referral_calculation_basis` (PROGRAM-LEVEL) |
+| Admin Fee | `20%` (typical) | `referral_admin_fee_percentage` (PROGRAM-LEVEL) |
+
+### INERT Fields (Must NOT be used)
+These generic fields MUST be set to inert values for `tier_network`:
+
+```json
+{
+  "reward_type": null,
+  "reward_amount": null,
+  "max_claim": null,
+  "calculation_base": "",
+  "calculation_method": "",
+  "calculation_value": null,
+  "admin_fee_enabled": false,
+  "admin_fee_percentage": null,
+  "formula_metadata": null,
+  "min_deposit": null,
+  "turnover_rule": ""
+}
+```
+
+### Valid Referral-Specific Fields
+Only these fields are the source of truth for tier_network:
+
+```json
+{
+  "referral_tiers": [
+    {
+      "tier_label": "Komisi 5%",
+      "min_downline": 5,
+      "commission_percentage": 5,
+      "sample_winlose": 10000000,
+      "sample_cashback": 700000,
+      "sample_commission_deduction": 300000,
+      "sample_net_winlose": 8500000,
+      "sample_commission_result": 425000
+    }
+  ],
+  "referral_calculation_basis": "loss",
+  "referral_admin_fee_enabled": true,
+  "referral_admin_fee_percentage": 20
+}
+```
+
+### custom_terms Contract
+For Referral promos, `custom_terms` MUST contain ONLY:
+- ✅ Legal/T&C statements
+- ✅ Narrative descriptions
+- ✅ Prohibitions (larangan)
+- ✅ Rights & obligations
+
+It MUST NOT contain:
+- ❌ Tier percentages or min_downline values (already in `referral_tiers[]`)
+- ❌ Formulas or calculation examples
+- ❌ Admin fee percentages (already in `referral_admin_fee_percentage`)
+- ❌ Simulation tables or sample calculations
+
+### Resolver Guard
+The `isTierNetworkPromo()` helper function in `promo-field-resolver.ts` guards all resolvers to return INERT values for tier_network, preventing accidental reads from generic fields.
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2025-01-01 | Initial tier archetype system |
 | 1.1 | 2025-01-25 | Added Point Store & Level/Milestone config sections |
+| 1.2 | 2026-01-03 | Added tier_network (Referral) semantic contract, INERT field rules, custom_terms cleaner |

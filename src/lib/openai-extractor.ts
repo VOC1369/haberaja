@@ -466,6 +466,64 @@ export const DEPOSIT_PULSA_KEYWORDS = [
   'depo pulsa',
 ] as const;
 
+// ============================================
+// REFERRAL CUSTOM_TERMS CLEANER
+// ============================================
+/**
+ * Clean custom_terms from tier logic and formula calculations for Referral promos
+ * 
+ * ARSITEKTUR:
+ * - custom_terms = HANYA legal/narasi/larangan/hak & kewajiban
+ * - TIDAK BOLEH ada angka tier, %, rumus, atau syarat kuantitatif
+ * - Truth = referral_tiers[] array (structured data)
+ * 
+ * Patterns removed:
+ * - "Tier X%: Minimal Y ID aktif"
+ * - "Hitungan komisi: [formula]"
+ * - "Admin Fee: X%"
+ * - "Tabel angka [simulasi]"
+ */
+export function cleanReferralCustomTerms(terms: string): string {
+  if (!terms) return '';
+  
+  const patternsToRemove = [
+    // Tier qualification patterns
+    /Tier\s*\d+%?:?\s*Minimal\s*\d+\s*ID\s*aktif;?\s*/gi,
+    /Tier\s*\d+%?\s*[-–:]\s*[^;]+;?\s*/gi,  // "Tier 5% - xxx"
+    
+    // Formula and calculation patterns
+    /Hitungan\s*komisi:?\s*[^;]+;?\s*/gi,
+    /Winlose\s*[-–]\s*Comm?ision\s*[-–]\s*[^;]+;?\s*/gi,  // Formula: Winlose - Commission - etc
+    
+    // Admin fee patterns
+    /Admin\s*Fee:?\s*\d+%?;?\s*/gi,
+    
+    // Simulation table notes
+    /Tabel\s*angka[^;]+;?\s*/gi,
+    /contoh\s*simulasi[^;]+;?\s*/gi,
+    /angka\s*simulasi[^;]+;?\s*/gi,
+    
+    // Winlose sample patterns (from tier table)
+    /WINLOSE,?\s*CASHBACK,?\s*FEE[^;]*;?\s*/gi,
+    /sample_winlose[^;]*;?\s*/gi,
+  ];
+  
+  let cleaned = terms;
+  for (const pattern of patternsToRemove) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  
+  // Cleanup artifacts
+  cleaned = cleaned
+    .replace(/;\s*;/g, ';')           // Double semicolons
+    .replace(/^\s*;\s*/, '')          // Leading semicolon
+    .replace(/;\s*$/, '')             // Trailing semicolon
+    .replace(/\s+/g, ' ')             // Multiple spaces
+    .trim();
+  
+  return cleaned;
+}
+
 // ============= SUB KATEGORI (VARIAN) =============
 export interface ExtractedPromoSubCategory {
   sub_name: string;
@@ -3331,7 +3389,14 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     distribution_time_from: '',
     distribution_time_until: '',
     distribution_day_time_enabled: false,
-    custom_terms: extracted.terms_conditions?.join('; ') || '',
+    // ============================================
+    // REFERRAL CUSTOM_TERMS CLEANER
+    // Remove tier logic, formulas, simulation notes from custom_terms
+    // Truth = referral_tiers[] array, NOT text in custom_terms
+    // ============================================
+    custom_terms: isReferralMultiTier 
+      ? cleanReferralCustomTerms(extracted.terms_conditions?.join('; ') || '')
+      : (extracted.terms_conditions?.join('; ') || ''),
     special_requirements: [],
 
     // Dinamis mode - from first subcategory as base
