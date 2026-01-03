@@ -3739,10 +3739,14 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                 </TableCell>
                                 <TableCell className="px-4 py-4 w-1/4">
                                   <FormattedNumberInput
-                                    value={tier.cashback_deduction ?? 0}
+                                    value={tier.cashback_deduction_amount ?? tier.cashback_deduction ?? 0}
                                     onChange={(val) => {
                                       const updatedTiers = [...(data.referral_tiers || [])];
-                                      updatedTiers[index] = { ...updatedTiers[index], cashback_deduction: val };
+                                      updatedTiers[index] = { 
+                                        ...updatedTiers[index], 
+                                        cashback_deduction_amount: val,
+                                        cashback_deduction: val, // Backward compat
+                                      };
                                       onChange({ referral_tiers: updatedTiers });
                                     }}
                                     placeholder="0"

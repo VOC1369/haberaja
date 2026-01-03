@@ -1,146 +1,156 @@
 /**
- * Referral Tier Validator v1.0
+ * Referral Tier Validator v2.0
  * 
- * DERIVED FIELD CONTRACT:
- * - winlose, cashback_deduction, fee_deduction, commission_percentage = RULE (source of truth)
- * - net_winlose, commission_result = DERIVED RULE (calculated from above)
+ * VALIDATOR CONTRACT (PURE VALIDATOR - NO CALCULATION):
+ * This file is ONLY for validation. All calculations are done by referral-tier-calculator.ts
  * 
- * Validator MUST:
- * 1. Recalculate derived fields from RULE fields
- * 2. Compare with stored values
- * 3. Return warnings for mismatches
- * 4. Auto-correct derived values
+ * SEPARATION OF CONCERNS:
+ * | Layer   | Responsibility           | Who              |
+ * |---------|--------------------------|------------------|
+ * | RULE    | Raw data from table      | Extractor        |
+ * | FORMULA | Math rules (metadata)    | Extractor        |
+ * | DERIVED | Calculated results       | Calculator ONLY  |
  * 
- * FORMULAS (LOCKED):
- * - net_winlose = winlose - cashback_deduction - fee_deduction
- * - commission_result = net_winlose * commission_percentage / 100
+ * This validator:
+ * 1. Validates that RULE fields exist and are valid
+ * 2. Validates that DERIVED fields are null BEFORE calculation (sanity check)
+ * 3. Delegates all calculation to referral-tier-calculator.ts
  */
 
 import type { ReferralCommissionTier } from '@/components/VOCDashboard/PromoFormWizard/types';
 
+// ============================================
+// VALIDATION INTERFACES
+// ============================================
 export interface ReferralTierValidation {
   valid: boolean;
+  errors: string[];
   warnings: string[];
-  corrected: ReferralCommissionTier;
-  corrections_applied: string[];
+  tier_index: number;
 }
 
 export interface ReferralTiersValidationResult {
   all_valid: boolean;
   tier_results: ReferralTierValidation[];
+  total_errors: string[];
   total_warnings: string[];
-  total_corrections: number;
 }
 
-/**
- * Validate a single referral tier and auto-correct derived fields
- */
-export function validateReferralTier(tier: ReferralCommissionTier, tierIndex: number): ReferralTierValidation {
+// ============================================
+// VALIDATE RULE FIELDS EXIST (BEFORE CALCULATION)
+// ============================================
+export function validateReferralTierRules(tier: ReferralCommissionTier, tierIndex: number): ReferralTierValidation {
+  const errors: string[] = [];
   const warnings: string[] = [];
-  const corrections_applied: string[] = [];
   
-  // Clone to avoid mutation
-  const corrected: ReferralCommissionTier = { ...tier };
-  
-  // Get RULE values (source of truth)
-  const winlose = tier.winlose ?? 0;
-  const cashbackDeduction = tier.cashback_deduction ?? 0;
-  const feeDeduction = tier.fee_deduction ?? 0;
-  const commissionPercentage = tier.commission_percentage ?? 0;
-  
-  // Calculate expected DERIVED values
-  const expectedNetWinlose = winlose - cashbackDeduction - feeDeduction;
-  const expectedCommissionResult = Math.round(expectedNetWinlose * commissionPercentage / 100);
-  
-  // Check net_winlose consistency
-  if (tier.net_winlose !== undefined && tier.net_winlose !== null) {
-    if (tier.net_winlose !== expectedNetWinlose) {
-      warnings.push(
-        `Tier ${tierIndex + 1} (${tier.tier_label}): net_winlose mismatch - ` +
-        `expected ${expectedNetWinlose.toLocaleString('id-ID')}, got ${tier.net_winlose.toLocaleString('id-ID')}`
-      );
-      corrections_applied.push(`net_winlose: ${tier.net_winlose} → ${expectedNetWinlose}`);
-    }
+  // === REQUIRED RULE FIELDS ===
+  if (tier.commission_percentage == null) {
+    errors.push(`Tier ${tierIndex + 1}: commission_percentage is required`);
+  } else if (tier.commission_percentage < 0 || tier.commission_percentage > 100) {
+    errors.push(`Tier ${tierIndex + 1}: commission_percentage must be between 0 and 100`);
   }
   
-  // Check commission_result consistency
-  if (tier.commission_result !== undefined && tier.commission_result !== null) {
-    // Allow small tolerance for rounding (within 1)
-    const diff = Math.abs(tier.commission_result - expectedCommissionResult);
-    if (diff > 1) {
-      warnings.push(
-        `Tier ${tierIndex + 1} (${tier.tier_label}): commission_result mismatch - ` +
-        `expected ${expectedCommissionResult.toLocaleString('id-ID')}, got ${tier.commission_result.toLocaleString('id-ID')}`
-      );
-      corrections_applied.push(`commission_result: ${tier.commission_result} → ${expectedCommissionResult}`);
-    }
+  if (tier.min_downline == null) {
+    warnings.push(`Tier ${tierIndex + 1}: min_downline is not set`);
+  } else if (tier.min_downline < 0) {
+    errors.push(`Tier ${tierIndex + 1}: min_downline must be >= 0`);
   }
   
-  // Always set correct derived values
-  corrected.net_winlose = expectedNetWinlose;
-  corrected.commission_result = expectedCommissionResult;
+  // === OPTIONAL RULE FIELDS (warn if missing for calculation) ===
+  if (tier.winlose == null) {
+    warnings.push(`Tier ${tierIndex + 1}: winlose is not set (will default to 0 for calculation)`);
+  }
   
   return {
-    valid: warnings.length === 0,
+    valid: errors.length === 0,
+    errors,
     warnings,
-    corrected,
-    corrections_applied,
+    tier_index: tierIndex,
   };
 }
 
-/**
- * Validate all referral tiers in an array
- */
-export function validateReferralTiers(tiers: ReferralCommissionTier[]): ReferralTiersValidationResult {
-  if (!tiers || tiers.length === 0) {
-    return {
-      all_valid: true,
-      tier_results: [],
-      total_warnings: [],
-      total_corrections: 0,
-    };
+// ============================================
+// VALIDATE DERIVED FIELDS ARE NULL (PRE-CALCULATION CHECK)
+// ============================================
+export function validateDerivedFieldsAreNull(tier: ReferralCommissionTier, tierIndex: number): ReferralTierValidation {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  // DERIVED fields MUST be null before calculation
+  // If they're not null, it means extractor calculated them (violation of contract)
+  if (tier.net_winlose != null) {
+    warnings.push(
+      `Tier ${tierIndex + 1}: net_winlose was ${tier.net_winlose} (should be null before calculation). ` +
+      `This indicates extraction may have violated the Calculator Contract.`
+    );
   }
   
-  const tier_results = tiers.map((tier, idx) => validateReferralTier(tier, idx));
-  const all_valid = tier_results.every(r => r.valid);
-  const total_warnings = tier_results.flatMap(r => r.warnings);
-  const total_corrections = tier_results.reduce((sum, r) => sum + r.corrections_applied.length, 0);
-  
-  return {
-    all_valid,
-    tier_results,
-    total_warnings,
-    total_corrections,
-  };
-}
-
-/**
- * Auto-correct all referral tiers and return corrected array
- */
-export function autoCorrectReferralTiers(tiers: ReferralCommissionTier[]): {
-  corrected_tiers: ReferralCommissionTier[];
-  validation_result: ReferralTiersValidationResult;
-} {
-  const validation_result = validateReferralTiers(tiers);
-  const corrected_tiers = validation_result.tier_results.map(r => r.corrected);
-  
-  if (validation_result.total_corrections > 0) {
-    console.log(
-      `[ReferralTierValidator] Auto-corrected ${validation_result.total_corrections} derived field(s):`,
-      validation_result.total_warnings
+  if (tier.commission_result != null) {
+    warnings.push(
+      `Tier ${tierIndex + 1}: commission_result was ${tier.commission_result} (should be null before calculation). ` +
+      `This indicates extraction may have violated the Calculator Contract.`
     );
   }
   
   return {
-    corrected_tiers,
-    validation_result,
+    valid: true, // Not blocking - just warnings
+    errors,
+    warnings,
+    tier_index: tierIndex,
   };
 }
 
-/**
- * Check if all commission percentages are identical (potential extraction bug)
- * Returns true if this looks like the "all 5%" bug
- */
+// ============================================
+// VALIDATE ALL REFERRAL TIERS (BEFORE CALCULATION)
+// ============================================
+export function validateReferralTiersBeforeCalc(tiers: ReferralCommissionTier[]): ReferralTiersValidationResult {
+  if (!tiers || tiers.length === 0) {
+    return {
+      all_valid: true,
+      tier_results: [],
+      total_errors: [],
+      total_warnings: [],
+    };
+  }
+  
+  const tier_results: ReferralTierValidation[] = [];
+  
+  tiers.forEach((tier, idx) => {
+    // Validate RULE fields
+    const ruleValidation = validateReferralTierRules(tier, idx);
+    
+    // Validate DERIVED fields are null
+    const derivedValidation = validateDerivedFieldsAreNull(tier, idx);
+    
+    // Combine results
+    tier_results.push({
+      valid: ruleValidation.valid && derivedValidation.valid,
+      errors: [...ruleValidation.errors, ...derivedValidation.errors],
+      warnings: [...ruleValidation.warnings, ...derivedValidation.warnings],
+      tier_index: idx,
+    });
+  });
+  
+  const all_valid = tier_results.every(r => r.valid);
+  const total_errors = tier_results.flatMap(r => r.errors);
+  const total_warnings = tier_results.flatMap(r => r.warnings);
+  
+  // Log warnings if any
+  if (total_warnings.length > 0) {
+    console.log('[ReferralValidator] Pre-calculation warnings:', total_warnings);
+  }
+  
+  return {
+    all_valid,
+    tier_results,
+    total_errors,
+    total_warnings,
+  };
+}
+
+// ============================================
+// DETECT ALL-SAME COMMISSION BUG
+// ============================================
 export function detectAllSameCommissionBug(tiers: ReferralCommissionTier[]): {
   detected: boolean;
   common_value: number | null;
@@ -154,6 +164,9 @@ export function detectAllSameCommissionBug(tiers: ReferralCommissionTier[]): {
   const allSame = percentages.every(p => p === percentages[0]);
   
   if (allSame) {
+    console.warn(
+      `[ReferralValidator] All-same commission bug detected: all ${tiers.length} tiers have ${percentages[0]}%`
+    );
     return {
       detected: true,
       common_value: percentages[0],
@@ -162,4 +175,26 @@ export function detectAllSameCommissionBug(tiers: ReferralCommissionTier[]): {
   }
   
   return { detected: false, common_value: null, tier_count: tiers.length };
+}
+
+// ============================================
+// LEGACY COMPATIBILITY: autoCorrectReferralTiers
+// This now delegates to the calculator
+// ============================================
+export function autoCorrectReferralTiers(tiers: ReferralCommissionTier[]): {
+  corrected_tiers: ReferralCommissionTier[];
+  validation_result: ReferralTiersValidationResult;
+} {
+  // Import calculator dynamically to avoid circular dependency
+  const { calculateAllReferralTiers } = require('./referral-tier-calculator');
+  
+  const validation_result = validateReferralTiersBeforeCalc(tiers);
+  const corrected_tiers = calculateAllReferralTiers(tiers);
+  
+  console.log('[ReferralValidator] Delegated calculation to referral-tier-calculator.ts');
+  
+  return {
+    corrected_tiers,
+    validation_result,
+  };
 }

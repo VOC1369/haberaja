@@ -3289,46 +3289,30 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
         tier_label: sub.sub_name || `Tier ${idx + 1}`,
         min_downline: extractMinDownline(sub, extracted.terms_conditions, idx),
         commission_percentage: commissionResult.value,
-        // CALCULATION RULES from promo table - Ini ATURAN FINAL, bukan sample!
+        
+        // === RULE FIELDS (from promo table - source of truth) ===
         winlose: (sub as any).winlose || sub.minimum_base || undefined,
+        // Use new field names with backward compatibility
+        cashback_deduction_amount: (sub as any).cashback_deduction || undefined,
+        admin_fee_deduction_amount: (sub as any).fee_deduction || undefined,
+        // Keep old field names for backward compatibility
         cashback_deduction: (sub as any).cashback_deduction || undefined,
         fee_deduction: (sub as any).fee_deduction || undefined,
-        net_winlose: (sub as any).net_winlose || undefined,
-        commission_result: (sub as any).commission_result || undefined,
-        // Audit metadata
+        
+        // === DERIVED FIELDS = NULL (CALCULATOR CONTRACT) ===
+        // These fields MUST be null after extraction!
+        // They will be calculated ONLY by referral-tier-calculator.ts before save.
+        net_winlose: null,
+        commission_result: null,
+        
+        // === AUDIT METADATA ===
+        _rule_source: 'table' as const,
         _commission_source: commissionResult.source,
         _commission_fix_applied: commissionResult.source !== 'calculation_value',
       };
     });
     
-    // ============================================
-    // DERIVED FIELD VALIDATION & AUTO-CORRECT
-    // Ensure net_winlose and commission_result are consistent
-    // ============================================
-    referralTiers = referralTiers.map((tier, idx) => {
-      const winlose = tier.winlose ?? 0;
-      const cashbackDeduction = tier.cashback_deduction ?? 0;
-      const feeDeduction = tier.fee_deduction ?? 0;
-      const commissionPercentage = tier.commission_percentage ?? 0;
-      
-      // Calculate correct derived values
-      const correctNetWinlose = winlose - cashbackDeduction - feeDeduction;
-      const correctCommissionResult = Math.round(correctNetWinlose * commissionPercentage / 100);
-      
-      // Check and log mismatches
-      if (tier.net_winlose !== undefined && tier.net_winlose !== correctNetWinlose) {
-        console.log(`[Referral Validator] Tier ${idx + 1}: net_winlose corrected ${tier.net_winlose} → ${correctNetWinlose}`);
-      }
-      if (tier.commission_result !== undefined && Math.abs(tier.commission_result - correctCommissionResult) > 1) {
-        console.log(`[Referral Validator] Tier ${idx + 1}: commission_result corrected ${tier.commission_result} → ${correctCommissionResult}`);
-      }
-      
-      return {
-        ...tier,
-        net_winlose: correctNetWinlose,
-        commission_result: correctCommissionResult,
-      };
-    });
+    console.log('[Extractor] Referral tiers extracted with DERIVED fields set to null (Calculator Contract)');
   }
   
   // ✅ SEMANTIC SANITIZATION: Prevent Rupiah from becoming WD multiplier
