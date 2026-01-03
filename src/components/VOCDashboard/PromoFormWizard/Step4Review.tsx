@@ -1338,8 +1338,43 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
           >
             <ValueBox label="Mode" value={data.reward_mode === 'formula' ? 'Dinamis' : data.reward_mode} isBadge badgeVariant="outline" />
             
-            {/* COMBO PROMO MODE - Tampilkan info redirect saja */}
-            {data.has_subcategories && data.subcategories && data.subcategories.length > 0 ? (
+            {/* TIER LEVEL TABLE - Always render if tier_level archetype with tiers */}
+            {data.tiers && data.tiers.length > 0 && data.tier_archetype === 'tier_level' && (
+              <div className="col-span-full mt-2">
+                <p className="text-muted-foreground text-xs mb-2">Detail Level Reward</p>
+                <div className="bg-muted rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left py-2 px-3 font-medium text-foreground">Level</th>
+                        <th className="text-right py-2 px-3 font-medium text-foreground">Syarat Unlock</th>
+                        <th className="text-left py-2 px-3 font-medium text-foreground">Jenis</th>
+                        <th className="text-right py-2 px-3 font-medium text-foreground">Reward</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.tiers.map((tier, idx) => (
+                        <tr key={tier?.id || idx} className="border-t border-border">
+                          <td className="py-2 px-3 text-foreground">{tier?.type || `Level ${idx + 1}`}</td>
+                          <td className="py-2 px-3 text-right text-foreground">
+                            {tier?.minimal_point ? `Rp ${tier.minimal_point.toLocaleString('id-ID')}` : '-'}
+                          </td>
+                          <td className="py-2 px-3 text-foreground">{tier?.jenis_hadiah || 'credit_game'}</td>
+                          <td className="py-2 px-3 text-right text-button-hover font-medium">
+                            {tier?.reward_type === 'percentage' 
+                              ? `${tier?.reward ?? 0}%` 
+                              : `Rp ${Number(tier?.reward ?? 0).toLocaleString('id-ID')}`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            
+            {/* COMBO PROMO MODE - Tampilkan info redirect (skip for tier_level) */}
+            {data.has_subcategories && data.subcategories && data.subcategories.length > 0 && data.tier_archetype !== 'tier_level' ? (
               <div className="col-span-full bg-muted/30 rounded-lg p-4">
                 <div className="flex items-center gap-2 text-foreground">
                   <span>📦</span>
@@ -1351,7 +1386,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                   Detail konfigurasi bonus masing-masing varian dapat dilihat di section "Sub Kategori Promo" di bawah.
                 </p>
               </div>
-            ) : (
+            ) : data.tier_archetype !== 'tier_level' ? (
               /* SINGLE PROMO MODE - Tampilkan detail lengkap */
               <>
                 {data.reward_mode === 'fixed' && (
@@ -1584,89 +1619,6 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </>
                     )}
                     
-                    {/* Detail Tier Table - Untuk tier_level */}
-                    {data.tiers && data.tiers.length > 0 && data.tier_archetype === 'tier_level' && (
-                      <div className="col-span-full mt-2">
-                        <p className="text-muted-foreground text-xs mb-2">Detail Tier</p>
-                        <div className="bg-muted rounded-lg overflow-hidden">
-                          <table className="w-full text-sm">
-                            <thead className="bg-muted/50">
-                              <tr>
-                                <th className="text-left py-2 px-3 font-medium text-foreground">Level</th>
-                                <th className="text-right py-2 px-3 font-medium text-foreground">Syarat Unlock</th>
-                                <th className="text-left py-2 px-3 font-medium text-foreground">Jenis</th>
-                                <th className="text-right py-2 px-3 font-medium text-foreground">Reward</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {data.tiers?.slice(0, 8).map((tier, idx) => (
-                                <tr key={tier?.id || idx} className="border-t border-border">
-                                  <td className="py-2 px-3 text-foreground">{tier?.type || `Level ${idx + 1}`}</td>
-                                  <td className="py-2 px-3 text-right text-foreground">
-                                    {tier?.minimal_point ? `Rp ${tier.minimal_point.toLocaleString('id-ID')}` : '-'}
-                                  </td>
-                                  <td className="py-2 px-3 text-foreground">{tier?.jenis_hadiah || 'credit_game'}</td>
-                                  <td className="py-2 px-3 text-right text-button-hover font-medium">
-                                    {tier?.reward_type === 'percentage' 
-                                      ? `${tier?.reward ?? 0}%` 
-                                      : `Rp ${Number(tier?.reward ?? 0).toLocaleString('id-ID')}`}
-                                  </td>
-                                </tr>
-                              ))}
-                              {(data.tiers?.length ?? 0) > 8 && (
-                                <tr className="border-t border-border bg-muted/30">
-                                  <td colSpan={4} className="py-2 px-3 text-center text-muted-foreground">
-                                    +{(data.tiers?.length ?? 0) - 8} tier lainnya
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Level Up Rewards Table - DEPRECATED, now using tiers[] above */}
-                    {/* Kept for backward compatibility with old data */}
-                    {data.level_up_rewards && data.level_up_rewards.length > 0 && data.tier_archetype === 'tier_level' && !data.tiers?.length && (
-                      <div className="col-span-full mt-2">
-                        <p className="text-muted-foreground text-xs mb-2">Tabel Level Reward (Legacy)</p>
-                        <div className="bg-muted rounded-lg overflow-hidden">
-                          <table className="w-full text-sm">
-                            <thead className="bg-muted/50">
-                              <tr>
-                                <th className="text-left py-2 px-3 font-medium text-foreground">Level</th>
-                                <th className="text-right py-2 px-3 font-medium text-foreground">Unlock (History Deposit)</th>
-                                <th className="text-right py-2 px-3 font-medium text-foreground">Reward</th>
-                                <th className="text-left py-2 px-3 font-medium text-foreground">Tipe</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {data.level_up_rewards.slice(0, 8).map((level, idx) => (
-                                <tr key={level?.id || idx} className="border-t border-border">
-                                  <td className="py-2 px-3 font-medium text-foreground">{level?.tier || `Level ${idx + 1}`}</td>
-                                  <td className="py-2 px-3 text-right text-foreground">
-                                    {level?.min_exp ? `Rp ${level.min_exp.toLocaleString('id-ID')}` : '-'}
-                                  </td>
-                                  <td className="py-2 px-3 text-right font-semibold text-button-hover">
-                                    Rp {(typeof level?.reward === 'number' ? level.reward : 0).toLocaleString('id-ID')}
-                                  </td>
-                                  <td className="py-2 px-3 text-foreground">{level?.type || 'credit_game'}</td>
-                                </tr>
-                              ))}
-                              {data.level_up_rewards.length > 8 && (
-                                <tr className="border-t border-border bg-muted/30">
-                                  <td colSpan={4} className="py-2 px-3 text-center text-muted-foreground">
-                                    +{data.level_up_rewards.length - 8} level lainnya
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                    
                     {/* Redeem Items Table - Untuk tier_point_store */}
                     {data.tier_archetype === 'tier_point_store' && data.redeem_items && data.redeem_items.length > 0 && (
                       <div className="col-span-full mt-2">
@@ -1788,7 +1740,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                   />
                 )}
               </>
-            )}
+            ) : null}
           </CollapsibleSection>
 
           {/* Sub Kategori Section - Combo Promo OR Referral Tiers from subcategories */}
