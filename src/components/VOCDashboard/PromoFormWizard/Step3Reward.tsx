@@ -1720,23 +1720,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     </Button>
                   </div>
 
-                  {/* Jenis Reward */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Jenis Reward</Label>
-                    <SelectWithAddNew
-                      value={data.fixed_reward_type || ''}
-                      onValueChange={(val) => onChange({ fixed_reward_type: val })}
-                      placeholder="Pilih jenis reward..."
-                      options={rewardTypeOptions}
-                      onAddOption={(opt) => {
-                        setRewardTypeOptions(prev => [...prev, opt]);
-                      }}
-                      onDeleteOption={(val) => {
-                        setRewardTypeOptions(prev => prev.filter(opt => opt.value !== val));
-                      }}
-                    />
-                  </div>
-
                   {/* Table */}
                   {(data.fixed_ticket_rewards || []).length > 0 ? (
                     <Table>
@@ -3090,23 +3073,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       <Plus className="h-4 w-4 mr-1" />
                       Add Row
                     </Button>
-                  </div>
-
-                  {/* Jenis Reward */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Jenis Reward</Label>
-                    <SelectWithAddNew
-                      value={data.reward_type || ''}
-                      onValueChange={(val) => onChange({ reward_type: val })}
-                      placeholder="Pilih jenis reward..."
-                      options={dinamisRewardTypeOptions}
-                      onAddOption={(opt) => {
-                        setDinamisRewardTypeOptions(prev => [...prev, opt]);
-                      }}
-                      onDeleteOption={(val) => {
-                        setDinamisRewardTypeOptions(prev => prev.filter(opt => opt.value !== val));
-                      }}
-                    />
                   </div>
 
                   {/* Table */}
