@@ -71,6 +71,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
     initialData ? classificationToProgram(initialData.program_classification) : null
   );
   const [policyData, setPolicyData] = useState<PolicyConfigData>(initialPolicyData);
+  const [targetSection, setTargetSection] = useState<string | null>(null);
 
   // Determine initial edit target based on reward_mode
   const initialEditTarget = formData.reward_mode === 'fixed' ? 'fixed' : 'base';
@@ -96,8 +97,9 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   };
 
   // Handle navigation from Review to specific step for editing
-  const handleGoToStepFromReview = (step: number) => {
+  const handleGoToStepFromReview = (step: number, sectionId?: string) => {
     setIsEditingFromReview(true);
+    setTargetSection(sectionId || null);
     setCurrentStep(step);
   };
 
@@ -203,6 +205,8 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
         progress={progress}
         canProceedFromStep3={canProceedFromStep3}
         STEPS={STEPS}
+        targetSection={targetSection}
+        setTargetSection={setTargetSection}
       />
     </EditContextProvider>
   );
@@ -225,12 +229,14 @@ interface PromoFormWizardContentProps {
   onSaveSuccess?: () => void;
   handleNext: () => void;
   handlePrevious: () => void;
-  handleGoToStepFromReview: (step: number) => void;
+  handleGoToStepFromReview: (step: number, sectionId?: string) => void;
   handleSaveDraft: () => Promise<void>;
   handlePublish: () => Promise<void>;
   progress: number;
   canProceedFromStep3: boolean;
   STEPS: Array<{ id: number; title: string }>;
+  targetSection: string | null;
+  setTargetSection: (section: string | null) => void;
 }
 
 function PromoFormWizardContent({
@@ -251,6 +257,8 @@ function PromoFormWizardContent({
   progress,
   canProceedFromStep3,
   STEPS,
+  targetSection,
+  setTargetSection,
 }: PromoFormWizardContentProps) {
   // Access edit context for tracking
   const editContext = useEditContext();
@@ -405,6 +413,8 @@ function PromoFormWizardContent({
             }}
             stepNumber={4}
             stepTitle="Konfigurasi Reward"
+            targetSection={targetSection}
+            onSectionScrolled={() => setTargetSection(null)}
           />
         )}
         {currentStep === 5 && <Step4Review data={formData} onGoToStep={handleGoToStepFromReview} />}
