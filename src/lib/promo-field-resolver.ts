@@ -4,17 +4,55 @@
  * Context-aware value resolution for promo fields.
  * Resolvers determine the "effective" value based on mode, context, and hierarchy.
  * 
- * RESOLUTION HIERARCHY:
- * 1. Subcategory-specific value (if applicable)
- * 2. Global toggle value (if enabled)
- * 3. Fixed mode override (if reward_mode === 'fixed')
- * 4. Base/dynamic field (canonical source)
+ * ============================================
+ * RESOLVER TRUTH HIERARCHY (FINAL - LOCKED)
+ * ============================================
+ * 
+ * Priority order (highest to lowest):
+ * 
+ * 1. FIXED (explicit override)
+ *    - Only applies when reward_mode === 'fixed'
+ *    - Uses fixed_* prefix fields
+ *    - Highest priority = user explicitly set this override
+ * 
+ * 2. SUBCATEGORY (scoped intent)
+ *    - Only applies when editing within a subcategory context
+ *    - Checks *_same_as_global flags to determine if using own value
+ *    - Scoped to specific subcategory
+ * 
+ * 3. GLOBAL (context inheritance)
+ *    - Uses global_* prefix fields
+ *    - Applied when subcategory uses same_as_global = true
+ *    - Provides consistent defaults across subcategories
+ * 
+ * 4. BASE (canonical source)
+ *    - Direct field access (e.g., reward_type, max_claim)
+ *    - The "ground truth" from extraction or manual entry
+ * 
+ * 5. LEGACY (dinamis_* fallback)
+ *    - Deprecated fields preserved for backward compatibility
+ *    - Will be normalized to base on read via promo-field-normalizer
+ *    - Should badge as ORANGE in UI
+ * 
+ * ============================================
  * 
  * IMPORTANT:
  * - Resolvers are READ-ONLY - they do not modify data
  * - Used by UI to display effective values
  * - Used by export/AI to get final computed values
+ * - NEVER use effective values for write-back without explicit user intent
  */
+
+/**
+ * Hierarchy order constant for documentation and validation
+ */
+export const RESOLVER_HIERARCHY_ORDER = [
+  'fixed',
+  'subcategory', 
+  'global',
+  'base',
+  'legacy',
+] as const;
 
 import type { PromoFormData, PromoSubCategory } from '@/components/VOCDashboard/PromoFormWizard/types';
 import { isInert } from './promo-field-normalizer';
@@ -131,23 +169,67 @@ export function getEffectiveMaxClaim(
 }
 
 /**
- * Check if max claim is unlimited
+ * Source type for unlimited flag (for badging)
+ */
+export type UnlimitedSource = 'fixed' | 'subcategory' | 'base' | 'legacy';
+
+/**
+ * Result of unlimited check with source info
+ */
+export interface MaxClaimUnlimitedResult {
+  isUnlimited: boolean;
+  source: UnlimitedSource;
+}
+
+/**
+ * Check if max claim is unlimited WITH SOURCE INFO
+ * 
+ * This is critical for badging legacy dinamis_max_claim_unlimited
+ * which has no base equivalent and must be explicitly shown as ORANGE badge
+ */
+export function getMaxClaimUnlimitedWithSource(
+  data: Partial<PromoFormData>,
+  subcategory?: PromoSubCategory
+): MaxClaimUnlimitedResult {
+  // Fixed mode check first
+  if (data.reward_mode === 'fixed') {
+    if (data.fixed_max_claim_unlimited) {
+      return { isUnlimited: true, source: 'fixed' };
+    }
+    // Fixed mode but not unlimited
+    return { isUnlimited: false, source: 'fixed' };
+  }
+  
+  // Subcategory check
+  if (subcategory) {
+    if (!subcategory.max_bonus_same_as_global) {
+      return { 
+        isUnlimited: !!subcategory.max_bonus_unlimited, 
+        source: 'subcategory' 
+      };
+    }
+  }
+  
+  // Base field check (max_claim_unlimited doesn't exist, so check legacy)
+  // CRITICAL: dinamis_max_claim_unlimited has no base equivalent
+  // This is the RED FLAG field that must be badged as LEGACY/ORANGE
+  if (data.dinamis_max_claim_unlimited) {
+    return { isUnlimited: true, source: 'legacy' };
+  }
+  
+  // Default: not unlimited, source is base
+  return { isUnlimited: false, source: 'base' };
+}
+
+/**
+ * Check if max claim is unlimited (simple boolean version)
+ * @deprecated Use getMaxClaimUnlimitedWithSource for proper badging
  */
 export function isMaxClaimUnlimited(
   data: Partial<PromoFormData>,
   subcategory?: PromoSubCategory
 ): boolean {
-  if (data.reward_mode === 'fixed') {
-    return !!data.fixed_max_claim_unlimited;
-  }
-  
-  if (subcategory) {
-    if (!subcategory.max_bonus_same_as_global) {
-      return !!subcategory.max_bonus_unlimited;
-    }
-  }
-  
-  return !!data.dinamis_max_claim_unlimited;
+  return getMaxClaimUnlimitedWithSource(data, subcategory).isUnlimited;
 }
 
 // ============================================
