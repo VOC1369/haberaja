@@ -2,6 +2,7 @@ import { PERSONA_BINDING_FIELDS, DROPPED_FIELDS, extractPersonaBindingFields, sa
 import { promoKB } from '@/lib/promo-storage';
 import { generateUUID } from '@/lib/supabase-client';
 import { applyInertValuesToPayload } from '@/lib/extractors/field-applicability-map';
+import { calculateAllReferralTiers, getDefaultReferralFormulaMetadata } from '@/lib/referral-tier-calculator';
 // PKB FIELD WHITELIST
 // ============================================
 
@@ -850,9 +851,6 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     // Only referral-tier-calculator.ts is allowed to calculate these!
     // ============================================
     if (data.referral_tiers && data.referral_tiers.length > 0) {
-      // Import synchronously (module is already loaded)
-      const { calculateAllReferralTiers, getDefaultReferralFormulaMetadata } = require('@/lib/referral-tier-calculator');
-      
       // Build formula metadata from promo data
       const calculationBasis = (data.referral_calculation_basis === 'loss' || data.referral_calculation_basis === 'turnover') 
         ? data.referral_calculation_basis 
