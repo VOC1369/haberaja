@@ -803,7 +803,7 @@ export const getDisplayTerms = (data: PromoFormData): string[] => {
         .map(line => line.trim())
         .filter(line => line.length > 0)
         // Filter out tier-related lines (already generated from form)
-        .filter(line => !/downline|aktif.*komisi|tier|id\s*aktif|tingkat\s*komisi/i.test(line))
+        .filter(line => !/downline|aktif.*komisi|tier\s*(downline)?|id\s*aktif|tingkat\s*komisi|hitungan\s*komisi|komisi.*agent|percentage.*komisi|hasil\s*x\s*persen/i.test(line))
         // Filter out admin fee lines (already generated)
         .filter(line => !/admin\s*fee|potongan|fee.*%/i.test(line))
         // Filter out basis perhitungan lines
