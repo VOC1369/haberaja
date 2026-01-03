@@ -341,11 +341,11 @@ Only these fields are the source of truth for tier_network:
       "tier_label": "Komisi 5%",
       "min_downline": 5,
       "commission_percentage": 5,
-      "sample_winlose": 10000000,
-      "sample_cashback": 700000,
-      "sample_commission_deduction": 300000,
-      "sample_net_winlose": 8500000,
-      "sample_commission_result": 425000
+      "winlose": 10000000,
+      "cashback_deduction": 700000,
+      "fee_deduction": 300000,
+      "net_winlose": 8500000,
+      "commission_result": 425000
     }
   ],
   "referral_calculation_basis": "loss",
@@ -353,6 +353,10 @@ Only these fields are the source of truth for tier_network:
   "referral_admin_fee_percentage": 20
 }
 ```
+
+⚠️ **KONTRAK SEMANTIK KUNCI**:
+Field `winlose`, `cashback_deduction`, `fee_deduction`, `net_winlose`, `commission_result` adalah **ATURAN FINAL PROMO**, bukan sample/contoh!
+Jika tabel promo TIDAK mengandung kata "misalkan" atau "contoh", semua angka adalah HUKUM yang mengikat.
 
 ### custom_terms Contract
 For Referral promos, `custom_terms` MUST contain ONLY:

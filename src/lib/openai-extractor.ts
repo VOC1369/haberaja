@@ -320,9 +320,9 @@ const FIELD_STATUS_MATRIX: Record<RewardArchetype, Record<string, FieldStatus>> 
     turnover_rule: 'not_applicable',
     payout_direction: 'required',
     max_bonus: 'optional',
-    minimum_base: 'not_applicable',  // Referral: tidak ada threshold nominal (WINLOSE di tabel = SAMPLE, bukan rule)
+    minimum_base: 'not_applicable',  // Referral: tidak ada threshold nominal (WINLOSE di tabel = ATURAN FINAL)
     min_downline: 'required',        // Referral: threshold tier = jumlah downline aktif
-    sample_winlose: 'optional',      // Referral: data simulasi dari tabel (jika ada)
+    winlose: 'optional',             // Referral: ATURAN FINAL dari tabel promo (bukan sample!)
   },
 };
 
@@ -498,14 +498,9 @@ export function cleanReferralCustomTerms(terms: string): string {
     // Admin fee patterns
     /Admin\s*Fee:?\s*\d+%?;?\s*/gi,
     
-    // Simulation table notes
+    // Table column header patterns (keep data in structured fields, not custom_terms)
     /Tabel\s*angka[^;]+;?\s*/gi,
-    /contoh\s*simulasi[^;]+;?\s*/gi,
-    /angka\s*simulasi[^;]+;?\s*/gi,
-    
-    // Winlose sample patterns (from tier table)
     /WINLOSE,?\s*CASHBACK,?\s*FEE[^;]*;?\s*/gi,
-    /sample_winlose[^;]*;?\s*/gi,
   ];
   
   let cleaned = terms;
@@ -1395,24 +1390,26 @@ ATURAN PARSING REFERRAL:
    - 10 ID → 10%
    - 15 ID → 15%
 
-4. ⚠️ DATA TABEL PROMO (BUKAN RULE!) - Extract semua nilai dari tabel:
-   - sample_winlose = nilai WINLOSE
-   - sample_cashback = nilai CASHBACK
-   - sample_commission_deduction = nilai COMMISION (potongan komisi)
-   - sample_net_winlose = nilai WINLOSE BERSIH
-   - sample_commission_result = nilai KOMISI Rp (hasil akhir)
+4. ⚠️ ATURAN FINAL DARI TABEL PROMO - Extract semua nilai dari tabel:
+   - winlose = nilai WINLOSE (ATURAN FINAL, bukan sample!)
+   - cashback_deduction = nilai CASHBACK
+   - fee_deduction = nilai COMMISION (potongan komisi)
+   - net_winlose = nilai WINLOSE BERSIH
+   - commission_result = nilai KOMISI Rp (hasil akhir)
    - referral_admin_fee_percentage = FEE % (dari header atau kolom, contoh: 20)
-   - Ini FAKTA DI TABEL PROMO → WAJIB diekstrak SEMUA jika ada
-   - TAPI BUKAN RULE/THRESHOLD!
+   
+   ⚠️ KONTRAK SEMANTIK KUNCI:
+   Jika tabel TIDAK mengandung kata "misalkan" atau "contoh",
+   maka SEMUA ANGKA di tabel adalah ATURAN FINAL PROMO yang mengikat.
+   Referral Bonus TIDAK PERNAH menggunakan "misalkan" - tabel = HUKUM!
 
 5. minimum_base = null (TIDAK ADA threshold winlose eksplisit untuk referral)
-   - Kolom WINLOSE di tabel = CONTOH SIMULASI, bukan syarat kualifikasi!
+   - Kolom WINLOSE di tabel = ATURAN FINAL perhitungan, bukan syarat kualifikasi
    - Threshold tier sebenarnya = min_downline (5, 10, 15 ID)
 
 6. Tambahkan metadata tier di terms_conditions:
    - "Tier 5%: Minimal 5 ID aktif"
    - "Tier 10%: Minimal 10 ID aktif"
-   - "Tabel angka (WINLOSE, FEE, dll) adalah contoh simulasi perhitungan"
 
 OUTPUT FORMAT REFERRAL MULTI-TIER:
 {
@@ -1429,11 +1426,11 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
       "calculation_value": 5,
       "minimum_base": null,
       "min_downline": 5,
-      "sample_winlose": 10000000,
-      "sample_cashback": 700000,
-      "sample_commission_deduction": 300000,
-      "sample_net_winlose": 8500000,
-      "sample_commission_result": 425000,
+      "winlose": 10000000,
+      "cashback_deduction": 700000,
+      "fee_deduction": 300000,
+      "net_winlose": 8500000,
+      "commission_result": 425000,
       "max_bonus": null,
       "turnover_rule": null,
       "payout_direction": "belakang",
@@ -1442,7 +1439,7 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
         "calculation_value": "explicit",
         "minimum_base": "not_applicable",
         "min_downline": "explicit",
-        "sample_winlose": "explicit",
+        "winlose": "explicit",
         "turnover_rule": "not_applicable"
       }
     },
@@ -1453,16 +1450,16 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
       "calculation_value": 10,
       "minimum_base": null,
       "min_downline": 10,
-      "sample_winlose": 50000000,
-      "sample_cashback": 3000000,
-      "sample_commission_deduction": 1500000,
-      "sample_net_winlose": 42500000,
-      "sample_commission_result": 4250000,
+      "winlose": 50000000,
+      "cashback_deduction": 3000000,
+      "fee_deduction": 1500000,
+      "net_winlose": 42500000,
+      "commission_result": 4250000,
       "confidence": {
         "calculation_value": "explicit",
         "minimum_base": "not_applicable",
         "min_downline": "explicit",
-        "sample_winlose": "explicit"
+        "winlose": "explicit"
       }
     },
     {
@@ -1472,16 +1469,16 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
       "calculation_value": 15,
       "minimum_base": null,
       "min_downline": 15,
-      "sample_winlose": 100000000,
-      "sample_cashback": 7000000,
-      "sample_commission_deduction": 3500000,
-      "sample_net_winlose": 85000000,
-      "sample_commission_result": 12750000,
+      "winlose": 100000000,
+      "cashback_deduction": 7000000,
+      "fee_deduction": 3500000,
+      "net_winlose": 85000000,
+      "commission_result": 12750000,
       "confidence": {
         "calculation_value": "explicit",
         "minimum_base": "not_applicable",
         "min_downline": "explicit",
-        "sample_winlose": "explicit"
+        "winlose": "explicit"
       }
     }
   ],
@@ -1490,8 +1487,7 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
     "Tier 10%: Minimal 10 ID aktif",
     "Tier 15%: Minimal 15 ID aktif",
     "Hitungan komisi: Winlose - Commision - Cashback - Admin Fee 20% = hasil x persentase",
-    "Admin Fee: 20%",
-    "Tabel angka (WINLOSE, CASHBACK, FEE) adalah contoh simulasi perhitungan, bukan syarat kualifikasi"
+    "Admin Fee: 20%"
   ]
 }
 
@@ -1500,8 +1496,8 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
 - JANGAN skip tier apapun dari tabel!
 - 3 baris dengan KOMISI berbeda = 3 subcategories!
 - minimum_base = null (TIDAK ada threshold nominal eksplisit!)
-- sample_winlose = nilai WINLOSE dari tabel (ini SAMPLE DATA, bukan rule!)
-- Kolom WINLOSE/CASHBACK/FEE di tabel = SIMULASI PERHITUNGAN, bukan syarat!
+- winlose = nilai WINLOSE dari tabel (ini ATURAN FINAL, bukan sample!)
+- Kolom WINLOSE/CASHBACK/FEE di tabel = FORMULA RESMI PROMO!
 - Threshold tier = min_downline SAJA (5, 10, 15 ID)
 - turnover_rule = null (not_applicable untuk referral)
 - payout_direction = "belakang" (komisi dihitung setelah downline bermain)
@@ -3213,13 +3209,13 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       tier_label: sub.sub_name || `Tier ${idx + 1}`,
       min_downline: extractMinDownline(sub, extracted.terms_conditions, idx),
       commission_percentage: sub.calculation_value || 0,
-      // ALL SAMPLE DATA from promo table (NOT rules!)
+      // CALCULATION RULES from promo table - Ini ATURAN FINAL, bukan sample!
       // Fallback to minimum_base for backward compatibility with old extractions
-      sample_winlose: (sub as any).sample_winlose || sub.minimum_base || undefined,
-      sample_cashback: (sub as any).sample_cashback || undefined,
-      sample_commission_deduction: (sub as any).sample_commission_deduction || undefined,
-      sample_net_winlose: (sub as any).sample_net_winlose || undefined,
-      sample_commission_result: (sub as any).sample_commission_result || undefined,
+      winlose: (sub as any).winlose || (sub as any).sample_winlose || sub.minimum_base || undefined,
+      cashback_deduction: (sub as any).cashback_deduction || (sub as any).sample_cashback || undefined,
+      fee_deduction: (sub as any).fee_deduction || (sub as any).sample_commission_deduction || undefined,
+      net_winlose: (sub as any).net_winlose || (sub as any).sample_net_winlose || undefined,
+      commission_result: (sub as any).commission_result || (sub as any).sample_commission_result || undefined,
     }));
   }
   

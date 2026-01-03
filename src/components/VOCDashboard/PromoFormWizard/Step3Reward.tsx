@@ -3686,9 +3686,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                             data.referral_admin_fee_enabled !== false
                               ? (data.referral_admin_fee_percentage ?? 20)
                               : 0;
-                          const sampleWinlose = tier.sample_winlose ?? 0;
-                          const feeAmount = Math.round((sampleWinlose * adminFeePercent) / 100);
-                          const winloseBersih = sampleWinlose - feeAmount;
+                          // CALCULATION RULES: Ini ATURAN FINAL, bukan sample!
+                          const ruleWinlose = tier.winlose ?? 0;
+                          const feeAmount = Math.round((ruleWinlose * adminFeePercent) / 100);
+                          const winloseBersih = ruleWinlose - feeAmount;
                           const komisi = Math.round((winloseBersih * tier.commission_percentage) / 100);
 
                           return (
@@ -3726,10 +3727,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                 </TableCell>
                                 <TableCell className="px-4 py-4 w-1/4">
                                   <FormattedNumberInput
-                                    value={tier.sample_winlose ?? 0}
+                                    value={tier.winlose ?? 0}
                                     onChange={(val) => {
                                       const updatedTiers = [...(data.referral_tiers || [])];
-                                      updatedTiers[index] = { ...updatedTiers[index], sample_winlose: val };
+                                      updatedTiers[index] = { ...updatedTiers[index], winlose: val };
                                       onChange({ referral_tiers: updatedTiers });
                                     }}
                                     placeholder="0"
@@ -3738,10 +3739,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                                 </TableCell>
                                 <TableCell className="px-4 py-4 w-1/4">
                                   <FormattedNumberInput
-                                    value={tier.sample_cashback ?? 0}
+                                    value={tier.cashback_deduction ?? 0}
                                     onChange={(val) => {
                                       const updatedTiers = [...(data.referral_tiers || [])];
-                                      updatedTiers[index] = { ...updatedTiers[index], sample_cashback: val };
+                                      updatedTiers[index] = { ...updatedTiers[index], cashback_deduction: val };
                                       onChange({ referral_tiers: updatedTiers });
                                     }}
                                     placeholder="0"

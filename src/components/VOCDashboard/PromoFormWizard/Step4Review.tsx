@@ -1685,18 +1685,19 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                                 <tbody>
                                   {data.referral_tiers?.slice(0, 5).map((tier, idx) => {
                                     const adminFeePercent = data.referral_admin_fee_percentage ?? 20;
-                                    const sampleWinlose = tier?.sample_winlose ?? 0;
-                                    const sampleCashback = tier?.sample_cashback ?? 0;
-                                    const feeAmount = tier?.sample_commission_deduction ?? Math.round((sampleWinlose * adminFeePercent) / 100);
-                                    const wlBersih = tier?.sample_net_winlose ?? (sampleWinlose - sampleCashback - feeAmount);
-                                    const komisiRp = tier?.sample_commission_result ?? Math.round((wlBersih * (tier?.commission_percentage ?? 0)) / 100);
+                                    // CALCULATION RULES: Ini ATURAN FINAL, bukan sample!
+                                    const ruleWinlose = tier?.winlose ?? 0;
+                                    const ruleCashback = tier?.cashback_deduction ?? 0;
+                                    const feeAmount = tier?.fee_deduction ?? Math.round((ruleWinlose * adminFeePercent) / 100);
+                                    const wlBersih = tier?.net_winlose ?? (ruleWinlose - ruleCashback - feeAmount);
+                                    const komisiRp = tier?.commission_result ?? Math.round((wlBersih * (tier?.commission_percentage ?? 0)) / 100);
                                     
                                     return (
                                       <tr key={tier?.id || idx} className="border-t border-border">
                                         <td className="py-2 px-3 text-foreground">{tier?.tier_label || `Tier ${idx + 1}`}</td>
                                         <td className="py-2 px-3 text-foreground">{tier?.min_downline?.toLocaleString('id-ID') || 0} ID</td>
-                                        <td className="py-2 px-3 text-foreground">{formatNumber(sampleWinlose)}</td>
-                                        <td className="py-2 px-3 text-foreground">{formatNumber(sampleCashback)}</td>
+                                        <td className="py-2 px-3 text-foreground">{formatNumber(ruleWinlose)}</td>
+                                        <td className="py-2 px-3 text-foreground">{formatNumber(ruleCashback)}</td>
                                         <td className="py-2 px-3 text-foreground">{formatNumber(feeAmount)}</td>
                                         <td className="py-2 px-3 text-foreground">{formatNumber(wlBersih)}</td>
                                         <td className="py-2 px-3 text-button-hover font-medium">{tier?.commission_percentage ?? 0}%</td>
@@ -1715,7 +1716,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                               </table>
                             </div>
                             <p className="text-xs text-muted-foreground mt-2 px-1">
-                              * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah data simulasi dari tabel promo.
+                              * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah ATURAN FINAL dari tabel promo.
                             </p>
                           </div>
                         )}
@@ -2125,18 +2126,19 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           <tbody>
                             {data.referral_tiers.map((tier, idx) => {
                               const adminFeePercent = data.referral_admin_fee_percentage ?? 20;
-                              const sampleWinlose = tier.sample_winlose ?? 0;
-                              const sampleCashback = tier.sample_cashback ?? 0;
-                              const feeAmount = tier.sample_commission_deduction ?? Math.round((sampleWinlose * adminFeePercent) / 100);
-                              const wlBersih = tier.sample_net_winlose ?? (sampleWinlose - sampleCashback - feeAmount);
-                              const komisiRp = tier.sample_commission_result ?? Math.round((wlBersih * tier.commission_percentage) / 100);
+                              // CALCULATION RULES: Ini ATURAN FINAL, bukan sample!
+                              const ruleWinlose = tier.winlose ?? 0;
+                              const ruleCashback = tier.cashback_deduction ?? 0;
+                              const feeAmount = tier.fee_deduction ?? Math.round((ruleWinlose * adminFeePercent) / 100);
+                              const wlBersih = tier.net_winlose ?? (ruleWinlose - ruleCashback - feeAmount);
+                              const komisiRp = tier.commission_result ?? Math.round((wlBersih * tier.commission_percentage) / 100);
                               
                               return (
                                 <tr key={tier.id || idx} className="border-t border-border">
                                   <td className="py-2 px-3 text-foreground">{tier.tier_label || `Tier ${idx + 1}`}</td>
                                   <td className="py-2 px-3 text-foreground">{tier.min_downline?.toLocaleString('id-ID') || 0} ID</td>
-                                  <td className="py-2 px-3 text-foreground">{formatNumber(sampleWinlose)}</td>
-                                  <td className="py-2 px-3 text-foreground">{formatNumber(sampleCashback)}</td>
+                                  <td className="py-2 px-3 text-foreground">{formatNumber(ruleWinlose)}</td>
+                                  <td className="py-2 px-3 text-foreground">{formatNumber(ruleCashback)}</td>
                                   <td className="py-2 px-3 text-foreground">{formatNumber(feeAmount)}</td>
                                   <td className="py-2 px-3 text-foreground">{formatNumber(wlBersih)}</td>
                                   <td className="py-2 px-3 text-button-hover font-medium">{tier.commission_percentage}%</td>
