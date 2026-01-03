@@ -3957,6 +3957,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     <TableHeader>
                       <TableRow>
                         <TableHead>Level Name</TableHead>
+                        <TableHead>Syarat Unlock</TableHead>
                         <TableHead>Jenis Hadiah</TableHead>
                         <TableHead>Nilai Hadiah</TableHead>
                         <TableHead className="w-[80px]">Action</TableHead>
@@ -3971,6 +3972,14 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                               onChange={(e) => updateTier(tier.id, { type: e.target.value })}
                               placeholder="Silver, Gold..."
                               className="bg-muted"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <FormattedNumberInput
+                              value={tier.minimal_point || 0}
+                              onChange={(val) => updateTier(tier.id, { minimal_point: val })}
+                              className="bg-muted"
+                              placeholder="History Deposit"
                             />
                           </TableCell>
                           <TableCell>

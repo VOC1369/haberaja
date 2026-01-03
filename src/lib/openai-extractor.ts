@@ -3313,36 +3313,37 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   };
   
   // ============================================
-  // BUILD LEVEL_UP_REWARDS ARRAY (for Event Level Up promos)
+  // BUILD TIERS ARRAY (for Event Level Up promos)
+  // Uses existing tiers[] structure with minimal_point for unlock condition
   // ============================================
-  let levelUpRewards: Array<{
+  let eventLevelUpTiers: Array<{
     id: string;
-    tier: string;
-    min_exp: number;
+    type: string;
+    minimal_point: number;
     reward: number;
     reward_type: 'fixed' | 'percentage';
-    type: string;
+    jenis_hadiah: string;
   }> = [];
   
   if (isEventLevelUp && extracted.subcategories?.length > 0) {
-    console.log('[Event Level Up Mapping] Converting subcategories to level_up_rewards');
+    console.log('[Event Level Up Mapping] Converting subcategories to tiers[]');
     
-    levelUpRewards = extracted.subcategories.map((sub, idx) => {
+    eventLevelUpTiers = extracted.subcategories.map((sub, idx) => {
       const unlockValue = extractUnlockCondition(sub, extracted.terms_conditions, idx);
       const rewardValue = sub.max_bonus || sub.calculation_value || (sub as any).reward || 0;
       
       return {
         id: generateUUID(),
-        tier: sub.sub_name || `Level ${idx + 1}`,
-        min_exp: unlockValue,  // Progress gate, NOT min_deposit
+        type: sub.sub_name || `Level ${idx + 1}`,
+        minimal_point: unlockValue,  // Progress gate (unlock condition)
         reward: typeof rewardValue === 'number' ? rewardValue : 0,
         reward_type: 'fixed' as const,
-        type: ((sub as any).reward_type || (sub as any).jenis_hadiah || 'credit_game').toLowerCase(),
+        jenis_hadiah: ((sub as any).reward_type || (sub as any).jenis_hadiah || 'credit_game').toLowerCase(),
       };
     });
     
-    console.log(`[Event Level Up] Mapped ${levelUpRewards.length} level rewards:`, 
-      levelUpRewards.map(l => `${l.tier}: unlock=${l.min_exp}, reward=${l.reward}`));
+    console.log(`[Event Level Up] Mapped ${eventLevelUpTiers.length} tiers:`, 
+      eventLevelUpTiers.map(t => `${t.type}: unlock=${t.minimal_point}, reward=${t.reward}`));
   }
 
   // Build referral_tiers if this is a referral multi-tier promo
@@ -3693,8 +3694,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     ...(isEventLevelUp && {
       reward_mode: 'tier' as const,
       tier_archetype: 'tier_level' as const,
-      level_up_rewards: levelUpRewards,
-      has_subcategories: false,  // Data is in level_up_rewards, not subcategories
+      tiers: eventLevelUpTiers,  // ✅ Use existing tiers[] structure with minimal_point
+      level_up_rewards: [],      // Inert - truth is in tiers[]
+      has_subcategories: false,  // Data is in tiers[], not subcategories
       subcategories: [],         // Clear generic subcategories
       // Event Level Up tidak pakai deposit/turnover rules
       min_deposit: null,

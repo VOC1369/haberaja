@@ -923,7 +923,7 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   
   // ============================================
   // PATCH 11B: tier_level (Event Level Up / BONUS NALEN) Semantic Rules
-  // Root calculation fields = INERT, truth is in level_up_rewards[]
+  // Root calculation fields = INERT, truth is in tiers[] with minimal_point
   // ============================================
   if (data.tier_archetype === 'tier_level') {
     console.log('[buildPKBPayload] Applying tier_level (Event Level Up) semantic rules');
@@ -932,7 +932,7 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.min_deposit = null;          // Tidak ada min deposit per klaim (unlock via history)
     pkbData.turnover_rule = "";          // Tidak ada TO requirement
     pkbData.turnover_rule_enabled = false;
-    pkbData.calculation_value = null;    // Truth is in level_up_rewards[]
+    pkbData.calculation_value = null;    // Truth is in tiers[]
     pkbData.calculation_base = "";
     pkbData.calculation_method = "";
     
@@ -940,9 +940,12 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.claim_frequency = "sekali";  // 1x per level naik
     pkbData.max_claim_unlimited = false;
     
-    // Subcategories = INERT (data is in level_up_rewards)
+    // Subcategories = INERT (data is in tiers[])
     pkbData.subcategories = [];
     pkbData.has_subcategories = false;
+    
+    // level_up_rewards = INERT (use tiers[] instead)
+    pkbData.level_up_rewards = [];
     
     // Fixed mode fields = INERT
     pkbData.fixed_reward_type = "";
