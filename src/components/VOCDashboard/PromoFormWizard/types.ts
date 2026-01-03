@@ -829,8 +829,18 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   // ============================================
   // PATCH 10: Clean tier_network (Referral) - Set LP/EXP fields to INERT
   // ARSITEKTUR: Full-shape JSON dengan inert values (BUKAN delete!)
+  // KONTRAK TIER MODE: Root fields (reward_type, reward_amount, max_claim) = INERT
+  // Truth = referral_tiers[] array (BUKAN root fields!)
   // ============================================
   if (data.reward_mode === 'tier' && data.tier_archetype === 'tier_network') {
+    // ============================================
+    // ROOT FIELDS = INERT (reward info ada di tier array)
+    // ============================================
+    pkbData.reward_type = null;            // ✅ INERT - truth is in referral_tiers[n].reward_type
+    pkbData.reward_amount = null;          // ✅ INERT - truth is in referral_tiers[n].commission_percentage
+    pkbData.max_claim = null;              // ✅ INERT - no concept of max_claim for referral
+    pkbData.max_claim_unlimited = false;   // ✅ INERT
+    
     // Referral TIDAK pakai LP/EXP system → set inert
     pkbData.promo_unit = "";
     pkbData.exp_mode = "";
@@ -853,22 +863,28 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.admin_fee_enabled = false;
     pkbData.admin_fee_percentage = null;
     
-    // Override reward_type untuk Referral
-    pkbData.reward_type = 'commission';
-    
-    // Override trigger_event untuk Referral
+    // Override trigger_event untuk Referral (konsisten)
     pkbData.trigger_event = 'Downline Activity';
     
     // Noise fields untuk Referral → set inert
     pkbData.min_deposit = null;
     pkbData.turnover_rule = "";
-    pkbData.turnover_rule_enabled = false;
     pkbData.min_calculation = null;
+    pkbData.min_reward_claim = null;
     
     // Fixed mode fields → set inert
     pkbData.fixed_reward_type = "";
     pkbData.fixed_calculation_value = null;
     pkbData.fixed_max_claim = null;
+    
+    // Formula metadata → set inert (referral bukan formula-based)
+    pkbData.formula_metadata = undefined;
+    pkbData.calculation_base = "";
+    pkbData.calculation_method = "";
+    pkbData.calculation_value = null;
+    
+    // Ensure tier_archetype is set
+    pkbData.tier_archetype = 'tier_network';
   }
   
   // ============================================

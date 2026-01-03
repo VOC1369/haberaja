@@ -73,6 +73,16 @@ export function getEffectiveRewardType(
   data: Partial<PromoFormData>,
   subcategory?: PromoSubCategory
 ): string {
+  // ============================================
+  // TIER MODE GUARD: Root fields are INERT
+  // Truth is in tier arrays (referral_tiers, tiers, etc.)
+  // ============================================
+  if (data.reward_mode === 'tier') {
+    // For tier_network (Referral), reward_type info is inside referral_tiers[]
+    // Return empty string to indicate "read from tier array"
+    return '';
+  }
+  
   // Fixed mode uses fixed_ prefix
   if (data.reward_mode === 'fixed') {
     if (!isInert(data.fixed_reward_type)) {
@@ -129,6 +139,14 @@ export function getEffectiveMaxClaim(
   data: Partial<PromoFormData>,
   subcategory?: PromoSubCategory
 ): number | null {
+  // ============================================
+  // TIER MODE GUARD: Root fields are INERT
+  // Max claim concept doesn't apply to tier mode (especially referral)
+  // ============================================
+  if (data.reward_mode === 'tier') {
+    return null; // No concept of max_claim for tier mode
+  }
+  
   // Fixed mode
   if (data.reward_mode === 'fixed') {
     if (data.fixed_max_claim_unlimited) return null;

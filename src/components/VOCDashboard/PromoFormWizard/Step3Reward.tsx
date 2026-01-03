@@ -450,6 +450,14 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     has_subcategories: false,
                     subcategories: [],
                     
+                    // ============ RESET ROOT FIELDS TO INERT (TIER MODE CONTRACT) ============
+                    // When switching to tier mode, root fields MUST be inert
+                    // Truth lives in tier arrays (referral_tiers, tiers, etc.)
+                    reward_type: newMode === 'tier' ? '' : data.reward_type,
+                    reward_amount: newMode === 'tier' ? null : data.reward_amount,
+                    max_claim: newMode === 'tier' ? null : data.max_claim,
+                    turnover_rule: newMode === 'tier' ? '' : data.turnover_rule,
+                    
                     // ============ RESET DINAMIS (formula) FIELDS ============
                     calculation_base: '',
                     calculation_method: '',
