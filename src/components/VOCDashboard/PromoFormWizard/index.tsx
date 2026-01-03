@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { Step3Reward } from "./Step3Reward";
 import { Step4BEventConfig } from "./Step4BEventConfig";
 import { Step4CPolicy, PolicyConfigData, initialPolicyData } from "./Step4CPolicy";
 import { Step4Review, generateTermsList, formatNumber } from "./Step4Review";
+import { EditContextProvider, useEditContext } from "@/hooks/use-edit-context";
 
 // Dynamic step title generator for Step 4
 const getStep4Title = (program: ProgramType) => {
@@ -70,6 +71,9 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
     initialData ? classificationToProgram(initialData.program_classification) : null
   );
   const [policyData, setPolicyData] = useState<PolicyConfigData>(initialPolicyData);
+
+  // Determine initial edit target based on reward_mode
+  const initialEditTarget = formData.reward_mode === 'fixed' ? 'fixed' : 'base';
 
   const handleChange = (updates: Partial<PromoFormData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -173,6 +177,99 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   ];
 
   return (
+    <EditContextProvider 
+      initialTarget={initialEditTarget}
+      initialFormData={formData}
+    >
+      <PromoFormWizardContent
+        formData={formData}
+        setFormData={setFormData}
+        handleChange={handleChange}
+        currentStep={currentStep}
+        setCurrentStep={setCurrentStep}
+        editingId={editingId}
+        setEditingId={setEditingId}
+        isEditingFromReview={isEditingFromReview}
+        setIsEditingFromReview={setIsEditingFromReview}
+        selectedProgram={selectedProgram}
+        setSelectedProgram={setSelectedProgram}
+        onBack={onBack}
+        onSaveSuccess={onSaveSuccess}
+        handleNext={handleNext}
+        handlePrevious={handlePrevious}
+        handleGoToStepFromReview={handleGoToStepFromReview}
+        handleSaveDraft={handleSaveDraft}
+        handlePublish={handlePublish}
+        progress={progress}
+        canProceedFromStep3={canProceedFromStep3}
+        STEPS={STEPS}
+      />
+    </EditContextProvider>
+  );
+}
+
+// Inner component that uses EditContext
+interface PromoFormWizardContentProps {
+  formData: PromoFormData;
+  setFormData: React.Dispatch<React.SetStateAction<PromoFormData>>;
+  handleChange: (updates: Partial<PromoFormData>) => void;
+  currentStep: number;
+  setCurrentStep: (step: number) => void;
+  editingId: string | undefined;
+  setEditingId: (id: string | undefined) => void;
+  isEditingFromReview: boolean;
+  setIsEditingFromReview: (value: boolean) => void;
+  selectedProgram: ProgramType;
+  setSelectedProgram: (program: ProgramType) => void;
+  onBack?: () => void;
+  onSaveSuccess?: () => void;
+  handleNext: () => void;
+  handlePrevious: () => void;
+  handleGoToStepFromReview: (step: number) => void;
+  handleSaveDraft: () => Promise<void>;
+  handlePublish: () => Promise<void>;
+  progress: number;
+  canProceedFromStep3: boolean;
+  STEPS: Array<{ id: number; title: string }>;
+}
+
+function PromoFormWizardContent({
+  formData,
+  handleChange,
+  currentStep,
+  setCurrentStep,
+  isEditingFromReview,
+  setIsEditingFromReview,
+  selectedProgram,
+  setSelectedProgram,
+  onBack,
+  handleNext,
+  handlePrevious,
+  handleGoToStepFromReview,
+  handleSaveDraft,
+  handlePublish,
+  progress,
+  canProceedFromStep3,
+  STEPS,
+}: PromoFormWizardContentProps) {
+  // Access edit context for tracking
+  const editContext = useEditContext();
+  
+  // Sync formData to EditContext for context-aware tracking
+  useEffect(() => {
+    editContext.setFormData(formData);
+  }, [formData, editContext]);
+  
+  // Auto-set edit target based on reward_mode changes
+  useEffect(() => {
+    if (formData.reward_mode === 'fixed') {
+      editContext.setTarget('fixed');
+    } else {
+      editContext.setTarget('base');
+    }
+  }, [formData.reward_mode, editContext]);
+
+    return (
     <div className="page-wrapper space-y-6">
       {/* Back Button */}
       {onBack && (

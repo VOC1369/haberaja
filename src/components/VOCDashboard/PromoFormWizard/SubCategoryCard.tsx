@@ -13,6 +13,8 @@ import { SelectWithAddNew, SelectOption } from "./SelectWithAddNew";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { InheritedBadge } from "@/components/ui/inherited-badge";
 import { usePromoResolver } from "@/hooks/use-promo-resolver";
+import { useEditContext, useTrackedChange } from "@/hooks/use-edit-context";
+
 // Helper untuk format angka ke Rupiah Indonesia (dengan separator titik)
 const formatRupiah = (value: number | undefined): string => {
   if (value === undefined || value === null || isNaN(value)) return '';
@@ -103,7 +105,23 @@ export function SubCategoryCard({
 }: SubCategoryCardProps) {
   // Resolver for inheritance badge display
   const resolved = usePromoResolver(parentFormData || {}, subCategory);
+  
+  // Edit context for write intent tracking
+  const editContext = useEditContext();
+  const { wrapOnChange } = useTrackedChange();
+  
+  // Set edit target to subcategory when this card is opened
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Auto-set edit target when subcategory card is opened
+  useEffect(() => {
+    if (isOpen) {
+      editContext.setTarget('subcategory', index);
+    }
+  }, [isOpen, index]);
+  
+  // Create tracked onChange handler for this subcategory
+  const trackedOnChange = wrapOnChange(onChange, subCategory as unknown as Record<string, unknown>, index);
   // Helper to format number with thousand separators (Indonesian format: dots)
   const formatThousands = (num: number): string => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
