@@ -1717,10 +1717,10 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     )}
                   </>
                 )}
-                {data.vip_multiplier.enabled && (
+                {data.vip_multiplier?.enabled && (
                   <ValueBox 
                     label="VIP Multiplier" 
-                    value={data.vip_multiplier.tiers.map(t => `${t.name} ${t.bonus_percent}%`).join(', ')} 
+                    value={data.vip_multiplier.tiers?.map(t => `${t.name} ${t.bonus_percent}%`).join(', ') || '-'} 
                   />
                 )}
               </>
