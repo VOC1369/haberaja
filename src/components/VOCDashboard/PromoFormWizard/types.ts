@@ -363,6 +363,17 @@ export interface PromoFormData {
   fixed_spin_valid_until?: string;
   fixed_spin_valid_unlimited?: boolean;
 
+  // Voucher/Ticket Validity Fields (Dynamic Mode)
+  voucher_validity_mode?: 'relative' | 'absolute';     // Mode waktu berlaku
+  voucher_validity_duration?: number;                  // Durasi (angka)
+  voucher_validity_unit?: 'hours' | 'days' | 'weeks' | 'months';  // Unit waktu
+  // Note: voucher_valid_from, voucher_valid_until, voucher_valid_unlimited already exist
+
+  // Fixed Mode Variants
+  fixed_voucher_validity_mode?: 'relative' | 'absolute';
+  fixed_voucher_validity_duration?: number;
+  fixed_voucher_validity_unit?: 'hours' | 'days' | 'weeks' | 'months';
+
   fixed_reward_quantity?: number | null;
   fixed_voucher_kind?: string;               // Jenis voucher ENUM (fixed mode)
   fixed_voucher_kind_custom?: string;        // Custom voucher kind (fixed mode, jika voucher_kind === 'other')
@@ -1602,6 +1613,20 @@ export const SPIN_VALIDITY_UNITS = [
   { value: 'months', label: 'Bulan' },
 ];
 
+// Voucher Validity Presets & Units (same as Spin for consistency)
+export const VOUCHER_VALIDITY_PRESETS = [
+  { label: '24 Jam', duration: 24, unit: 'hours' as const },
+  { label: '7 Hari', duration: 7, unit: 'days' as const },
+  { label: '30 Hari', duration: 30, unit: 'days' as const },
+];
+
+export const VOUCHER_VALIDITY_UNITS = [
+  { value: 'hours', label: 'Jam' },
+  { value: 'days', label: 'Hari' },
+  { value: 'weeks', label: 'Minggu' },
+  { value: 'months', label: 'Bulan' },
+];
+
 export const PLATFORM_ACCESS = [
   { value: 'web', label: 'Web' },
   { value: 'apk', label: 'APK' },
@@ -1869,6 +1894,17 @@ export const initialPromoData: PromoFormData = {
   voucher_valid_from: '',
   voucher_valid_until: '',
   voucher_valid_unlimited: false,
+  
+  // Voucher Validity Fields (Dynamic Mode)
+  voucher_validity_mode: 'relative',
+  voucher_validity_duration: 24,
+  voucher_validity_unit: 'hours',
+  
+  // Fixed Mode Variants for Voucher Validity
+  fixed_voucher_validity_mode: 'relative',
+  fixed_voucher_validity_duration: 24,
+  fixed_voucher_validity_unit: 'hours',
+  
   lucky_spin_enabled: false,
   lucky_spin_id: '',
   lucky_spin_max_per_day: null,
