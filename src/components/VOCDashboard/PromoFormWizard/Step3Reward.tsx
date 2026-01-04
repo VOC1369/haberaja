@@ -53,6 +53,8 @@ import {
   GAME_NAMES,
   TIER_ARCHETYPE_OPTIONS,
   TierArchetype,
+  SPIN_VALIDITY_PRESETS,
+  SPIN_VALIDITY_UNITS,
 } from "./types";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { generateUUID } from "@/lib/supabase-client";
@@ -2094,7 +2096,181 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
             )}
 
-            {/* Row 1.2: Voucher / Ticket Fields (hanya muncul jika dinamis_reward_type === 'voucher') */}
+            {/* Row 1.2: Waktu Berlaku Spin (hanya untuk Lucky Spin) */}
+            {data.dinamis_reward_type === 'lucky_spin' && (
+              <div className="rounded-lg border bg-muted/30 p-4 mb-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Label className="font-medium">Waktu Berlaku Spin</Label>
+                </div>
+                
+                {/* Mode Selection - Radio Group */}
+                <RadioGroup
+                  value={data.spin_validity_mode || 'relative'}
+                  onValueChange={(value: 'relative' | 'absolute') => onChange({ 
+                    spin_validity_mode: value,
+                    // Reset fields saat ganti mode
+                    ...(value === 'relative' ? { spin_valid_from: '', spin_valid_until: '', spin_valid_unlimited: false } : {}),
+                    ...(value === 'absolute' ? { spin_validity_duration: 24, spin_validity_unit: 'hours' } : {})
+                  })}
+                  className="flex flex-row items-center gap-6"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="relative" id="spin-validity-relative" />
+                    <Label htmlFor="spin-validity-relative" className="cursor-pointer font-normal text-sm">
+                      Relatif (setelah didapat)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="absolute" id="spin-validity-absolute" />
+                    <Label htmlFor="spin-validity-absolute" className="cursor-pointer font-normal text-sm">
+                      Absolut (rentang tanggal)
+                    </Label>
+                  </div>
+                </RadioGroup>
+                
+                {/* Conditional Content based on Mode */}
+                {data.spin_validity_mode === 'relative' || !data.spin_validity_mode ? (
+                  // RELATIF MODE
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Column 1: Duration Input */}
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Durasi Berlaku</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          value={data.spin_validity_duration ?? 24}
+                          onChange={(e) => onChange({ spin_validity_duration: parseInt(e.target.value) || 24 })}
+                          className="w-24"
+                          placeholder="24"
+                        />
+                        <Select
+                          value={data.spin_validity_unit || 'hours'}
+                          onValueChange={(value) => onChange({ spin_validity_unit: value as 'hours' | 'days' | 'weeks' | 'months' })}
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Pilih unit" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SPIN_VALIDITY_UNITS.map((unit) => (
+                              <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    {/* Column 2: Quick Presets */}
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Quick Presets</Label>
+                      <div className="flex gap-2">
+                        {SPIN_VALIDITY_PRESETS.map((preset) => (
+                          <Button
+                            key={preset.label}
+                            type="button"
+                            variant={
+                              data.spin_validity_duration === preset.duration && 
+                              data.spin_validity_unit === preset.unit 
+                                ? 'default' 
+                                : 'outline'
+                            }
+                            size="sm"
+                            onClick={() => onChange({ 
+                              spin_validity_duration: preset.duration, 
+                              spin_validity_unit: preset.unit 
+                            })}
+                          >
+                            {preset.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // ABSOLUT MODE
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Column 1: Valid From */}
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Berlaku Dari</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !data.spin_valid_from && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {data.spin_valid_from 
+                              ? format(new Date(data.spin_valid_from), "dd MMM yyyy")
+                              : "Pilih tanggal"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={data.spin_valid_from ? new Date(data.spin_valid_from) : undefined}
+                            onSelect={(date) => onChange({ spin_valid_from: date ? format(date, "yyyy-MM-dd") : '' })}
+                            initialFocus
+                            className="p-3 pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    
+                    {/* Column 2: Valid Until dengan Unlimited toggle */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-sm text-muted-foreground">Berlaku Hingga</Label>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Unlimited</span>
+                          <Switch
+                            checked={data.spin_valid_unlimited || false}
+                            onCheckedChange={(checked) => onChange({ 
+                              spin_valid_unlimited: checked,
+                              spin_valid_until: checked ? '' : data.spin_valid_until
+                            })}
+                          />
+                        </div>
+                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              (!data.spin_valid_until || data.spin_valid_unlimited) && "text-muted-foreground",
+                              data.spin_valid_unlimited && "opacity-50"
+                            )}
+                            disabled={data.spin_valid_unlimited}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {data.spin_valid_unlimited 
+                              ? "Tidak ada kadaluwarsa"
+                              : data.spin_valid_until 
+                                ? format(new Date(data.spin_valid_until), "dd MMM yyyy")
+                                : "Pilih tanggal"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={data.spin_valid_until ? new Date(data.spin_valid_until) : undefined}
+                            onSelect={(date) => onChange({ spin_valid_until: date ? format(date, "yyyy-MM-dd") : '' })}
+                            initialFocus
+                            className="p-3 pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Row 1.3: Voucher / Ticket Fields (hanya muncul jika dinamis_reward_type === 'voucher') */}
             {data.dinamis_reward_type === 'voucher' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {/* Left column - dibawah Jenis Hadiah */}
