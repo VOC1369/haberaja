@@ -347,7 +347,22 @@ export interface PromoFormData {
   lucky_spin_id?: string;                    // ID Lucky Spin
   lucky_spin_max_per_day?: number | null;    // Max spin per hari (optional)
   
+  // Lucky Spin Validity Fields (Dynamic Mode)
+  spin_validity_mode?: 'relative' | 'absolute';     // Mode waktu berlaku
+  spin_validity_duration?: number;                  // Durasi (angka)
+  spin_validity_unit?: 'hours' | 'days' | 'weeks' | 'months';  // Unit waktu
+  spin_valid_from?: string;                         // Tanggal mulai (absolut)
+  spin_valid_until?: string;                        // Tanggal berakhir (absolut)
+  spin_valid_unlimited?: boolean;                   // Toggle unlimited (absolut)
+
   // Fixed Mode Variants
+  fixed_spin_validity_mode?: 'relative' | 'absolute';
+  fixed_spin_validity_duration?: number;
+  fixed_spin_validity_unit?: 'hours' | 'days' | 'weeks' | 'months';
+  fixed_spin_valid_from?: string;
+  fixed_spin_valid_until?: string;
+  fixed_spin_valid_unlimited?: boolean;
+
   fixed_reward_quantity?: number | null;
   fixed_voucher_kind?: string;               // Jenis voucher ENUM (fixed mode)
   fixed_voucher_kind_custom?: string;        // Custom voucher kind (fixed mode, jika voucher_kind === 'other')
@@ -1572,6 +1587,21 @@ export const REWARD_DISTRIBUTIONS = [
   { value: 'hari_tertentu', label: 'Hari & Jam Tertentu', helper: 'Bonus dikirim pada hari dan jam tertentu (contoh: Senin 00:00 WIB).' },
   { value: 'tanggal_tertentu', label: 'Tanggal Tertentu', helper: 'Bonus dikirim pada rentang tanggal spesifik.' },
 ];
+
+// Spin Validity Presets & Units
+export const SPIN_VALIDITY_PRESETS = [
+  { label: '24 Jam', duration: 24, unit: 'hours' as const },
+  { label: '7 Hari', duration: 7, unit: 'days' as const },
+  { label: '30 Hari', duration: 30, unit: 'days' as const },
+];
+
+export const SPIN_VALIDITY_UNITS = [
+  { value: 'hours', label: 'Jam' },
+  { value: 'days', label: 'Hari' },
+  { value: 'weeks', label: 'Minggu' },
+  { value: 'months', label: 'Bulan' },
+];
+
 export const PLATFORM_ACCESS = [
   { value: 'web', label: 'Web' },
   { value: 'apk', label: 'APK' },
@@ -1843,7 +1873,21 @@ export const initialPromoData: PromoFormData = {
   lucky_spin_id: '',
   lucky_spin_max_per_day: null,
   
+  // Lucky Spin Validity Fields (Dynamic Mode)
+  spin_validity_mode: 'relative',
+  spin_validity_duration: 24,
+  spin_validity_unit: 'hours',
+  spin_valid_from: '',
+  spin_valid_until: '',
+  spin_valid_unlimited: false,
+  
   // Fixed Mode Variants
+  fixed_spin_validity_mode: 'relative',
+  fixed_spin_validity_duration: 24,
+  fixed_spin_validity_unit: 'hours',
+  fixed_spin_valid_from: '',
+  fixed_spin_valid_until: '',
+  fixed_spin_valid_unlimited: false,
   fixed_reward_quantity: null,
   fixed_voucher_kind: '',
   fixed_voucher_kind_custom: '',
