@@ -672,6 +672,162 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     </div>
                   </div>
                 )}
+                {/* Waktu Berlaku Spin - Fixed Mode */}
+                {data.fixed_reward_type === 'lucky_spin' && (
+                  <div className="rounded-lg border bg-muted/30 p-4 mt-4 space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <Label className="font-medium">Waktu Berlaku Spin</Label>
+                    </div>
+                    
+                    <RadioGroup
+                      value={data.fixed_spin_validity_mode || 'relative'}
+                      onValueChange={(value: 'relative' | 'absolute') => onChange({ 
+                        fixed_spin_validity_mode: value,
+                        ...(value === 'relative' ? { 
+                          fixed_spin_valid_from: '', 
+                          fixed_spin_valid_until: '', 
+                          fixed_spin_valid_unlimited: false 
+                        } : {}),
+                        ...(value === 'absolute' ? { 
+                          fixed_spin_validity_duration: undefined, 
+                          fixed_spin_validity_unit: undefined 
+                        } : {})
+                      })}
+                      className="flex flex-row items-center gap-6"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="relative" id="fixed-spin-validity-relative" />
+                        <Label htmlFor="fixed-spin-validity-relative" className="cursor-pointer font-normal">Relatif (setelah didapat)</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="absolute" id="fixed-spin-validity-absolute" />
+                        <Label htmlFor="fixed-spin-validity-absolute" className="cursor-pointer font-normal">Absolut (rentang tanggal)</Label>
+                      </div>
+                    </RadioGroup>
+                    
+                    {(data.fixed_spin_validity_mode || 'relative') === 'relative' ? (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Durasi Berlaku</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="number"
+                              min={1}
+                              value={data.fixed_spin_validity_duration ?? ''}
+                              onChange={(e) => onChange({ fixed_spin_validity_duration: e.target.value ? parseInt(e.target.value) : undefined })}
+                              placeholder="Contoh: 24"
+                              className="flex-1"
+                            />
+                            <Select
+                              value={data.fixed_spin_validity_unit || 'hours'}
+                              onValueChange={(value: 'hours' | 'days' | 'weeks' | 'months') => onChange({ fixed_spin_validity_unit: value })}
+                            >
+                              <SelectTrigger className="w-[100px]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {SPIN_VALIDITY_UNITS.map((unit) => (
+                                  <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Quick Presets</Label>
+                          <div className="flex gap-2">
+                            {SPIN_VALIDITY_PRESETS.map((preset) => (
+                              <Button
+                                key={preset.label}
+                                type="button"
+                                variant={data.fixed_spin_validity_duration === preset.duration && data.fixed_spin_validity_unit === preset.unit ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => onChange({ 
+                                  fixed_spin_validity_duration: preset.duration, 
+                                  fixed_spin_validity_unit: preset.unit 
+                                })}
+                              >
+                                {preset.label}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Berlaku Dari</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !data.fixed_spin_valid_from && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {data.fixed_spin_valid_from ? format(new Date(data.fixed_spin_valid_from), "PPP", { locale: id }) : "Pilih tanggal"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={data.fixed_spin_valid_from ? new Date(data.fixed_spin_valid_from) : undefined}
+                                onSelect={(date) => onChange({ fixed_spin_valid_from: date ? format(date, 'yyyy-MM-dd') : '' })}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <Label>Berlaku Hingga</Label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">Unlimited</span>
+                              <Switch
+                                checked={data.fixed_spin_valid_unlimited || false}
+                                onCheckedChange={(checked) => onChange({ 
+                                  fixed_spin_valid_unlimited: checked,
+                                  fixed_spin_valid_until: checked ? '' : data.fixed_spin_valid_until
+                                })}
+                              />
+                            </div>
+                          </div>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-full justify-start text-left font-normal",
+                                  !data.fixed_spin_valid_until && "text-muted-foreground",
+                                  data.fixed_spin_valid_unlimited && "opacity-50"
+                                )}
+                                disabled={data.fixed_spin_valid_unlimited}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {data.fixed_spin_valid_unlimited 
+                                  ? "Tidak ada batas" 
+                                  : data.fixed_spin_valid_until 
+                                    ? format(new Date(data.fixed_spin_valid_until), "PPP", { locale: id }) 
+                                    : "Pilih tanggal"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={data.fixed_spin_valid_until ? new Date(data.fixed_spin_valid_until) : undefined}
+                                onSelect={(date) => onChange({ fixed_spin_valid_until: date ? format(date, 'yyyy-MM-dd') : '' })}
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {/* Dynamic Field: Uang Tunai */}
                 {data.fixed_reward_type === 'uang_tunai' && (
                   <div className="space-y-2 mt-2">
@@ -718,10 +874,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
             
             {/* Row 1.1: Voucher / Ticket Fields (hanya muncul jika fixed_reward_type === 'voucher') */}
-            {data.fixed_reward_type === 'voucher' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                {/* Left column - dibawah Jenis Hadiah */}
-                <div className="grid grid-cols-2 gap-4">
+{data.fixed_reward_type === 'voucher' && (
+              <>
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="space-y-2">
                     <Label>Jenis Voucher</Label>
                     <Select
@@ -760,41 +915,162 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     />
                   </div>
                 </div>
-                {/* Right column - dibawah Max Bonus */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Masa Berlaku Dimulai</Label>
-                    <Input
-                      type="date"
-                      value={data.fixed_voucher_valid_from || ''}
-                      onChange={(e) => onChange({ fixed_voucher_valid_from: e.target.value })}
-                    />
+                
+                {/* Waktu Berlaku Voucher - Fixed Mode */}
+                <div className="rounded-lg border bg-muted/30 p-4 mb-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Label className="font-medium">Waktu Berlaku Voucher</Label>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <Label>Masa Berakhir</Label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Unlimited</span>
-                        <Switch
-                          checked={data.fixed_voucher_valid_unlimited || false}
-                          onCheckedChange={(checked) => onChange({ 
-                            fixed_voucher_valid_unlimited: checked,
-                            fixed_voucher_valid_until: checked ? '' : data.fixed_voucher_valid_until
-                          })}
-                        />
+                  
+                  <RadioGroup
+                    value={data.fixed_voucher_validity_mode || 'relative'}
+                    onValueChange={(value: 'relative' | 'absolute') => onChange({ 
+                      fixed_voucher_validity_mode: value,
+                      ...(value === 'relative' ? { 
+                        fixed_voucher_valid_from: '', 
+                        fixed_voucher_valid_until: '', 
+                        fixed_voucher_valid_unlimited: false 
+                      } : {}),
+                      ...(value === 'absolute' ? { 
+                        fixed_voucher_validity_duration: undefined, 
+                        fixed_voucher_validity_unit: undefined 
+                      } : {})
+                    })}
+                    className="flex flex-row items-center gap-6"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="relative" id="fixed-voucher-validity-relative" />
+                      <Label htmlFor="fixed-voucher-validity-relative" className="cursor-pointer font-normal">Relatif (setelah didapat)</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="absolute" id="fixed-voucher-validity-absolute" />
+                      <Label htmlFor="fixed-voucher-validity-absolute" className="cursor-pointer font-normal">Absolut (rentang tanggal)</Label>
+                    </div>
+                  </RadioGroup>
+                  
+                  {(data.fixed_voucher_validity_mode || 'relative') === 'relative' ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Durasi Berlaku</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            min={1}
+                            value={data.fixed_voucher_validity_duration ?? ''}
+                            onChange={(e) => onChange({ fixed_voucher_validity_duration: e.target.value ? parseInt(e.target.value) : undefined })}
+                            placeholder="Contoh: 24"
+                            className="flex-1"
+                          />
+                          <Select
+                            value={data.fixed_voucher_validity_unit || 'hours'}
+                            onValueChange={(value: 'hours' | 'days' | 'weeks' | 'months') => onChange({ fixed_voucher_validity_unit: value })}
+                          >
+                            <SelectTrigger className="w-[100px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {VOUCHER_VALIDITY_UNITS.map((unit) => (
+                                <SelectItem key={unit.value} value={unit.value}>{unit.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Quick Presets</Label>
+                        <div className="flex gap-2">
+                          {VOUCHER_VALIDITY_PRESETS.map((preset) => (
+                            <Button
+                              key={preset.label}
+                              type="button"
+                              variant={data.fixed_voucher_validity_duration === preset.duration && data.fixed_voucher_validity_unit === preset.unit ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => onChange({ 
+                                fixed_voucher_validity_duration: preset.duration, 
+                                fixed_voucher_validity_unit: preset.unit 
+                              })}
+                            >
+                              {preset.label}
+                            </Button>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                    <Input
-                      type="date"
-                      value={data.fixed_voucher_valid_unlimited ? '' : (data.fixed_voucher_valid_until || '')}
-                      onChange={(e) => onChange({ fixed_voucher_valid_until: e.target.value })}
-                      disabled={data.fixed_voucher_valid_unlimited}
-                      placeholder={data.fixed_voucher_valid_unlimited ? "Tidak ada kadaluwarsa" : ""}
-                      className={cn(data.fixed_voucher_valid_unlimited && "opacity-50")}
-                    />
-                  </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Berlaku Dari</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !data.fixed_voucher_valid_from && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {data.fixed_voucher_valid_from ? format(new Date(data.fixed_voucher_valid_from), "PPP", { locale: id }) : "Pilih tanggal"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={data.fixed_voucher_valid_from ? new Date(data.fixed_voucher_valid_from) : undefined}
+                              onSelect={(date) => onChange({ fixed_voucher_valid_from: date ? format(date, 'yyyy-MM-dd') : '' })}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <Label>Berlaku Hingga</Label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Unlimited</span>
+                            <Switch
+                              checked={data.fixed_voucher_valid_unlimited || false}
+                              onCheckedChange={(checked) => onChange({ 
+                                fixed_voucher_valid_unlimited: checked,
+                                fixed_voucher_valid_until: checked ? '' : data.fixed_voucher_valid_until
+                              })}
+                            />
+                          </div>
+                        </div>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !data.fixed_voucher_valid_until && "text-muted-foreground",
+                                data.fixed_voucher_valid_unlimited && "opacity-50"
+                              )}
+                              disabled={data.fixed_voucher_valid_unlimited}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {data.fixed_voucher_valid_unlimited 
+                                ? "Tidak ada batas" 
+                                : data.fixed_voucher_valid_until 
+                                  ? format(new Date(data.fixed_voucher_valid_until), "PPP", { locale: id }) 
+                                  : "Pilih tanggal"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={data.fixed_voucher_valid_until ? new Date(data.fixed_voucher_valid_until) : undefined}
+                              onSelect={(date) => onChange({ fixed_voucher_valid_until: date ? format(date, 'yyyy-MM-dd') : '' })}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              </>
             )}
             
             {/* Row 2: 2 kolom utama - Kolom 1 (Payout + Admin Fee), Kolom 2 (Minimum Depo) */}
