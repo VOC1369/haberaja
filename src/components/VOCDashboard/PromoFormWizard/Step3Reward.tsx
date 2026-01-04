@@ -1995,42 +1995,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     </div>
                   </div>
                 )}
-                {/* Dynamic Field: Lucky Spin */}
-                {data.dinamis_reward_type === 'lucky_spin' && (
-                  <div className="grid grid-cols-3 gap-4 mt-2">
-                    <div className="space-y-2">
-                      <Label>ID Lucky Spin</Label>
-                      <Input
-                        value={data.lucky_spin_id || ''}
-                        onChange={(e) => onChange({ 
-                          lucky_spin_id: e.target.value,
-                          lucky_spin_enabled: true
-                        })}
-                        placeholder="Contoh: SPIN-2024-001"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Jumlah Reward</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={data.reward_quantity ?? 1}
-                        onChange={(e) => onChange({ reward_quantity: parseInt(e.target.value) || 1 })}
-                        placeholder="Jumlah spin"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Max Spin/Hari (opsional)</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={data.lucky_spin_max_per_day ?? ''}
-                        onChange={(e) => onChange({ lucky_spin_max_per_day: e.target.value ? parseInt(e.target.value) : null })}
-                        placeholder="Contoh: 3"
-                      />
-                    </div>
-                  </div>
-                )}
+                {/* Lucky Spin fields dipindahkan ke Row 1.1 terpisah di bawah */}
                 {/* Dynamic Field: Uang Tunai */}
                 {data.dinamis_reward_type === 'uang_tunai' && (
                   <div className="space-y-2 mt-2">
@@ -2076,7 +2041,60 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </div>
             </div>
             
-            {/* Row 1.1: Voucher / Ticket Fields (hanya muncul jika dinamis_reward_type === 'voucher') */}
+            {/* Row 1.1: Lucky Spin Fields (hanya muncul jika dinamis_reward_type === 'lucky_spin') */}
+            {data.dinamis_reward_type === 'lucky_spin' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Column 1 (50%): ID Lucky Spin dengan toggle */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>ID Lucky Spin</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Aktif</span>
+                      <Switch
+                        checked={data.lucky_spin_enabled ?? true}
+                        onCheckedChange={(checked) => onChange({ lucky_spin_enabled: checked })}
+                      />
+                    </div>
+                  </div>
+                  <Input
+                    value={data.lucky_spin_id || ''}
+                    onChange={(e) => onChange({ lucky_spin_id: e.target.value })}
+                    placeholder="Contoh: SPIN-2024-001"
+                    disabled={!data.lucky_spin_enabled}
+                    className={cn(!data.lucky_spin_enabled && "opacity-50")}
+                  />
+                </div>
+                
+                {/* Column 2 (50%): Split into 2 sub-columns (25% + 25%) */}
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Sub-column 2a: Jumlah Reward */}
+                  <div className="space-y-2">
+                    <Label>Jumlah Reward</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={data.reward_quantity ?? 1}
+                      onChange={(e) => onChange({ reward_quantity: parseInt(e.target.value) || 1 })}
+                      placeholder="1"
+                    />
+                  </div>
+                  
+                  {/* Sub-column 2b: Max Spin/Hari */}
+                  <div className="space-y-2">
+                    <Label>Max Spin/Hari (opsional)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={data.lucky_spin_max_per_day ?? ''}
+                      onChange={(e) => onChange({ lucky_spin_max_per_day: e.target.value ? parseInt(e.target.value) : null })}
+                      placeholder="Contoh: 3"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Row 1.2: Voucher / Ticket Fields (hanya muncul jika dinamis_reward_type === 'voucher') */}
             {data.dinamis_reward_type === 'voucher' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {/* Left column - dibawah Jenis Hadiah */}
