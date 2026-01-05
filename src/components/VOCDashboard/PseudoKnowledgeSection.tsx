@@ -623,8 +623,10 @@ export function PseudoKnowledgeSection() {
                   <span className="text-button-hover font-semibold">
                     {sub.calculation_value != null 
                       ? (sub.calculation_method === 'threshold'
-                          ? `Rp ${sub.calculation_value.toLocaleString('id-ID')}`
-                          : `${sub.calculation_value}${sub.calculation_method === 'percentage' ? '%' : ''}`)
+                          ? `Rp ${Number(sub.calculation_value).toLocaleString('id-ID')}`
+                          : sub.calculation_method === 'percentage'
+                            ? `${sub.calculation_value}%`
+                            : `Rp ${Number(sub.calculation_value).toLocaleString('id-ID')}`)
                       : '-'}
                   </span>
                 )}
@@ -969,32 +971,6 @@ export function PseudoKnowledgeSection() {
                   )}
                 </Badge>
               )}
-              {/* Promo Type Badge moved to ClassificationOverride header */}
-              {(() => {
-                const domain = detectGameDomain(extractedPromo);
-                if (domain !== 'general') {
-                  const domainLabels: Record<GameDomain, string> = {
-                    togel: 'Togel / Lottery',
-                    slot: 'Slot',
-                    casino: 'Live Casino',
-                    sports: 'Sportsbook',
-                    general: 'Semua'
-                  };
-                  const domainColors: Record<GameDomain, string> = {
-                    togel: 'bg-purple-500/20 text-purple-400 border-purple-500/40',
-                    slot: 'bg-amber-500/20 text-amber-400 border-amber-500/40',
-                    casino: 'bg-pink-500/20 text-pink-400 border-pink-500/40',
-                    sports: 'bg-green-500/20 text-green-400 border-green-500/40',
-                    general: 'bg-muted text-muted-foreground'
-                  };
-                  return (
-                    <Badge variant="outline" className={`text-xs ${domainColors[domain]}`}>
-                      {domainLabels[domain]}
-                    </Badge>
-                  );
-                }
-                return null;
-              })()}
             </div>
           </div>
         </div>
