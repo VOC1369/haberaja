@@ -45,6 +45,7 @@ interface ClassificationOverrideProps {
   confidence: ClassificationConfidence;
   qualityFlags: QualityFlag[];
   rewardMode?: 'fixed' | 'formula' | 'tier' | 'multi';
+  promoSubType?: string;  // e.g., "Lucky Spin", "Cashback", etc.
   reasoning?: {
     q1: QAnswer;
     q2: QAnswer;
@@ -60,6 +61,7 @@ export function ClassificationOverride({
   confidence,
   qualityFlags,
   rewardMode,
+  promoSubType,
   reasoning,
   onOverride,
 }: ClassificationOverrideProps) {
@@ -124,6 +126,11 @@ export function ClassificationOverride({
               {rewardMode === 'formula' ? 'Dinamis' : 
                rewardMode === 'fixed' ? 'Fixed' : 
                rewardMode === 'tier' ? 'Tier' : 'Multi'}
+            </Badge>
+          )}
+          {promoSubType && (
+            <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-button-hover/40">
+              {promoSubType}
             </Badge>
           )}
         </div>
