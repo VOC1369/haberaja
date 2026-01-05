@@ -3652,6 +3652,17 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       : 'after',
     fixed_admin_fee_enabled: false,
     fixed_admin_fee_percentage: undefined,
+    // ✅ Fixed Mode - Nilai Bonus auto-toggle based on reward type
+    fixed_calculation_value_enabled: (() => {
+      if (modeDetection.mode !== 'fixed') return false;
+      const rewardType = extracted.subcategories[0]?.reward_type?.toLowerCase() || '';
+      // Auto-OFF untuk Uang Tunai dan Hadiah Fisik (sudah ada nominal eksplisit)
+      if (['uang_tunai', 'hadiah_fisik', 'cash', 'physical'].includes(rewardType)) {
+        return false;
+      }
+      // Default ON untuk reward type lain yang memerlukan kalkulasi
+      return true;
+    })(),
     // ✅ Fixed Mode - Min Calculation with Birthday/Historical Eligibility Guard
     fixed_min_calculation_enabled: (() => {
       if (modeDetection.mode !== 'fixed') return false;
