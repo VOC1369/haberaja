@@ -238,6 +238,7 @@ export interface PromoFormData {
   fixed_calculation_method: string;
   fixed_calculation_value?: number;
   fixed_max_claim?: number;
+  fixed_max_claim_enabled: boolean;
   fixed_max_claim_unlimited: boolean;
   fixed_payout_direction: 'before' | 'after';
   fixed_admin_fee_enabled: boolean;
@@ -1827,6 +1828,7 @@ export const initialPromoData: PromoFormData = {
   fixed_calculation_method: '',
   fixed_calculation_value: undefined,
   fixed_max_claim: undefined,
+  fixed_max_claim_enabled: true,
   fixed_max_claim_unlimited: false,
   fixed_payout_direction: 'after',
   fixed_admin_fee_enabled: false,
@@ -2060,6 +2062,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   fixed_calculation_method: '',
   fixed_calculation_value: undefined,
   fixed_max_claim: undefined,
+  fixed_max_claim_enabled: true,
   fixed_max_claim_unlimited: false,
   fixed_payout_direction: 'after',
   fixed_admin_fee_enabled: false,
