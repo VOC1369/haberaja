@@ -1211,6 +1211,7 @@ import {
   parseTurnoverMultiplier as parseMultiplier,
   mapToCategory,
   consolidateGameExclusions,
+  validateCanonicalPromo,
   CANONICAL_INERT,
 } from '@/lib/canonical-promo-schema';
 
@@ -1358,6 +1359,18 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     ? data.extraction_confidence 
     : (data.classification_confidence === 'high' ? 0.9 : data.classification_confidence === 'medium' ? 0.7 : 0.5);
   canonical.human_verified = data.human_verified || false;
+  
+  // ===============================
+  // CANONICAL GUARD VALIDATION
+  // Run validation and log warnings
+  // ===============================
+  const validation = validateCanonicalPromo(canonical);
+  if (!validation.valid) {
+    console.warn('[buildCanonicalPayload] Validation failed:', validation.errors);
+  }
+  if (validation.warnings.length > 0) {
+    console.debug('[buildCanonicalPayload] Validation warnings:', validation.warnings);
+  }
   
   return canonical;
 }

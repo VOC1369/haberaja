@@ -255,6 +255,38 @@ function applyCanonicalMigrations(data: Record<string, unknown>): Record<string,
   return migrated;
 }
 
+// ============================================
+// UI FIELD PREFIX STRIPPING
+// ============================================
+
+/**
+ * Strip UI-specific prefixes for canonical export.
+ * This function removes fixed_, dinamis_, global_, formula_ prefixes
+ * to produce clean canonical field names.
+ */
+export function stripUIFieldPrefixes(data: Record<string, unknown>): Record<string, unknown> {
+  const prefixes = ['fixed_', 'dinamis_', 'global_', 'formula_'];
+  const output: Record<string, unknown> = {};
+  
+  for (const [key, value] of Object.entries(data)) {
+    let canonicalKey = key;
+    
+    for (const prefix of prefixes) {
+      if (key.startsWith(prefix)) {
+        canonicalKey = key.slice(prefix.length);
+        break;
+      }
+    }
+    
+    // If the stripped key already exists, don't overwrite with prefixed version
+    if (output[canonicalKey] === undefined || key === canonicalKey) {
+      output[canonicalKey] = value;
+    }
+  }
+  
+  return output;
+}
+
 /**
  * Normalize an array of promo items
  */

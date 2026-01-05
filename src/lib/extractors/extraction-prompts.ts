@@ -591,15 +591,52 @@ Jika tidak ada provider spesifik → eligible_providers: []
 `;
 
 // ============================================
+// CANONICAL OUTPUT PROMPT (INJECTED INTO ALL PROMPTS)
+// ============================================
+
+export const CANONICAL_OUTPUT_PROMPT = `
+🔒 CANONICAL OUTPUT RULES (NON-NEGOTIABLE):
+
+1. ONLY output fields that exist in the Canonical Contract v2.1
+2. ALWAYS output FULL-SHAPE JSON (every field must exist)
+3. Use "", null, false, or [] for non-applicable fields
+4. Ignore UI-specific prefixes (fixed_, dinamis_, global_, etc.)
+
+❌ HARD FAIL CONDITIONS (STOP OUTPUT):
+- Missing schema_version
+- mode = "tier" but tiers[] empty  
+- Percentage reward without max_bonus or max_bonus_unlimited
+- Unknown field name appears
+- Engine logic placed outside extra_config
+
+✅ TAXONOMY RULES (LOCKED VALUES):
+- category: "reward" | "event" | ""
+- mode: "fixed" | "dinamis" | "tier" | ""
+- tier_archetype: "level" | "point" | "network" | null
+
+🧯 ESCAPE HATCH:
+- special_conditions[] → short textual requirements
+- custom_terms → FULL S&K BACKUP
+- extra_config → ALL advanced / engine logic
+
+📦 OUTPUT FORMAT: JSON only, no explanation, no markdown
+`;
+
+// ============================================
 // GET PROMPT BY CATEGORY
 // ============================================
 
 export function getExtractionPrompt(category: ProgramCategory): string {
-  switch (category) {
-    case 'A': return REWARD_EXTRACTION_PROMPT;
-    case 'B': return EVENT_EXTRACTION_PROMPT;
-    case 'C': return POLICY_EXTRACTION_PROMPT;
-  }
+  const basePrompt = (() => {
+    switch (category) {
+      case 'A': return REWARD_EXTRACTION_PROMPT;
+      case 'B': return EVENT_EXTRACTION_PROMPT;
+      case 'C': return POLICY_EXTRACTION_PROMPT;
+    }
+  })();
+  
+  // Inject canonical output rules at the end of every prompt
+  return basePrompt + '\n\n' + CANONICAL_OUTPUT_PROMPT;
 }
 
 export function getExtractorPromptVersion(category: ProgramCategory): string {
