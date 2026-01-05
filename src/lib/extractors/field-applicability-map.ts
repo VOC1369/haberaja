@@ -94,6 +94,7 @@ export const INERT_VALUES: Record<string, unknown> = {
   fixed_admin_fee_enabled: false,
   fixed_min_calculation_enabled: false,
   fixed_calculation_value_enabled: false,
+  fixed_max_claim_enabled: false,
   fixed_max_claim_unlimited: false,
   fixed_min_depo_enabled: false,
   min_calculation_enabled: false,

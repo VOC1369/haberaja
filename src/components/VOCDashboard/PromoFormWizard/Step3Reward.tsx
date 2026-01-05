@@ -669,27 +669,38 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               {/* Max Bonus / Max Claim Reward - Dynamic Label based on reward type */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>
-                    {UNIT_BASED_REWARDS.includes(data.fixed_reward_type || '') ? 'Max Claim Reward' : 'Max Bonus'}
-                  </Label>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Unlimited</span>
                     <Switch
-                      checked={data.fixed_max_claim_unlimited ?? false}
+                      checked={data.fixed_max_claim_enabled ?? true}
                       onCheckedChange={(checked) => onChange({ 
-                        fixed_max_claim_unlimited: checked,
-                        fixed_max_claim: checked ? undefined : data.fixed_max_claim
+                        fixed_max_claim_enabled: checked,
+                        ...(checked ? {} : { fixed_max_claim: undefined, fixed_max_claim_unlimited: false })
                       })}
                     />
+                    <Label className={cn(!(data.fixed_max_claim_enabled ?? true) && "text-muted-foreground")}>
+                      {UNIT_BASED_REWARDS.includes(data.fixed_reward_type || '') ? 'Max Claim Reward' : 'Max Bonus'}
+                    </Label>
                   </div>
+                  {(data.fixed_max_claim_enabled ?? true) && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Unlimited</span>
+                      <Switch
+                        checked={data.fixed_max_claim_unlimited ?? false}
+                        onCheckedChange={(checked) => onChange({ 
+                          fixed_max_claim_unlimited: checked,
+                          fixed_max_claim: checked ? undefined : data.fixed_max_claim
+                        })}
+                      />
+                    </div>
+                  )}
                 </div>
                 <Input
                   type="text"
-                  value={data.fixed_max_claim_unlimited ? '' : (data.fixed_max_claim ? data.fixed_max_claim.toLocaleString('id-ID') : '')}
+                  value={!(data.fixed_max_claim_enabled ?? true) || data.fixed_max_claim_unlimited ? '' : (data.fixed_max_claim ? data.fixed_max_claim.toLocaleString('id-ID') : '')}
                   onChange={(e) => onChange({ fixed_max_claim: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={data.fixed_max_claim_unlimited ? "Unlimited / Tanpa Batas" : (UNIT_BASED_REWARDS.includes(data.fixed_reward_type || '') ? "Contoh: 10 unit/hari" : "Contoh: 100.000")}
-                  disabled={data.fixed_max_claim_unlimited}
-                  className={cn(data.fixed_max_claim_unlimited && "opacity-50")}
+                  placeholder={!(data.fixed_max_claim_enabled ?? true) ? "Tidak Aktif" : (data.fixed_max_claim_unlimited ? "Unlimited / Tanpa Batas" : (UNIT_BASED_REWARDS.includes(data.fixed_reward_type || '') ? "Contoh: 10 unit/hari" : "Contoh: 100.000"))}
+                  disabled={!(data.fixed_max_claim_enabled ?? true) || data.fixed_max_claim_unlimited}
+                  className={cn((!(data.fixed_max_claim_enabled ?? true) || data.fixed_max_claim_unlimited) && "opacity-50")}
                 />
               </div>
             </div>

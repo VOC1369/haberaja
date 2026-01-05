@@ -3644,6 +3644,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_max_claim: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].max_bonus ?? undefined)
       : undefined,
+    fixed_max_claim_enabled: modeDetection.mode === 'fixed',
     fixed_max_claim_unlimited: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? extracted.subcategories[0].max_bonus === null
       : false,
