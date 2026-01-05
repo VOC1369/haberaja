@@ -106,6 +106,39 @@ EXCEPTION untuk "uang_tunai":
 - Rebate = persentase turnover yang dikreditkan ke akun
 - Rollingan = sama dengan Rebate
 
+🎂 BIRTHDAY / SPECIAL PROMO DETECTION (CRITICAL!):
+
+⚠️ BEDAKAN "Syarat Eligibility Historis" vs "Min Deposit Promo":
+
+SYARAT ELIGIBILITY HISTORIS (→ special_requirements, BUKAN min_deposit!):
+- "Total Turnover X bulan terakhir" → special_requirements: ["Minimum turnover Rp X dalam Y bulan terakhir"]
+- "Minimal bermain 3 bulan" → special_requirements: ["Sudah bermain minimal 3 bulan"]
+- "Sudah deposit minimal X kali" → special_requirements: ["Sudah deposit minimal X kali"]
+- "Akun terdaftar minimal 6 bulan" → special_requirements: ["Akun terdaftar minimal 6 bulan"]
+- "Verifikasi KTP/SIM" → special_requirements: ["Verifikasi KTP/SIM wajib"]
+
+MIN DEPOSIT PROMO (→ min_deposit):
+- "Deposit Rp X untuk klaim bonus" → min_deposit ✅
+- "Minimal deposit Rp X" (untuk aksi claim) → min_deposit ✅
+
+PATTERN EXTRACTION:
+1. "Total Turnover Minimal Rp 5.000.000 dalam 3 BULAN Terakhir"
+   → special_requirements: ["Minimum turnover Rp 5.000.000 dalam 3 bulan terakhir"]
+   → min_deposit: null (BUKAN 5000000!)
+
+2. "Klaim hanya di tanggal ulang tahun"
+   → special_requirements: ["Klaim hanya pada tanggal ulang tahun"]
+
+🔄 PAYOUT SPLIT DETECTION:
+
+Jika ada pattern "Withdraw X% sisanya TO Y":
+- "Bonus bisa di Withdraw 50% dan Sisanya Dikenai Syarat TO 3X"
+  → special_requirements: ["Payout 50% langsung WD, 50% dengan TO 3x"]
+  → turnover_rule: "3x" (untuk bagian yang kena TO)
+
+- "30% bisa langsung WD, 70% syarat TO 5x"
+  → special_requirements: ["Payout 30% langsung WD, 70% dengan TO 5x"]
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama promo",
@@ -134,6 +167,7 @@ EXCEPTION untuk "uang_tunai":
   "claim_method": "auto" | "manual" | "code" | null,
   
   "terms_conditions": ["syarat 1", "syarat 2", ...] | null,
+  "special_requirements": ["syarat eligibility khusus", "payout split info", ...] | [],
   
   "has_subcategories": boolean,
   "subcategories": [

@@ -686,6 +686,7 @@ export interface ExtractedPromo {
   
   // General terms
   terms_conditions: string[];
+  special_requirements?: string[];  // ✅ NEW: Syarat eligibility khusus (birthday, payout split, etc.)
   claim_method?: string;
   
   // Metadata
@@ -3475,8 +3476,29 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Fixed mode defaults - using INERT VALUES (null, not 0)
     reward_type: 'freechip',  // lowercase to match enum
     reward_amount: null,      // ✅ FIX: null = inert (not 0)
-    // ✅ FIX: Map min_deposit from extracted (for voucher/ticket/lucky_spin promos)
-    min_deposit: extracted.min_deposit ?? null,
+    // ✅ FIX: Guard min_deposit - JANGAN map historical eligibility sebagai min_deposit!
+    // "Total Turnover X bulan terakhir" = eligibility, BUKAN min_deposit
+    min_deposit: (() => {
+      const rawMinDeposit = extracted.min_deposit;
+      if (rawMinDeposit === null || rawMinDeposit === undefined) return null;
+      
+      // Check if this "min_deposit" is actually a historical eligibility requirement
+      // by looking for patterns in terms_conditions
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const hasHistoricalEligibility = 
+        /turnover.*bulan\s*terakhir/i.test(termsText) ||
+        /dalam\s*\d+\s*bulan/i.test(termsText) ||
+        /periode.*bulan/i.test(termsText);
+      
+      // If detected as Birthday promo with historical turnover, nullify min_deposit
+      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah/i.test(extracted.promo_name || '');
+      if (isBirthdayPromo && hasHistoricalEligibility) {
+        console.log('[Extractor] Birthday promo detected with historical eligibility - nullifying min_deposit');
+        return null;
+      }
+      
+      return rawMinDeposit;
+    })(),
     max_claim: null,
     // ✅ FIX: turnover_rule default "" (inert), not "0x"
     turnover_rule: subcategories[0]?.turnover_rule || '',
@@ -3721,7 +3743,23 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     custom_terms: isReferralMultiTier 
       ? cleanReferralCustomTerms(extracted.terms_conditions?.join('; ') || '')
       : (extracted.terms_conditions?.join('; ') || ''),
-    special_requirements: [],
+    // ✅ FIX: Populate special_requirements from LLM extraction OR filter from terms_conditions
+    special_requirements: extracted.special_requirements?.length > 0 
+      ? extracted.special_requirements 
+      : (extracted.terms_conditions || []).filter((term: string) => 
+          // Eligibility patterns (bukan deposit untuk klaim, tapi syarat historis)
+          /turnover.*bulan/i.test(term) ||
+          /bermain.*bulan/i.test(term) ||
+          /terdaftar.*bulan/i.test(term) ||
+          /deposit.*kali/i.test(term) ||
+          /verifikasi|ktp|sim/i.test(term) ||
+          // Payout split patterns
+          /withdraw.*%|wd.*%/i.test(term) ||
+          /sisanya.*to|sisa.*to/i.test(term) ||
+          // Birthday/special claim patterns
+          /ulang\s*tahun|birthday/i.test(term) ||
+          /klaim.*tanggal/i.test(term)
+        ),
 
     // Dinamis mode - from first subcategory as base
     calculation_base: subcategories[0]?.calculation_base || 'deposit',
