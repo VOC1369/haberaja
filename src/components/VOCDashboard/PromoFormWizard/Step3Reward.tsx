@@ -583,6 +583,16 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       fixed_lucky_spin_max_per_day: null,
                     };
                     
+                    // Auto-toggle Nilai Bonus based on reward type
+                    // OFF untuk Uang Tunai & Hadiah Fisik (nominal eksplisit, tidak perlu kalkulasi)
+                    if (value === 'uang_tunai' || value === 'hadiah_fisik') {
+                      inertUpdates.fixed_calculation_value_enabled = false;
+                      inertUpdates.fixed_calculation_value = undefined;
+                    } else {
+                      // ON untuk reward type lain (perlu kalkulasi bonus)
+                      inertUpdates.fixed_calculation_value_enabled = true;
+                    }
+                    
                     // Set default untuk field yang relevan
                     if (value === 'hadiah_fisik') {
                       inertUpdates.fixed_reward_quantity = 1;
@@ -595,6 +605,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       inertUpdates.fixed_admin_fee_percentage = undefined;
                       inertUpdates.fixed_calculation_method = '';
                       inertUpdates.fixed_calculation_value = undefined;
+                      inertUpdates.fixed_calculation_value_enabled = false;
                     } else if (value === 'lucky_spin') {
                       inertUpdates.fixed_lucky_spin_enabled = true;
                       inertUpdates.fixed_reward_quantity = 1;
@@ -604,6 +615,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       inertUpdates.fixed_admin_fee_percentage = undefined;
                       inertUpdates.fixed_calculation_method = '';
                       inertUpdates.fixed_calculation_value = undefined;
+                      inertUpdates.fixed_calculation_value_enabled = false;
                     }
                     
                     onChange(inertUpdates);
@@ -1229,14 +1241,28 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     )}
                   </div>
                   
-                  {/* Nilai Bonus - DISABLED untuk eligibility-based rewards */}
+                  {/* Nilai Bonus - DISABLED untuk eligibility-based rewards DAN hadiah fisik/uang tunai */}
                   <div className="space-y-2">
-                    <Label className={isEligibilityMode ? 'text-muted-foreground' : ''}>Nilai Bonus</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className={(isEligibilityMode || !data.fixed_calculation_value_enabled) ? 'text-muted-foreground' : ''}>Nilai Bonus</Label>
+                      {!isEligibilityMode && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Aktifkan</span>
+                          <Switch
+                            checked={data.fixed_calculation_value_enabled ?? false}
+                            onCheckedChange={(checked) => onChange({ 
+                              fixed_calculation_value_enabled: checked,
+                              fixed_calculation_value: checked ? data.fixed_calculation_value : undefined
+                            })}
+                          />
+                        </div>
+                      )}
+                    </div>
                     <div className="relative">
                       <Input
                         type="text"
                         inputMode="decimal"
-                        value={data.fixed_calculation_value !== undefined && data.fixed_calculation_value !== null 
+                        value={data.fixed_calculation_value_enabled && data.fixed_calculation_value !== undefined && data.fixed_calculation_value !== null 
                           ? String(data.fixed_calculation_value).replace('.', ',') 
                           : ''}
                         onChange={(e) => {
@@ -1249,11 +1275,13 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                             onChange({ fixed_calculation_value: 0 });
                           }
                         }}
-                        placeholder={isEligibilityMode ? "Tidak berlaku untuk ticket" : "Contoh: 0,5"}
-                        className={cn("pr-10", isEligibilityMode && "opacity-50")}
-                        disabled={isEligibilityMode}
+                        placeholder={!data.fixed_calculation_value_enabled 
+                          ? "Tidak aktif" 
+                          : (isEligibilityMode ? "Tidak berlaku untuk ticket" : "Contoh: 0,5")}
+                        className={cn("pr-10", (isEligibilityMode || !data.fixed_calculation_value_enabled) && "opacity-50")}
+                        disabled={isEligibilityMode || !data.fixed_calculation_value_enabled}
                       />
-                      {data.fixed_calculation_method === 'percentage' && !isEligibilityMode && (
+                      {data.fixed_calculation_method === 'percentage' && data.fixed_calculation_value_enabled && !isEligibilityMode && (
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                       )}
                     </div>

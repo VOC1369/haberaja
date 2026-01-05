@@ -244,6 +244,7 @@ export interface PromoFormData {
   fixed_admin_fee_percentage?: number;
   fixed_min_calculation_enabled: boolean;
   fixed_min_calculation?: number;
+  fixed_calculation_value_enabled: boolean;
   fixed_physical_reward_name?: string;
   fixed_physical_reward_quantity?: number;
   fixed_cash_reward_amount?: number;
@@ -1832,6 +1833,7 @@ export const initialPromoData: PromoFormData = {
   fixed_admin_fee_percentage: undefined,
   fixed_min_calculation_enabled: false,
   fixed_min_calculation: undefined,
+  fixed_calculation_value_enabled: true,
   fixed_physical_reward_name: '',
   fixed_physical_reward_quantity: 1,
   fixed_cash_reward_amount: undefined,
@@ -2064,6 +2066,7 @@ export const SAMPLE_PROMO_WELCOME_BONUS: PromoItem = {
   fixed_admin_fee_percentage: undefined,
   fixed_min_calculation_enabled: false,
   fixed_min_calculation: undefined,
+  fixed_calculation_value_enabled: true,
   fixed_physical_reward_name: '',
   fixed_physical_reward_quantity: 1,
   fixed_cash_reward_amount: undefined,
