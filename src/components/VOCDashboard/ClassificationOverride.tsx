@@ -44,6 +44,7 @@ interface ClassificationOverrideProps {
   categoryName: string;
   confidence: ClassificationConfidence;
   qualityFlags: QualityFlag[];
+  rewardMode?: 'fixed' | 'formula' | 'tier' | 'multi';
   reasoning?: {
     q1: QAnswer;
     q2: QAnswer;
@@ -58,6 +59,7 @@ export function ClassificationOverride({
   categoryName,
   confidence,
   qualityFlags,
+  rewardMode,
   reasoning,
   onOverride,
 }: ClassificationOverrideProps) {
@@ -115,12 +117,15 @@ export function ClassificationOverride({
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-muted-foreground">Terdeteksi sebagai:</span>
           <Badge variant="outline" className={getCategoryBadgeStyle(currentCategory)}>
-            {currentCategory} - {categoryName}
+            {categoryName}
           </Badge>
-          <Badge variant="outline" className={`${getConfidenceStyle(confidence)} flex items-center gap-1`}>
-            {getConfidenceIcon(confidence)}
-            {confidence}
-          </Badge>
+          {rewardMode && (
+            <Badge variant="outline" className="bg-purple-500/20 text-purple-400 border-purple-500/40">
+              {rewardMode === 'formula' ? 'Dinamis' : 
+               rewardMode === 'fixed' ? 'Fixed' : 
+               rewardMode === 'tier' ? 'Tier' : 'Multi'}
+            </Badge>
+          )}
         </div>
 
         <Dialog open={isOpen} onOpenChange={setIsOpen}>

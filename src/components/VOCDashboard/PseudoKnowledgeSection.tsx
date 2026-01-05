@@ -1568,6 +1568,7 @@ export function PseudoKnowledgeSection() {
                   categoryName={extractedPromo.program_classification_name || 'Unknown'}
                   confidence={extractedPromo.classification_confidence || 'medium'}
                   qualityFlags={extractedPromo.quality_flags || []}
+                  rewardMode={mappedPreview?.reward_mode}
                   reasoning={
                     extractedPromo.classification_q1 ? {
                       q1: extractedPromo.classification_q1,
