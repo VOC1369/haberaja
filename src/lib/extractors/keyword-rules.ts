@@ -88,7 +88,8 @@ export const KEYWORD_RULES: KeywordRule[] = [
       fixed_max_claim_enabled: true,
       fixed_admin_fee_enabled: false,
       fixed_min_depo_enabled: true,
-      fixed_turnover_rule_enabled: true,
+      // ⚠️ WD Turnover TIDAK auto-enable - harus eksplisit dari terms
+      fixed_turnover_rule_enabled: false,
     },
   },
   
@@ -118,7 +119,8 @@ export const KEYWORD_RULES: KeywordRule[] = [
       fixed_max_claim_enabled: true,
       fixed_admin_fee_enabled: false,
       fixed_min_depo_enabled: true,
-      fixed_turnover_rule_enabled: true,
+      // ⚠️ WD Turnover TIDAK auto-enable - harus eksplisit dari terms
+      fixed_turnover_rule_enabled: false,
     },
   },
   

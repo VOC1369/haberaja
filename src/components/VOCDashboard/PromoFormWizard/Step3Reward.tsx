@@ -1387,17 +1387,32 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               </Collapsible>
             )}
 
-            {/* Syarat Main Sebelum WD */}
+            {/* Syarat Main Sebelum WD - INDEPENDENT FROM MIN_CALCULATION */}
             <div className="pt-4">
               <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl mb-2">
                 <Switch
                   checked={data.fixed_turnover_rule_enabled === true}
-                  onCheckedChange={(checked) => onChange({ fixed_turnover_rule_enabled: checked })}
+                  onCheckedChange={(checked) => {
+                    // SEMANTIC CONTRACT: Toggle WD MUST NOT affect min_calculation
+                    // Only update WD-related fields
+                    const updates: Partial<PromoFormData> = {
+                      fixed_turnover_rule_enabled: checked,
+                    };
+                    
+                    // If turning OFF, clear multiplier values (inert contract)
+                    if (!checked) {
+                      updates.fixed_turnover_rule = '';
+                      updates.fixed_turnover_rule_custom = '';
+                    }
+                    
+                    onChange(updates);
+                  }}
                 />
                 <div>
                   <div className="font-medium text-sm text-button-hover">Syarat Main Sebelum WD</div>
                   <p className="text-xs text-muted-foreground">
-                    Aktifkan jika promo memiliki syarat kelipatan main (turnover) sebelum withdrawal
+                    Kelipatan main (3x, 5x, dst) sebelum dapat melakukan withdrawal.
+                    <span className="text-warning ml-1">Ini BUKAN Minimal Perhitungan.</span>
                   </p>
                 </div>
               </div>
@@ -1408,9 +1423,25 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     <Label>Kelipatan Main Bonus (TO)</Label>
                     <SelectWithAddNew
                       value={data.fixed_turnover_rule || ''}
-                      onValueChange={(value) => onChange({ fixed_turnover_rule: value })}
+                      onValueChange={(value) => {
+                        // GUARD: Prevent large numeric values (threshold) from being set as multiplier
+                        const numericCheck = parseInt(value.replace(/[^0-9]/g, ''), 10);
+                        if (numericCheck > 100) {
+                          toast.error(`Nilai "${value}" terlalu besar untuk kelipatan. Maksimal 100x.`);
+                          return;
+                        }
+                        onChange({ fixed_turnover_rule: value });
+                      }}
                       options={turnoverRuleOptions}
-                      onAddOption={(option) => setTurnoverRuleOptions([...turnoverRuleOptions, option])}
+                      onAddOption={(option) => {
+                        // GUARD: Prevent adding absurd multiplier options
+                        const numericCheck = parseInt(option.value.replace(/[^0-9]/g, ''), 10);
+                        if (numericCheck > 100) {
+                          toast.error(`Nilai "${option.value}" terlalu besar untuk kelipatan. Maksimal 100x.`);
+                          return;
+                        }
+                        setTurnoverRuleOptions([...turnoverRuleOptions, option]);
+                      }}
                       onDeleteOption={handleDeleteTurnoverRule}
                       placeholder="Pilih kelipatan main"
                     />
@@ -1419,7 +1450,16 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     <Label>Nilai Custom</Label>
                     <Input
                       value={data.fixed_turnover_rule_custom || ''}
-                      onChange={(e) => onChange({ fixed_turnover_rule_custom: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // GUARD: Prevent large numeric values
+                        const numericCheck = parseInt(val.replace(/[^0-9]/g, ''), 10);
+                        if (numericCheck > 100) {
+                          toast.error(`Nilai "${val}" terlalu besar untuk kelipatan. Maksimal 100x.`);
+                          return;
+                        }
+                        onChange({ fixed_turnover_rule_custom: val });
+                      }}
                       placeholder="Contoh: 3x, 10x, 12x"
                       disabled={data.fixed_turnover_rule !== 'custom'}
                       className={data.fixed_turnover_rule !== 'custom' ? 'opacity-50' : ''}
