@@ -969,12 +969,7 @@ export function PseudoKnowledgeSection() {
                   )}
                 </Badge>
               )}
-              {/* Promo Type Badge - Override "Mini Game" to "Lucky Spin" when applicable */}
-              <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-button-hover/40">
-                {/lucky\s*spin/i.test(extractedPromo.promo_name || '') 
-                  ? 'Lucky Spin' 
-                  : formatPromoType(extractedPromo.promo_type)}
-              </Badge>
+              {/* Promo Type Badge moved to ClassificationOverride header */}
               {(() => {
                 const domain = detectGameDomain(extractedPromo);
                 if (domain !== 'general') {
@@ -1536,6 +1531,11 @@ export function PseudoKnowledgeSection() {
                   confidence={extractedPromo.classification_confidence || 'medium'}
                   qualityFlags={extractedPromo.quality_flags || []}
                   rewardMode={mappedPreview?.reward_mode}
+                  promoSubType={
+                    /lucky\s*spin/i.test(extractedPromo.promo_name || '') 
+                      ? 'Lucky Spin' 
+                      : formatPromoType(extractedPromo.promo_type)
+                  }
                   reasoning={
                     extractedPromo.classification_q1 ? {
                       q1: extractedPromo.classification_q1,
