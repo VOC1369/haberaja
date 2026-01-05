@@ -1075,10 +1075,18 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
 export async function savePromoDraft(promoData: PromoFormData, existingId?: string, updatedBy?: string): Promise<PromoItem> {
   // Also save persona binding separately
   const personaFields = extractPersonaBindingFields(promoData as unknown as Record<string, unknown>);
-  
+
+  // Guardrail: enforce semantic separation between TO threshold vs WD multiplier
+  const { enforceTurnoverSemanticContract } = await import('@/lib/promo-turnover-guard');
+  const guarded = enforceTurnoverSemanticContract(promoData);
+  if (guarded.warnings.length > 0) {
+    console.warn('[savePromoDraft] Turnover semantic guard applied:', guarded.warnings);
+  }
+  const dataToSave = guarded.data;
+
   if (existingId) {
     // Update existing
-    const success = await promoKB.update(existingId, promoData);
+    const success = await promoKB.update(existingId, dataToSave);
     if (success) {
       savePersonaBinding(existingId, personaFields);
       const updated = await promoKB.getById(existingId);
@@ -1086,9 +1094,9 @@ export async function savePromoDraft(promoData: PromoFormData, existingId?: stri
     }
     throw new Error('Failed to update promo');
   }
-  
+
   // Create new
-  const newPromo = await promoKB.add(promoData);
+  const newPromo = await promoKB.add(dataToSave);
   savePersonaBinding(newPromo.id, personaFields);
   return newPromo;
 }
