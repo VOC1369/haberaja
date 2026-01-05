@@ -3603,25 +3603,39 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
       const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
       
-      // Birthday promo guard - tidak pakai calculation_base
+      // ✅ STEP 1: Detect immediate TO requirement FIRST (terms override)
+      // Match patterns like "Minimum TO Rp 5.000.000" but exclude historical "dalam 3 bulan"
+      const hasImmediateTORequirement = 
+        (/min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText) ||
+         /syarat\s*to\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText) ||
+         /total\s*to\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText)) &&
+        !/dalam\s*\d+\s*bulan|bulan\s*terakhir/i.test(termsText);
+      
+      // ✅ STEP 2: Birthday + Immediate TO = ALLOW turnover (terms beats title default)
+      if (isBirthdayPromo && hasImmediateTORequirement) {
+        console.log('[Extractor] Birthday + immediate TO = turnover (terms override)');
+        return 'turnover';
+      }
+      
+      // ✅ STEP 3: Birthday WITHOUT immediate TO = empty (title default)
       if (isBirthdayPromo) {
-        console.log('[Extractor] Birthday promo - setting calculation_base to empty');
+        console.log('[Extractor] Birthday promo (no immediate TO) - setting calculation_base to empty');
         return '';
       }
       
-      // Priority 1: Keyword defaults
+      // ✅ STEP 4: Keyword defaults for non-Birthday
       const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
       if (keywordDefaults?.fixed_calculation_base) {
         return keywordDefaults.fixed_calculation_base as string;
       }
       
-      // Priority 2: LLM extraction
+      // ✅ STEP 5: LLM extraction
       const llmBase = extracted.subcategories[0]?.calculation_base?.toLowerCase();
       if (llmBase && ['turnover', 'deposit', 'loss', 'winlose', 'bet'].includes(llmBase)) {
         return llmBase;
       }
       
-      // Priority 3: Heuristic - detect "minimum TO X juta" pattern (turnover-based eligibility)
+      // ✅ STEP 6: General heuristic for non-Birthday (detect "minimum TO X" pattern)
       const turnoverPattern = 
         /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?)?[\s:]?\d/i.test(termsText) ||
         /syarat\s*to\s*(?:rp\.?)?[\s:]?\d/i.test(termsText) ||
