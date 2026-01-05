@@ -20,6 +20,7 @@
 import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
 import { generateUUID } from './supabase-client';
 import { enforceFieldApplicability } from './extractors/field-applicability-map';
+import { getDefaultsFromKeywords } from './extractors/keyword-rules';
 
 // ============= CONFIDENCE LEVELS (EXPANDED + NOT_APPLICABLE) =============
 export type ConfidenceLevel = 
@@ -3469,40 +3470,23 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
 
     // Fixed Mode - SEPARATE fields (prefix: fixed_)
     // Phase 1B: Map from subcategories[0] when mode is 'fixed'
-    // ✅ SMART DETECTION: Auto-detect Lucky Spin from promo_name if LLM missed it
+    // ✅ Uses keyword-rules.ts as single source of truth for auto-detection
     fixed_reward_type: (() => {
       if (modeDetection.mode !== 'fixed' || !extracted.subcategories[0]) return '';
       
-      // Source 1: LLM extracted reward_type
+      // Source 1: LLM extracted reward_type (trust if specific)
       const extractedType = extracted.subcategories[0].reward_type?.toLowerCase();
-      if (extractedType && extractedType !== 'credit_game' && extractedType !== 'other') {
-        return extractedType; // Trust LLM if it found specific type
+      if (extractedType && !['credit_game', 'other', ''].includes(extractedType)) {
+        return extractedType;
       }
       
-      // Source 2: Auto-detect from promo_name patterns
-      const promoName = (extracted.promo_name || '').toLowerCase();
-      const promoType = (extracted.promo_type || '').toLowerCase();
-      const combined = `${promoName} ${promoType}`;
-      
-      // Lucky Spin detection
-      if (/lucky\s*spin|spin\s*gratis|free\s*spin|spin\s*wheel|roda\s*keberuntungan|spin\s*harian/i.test(combined)) {
-        console.log('[Extractor] Auto-detected Lucky Spin from promo name/type');
-        return 'lucky_spin';
+      // Source 2: Use keyword-rules (single source of truth)
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.fixed_reward_type) {
+        console.log('[Extractor] Using keyword-rules for fixed_reward_type:', keywordDefaults.fixed_reward_type);
+        return keywordDefaults.fixed_reward_type as string;
       }
       
-      // Voucher detection
-      if (/voucher|kupon|tiket\s*gratis/i.test(combined)) {
-        console.log('[Extractor] Auto-detected Voucher from promo name/type');
-        return 'voucher';
-      }
-      
-      // Ticket detection
-      if (/ticket|tiket|undian/i.test(combined)) {
-        console.log('[Extractor] Auto-detected Ticket from promo name/type');
-        return 'ticket';
-      }
-      
-      // Fallback to extracted or default
       return extractedType || 'credit_game';
     })(),
     fixed_calculation_base: modeDetection.mode === 'fixed' && extracted.subcategories[0]
@@ -3568,19 +3552,17 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_lucky_spin_max_per_day: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].lucky_spin_max_per_day ?? null)
       : null,
-    // ✅ NEW: Auto-enable Lucky Spin if reward_type is 'lucky_spin'
+    // ✅ Uses keyword-rules.ts for auto-enable detection
     fixed_lucky_spin_enabled: (() => {
-      if (modeDetection.mode !== 'fixed' || !extracted.subcategories[0]) return false;
+      if (modeDetection.mode !== 'fixed') return false;
       
-      // Check if LLM extracted lucky_spin
-      const extractedType = extracted.subcategories[0].reward_type?.toLowerCase();
+      // Source 1: LLM extracted reward_type
+      const extractedType = extracted.subcategories[0]?.reward_type?.toLowerCase();
       if (extractedType === 'lucky_spin') return true;
       
-      // Auto-detect from promo_name
-      const promoName = (extracted.promo_name || '').toLowerCase();
-      const promoType = (extracted.promo_type || '').toLowerCase();
-      const combined = `${promoName} ${promoType}`;
-      return /lucky\s*spin|spin\s*gratis|free\s*spin|spin\s*wheel|roda\s*keberuntungan|spin\s*harian/i.test(combined);
+      // Source 2: Use keyword-rules
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      return keywordDefaults?.fixed_lucky_spin_enabled ?? false;
     })(),
     fixed_lucky_spin_id: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].lucky_spin_id || '')
