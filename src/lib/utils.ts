@@ -47,6 +47,66 @@ export function formatPromoType(type: string | null | undefined): string {
 }
 
 /**
+ * Get consistent display text for promo sub-type badge
+ * Priority: 1) Keyword override from promo_name, 2) Type mapping, 3) Fallback formatPromoType
+ */
+export function getPromoSubTypeDisplay(
+  promoName: string | null | undefined,
+  promoType: string | null | undefined
+): string {
+  const name = (promoName || '').toLowerCase();
+  const type = (promoType || '').toLowerCase();
+  
+  // Priority 1: Keyword-based override dari promo_name
+  if (/lucky\s*spin/i.test(name) || /spin\s*gratis/i.test(name) || /spin\s*harian/i.test(name)) {
+    return 'Lucky Spin';
+  }
+  if (/lucky\s*draw/i.test(name) || /undian/i.test(name)) {
+    return 'Undian';
+  }
+  if (/voucher/i.test(name) || /kupon/i.test(name)) {
+    return 'Voucher';
+  }
+  if (/tiket/i.test(name) || /ticket/i.test(name)) {
+    return 'Tiket';
+  }
+  if (/tournament/i.test(name) || /turnamen/i.test(name)) {
+    return 'Tournament';
+  }
+  if (/leaderboard/i.test(name) || /ranking/i.test(name)) {
+    return 'Leaderboard';
+  }
+  
+  // Priority 2: Type-based mapping
+  const typeDisplayMap: Record<string, string> = {
+    'mini_game': 'Mini Game',
+    'spin_wheel': 'Lucky Spin',
+    'lucky_draw': 'Undian',
+    'welcome_bonus': 'Welcome Bonus',
+    'deposit_bonus': 'Deposit Bonus',
+    'cashback': 'Cashback',
+    'rollingan': 'Rollingan',
+    'referral': 'Referral',
+    'event_level_up': 'Level Up',
+    'freechip': 'Freechip',
+    'loyalty_point': 'Loyalty Point',
+    'tournament': 'Tournament',
+    'leaderboard': 'Leaderboard',
+    'merchandise': 'Merchandise',
+    'campaign': 'Campaign',
+    'race': 'Race',
+    'level_up': 'Level Up',
+  };
+  
+  if (typeDisplayMap[type]) {
+    return typeDisplayMap[type];
+  }
+  
+  // Fallback: formatPromoType (snake_case → Title Case)
+  return formatPromoType(promoType);
+}
+
+/**
  * Format date to DD/MM/YY
  * e.g., "2025-12-23" → "23/12/25"
  */

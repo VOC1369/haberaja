@@ -58,7 +58,7 @@ import {
 } from "@/lib/openai-extractor";
 import { promoKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
-import { formatPromoType } from "@/lib/utils";
+import { formatPromoType, getPromoSubTypeDisplay } from "@/lib/utils";
 import { ClassificationOverride } from "./ClassificationOverride";
 import { ConfidenceGateModal } from "./ConfidenceGateModal";
 import type { PromoFormData } from "./PromoFormWizard/types";
@@ -1531,11 +1531,10 @@ export function PseudoKnowledgeSection() {
                   confidence={extractedPromo.classification_confidence || 'medium'}
                   qualityFlags={extractedPromo.quality_flags || []}
                   rewardMode={mappedPreview?.reward_mode}
-                  promoSubType={
-                    /lucky\s*spin/i.test(extractedPromo.promo_name || '') 
-                      ? 'Lucky Spin' 
-                      : formatPromoType(extractedPromo.promo_type)
-                  }
+                  promoSubType={getPromoSubTypeDisplay(
+                    extractedPromo.promo_name,
+                    extractedPromo.promo_type
+                  )}
                   reasoning={
                     extractedPromo.classification_q1 ? {
                       q1: extractedPromo.classification_q1,
