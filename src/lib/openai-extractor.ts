@@ -3603,23 +3603,22 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
       const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
       
-      // ✅ STEP 1: Detect immediate TO requirement FIRST (terms override)
-      // Match patterns like "Minimum TO Rp 5.000.000" but exclude historical "dalam 3 bulan"
-      const hasImmediateTORequirement = 
-        (/min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText) ||
-         /syarat\s*to\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText) ||
-         /total\s*to\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText)) &&
-        !/dalam\s*\d+\s*bulan|bulan\s*terakhir/i.test(termsText);
+      // ✅ DECOUPLED DETECTION: Check TO pattern WITHOUT historical guard
+      // Historical eligibility goes to special_requirements[], doesn't block calculation_base
+      const hasAnyTOPattern = 
+        /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText) ||
+        /syarat\s*to\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText) ||
+        /total\s*to\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText);
       
-      // ✅ STEP 2: Birthday + Immediate TO = ALLOW turnover (terms beats title default)
-      if (isBirthdayPromo && hasImmediateTORequirement) {
-        console.log('[Extractor] Birthday + immediate TO = turnover (terms override)');
+      // ✅ Birthday + ANY TO pattern = turnover (terms sets base, historical handled separately)
+      if (isBirthdayPromo && hasAnyTOPattern) {
+        console.log('[Extractor] Birthday + TO pattern = turnover');
         return 'turnover';
       }
       
-      // ✅ STEP 3: Birthday WITHOUT immediate TO = empty (title default)
+      // ✅ Birthday WITHOUT any TO = empty (manual eligibility)
       if (isBirthdayPromo) {
-        console.log('[Extractor] Birthday promo (no immediate TO) - setting calculation_base to empty');
+        console.log('[Extractor] Birthday promo (no TO pattern) - calculation_base empty');
         return '';
       }
       
