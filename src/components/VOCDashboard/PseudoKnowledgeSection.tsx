@@ -603,22 +603,34 @@ export function PseudoKnowledgeSection() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div className="bg-muted rounded-lg p-3">
-            <span className="text-muted-foreground text-xs block mb-1">
-              {sub.calculation_method === 'threshold' ? 'Target' : 'Nilai Bonus'}
-            </span>
-            {getFieldStatus('calculation_value', archetype) === 'not_applicable' ? (
-              <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
-            ) : (
-              <span className="text-button-hover font-semibold">
-                {sub.calculation_value != null 
-                  ? (sub.calculation_method === 'threshold'
-                      ? `Rp ${sub.calculation_value.toLocaleString('id-ID')}`
-                      : `${sub.calculation_value}${sub.calculation_method === 'percentage' ? '%' : ''}`)
-                  : '-'}
-              </span>
-            )}
-          </div>
+          {/* ✅ Hide "Nilai Bonus" for unit-based rewards (Lucky Spin/Voucher/Ticket) in Fixed mode */}
+          {(() => {
+            const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+            const rewardType = isFixedMode ? mappedPreview?.fixed_reward_type : sub.reward_type;
+            const isUnitBased = isFixedMode && ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
+            
+            // Skip rendering for unit-based rewards - "Jumlah Reward" shown in detail section instead
+            if (isUnitBased) return null;
+            
+            return (
+              <div className="bg-muted rounded-lg p-3">
+                <span className="text-muted-foreground text-xs block mb-1">
+                  {sub.calculation_method === 'threshold' ? 'Target' : 'Nilai Bonus'}
+                </span>
+                {getFieldStatus('calculation_value', archetype) === 'not_applicable' ? (
+                  <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
+                ) : (
+                  <span className="text-button-hover font-semibold">
+                    {sub.calculation_value != null 
+                      ? (sub.calculation_method === 'threshold'
+                          ? `Rp ${sub.calculation_value.toLocaleString('id-ID')}`
+                          : `${sub.calculation_value}${sub.calculation_method === 'percentage' ? '%' : ''}`)
+                      : '-'}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
           <div className="bg-muted rounded-lg p-3">
             {(() => {
               // Rollingan/Cashback: No min deposit, use min_claim instead
@@ -865,11 +877,19 @@ export function PseudoKnowledgeSection() {
                 <div className="bg-muted rounded-lg p-3">
                   <span className="text-muted-foreground text-xs block mb-1">Waktu Berlaku</span>
                   <span className="text-foreground font-medium">
-                    {mappedPreview?.fixed_voucher_valid_unlimited 
-                      ? 'Tidak Terbatas' 
-                      : mappedPreview?.fixed_voucher_valid_until 
-                        ? `s/d ${mappedPreview.fixed_voucher_valid_until}`
-                        : 'Reset Harian'}
+                    {(() => {
+                      // Check validity mode from mappedPreview
+                      const validityMode = mappedPreview?.fixed_spin_validity_mode;
+                      if (mappedPreview?.fixed_voucher_valid_unlimited) return 'Tidak Terbatas';
+                      if (mappedPreview?.fixed_voucher_valid_until) return `s/d ${mappedPreview.fixed_voucher_valid_until}`;
+                      if (validityMode === 'relative') {
+                        const duration = mappedPreview?.fixed_spin_validity_duration;
+                        const unit = mappedPreview?.fixed_spin_validity_unit;
+                        if (duration === 24 && unit === 'hours') return 'Reset Harian';
+                        if (duration && unit) return `${duration} ${unit === 'hours' ? 'Jam' : unit === 'days' ? 'Hari' : unit}`;
+                      }
+                      return 'Reset Harian'; // Default fallback
+                    })()}
                   </span>
                 </div>
               </div>
