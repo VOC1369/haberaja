@@ -163,23 +163,37 @@ EXCEPTION untuk "uang_tunai":
   ] | null
 }
 
-🎫 VOUCHER / TICKET / LUCKY SPIN DETECTION:
-Jika reward adalah voucher, ticket, atau lucky spin, WAJIB extract:
+🎫 VOUCHER / TICKET / LUCKY SPIN DETECTION (CRITICAL!):
+Jika reward adalah voucher, ticket, atau lucky spin, WAJIB extract dengan pattern:
 
 PATTERN - VOUCHER/TICKET:
 - "Dapat 5 tiket per hari" → reward_type: "ticket", reward_quantity: 5
 - "Bonus 10 voucher deposit" → reward_type: "voucher", voucher_kind: "deposit", reward_quantity: 10
 - "Voucher berlaku 7 hari" → voucher_valid_until: [hitung dari valid_from + 7 hari]
 - "Voucher tidak ada masa kadaluwarsa" → voucher_valid_unlimited: true
+- "Berlaku sampai jam 00:00" → voucher_valid_note: "Reset harian"
 
-PATTERN - LUCKY SPIN:
-- "Dapatkan 3 spin gratis" → reward_type: "lucky_spin", reward_quantity: 3
+PATTERN - LUCKY SPIN (PRIORITAS TINGGI):
+Jika nama promo mengandung "Lucky Spin", "Spin", "Free Spin", "Tiket Spin":
+→ reward_type: "lucky_spin" (WAJIB!)
+
+Pola ekstraksi WAJIB:
+- "Deposit 50.000 = 1 Tiket Lucky Spin" → 
+    reward_type: "lucky_spin", min_deposit: 50000, reward_quantity: 1
+- "Deposit 100rb dapet 2 spin" →
+    reward_type: "lucky_spin", min_deposit: 100000, reward_quantity: 2
+- "Maksimal Claim 10 Tiket" → lucky_spin_max_per_day: 10
 - "Max 5 spin per hari" → lucky_spin_max_per_day: 5
+- "Minimal Turnover 1X" → turnover_rule: 1
+- "TO 1X Untuk Withdraw" → turnover_rule: 1
+- "Tidak Berlaku Kelipatan" → [set kelipatan flag to false in terms]
+- "Reset harian" → voucher_valid_note: "Reset harian"
 
 ⚠️ WALAUPUN reward_type bukan uang (voucher/ticket/lucky_spin):
-- TETAP extract max_bonus jika ada limit (e.g., "Max 10 tiket" → max_bonus: 10)
-- max_bonus untuk voucher/ticket/lucky_spin = batas jumlah unit klaim
-- min_deposit TETAP diisi jika ada syarat deposit
+- lucky_spin_max_per_day = BATAS MAKSIMAL CLAIM per hari (dari "Maksimal Claim X Tiket")
+- reward_quantity = JUMLAH per deposit/trigger (dari "dapet X tiket" atau "= X Tiket")
+- min_deposit WAJIB diisi dari "Minimal Deposit Rp X" atau "Deposit X"
+- turnover_rule WAJIB diisi dari "Minimal Turnover X" atau "TO X"
 
 🚫 ATURAN:
 1. Jika data tidak eksplisit → null

@@ -654,46 +654,117 @@ export function PseudoKnowledgeSection() {
             })()}
           </div>
           <div className="bg-muted rounded-lg p-3">
-            <span className="text-muted-foreground text-xs block mb-1">Max Bonus</span>
-            <span className="text-foreground font-medium">
-              {(() => {
-                // Explicit unlimited flags
-                const isUnlimited = (sub as any).dinamis_max_claim_unlimited || (sub as any).max_bonus_unlimited;
-                if (isUnlimited) return 'Unlimited';
-                
-                // Has explicit max value
-                const maxValue = sub.max_bonus || (sub as any).dinamis_max_claim;
-                if (maxValue && maxValue > 0) {
-                  return `Rp ${maxValue.toLocaleString('id-ID')}`;
-                }
-                
-                // No value + no unlimited flag = effectively unlimited (no cap stated)
-                return 'Unlimited';
-              })()}
-            </span>
+            {(() => {
+              // ✅ Use mappedPreview for Fixed mode (single source of truth)
+              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+              const rewardType = isFixedMode 
+                ? mappedPreview?.fixed_reward_type 
+                : sub.reward_type;
+              const isUnitBased = ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
+              
+              // For unit-based rewards, show "Max Claim Reward" with unit count
+              if (isUnitBased && isFixedMode) {
+                const maxPerDay = mappedPreview?.fixed_lucky_spin_max_per_day;
+                return (
+                  <>
+                    <span className="text-muted-foreground text-xs block mb-1">Max Claim Reward</span>
+                    <span className="text-foreground font-medium">
+                      {maxPerDay ? `${maxPerDay} / hari` : 'Unlimited'}
+                    </span>
+                  </>
+                );
+              }
+              
+              // Regular max bonus logic
+              const isUnlimited = (sub as any).dinamis_max_claim_unlimited || (sub as any).max_bonus_unlimited;
+              if (isUnlimited) {
+                return (
+                  <>
+                    <span className="text-muted-foreground text-xs block mb-1">Max Bonus</span>
+                    <span className="text-foreground font-medium">Unlimited</span>
+                  </>
+                );
+              }
+              
+              const maxValue = sub.max_bonus || (sub as any).dinamis_max_claim;
+              return (
+                <>
+                  <span className="text-muted-foreground text-xs block mb-1">Max Bonus</span>
+                  <span className="text-foreground font-medium">
+                    {maxValue && maxValue > 0 ? `Rp ${maxValue.toLocaleString('id-ID')}` : 'Unlimited'}
+                  </span>
+                </>
+              );
+            })()}
           </div>
           <div className="bg-muted rounded-lg p-3">
-            <span className="text-muted-foreground text-xs block mb-1">Jenis Hadiah</span>
-            <span className={`font-medium ${
-              sub.reward_type === 'hadiah_fisik' ? 'text-amber-400' :
-              sub.reward_type === 'uang_tunai' ? 'text-green-400' :
-              'text-foreground'
-            }`}>
-              {sub.reward_type === 'hadiah_fisik' 
-                ? `${sub.physical_reward_name || 'Hadiah Fisik'}${sub.physical_reward_quantity && sub.physical_reward_quantity > 1 ? ` x${sub.physical_reward_quantity}` : ''}`
-                : sub.reward_type === 'uang_tunai'
-                  ? (sub.cash_reward_amount ? `Rp ${sub.cash_reward_amount.toLocaleString('id-ID')}` : 'Uang Tunai')
-                  : 'Credit Game'}
-            </span>
+            {(() => {
+              // ✅ Use mappedPreview for Fixed mode (single source of truth)
+              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+              const rewardType = isFixedMode 
+                ? mappedPreview?.fixed_reward_type 
+                : sub.reward_type;
+              
+              // Display label based on reward type
+              const getRewardLabel = (type: string | undefined) => {
+                switch (type) {
+                  case 'lucky_spin': return 'Lucky Spin';
+                  case 'voucher': return 'Voucher';
+                  case 'ticket': return 'Ticket';
+                  case 'hadiah_fisik': return isFixedMode 
+                    ? (mappedPreview?.fixed_physical_reward_name || 'Hadiah Fisik')
+                    : (sub.physical_reward_name || 'Hadiah Fisik');
+                  case 'uang_tunai': return 'Uang Tunai';
+                  default: return 'Credit Game';
+                }
+              };
+              
+              const getRewardColor = (type: string | undefined) => {
+                switch (type) {
+                  case 'lucky_spin': return 'text-purple-400';
+                  case 'voucher': return 'text-blue-400';
+                  case 'ticket': return 'text-cyan-400';
+                  case 'hadiah_fisik': return 'text-amber-400';
+                  case 'uang_tunai': return 'text-green-400';
+                  default: return 'text-foreground';
+                }
+              };
+              
+              return (
+                <>
+                  <span className="text-muted-foreground text-xs block mb-1">Jenis Hadiah</span>
+                  <span className={`font-medium ${getRewardColor(rewardType)}`}>
+                    {getRewardLabel(rewardType)}
+                  </span>
+                </>
+              );
+            })()}
           </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-muted rounded-lg p-3">
-            {/* Read format from metadata (set by extractor), fallback to calculation_base for old data */}
+            {/* ✅ Use mappedPreview for Fixed mode turnover */}
             {(() => {
+              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+              
+              // Fixed mode: read from mappedPreview
+              if (isFixedMode) {
+                const turnoverEnabled = mappedPreview?.fixed_turnover_rule_enabled;
+                const turnoverValue = mappedPreview?.fixed_turnover_rule;
+                return (
+                  <>
+                    <span className="text-muted-foreground text-xs block mb-1">Turnover</span>
+                    <span className="text-foreground font-medium">
+                      {!turnoverEnabled ? 'Tidak Berlaku' : (turnoverValue || '-')}
+                    </span>
+                  </>
+                );
+              }
+              
+              // Dinamis mode: original logic
               const isMinRupiahFormat = sub.turnover_rule_format === 'min_rupiah' 
-                || sub.calculation_base === 'turnover'; // Fallback for old data
+                || sub.calculation_base === 'turnover';
               return (
                 <>
                   <span className="text-muted-foreground text-xs block mb-1">
@@ -704,8 +775,6 @@ export function PseudoKnowledgeSection() {
                   ) : (
                     <span className="text-foreground font-medium">
                       {(() => {
-                        // For min_rupiah format (Rollingan/Cashback): fallback to minimum_base
-                        // This handles the case where semantic fix moved the value from turnover_rule to minimum_base
                         const displayValue = isMinRupiahFormat
                           ? (sub.turnover_rule && String(sub.turnover_rule) !== '0' && Number(sub.turnover_rule) !== 0)
                               ? sub.turnover_rule
@@ -745,6 +814,68 @@ export function PseudoKnowledgeSection() {
             </span>
           </div>
         </div>
+
+        {/* ✅ Lucky Spin / Voucher / Ticket specific fields (Fixed Mode only) */}
+        {(() => {
+          const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+          const rewardType = isFixedMode ? mappedPreview?.fixed_reward_type : undefined;
+          const isUnitBased = isFixedMode && ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
+          
+          if (!isUnitBased) return null;
+          
+          return (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <span className="text-sm font-medium text-purple-400">
+                  Detail {rewardType === 'lucky_spin' ? 'Lucky Spin' : rewardType === 'voucher' ? 'Voucher' : 'Ticket'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-muted rounded-lg p-3">
+                  <span className="text-muted-foreground text-xs block mb-1">Jumlah Reward</span>
+                  <span className="text-foreground font-medium">
+                    {mappedPreview?.fixed_reward_quantity || 1}
+                  </span>
+                </div>
+                {rewardType === 'lucky_spin' && (
+                  <>
+                    <div className="bg-muted rounded-lg p-3">
+                      <span className="text-muted-foreground text-xs block mb-1">Max Spin/Hari</span>
+                      <span className="text-foreground font-medium">
+                        {mappedPreview?.fixed_lucky_spin_max_per_day || 'Unlimited'}
+                      </span>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3">
+                      <span className="text-muted-foreground text-xs block mb-1">ID Lucky Spin</span>
+                      <span className="text-foreground font-medium">
+                        {mappedPreview?.fixed_lucky_spin_id || '-'}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {rewardType === 'voucher' && (
+                  <div className="bg-muted rounded-lg p-3">
+                    <span className="text-muted-foreground text-xs block mb-1">Jenis Voucher</span>
+                    <span className="text-foreground font-medium">
+                      {mappedPreview?.fixed_voucher_kind || 'Umum'}
+                    </span>
+                  </div>
+                )}
+                <div className="bg-muted rounded-lg p-3">
+                  <span className="text-muted-foreground text-xs block mb-1">Waktu Berlaku</span>
+                  <span className="text-foreground font-medium">
+                    {mappedPreview?.fixed_voucher_valid_unlimited 
+                      ? 'Tidak Terbatas' 
+                      : mappedPreview?.fixed_voucher_valid_until 
+                        ? `s/d ${mappedPreview.fixed_voucher_valid_until}`
+                        : 'Reset Harian'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {hasBlacklist && (
           <div className="mt-4 pt-4 border-t border-border">
