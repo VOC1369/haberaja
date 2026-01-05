@@ -6,6 +6,10 @@
  * 
  * @version 2.1-FINAL
  * @status LOCKED
+ * 
+ * @todo UX DEBT: Add "Auto-Derived" badge in Step4Review UI
+ * for fields listed in extra_config._derived_fields
+ * Priority: Low (informational, non-blocking)
  */
 
 import { 
@@ -17,11 +21,11 @@ import {
 } from './canonical-promo-schema';
 
 // ============================================================================
-// CANONICAL FIELD WHITELIST (EXHAUSTIVE)
+// CANONICAL EXPORT WHITELIST (52 FIELDS - SYNCED WITH CONTRACT v2.1-FINAL)
 // ============================================================================
 
-export const CANONICAL_FIELD_WHITELIST = [
-  // CORE IDENTITY
+export const CANONICAL_EXPORT_WHITELIST = [
+  // CORE IDENTITY (9)
   'schema_version',
   'client_id',
   'client_name',
@@ -32,34 +36,37 @@ export const CANONICAL_FIELD_WHITELIST = [
   'status',
   'promo_summary',
   
-  // TAXONOMY
+  // TAXONOMY (3)
   'category',
   'mode',
   'tier_archetype',
   
-  // INTENT & TRIGGER
+  // INTENT & TRIGGER (4)
   'intent_category',
   'target_segment',
   'trigger_event',
+  'trigger_min_value',
   
-  // VALIDITY
+  // VALIDITY (3)
   'valid_from',
   'valid_until',
   'valid_until_unlimited',
   
-  // REWARD CORE
+  // REWARD CORE (6)
   'reward_type',
   'reward_amount',
   'reward_unit',
+  'reward_is_percentage',
   'max_bonus',
   'max_bonus_unlimited',
   
-  // CALCULATION
+  // CALCULATION (4)
   'calculation_basis',
   'min_calculation',
+  'payout_direction',
   'conversion_formula',
   
-  // CLAIM RULES
+  // CLAIM RULES (6)
   'min_deposit',
   'max_claim',
   'max_claim_unlimited',
@@ -67,44 +74,46 @@ export const CANONICAL_FIELD_WHITELIST = [
   'claim_method',
   'claim_deadline_days',
   
-  // TURNOVER / WD
+  // TURNOVER / WD (3)
   'turnover_enabled',
   'turnover_multiplier',
+  'min_withdraw_after_bonus',
   
-  // DISTRIBUTION
+  // DISTRIBUTION (3)
   'distribution_mode',
   'distribution_schedule',
   'distribution_note',
   
-  // TIERS
+  // TIERS (2)
+  'tier_count',
   'tiers',
   
-  // GAME SCOPE
+  // GAME SCOPE (4)
   'game_scope',
   'game_types',
   'game_providers',
   'game_exclusions',
   
-  // ACCESS & RESTRICTION
+  // ACCESS & RESTRICTION (4)
   'platform_access',
   'geo_restriction',
   'require_apk',
   'one_account_rule',
   
-  // RISK
+  // RISK (2)
   'promo_risk_level',
   'anti_fraud_notes',
   
-  // ESCAPE HATCH
+  // ESCAPE HATCH (3)
   'special_conditions',
   'custom_terms',
   'extra_config',
   
-  // SUBCATEGORIES
+  // SUBCATEGORIES (2)
   'has_subcategories',
   'subcategories',
   
-  // AUDIT
+  // AUDIT (5)
   'created_at',
   'updated_at',
   'created_by',
@@ -112,7 +121,7 @@ export const CANONICAL_FIELD_WHITELIST = [
   'human_verified',
 ] as const;
 
-export type CanonicalFieldName = typeof CANONICAL_FIELD_WHITELIST[number];
+export type CanonicalFieldName = typeof CANONICAL_EXPORT_WHITELIST[number];
 
 // ============================================================================
 // TAXONOMY RULES (LOCKED VALUES)
@@ -168,7 +177,7 @@ export function checkHardFail(data: Record<string, unknown>): HardFailResult {
   
   // 4. Unknown field names (check for non-whitelisted fields)
   const unknownFields = Object.keys(data).filter(
-    key => !CANONICAL_FIELD_WHITELIST.includes(key as CanonicalFieldName)
+    key => !CANONICAL_EXPORT_WHITELIST.includes(key as CanonicalFieldName)
   );
   if (unknownFields.length > 0) {
     return { 
@@ -277,12 +286,12 @@ export function enforceCanonicalGuard(data: Record<string, unknown>): CanonicalG
     }
     
     // Only copy whitelisted fields
-    if (CANONICAL_FIELD_WHITELIST.includes(canonicalKey as CanonicalFieldName)) {
+    if (CANONICAL_EXPORT_WHITELIST.includes(canonicalKey as CanonicalFieldName)) {
       output[canonicalKey] = value;
     } else {
       // Non-whitelisted field - check if it's just a prefixed version
       const strippedKey = stripUIPrefix(key);
-      if (CANONICAL_FIELD_WHITELIST.includes(strippedKey as CanonicalFieldName)) {
+      if (CANONICAL_EXPORT_WHITELIST.includes(strippedKey as CanonicalFieldName)) {
         output[strippedKey] = value;
       } else {
         warnings.push(`Skipped unknown field: ${key}`);

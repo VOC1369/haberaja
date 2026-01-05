@@ -136,6 +136,12 @@ export interface CanonicalPromoKB {
   // ===============================
   // TIERS (UNIVERSAL ARRAY)
   // ===============================
+  /**
+   * Validator hint - NOT source of truth.
+   * Actual tier count should be derived from tiers.length.
+   * Used for quick sanity checks without parsing full array.
+   * Auto-derived from tiers.length in buildCanonicalPayload().
+   */
   tier_count: number;
   tiers: UniversalTier[];
 

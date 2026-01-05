@@ -115,7 +115,7 @@ export {
   stripUIPrefix,
   isEngineLogicField,
   enforceGameExclusions,
-  CANONICAL_FIELD_WHITELIST,
+  CANONICAL_EXPORT_WHITELIST,
   TAXONOMY_RULES,
   CANONICAL_OUTPUT_PROMPT,
   type CanonicalFieldName,
