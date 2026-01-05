@@ -3620,6 +3620,41 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_lucky_spin_id: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].lucky_spin_id || '')
       : '',
+    
+    // ✅ Lucky Spin Validity - map "Reset Harian" pattern
+    fixed_spin_validity_mode: (() => {
+      if (modeDetection.mode !== 'fixed') return 'relative' as const;
+      
+      // Check terms for validity patterns
+      const termsText = extracted.terms_conditions?.join(' ') || '';
+      
+      // Pattern: "Reset Setiap Hari", "Reset harian", "Daily reset"
+      const resetPattern = /reset\s*(setiap\s*)?hari|harian|daily\s*reset/i;
+      if (resetPattern.test(termsText)) {
+        return 'relative' as const;
+      }
+      
+      return 'relative' as const; // Default to relative
+    })(),
+    fixed_spin_validity_duration: (() => {
+      if (modeDetection.mode !== 'fixed') return 24;
+      
+      const termsText = extracted.terms_conditions?.join(' ') || '';
+      
+      // Pattern: "Reset Setiap Hari" = 24 hours
+      const resetPattern = /reset\s*(setiap\s*)?hari|harian|daily\s*reset/i;
+      if (resetPattern.test(termsText)) {
+        return 24;
+      }
+      
+      // Try to extract hours pattern: "berlaku 24 jam", "valid 48 hours"
+      const hoursPattern = /(?:berlaku|valid)\s*(\d+)\s*(?:jam|hours?)/i;
+      const match = termsText.match(hoursPattern);
+      if (match) return parseInt(match[1], 10);
+      
+      return 24; // Default
+    })(),
+    fixed_spin_validity_unit: 'hours' as const,
 
     // Tier mode defaults
     promo_unit: 'lp',
