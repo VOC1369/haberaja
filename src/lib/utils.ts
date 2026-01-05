@@ -58,6 +58,9 @@ export function getPromoSubTypeDisplay(
   const type = (promoType || '').toLowerCase();
   
   // Priority 1: Keyword-based override dari promo_name
+  if (/birthday/i.test(name) || /ulang\s*tahun/i.test(name) || /ultah/i.test(name)) {
+    return 'Birthday Bonus';
+  }
   if (/lucky\s*spin/i.test(name) || /spin\s*gratis/i.test(name) || /spin\s*harian/i.test(name)) {
     return 'Lucky Spin';
   }
