@@ -43,9 +43,11 @@ export interface CanonicalSubCategory {
   game_types: string[];
   game_providers: string[];
   reward_amount: number | null;
+  reward_is_percentage: boolean;
   max_bonus: number | null;
   min_deposit: number | null;
   turnover_multiplier: number | null;
+  payout_direction: 'depan' | 'belakang' | null;
 }
 
 /**
@@ -80,6 +82,7 @@ export interface CanonicalPromoKB {
   intent_category: string;
   target_segment: string;
   trigger_event: string;
+  trigger_min_value: number | null;
 
   // ===============================
   // VALIDITY
@@ -94,6 +97,7 @@ export interface CanonicalPromoKB {
   reward_type: string;
   reward_amount: number | null;
   reward_unit: string;
+  reward_is_percentage: boolean;
   max_bonus: number | null;
   max_bonus_unlimited: boolean;
 
@@ -102,6 +106,7 @@ export interface CanonicalPromoKB {
   // ===============================
   calculation_basis: string;
   min_calculation: number | null;
+  payout_direction: 'depan' | 'belakang' | null;
   conversion_formula: string;
 
   // ===============================
@@ -119,6 +124,7 @@ export interface CanonicalPromoKB {
   // ===============================
   turnover_enabled: boolean;
   turnover_multiplier: number | null;
+  min_withdraw_after_bonus: number | null;
 
   // ===============================
   // DISTRIBUTION
@@ -130,6 +136,7 @@ export interface CanonicalPromoKB {
   // ===============================
   // TIERS (UNIVERSAL ARRAY)
   // ===============================
+  tier_count: number;
   tiers: UniversalTier[];
 
   // ===============================
@@ -272,6 +279,7 @@ export const CANONICAL_INERT: CanonicalPromoKB = {
   intent_category: '',
   target_segment: '',
   trigger_event: '',
+  trigger_min_value: null,
   
   // Validity
   valid_from: '',
@@ -282,12 +290,14 @@ export const CANONICAL_INERT: CanonicalPromoKB = {
   reward_type: '',
   reward_amount: null,
   reward_unit: '',
+  reward_is_percentage: false,
   max_bonus: null,
   max_bonus_unlimited: false,
   
   // Calculation
   calculation_basis: '',
   min_calculation: null,
+  payout_direction: null,
   conversion_formula: '',
   
   // Claim Rules
@@ -301,6 +311,7 @@ export const CANONICAL_INERT: CanonicalPromoKB = {
   // Turnover / WD
   turnover_enabled: false,
   turnover_multiplier: null,
+  min_withdraw_after_bonus: null,
   
   // Distribution
   distribution_mode: '',
@@ -308,6 +319,7 @@ export const CANONICAL_INERT: CanonicalPromoKB = {
   distribution_note: '',
   
   // Tiers
+  tier_count: 0,
   tiers: [],
   
   // Game Scope
