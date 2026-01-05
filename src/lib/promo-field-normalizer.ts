@@ -3,6 +3,7 @@
  * 
  * Converts legacy dinamis_* fields to canonical base fields.
  * Also handles turnover semantic migration (threshold vs multiplier separation).
+ * Also handles v2.1 Canonical Contract field migrations.
  * 
  * CLASSIFICATION (LOCKED):
  * - Base fields (reward_type, max_reward_claim, etc) = Canonical source of truth
@@ -15,6 +16,14 @@
  * - Threshold (qualify) = min_calculation / fixed_min_calculation
  * - Multiplier WD = turnover_rule / fixed_turnover_rule
  * - Large numeric values (> 100) in turnover_rule fields are MIGRATED to min_calculation
+ * 
+ * CANONICAL CONTRACT v2.1:
+ * - turnover_rule (string "3x") → turnover_multiplier (number 3)
+ * - turnover_rule_enabled → turnover_enabled
+ * - max_claim → max_bonus (semantic shift)
+ * - reward_distribution → distribution_mode
+ * - game_restriction → game_scope (alias)
+ * - special_requirements → special_conditions (alias)
  * 
  * This module does NOT delete fields - it copies values to canonical locations
  * while preserving all original fields for backward compatibility.
@@ -45,6 +54,27 @@ export const LEGACY_ALIASES: Record<string, keyof PromoFormData> = {
   'dinamis_max_claim': 'max_claim',
 } as const;
 
+/**
+ * Canonical Contract v2.1 rename mappings
+ * Maps old field names to new canonical field names
+ */
+export const CANONICAL_RENAMES: Record<string, string> = {
+  // Turnover semantic (string → number)
+  'turnover_rule_enabled': 'turnover_enabled',
+  
+  // Distribution
+  'reward_distribution': 'distribution_mode',
+  
+  // Game Scope
+  'game_restriction': 'game_scope',
+  
+  // Special Conditions
+  'special_requirements': 'special_conditions',
+  
+  // Classification
+  'classification_confidence': 'extraction_confidence_legacy',
+} as const;
+
 // ============================================
 // INERT VALUE HELPERS
 // ============================================
@@ -70,12 +100,32 @@ export function hasMeaningfulValue(value: unknown): boolean {
 }
 
 // ============================================
+// TURNOVER MULTIPLIER PARSER
+// ============================================
+
+/**
+ * Parse turnover multiplier from string to number
+ * "3x" → 3, "10x" → 10, "" → null
+ */
+export function parseTurnoverMultiplier(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return value;
+  
+  const match = String(value).match(/^(\d+)x?$/i);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+  return null;
+}
+
+// ============================================
 // NORMALIZER FUNCTION
 // ============================================
 
 /**
  * Normalize legacy dinamis_* fields to canonical base fields.
  * Also applies turnover semantic migration (threshold vs multiplier separation).
+ * Also applies Canonical Contract v2.1 field migrations.
  * 
  * RULES:
  * 1. Only dinamis_* fields are normalized (copied to base)
@@ -83,6 +133,7 @@ export function hasMeaningfulValue(value: unknown): boolean {
  * 3. Original dinamis_* fields are NOT deleted (backward compat)
  * 4. fixed_* and global_* are NEVER touched (except turnover migration)
  * 5. Turnover migration: large values in turnover_rule → min_calculation
+ * 6. Canonical v2.1: turnover_rule (string) → turnover_multiplier (number)
  * 
  * @param data - Raw promo data (from storage or extraction)
  * @returns Normalized promo data with canonical fields populated
@@ -115,7 +166,93 @@ export function normalizeToStandard<T extends Partial<PromoFormData>>(data: T): 
     }
   }
   
+  // Step 3: Apply Canonical v2.1 migrations
+  normalized = applyCanonicalMigrations(normalized);
+  
   return normalized as T;
+}
+
+/**
+ * Apply Canonical Contract v2.1 field migrations
+ */
+function applyCanonicalMigrations(data: Record<string, unknown>): Record<string, unknown> {
+  const migrated = { ...data };
+  
+  // 3.1: Set schema_version if not present
+  if (!migrated.schema_version) {
+    migrated.schema_version = '2.1';
+  }
+  
+  // 3.2: Migrate turnover_rule (string) → turnover_multiplier (number)
+  if (typeof migrated.turnover_rule === 'string' && migrated.turnover_rule) {
+    const multiplier = parseTurnoverMultiplier(migrated.turnover_rule);
+    if (multiplier !== null && isInert(migrated.turnover_multiplier)) {
+      migrated.turnover_multiplier = multiplier;
+      console.debug('[Normalizer] turnover_rule → turnover_multiplier', { from: migrated.turnover_rule, to: multiplier });
+    }
+  }
+  
+  // 3.3: Migrate turnover_rule_enabled → turnover_enabled
+  if (migrated.turnover_rule_enabled !== undefined && migrated.turnover_enabled === undefined) {
+    migrated.turnover_enabled = Boolean(migrated.turnover_rule_enabled);
+  }
+  
+  // 3.4: Migrate max_claim → max_bonus (semantic shift for canonical output)
+  if (hasMeaningfulValue(migrated.max_claim) && isInert(migrated.max_bonus)) {
+    migrated.max_bonus = migrated.max_claim;
+  }
+  if (migrated.max_claim_unlimited && migrated.max_bonus_unlimited === undefined) {
+    migrated.max_bonus_unlimited = migrated.max_claim_unlimited;
+  }
+  
+  // 3.5: Migrate reward_distribution → distribution_mode
+  if (hasMeaningfulValue(migrated.reward_distribution) && isInert(migrated.distribution_mode)) {
+    migrated.distribution_mode = migrated.reward_distribution;
+  }
+  
+  // 3.6: Derive category from program_classification
+  if (migrated.program_classification && isInert(migrated.category)) {
+    const classification = String(migrated.program_classification).toUpperCase();
+    if (classification === 'A' || classification === 'B') {
+      migrated.category = 'REWARD';
+    } else if (classification === 'C') {
+      migrated.category = 'EVENT';
+    }
+  }
+  
+  // 3.7: Consolidate game exclusions if blacklist arrays exist
+  if (isInert(migrated.game_exclusions)) {
+    const exclusions: string[] = [];
+    const typesBlacklist = migrated.game_types_blacklist as string[] | undefined;
+    const providersBlacklist = migrated.game_providers_blacklist as string[] | undefined;
+    const namesBlacklist = migrated.game_names_blacklist as string[] | undefined;
+    
+    if (typesBlacklist?.length) {
+      exclusions.push(...typesBlacklist.map(t => `type:${t}`));
+    }
+    if (providersBlacklist?.length) {
+      exclusions.push(...providersBlacklist.map(p => `provider:${p}`));
+    }
+    if (namesBlacklist?.length) {
+      exclusions.push(...namesBlacklist.map(n => `game:${n}`));
+    }
+    
+    if (exclusions.length > 0) {
+      migrated.game_exclusions = exclusions;
+    }
+  }
+  
+  // 3.8: Initialize extra_config if not present
+  if (migrated.extra_config === undefined) {
+    migrated.extra_config = {};
+  }
+  
+  // 3.9: Initialize human_verified if not present
+  if (migrated.human_verified === undefined) {
+    migrated.human_verified = false;
+  }
+  
+  return migrated;
 }
 
 /**
@@ -146,6 +283,20 @@ export const FIELD_ROLES = {
     'calculation_base',
     'calculation_method',
     'calculation_value',
+  ],
+  
+  // CANONICAL v2.1 FIELDS (new standard)
+  canonical: [
+    'schema_version',
+    'category',
+    'turnover_enabled',
+    'turnover_multiplier',
+    'max_bonus',
+    'max_bonus_unlimited',
+    'distribution_mode',
+    'game_exclusions',
+    'extra_config',
+    'human_verified',
   ],
   
   // LEGACY ALIASES (deprecated, normalize to base)

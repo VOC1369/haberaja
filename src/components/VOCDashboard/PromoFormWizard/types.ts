@@ -19,54 +19,83 @@ import { calculateAllReferralTiers, getDefaultReferralFormulaMetadata } from '@/
  * are NOT included - only their data arrays/values are saved
  */
 export const PKB_FIELD_WHITELIST = [
-  // Identitas
+  // ===============================
+  // SCHEMA VERSION (v2.1-FINAL)
+  // ===============================
+  'schema_version',
+  
+  // ===============================
+  // CORE IDENTITY
+  // ===============================
   'client_id',
+  'client_name',            // NEW: canonical
   'promo_name',
+  'promo_slug',             // NEW: canonical
+  'source_url',             // NEW: canonical
+  'promo_summary',          // NEW: canonical
+  
+  // ===============================
+  // TAXONOMY
+  // ===============================
   'promo_type',
+  'category',               // NEW: 'REWARD' | 'EVENT' (replaces program_classification semantics)
+  'reward_mode',            // alias: mode
+  'tier_archetype',
+  
+  // ===============================
+  // INTENT & TRIGGER
+  // ===============================
   'intent_category',
   'target_segment',
   'trigger_event',
-  'currency_scope',  // NEW: 'rupiah' | 'credit' | 'lp' | 'exp'
+  'currency_scope',
   
-  // Reward Config
-  'reward_mode',
+  // ===============================
+  // REWARD CORE
+  // ===============================
   'reward_type',
   'reward_amount',
-  'min_deposit',        // Fixed mode: Minimal deposit untuk klaim
-  'min_calculation',    // Dinamis mode: Minimal basis perhitungan (Loss/TO/dll)  
-  'min_claim',          // Minimal bonus yang bisa diambil (diklaim)
+  'reward_unit',            // NEW: canonical
+  'max_bonus',              // NEW: canonical (replaces max_claim semantic)
+  'max_bonus_unlimited',    // NEW: canonical
+  
+  // ===============================
+  // CALCULATION (DINAMIS)
+  // ===============================
+  'calculation_base',       // alias: calculation_basis
+  'calculation_method',
+  'calculation_value',
+  'min_calculation',
+  'conversion_formula',
+  'formula_metadata',
+  
+  // ===============================
+  // CLAIM RULES
+  // ===============================
+  'min_deposit',
   'max_claim',
   'max_claim_unlimited',
-  'turnover_rule',
-  // 'turnover_rule_enabled', // ❌ REMOVED - UI-only toggle
+  'min_claim',
+  'min_reward_claim',
   'claim_frequency',
+  'claim_method',           // NEW: 'auto' | 'manual' | 'cs_request'
+  'claim_deadline_days',    // NEW: canonical
   'claim_date_from',
   'claim_date_until',
   
-  // Periode Perhitungan (untuk weekly/daily promo) - EKSPLISIT
-  'calculation_period_start',   // 'senin', 'selasa', etc.
-  'calculation_period_end',     // 'senin', 'selasa', etc.
-  'calculation_period_note',    // Catatan periode untuk AI (e.g., "7 hari rolling, proses Selasa")
+  // ===============================
+  // TURNOVER / WD (CANONICAL)
+  // ===============================
+  'turnover_enabled',       // NEW: canonical (replaces turnover_rule_enabled)
+  'turnover_multiplier',    // NEW: canonical (number, replaces turnover_rule string)
+  'turnover_rule',          // LEGACY: kept for backward compat
   
-  // Tier mode
-  'tier_archetype',       // 'tier_level' | 'tier_point_store' | 'tier_network' (Referral)
-  'promo_unit',
-  'exp_mode',
-  'lp_calc_method',
-  'exp_calc_method',
-  'lp_earn_basis',           // Basis perhitungan LP: 'turnover' | 'win' | 'lose' | 'deposit'
-  'lp_earn_amount',          // Setiap [X] (unit sesuai basis)
-  'lp_earn_point_amount',    // → mendapatkan [Y] LP
-  'exp_formula',
-  'lp_value',
-  'exp_value',
-  'tiers',
-  'fast_exp_missions',
-  'level_up_rewards',
-  'vip_multiplier',
-  
-  // Distribution
-  // 'reward_distribution',  // ❌ REMOVED - Runtime decision by toggle, NOT promo data!
+  // ===============================
+  // DISTRIBUTION
+  // ===============================
+  'distribution_mode',      // NEW: canonical (replaces reward_distribution)
+  'distribution_schedule',  // NEW: canonical
+  'distribution_note',      // NEW: canonical
   'distribution_day',
   'distribution_time',
   'distribution_date_from',
@@ -75,58 +104,106 @@ export const PKB_FIELD_WHITELIST = [
   'distribution_time_from',
   'distribution_time_until',
   'distribution_day_time_enabled',
-  'custom_terms',
-  'special_requirements',
   
-  // Dinamis mode - NON-EXECUTABLE wrapper
-  'formula_metadata',       // NEW: wrapper untuk fakta formula (base, method, value, period, timezone)
-  'conversion_formula',     // Deskripsi tekstual (read-only untuk AI)
-  'min_reward_claim',       // Minimal bonus yang bisa diklaim (payout threshold)
+  // ===============================
+  // PERIODE PERHITUNGAN
+  // ===============================
+  'calculation_period_start',
+  'calculation_period_end',
+  'calculation_period_note',
   
-  // Sub Kategori (Combo Promo)
-  // 'has_subcategories', // ❌ REMOVED - UI-only toggle (subcategories array presence = has subcategories)
-  'subcategories',
+  // ===============================
+  // TIERS (UNIVERSAL)
+  // ===============================
+  'tiers',
+  'fast_exp_missions',
+  'level_up_rewards',
+  'vip_multiplier',
   
-  // Point Store Redeem Table
+  // ===============================
+  // POINT SYSTEM
+  // ===============================
+  'promo_unit',
+  'exp_mode',
+  'lp_calc_method',
+  'exp_calc_method',
+  'lp_earn_basis',
+  'lp_earn_amount',
+  'lp_earn_point_amount',
+  'exp_formula',
+  'lp_value',
+  'exp_value',
   'redeem_items',
-  'redeem_jenis_reward',  // Global jenis reward untuk semua redeem items
+  'redeem_jenis_reward',
   
-  // Referral Commission Tiers (tier_network)
+  // ===============================
+  // REFERRAL
+  // ===============================
   'referral_tiers',
   'referral_calculation_basis',
   'referral_admin_fee_enabled',
   'referral_admin_fee_percentage',
   
-  // Batasan & Akses
-  'platform_access',
-  'game_restriction',
+  // ===============================
+  // GAME SCOPE
+  // ===============================
+  'game_restriction',       // alias: game_scope
   'game_types',
   'game_providers',
   'game_names',
-  
-  // Game Blacklist (Dinamis mode) - arrays only, toggle removed
-  // 'game_blacklist_enabled', // ❌ REMOVED - UI-only toggle (blacklist arrays presence = enabled)
-  'game_types_blacklist',
-  'game_providers_blacklist',
-  'game_names_blacklist',
+  'game_exclusions',        // NEW: consolidated blacklist
+  'game_types_blacklist',   // LEGACY
+  'game_providers_blacklist', // LEGACY
+  'game_names_blacklist',   // LEGACY
   'game_exclusion_rules',
   
+  // ===============================
+  // ACCESS & RESTRICTION
+  // ===============================
+  'platform_access',
+  'geo_restriction',
+  'require_apk',
+  'one_account_rule',       // NEW: canonical
+  
+  // ===============================
+  // VALIDITY
+  // ===============================
   'valid_from',
   'valid_until',
   'valid_until_unlimited',
   'status',
-  'geo_restriction',
-  'require_apk',
-  'promo_risk_level', // Metadata deskriptif - level risiko komunikasi AI
   
-  // Payment Method Context (NEW - for Deposit Pulsa, E-Wallet, Crypto, etc.)
+  // ===============================
+  // RISK
+  // ===============================
+  'promo_risk_level',
+  'anti_fraud_notes',       // NEW: canonical
+  
+  // ===============================
+  // ESCAPE HATCH
+  // ===============================
+  'special_requirements',   // alias: special_conditions
+  'custom_terms',
+  'extra_config',           // NEW: CRITICAL escape hatch
+  
+  // ===============================
+  // SUBCATEGORIES
+  // ===============================
+  'subcategories',
+  
+  // ===============================
+  // PAYMENT METHOD
+  // ===============================
   'deposit_method',
   'deposit_method_providers',
   'deposit_rate',
   
-  // Admin Fee (REMOVED - use referral_admin_fee_* for Referral promos)
-  // 'admin_fee_enabled',      // ❌ REMOVED - ambiguous with referral_admin_fee_enabled
-  // 'admin_fee_percentage',   // ❌ REMOVED - ambiguous with referral_admin_fee_percentage
+  // ===============================
+  // AUDIT
+  // ===============================
+  'created_by',             // NEW: canonical
+  'human_verified',         // NEW: canonical
+  'extraction_confidence',  // alias for classification_confidence
 ] as const;
 
 // ============================================
@@ -162,14 +239,30 @@ export interface TicketReward {
 }
 
 export interface PromoFormData {
-  // Step 1 - Identitas Promo
+  // ===============================
+  // SCHEMA VERSION (v2.1-FINAL)
+  // ===============================
+  schema_version?: '2.1';
+  
+  // ===============================
+  // CORE IDENTITY (Step 1)
+  // ===============================
   client_id: string;
+  client_name?: string;            // NEW: canonical
   promo_name: string;
+  promo_slug?: string;             // NEW: canonical (auto-generated)
+  source_url?: string;             // NEW: canonical
+  promo_summary?: string;          // NEW: canonical
   promo_type: string;
   intent_category: string;
   target_segment: string;
   trigger_event: string;
-  currency_scope?: 'rupiah' | 'credit' | 'lp' | 'exp';  // NEW: canonical currency unit
+  currency_scope?: 'rupiah' | 'credit' | 'lp' | 'exp';
+  
+  // ===============================
+  // TAXONOMY (CANONICAL)
+  // ===============================
+  category?: 'REWARD' | 'EVENT' | '';  // NEW: canonical (derived from program_classification)
 
   // Step 2 - Konfigurasi Reward
   // Backend contract: 'formula' (UI displays as 'Dinamis')
@@ -434,6 +527,45 @@ export interface PromoFormData {
   ai_guidelines: string;
   default_behavior: string;
   completion_steps: string;
+
+  // ===============================
+  // CANONICAL FIELDS (v2.1-FINAL)
+  // ===============================
+  
+  // Reward Canonical
+  reward_unit?: string;                    // NEW: 'percent' | 'fixed' | 'unit'
+  max_bonus?: number | null;               // NEW: canonical (replaces max_claim semantic)
+  max_bonus_unlimited?: boolean;           // NEW: canonical
+  
+  // Claim Canonical
+  claim_method?: 'auto' | 'manual' | 'cs_request' | '';  // NEW: canonical
+  claim_deadline_days?: number | null;     // NEW: canonical
+  
+  // Turnover Canonical
+  turnover_enabled?: boolean;              // NEW: canonical (replaces turnover_rule_enabled for output)
+  turnover_multiplier?: number | null;     // NEW: canonical (number, replaces turnover_rule string)
+  
+  // Distribution Canonical
+  distribution_mode?: string;              // NEW: canonical (replaces reward_distribution)
+  distribution_schedule?: string;          // NEW: canonical
+  distribution_note?: string;              // NEW: canonical
+  
+  // Game Scope Canonical
+  game_exclusions?: string[];              // NEW: consolidated blacklist
+  
+  // Access Canonical
+  one_account_rule?: boolean;              // NEW: canonical
+  
+  // Risk Canonical
+  anti_fraud_notes?: string;               // NEW: canonical
+  
+  // Escape Hatch Canonical
+  extra_config?: Record<string, unknown>;  // NEW: CRITICAL escape hatch
+  
+  // Audit Canonical
+  created_by?: string;                     // NEW: canonical
+  human_verified?: boolean;                // NEW: canonical
+  extraction_confidence?: number | null;   // NEW: canonical (numeric 0-1)
 
   // Classification metadata (from LLM classifier)
   program_classification?: 'A' | 'B' | 'C';
@@ -1065,6 +1197,264 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   );
   
   return finalPayload as Partial<PromoFormData>;
+}
+
+// ============================================
+// CANONICAL PAYLOAD BUILDER (v2.1-FINAL)
+// ============================================
+
+import { 
+  CanonicalPromoKB, 
+  UniversalTier, 
+  CanonicalSubCategory,
+  slugify,
+  parseTurnoverMultiplier as parseMultiplier,
+  mapToCategory,
+  consolidateGameExclusions,
+  CANONICAL_INERT,
+} from '@/lib/canonical-promo-schema';
+
+/**
+ * Build Canonical Promo KB payload (v2.1-FINAL schema)
+ * This is the OUTPUT format for storage/export/API
+ * 
+ * DIFFERENCES from buildPKBPayload:
+ * - Uses canonical field names (turnover_multiplier vs turnover_rule)
+ * - Unified tiers[] array for all tier archetypes
+ * - Consolidated game_exclusions[]
+ * - Includes schema_version and audit fields
+ */
+export function buildCanonicalPayload(data: PromoFormData, promoId?: string): CanonicalPromoKB {
+  // Start with inert baseline
+  const canonical: CanonicalPromoKB = { ...CANONICAL_INERT };
+  
+  // ===============================
+  // CORE IDENTITY
+  // ===============================
+  canonical.schema_version = '2.1';
+  canonical.client_id = data.client_id || '';
+  canonical.client_name = data.client_name || '';
+  canonical.promo_id = promoId || generatePromoId();
+  canonical.promo_name = data.promo_name || '';
+  canonical.promo_slug = slugify(data.promo_name || '');
+  canonical.source_url = data.source_url || '';
+  canonical.status = data.status || 'draft';
+  canonical.promo_summary = data.promo_summary || '';
+  
+  // ===============================
+  // TAXONOMY
+  // ===============================
+  canonical.category = mapToCategory(data.program_classification) || (data.category as 'REWARD' | 'EVENT' | '') || '';
+  canonical.mode = data.reward_mode || '';
+  canonical.tier_archetype = data.tier_archetype || null;
+  
+  // ===============================
+  // INTENT & TRIGGER
+  // ===============================
+  canonical.intent_category = data.intent_category || '';
+  canonical.target_segment = data.target_segment || '';
+  canonical.trigger_event = data.trigger_event || '';
+  
+  // ===============================
+  // VALIDITY
+  // ===============================
+  canonical.valid_from = data.valid_from || '';
+  canonical.valid_until = data.valid_until || '';
+  canonical.valid_until_unlimited = data.valid_until_unlimited || false;
+  
+  // ===============================
+  // REWARD CORE
+  // ===============================
+  canonical.reward_type = data.reward_type || data.dinamis_reward_type || data.fixed_reward_type || '';
+  canonical.reward_amount = data.reward_amount ?? data.dinamis_reward_amount ?? null;
+  canonical.reward_unit = data.calculation_method === 'percentage' ? 'percent' : 'fixed';
+  canonical.max_bonus = data.max_bonus ?? data.max_claim ?? data.dinamis_max_claim ?? null;
+  canonical.max_bonus_unlimited = data.max_bonus_unlimited ?? data.dinamis_max_claim_unlimited ?? data.fixed_max_claim_unlimited ?? false;
+  
+  // ===============================
+  // CALCULATION
+  // ===============================
+  canonical.calculation_basis = data.calculation_base || '';
+  canonical.min_calculation = data.min_calculation ?? null;
+  canonical.conversion_formula = data.conversion_formula || '';
+  
+  // ===============================
+  // CLAIM RULES
+  // ===============================
+  canonical.min_deposit = data.min_deposit ?? data.fixed_min_depo ?? null;
+  canonical.max_claim = data.max_claim ?? null;
+  canonical.max_claim_unlimited = data.dinamis_max_claim_unlimited || data.fixed_max_claim_unlimited || false;
+  canonical.claim_frequency = normalizeClaimFrequency(data.claim_frequency);
+  canonical.claim_method = data.claim_method || '';
+  canonical.claim_deadline_days = data.claim_deadline_days ?? null;
+  
+  // ===============================
+  // TURNOVER / WD (CANONICAL)
+  // ===============================
+  const turnoverRule = data.reward_mode === 'fixed' ? data.fixed_turnover_rule : data.turnover_rule;
+  const turnoverEnabled = data.reward_mode === 'fixed' ? data.fixed_turnover_rule_enabled : data.turnover_rule_enabled;
+  
+  canonical.turnover_enabled = data.turnover_enabled ?? turnoverEnabled ?? false;
+  canonical.turnover_multiplier = data.turnover_multiplier ?? parseMultiplier(turnoverRule) ?? null;
+  
+  // ===============================
+  // DISTRIBUTION
+  // ===============================
+  canonical.distribution_mode = data.distribution_mode || data.reward_distribution || '';
+  canonical.distribution_schedule = data.distribution_day || '';
+  canonical.distribution_note = data.distribution_note || '';
+  
+  // ===============================
+  // TIERS (UNIVERSAL)
+  // ===============================
+  canonical.tiers = unifyTiers(data);
+  
+  // ===============================
+  // GAME SCOPE
+  // ===============================
+  canonical.game_scope = data.game_restriction || '';
+  canonical.game_types = data.game_types || [];
+  canonical.game_providers = data.game_providers || [];
+  canonical.game_exclusions = data.game_exclusions || consolidateGameExclusions(
+    data.game_types_blacklist,
+    data.game_providers_blacklist,
+    data.game_names_blacklist
+  );
+  
+  // ===============================
+  // ACCESS & RESTRICTION
+  // ===============================
+  canonical.platform_access = data.platform_access || '';
+  canonical.geo_restriction = data.geo_restriction || '';
+  canonical.require_apk = data.require_apk || false;
+  canonical.one_account_rule = data.one_account_rule || false;
+  
+  // ===============================
+  // RISK
+  // ===============================
+  canonical.promo_risk_level = data.promo_risk_level || '';
+  canonical.anti_fraud_notes = data.anti_fraud_notes || '';
+  
+  // ===============================
+  // ESCAPE HATCH
+  // ===============================
+  canonical.special_conditions = data.special_requirements || [];
+  canonical.custom_terms = data.custom_terms || '';
+  canonical.extra_config = data.extra_config || {};
+  
+  // ===============================
+  // SUBCATEGORIES
+  // ===============================
+  canonical.has_subcategories = data.has_subcategories || false;
+  canonical.subcategories = canonicalizeSubcategories(data);
+  
+  // ===============================
+  // AUDIT
+  // ===============================
+  canonical.created_at = '';  // Set by storage layer
+  canonical.updated_at = '';  // Set by storage layer
+  canonical.created_by = data.created_by || '';
+  canonical.extraction_confidence = typeof data.extraction_confidence === 'number' 
+    ? data.extraction_confidence 
+    : (data.classification_confidence === 'high' ? 0.9 : data.classification_confidence === 'medium' ? 0.7 : 0.5);
+  canonical.human_verified = data.human_verified || false;
+  
+  return canonical;
+}
+
+/**
+ * Helper: Normalize claim_frequency to English enum
+ */
+function normalizeClaimFrequency(freq?: string): string {
+  if (!freq) return '';
+  const map: Record<string, string> = {
+    'harian': 'daily',
+    'mingguan': 'weekly',
+    'bulanan': 'monthly',
+    'sekali': 'once',
+    'per_transaksi': 'per_transaction',
+  };
+  return map[freq.toLowerCase()] || freq;
+}
+
+/**
+ * Helper: Unify all tier types into canonical UniversalTier[]
+ */
+function unifyTiers(data: PromoFormData): UniversalTier[] {
+  // tier_network = Referral
+  if (data.tier_archetype === 'tier_network' && data.referral_tiers?.length) {
+    return data.referral_tiers.map((t, i) => ({
+      tier_id: t.id,
+      tier_name: t.tier_label,
+      tier_order: i + 1,
+      requirement_value: t.min_downline,
+      requirement_max: null,
+      reward_value: t.commission_percentage,
+      reward_type: 'percentage',
+      turnover_multiplier: null,
+      extra: { 
+        winlose: t.winlose, 
+        net_winlose: t.net_winlose,
+        cashback_deduction_amount: t.cashback_deduction_amount,
+        admin_fee_deduction_amount: t.admin_fee_deduction_amount,
+      },
+    }));
+  }
+  
+  // tier_point_store = LP Redeem
+  if (data.tier_archetype === 'tier_point_store' && data.redeem_items?.length) {
+    return data.redeem_items.map((r, i) => ({
+      tier_id: r.id,
+      tier_name: r.nama_hadiah,
+      tier_order: i + 1,
+      requirement_value: r.biaya_lp,
+      requirement_max: null,
+      reward_value: r.nilai_hadiah,
+      reward_type: 'fixed',
+      turnover_multiplier: null,
+      extra: { is_active: r.is_active },
+    }));
+  }
+  
+  // Default: tier_level / tier_formula = Standard tiers
+  if (data.tiers?.length) {
+    return data.tiers.map((t, i) => ({
+      tier_id: t.id,
+      tier_name: t.type || `Tier ${i + 1}`,
+      tier_order: i + 1,
+      requirement_value: t.minimal_point,
+      requirement_max: null,
+      reward_value: typeof t.reward === 'number' ? t.reward : null,
+      reward_type: t.reward_type || 'fixed',
+      turnover_multiplier: null,
+      extra: { 
+        jenis_hadiah: t.jenis_hadiah,
+        physical_reward_name: t.physical_reward_name,
+      },
+    }));
+  }
+  
+  return [];
+}
+
+/**
+ * Helper: Convert subcategories to canonical schema
+ */
+function canonicalizeSubcategories(data: PromoFormData): CanonicalSubCategory[] {
+  if (!data.subcategories?.length) return [];
+  
+  return data.subcategories.map(sub => ({
+    sub_id: sub.id,
+    sub_name: sub.name,
+    game_types: sub.game_types || [],
+    game_providers: sub.game_providers || [],
+    reward_amount: sub.calculation_value ?? null,
+    max_bonus: sub.max_bonus_same_as_global ? (data.global_max_bonus ?? null) : (sub.max_bonus ?? null),
+    min_deposit: sub.minimum_base_enabled ? (sub.minimum_base ?? null) : null,
+    turnover_multiplier: sub.turnover_rule_enabled 
+      ? parseMultiplier(sub.turnover_rule) 
+      : null,
+  }));
 }
 
 /**
