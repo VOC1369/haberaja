@@ -76,6 +76,21 @@ export function getPromoSubTypeDisplay(
   if (/leaderboard/i.test(name) || /ranking/i.test(name)) {
     return 'Leaderboard';
   }
+  if (/freechip/i.test(name) || /freebet/i.test(name) || /chip\s*gratis/i.test(name)) {
+    return 'Freechip';
+  }
+  if (/pragmatic/i.test(name) || /drops.*wins/i.test(name) || /pg\s*soft/i.test(name)) {
+    return 'Provider Event';
+  }
+  if (/maxwin/i.test(name) || /max\s*win/i.test(name) || /multiplier/i.test(name)) {
+    return 'Event Multiplier';
+  }
+  if (/mystery/i.test(name) || /kejutan/i.test(name) || /misteri/i.test(name)) {
+    return 'Mystery Bonus';
+  }
+  if (/streak/i.test(name) || /combo/i.test(name) || /check.?in/i.test(name) || /absen/i.test(name)) {
+    return 'Streak Bonus';
+  }
   
   // Priority 2: Type-based mapping
   const typeDisplayMap: Record<string, string> = {
@@ -89,6 +104,7 @@ export function getPromoSubTypeDisplay(
     'referral': 'Referral',
     'event_level_up': 'Level Up',
     'freechip': 'Freechip',
+    'freebet': 'Freebet',
     'loyalty_point': 'Loyalty Point',
     'tournament': 'Tournament',
     'leaderboard': 'Leaderboard',
@@ -96,6 +112,10 @@ export function getPromoSubTypeDisplay(
     'campaign': 'Campaign',
     'race': 'Race',
     'level_up': 'Level Up',
+    'provider_tournament': 'Provider Event',
+    'event_multiplier': 'Event Multiplier',
+    'mystery_bonus': 'Mystery Bonus',
+    'streak_bonus': 'Streak Bonus',
   };
   
   if (typeDisplayMap[type]) {

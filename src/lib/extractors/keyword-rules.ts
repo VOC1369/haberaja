@@ -80,6 +80,54 @@ export const KEYWORD_RULES: KeywordRule[] = [
     },
   },
   
+  // Deposit Bonus
+  {
+    id: 'deposit_bonus',
+    name: 'Deposit Bonus',
+    patterns: [
+      /bonus\s*deposit/i,
+      /deposit\s*bonus/i,
+      /bonus\s*\d+%/i,
+      /extra\s*deposit/i,
+      /double\s*deposit/i,
+      /next\s*deposit/i,
+    ],
+    category: 'A',
+    archetype: 'formula_based',
+    reason: 'DEPOSIT BONUS → Reward Program (deposit-based)',
+    defaults: {
+      reward_mode: 'formula',
+      calculation_base: 'deposit',
+      trigger_event: 'Deposit',
+      target_segment: 'Semua',
+      intent_category: 'Retention',
+    },
+  },
+  
+  // Freechip / Freebet
+  {
+    id: 'freechip',
+    name: 'Freechip / Freebet',
+    patterns: [
+      /freechip/i,
+      /free\s*chip/i,
+      /freebet/i,
+      /free\s*bet/i,
+      /chip\s*gratis/i,
+      /bonus\s*harian/i,
+    ],
+    category: 'A',
+    archetype: 'formula_based',
+    reason: 'FREECHIP → Reward Program (instant bonus)',
+    defaults: {
+      reward_mode: 'fixed',
+      trigger_event: 'Login',
+      target_segment: 'Semua',
+      intent_category: 'Retention',
+      claim_frequency: 'harian',
+    },
+  },
+  
   // Birthday
   {
     id: 'birthday',
@@ -220,6 +268,29 @@ export const KEYWORD_RULES: KeywordRule[] = [
     },
   },
   
+  // Provider Tournament (Pragmatic, PG Soft, etc.)
+  {
+    id: 'provider_tournament',
+    name: 'Provider Tournament',
+    patterns: [
+      /pragmatic/i,
+      /drops\s*(and|&|\+)\s*wins/i,
+      /provider\s*tournament/i,
+      /pg\s*soft/i,
+      /habanero\s*race/i,
+      /microgaming/i,
+      /spade\s*gaming/i,
+    ],
+    category: 'B',
+    archetype: 'event_table',
+    reason: 'PROVIDER TOURNAMENT → Event Program (external)',
+    defaults: {
+      reward_mode: 'tier',
+      trigger_event: 'Mission Completed',
+      intent_category: 'Retention',
+    },
+  },
+  
   // Tournament
   {
     id: 'tournament',
@@ -237,6 +308,77 @@ export const KEYWORD_RULES: KeywordRule[] = [
     defaults: {
       reward_mode: 'tier',
       trigger_event: 'Mission Completed',
+      intent_category: 'Retention',
+    },
+  },
+  
+  // Event Multiplier / MaxWin
+  {
+    id: 'event_multiplier',
+    name: 'Event Multiplier / MaxWin',
+    patterns: [
+      /maxwin/i,
+      /max\s*win/i,
+      /multiplier\s*\d+x/i,
+      /target\s*kemenangan/i,
+      /spaceman.*\d+x/i,
+      /aviator.*\d+x/i,
+      /bonus\s*multiplier/i,
+      /big\s*win/i,
+      /mega\s*win/i,
+    ],
+    category: 'B',
+    archetype: 'event_table',
+    reason: 'EVENT MULTIPLIER → Event Program (target-based)',
+    defaults: {
+      reward_mode: 'tier',
+      trigger_event: 'Mission Completed',
+      intent_category: 'Retention',
+    },
+  },
+  
+  // Mystery / Random Bonus
+  {
+    id: 'mystery_bonus',
+    name: 'Mystery / Random Bonus',
+    patterns: [
+      /mystery/i,
+      /random\s*bonus/i,
+      /surprise/i,
+      /kejutan/i,
+      /rahasia/i,
+      /misteri/i,
+    ],
+    category: 'B',
+    archetype: 'event_table',
+    reason: 'MYSTERY BONUS → Event Program (random)',
+    defaults: {
+      reward_mode: 'fixed',
+      trigger_event: 'Login',
+      intent_category: 'Retention',
+    },
+  },
+  
+  // Streak / Combo / Daily Check-in
+  {
+    id: 'streak_bonus',
+    name: 'Streak / Combo Bonus',
+    patterns: [
+      /streak/i,
+      /combo/i,
+      /beruntun/i,
+      /daily\s*login/i,
+      /check.?in/i,
+      /hadir\s*setiap\s*hari/i,
+      /absen/i,
+      /consecutive/i,
+    ],
+    category: 'B',
+    archetype: 'tiered_fixed',
+    reason: 'STREAK BONUS → Event Program (accumulative)',
+    defaults: {
+      reward_mode: 'tier',
+      trigger_event: 'Login',
       intent_category: 'Retention',
     },
   },
