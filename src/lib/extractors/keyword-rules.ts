@@ -499,6 +499,257 @@ export const KEYWORD_RULES: KeywordRule[] = [
   },
   
   // ========================
+  // NEW TAXONOMY RULES (Phase 1)
+  // ========================
+  
+  // Togel Discount (bet_amount-based)
+  {
+    id: 'togel_discount',
+    name: 'Togel Discount',
+    patterns: [
+      /diskon\s*togel/i,
+      /togel\s*discount/i,
+      /potongan\s*togel/i,
+      /discount\s*\d+%.*togel/i,
+    ],
+    category: 'A',
+    archetype: 'formula_based',
+    reason: 'TOGEL DISCOUNT → Reward Program (bet_amount based)',
+    defaults: {
+      reward_mode: 'formula',
+      calculation_base: 'bet_amount',
+      trigger_event: 'Bet',
+      promo_type: 'Togel Discount',
+      target_segment: 'Semua',
+      intent_category: 'Retention',
+      fixed_calculation_value_enabled: true,
+      fixed_max_claim_enabled: false,
+    },
+  },
+  
+  // Bonus Withdraw (milestone-based)
+  {
+    id: 'bonus_withdraw',
+    name: 'Bonus Withdraw',
+    patterns: [
+      /bonus\s*withdraw/i,
+      /bonus\s*wd/i,
+      /withdraw\s*bonus/i,
+      /bonus\s*penarikan/i,
+    ],
+    category: 'B',
+    archetype: 'tiered_fixed',
+    reason: 'BONUS WITHDRAW → Event Program (milestone-based)',
+    defaults: {
+      reward_mode: 'tier',
+      tier_archetype: 'tier_level',
+      trigger_event: 'Withdraw',
+      promo_type: 'Bonus Withdraw',
+      intent_category: 'Retention',
+    },
+  },
+  
+  // Winstreak (streak-based)
+  {
+    id: 'winstreak',
+    name: 'Winstreak Bonus',
+    patterns: [
+      /winstreak/i,
+      /win\s*streak/i,
+      /menang\s*beruntun/i,
+      /kemenangan\s*beruntun/i,
+    ],
+    category: 'B',
+    archetype: 'tiered_fixed',
+    reason: 'WINSTREAK → Event Program (streak-based)',
+    defaults: {
+      reward_mode: 'tier',
+      tier_archetype: 'tier_level',
+      trigger_event: 'Win',
+      promo_type: 'Winstreak Bonus',
+      intent_category: 'Retention',
+    },
+  },
+  
+  // Milestone Deposit (target-based)
+  {
+    id: 'milestone_deposit',
+    name: 'Milestone Deposit',
+    patterns: [
+      /milestone/i,
+      /target\s*deposit/i,
+      /deposit\s*target/i,
+      /total\s*deposit.*bonus/i,
+    ],
+    category: 'B',
+    archetype: 'tiered_fixed',
+    reason: 'MILESTONE → Event Program (target-based)',
+    defaults: {
+      reward_mode: 'tier',
+      tier_archetype: 'tier_level',
+      trigger_event: 'Deposit',
+      promo_type: 'Milestone Deposit',
+      intent_category: 'Retention',
+    },
+  },
+  
+  // VIP Rebate (tier-based percentage)
+  {
+    id: 'vip_rebate',
+    name: 'VIP Rebate',
+    patterns: [
+      /vip.*rebate/i,
+      /rebate.*vip/i,
+      /member.*rebate/i,
+      /rebate.*tier/i,
+    ],
+    category: 'A',
+    archetype: 'tiered_fixed',
+    reason: 'VIP REBATE → Reward Program (tier-based percentage)',
+    defaults: {
+      reward_mode: 'tier',
+      tier_archetype: 'tier_formula',
+      calculation_base: 'turnover',
+      promo_type: 'VIP Rebate',
+      intent_category: 'Retention',
+    },
+  },
+  
+  // Merchandise Reward (physical)
+  {
+    id: 'merchandise',
+    name: 'Merchandise Reward',
+    patterns: [
+      /merchandise/i,
+      /hadiah\s*fisik/i,
+      /motor/i,
+      /mobil/i,
+      /iphone/i,
+      /hp\s*gratis/i,
+    ],
+    category: 'A',
+    archetype: 'formula_based',
+    reason: 'MERCHANDISE → Reward Program (physical reward)',
+    defaults: {
+      reward_mode: 'fixed',
+      trigger_event: 'Mission Completed',
+      promo_type: 'Merchandise Reward',
+      intent_category: 'Retention',
+      fixed_reward_type: 'hadiah_fisik',
+    },
+  },
+  
+  // VIP Birthday (tier-based)
+  {
+    id: 'vip_birthday',
+    name: 'VIP Birthday',
+    patterns: [
+      /vip.*birthday/i,
+      /birthday.*vip/i,
+      /ultah.*vip/i,
+      /vip.*ulang\s*tahun/i,
+    ],
+    category: 'B',
+    archetype: 'tiered_fixed',
+    reason: 'VIP BIRTHDAY → Event Program (tier-based)',
+    defaults: {
+      reward_mode: 'tier',
+      tier_archetype: 'tier_level',
+      trigger_event: 'Login',
+      promo_type: 'VIP Birthday',
+      intent_category: 'Retention',
+      claim_frequency: 'tahunan',
+    },
+  },
+  
+  // Daily Login Reward
+  {
+    id: 'daily_login',
+    name: 'Daily Login Reward',
+    patterns: [
+      /daily\s*login/i,
+      /login\s*harian/i,
+      /bonus\s*login/i,
+      /login\s*reward/i,
+    ],
+    category: 'B',
+    archetype: 'formula_based',
+    reason: 'DAILY LOGIN → Event Program (fixed daily)',
+    defaults: {
+      reward_mode: 'fixed',
+      trigger_event: 'Login',
+      promo_type: 'Daily Login Reward',
+      intent_category: 'Retention',
+      claim_frequency: 'harian',
+    },
+  },
+  
+  // First Deposit Bonus (fixed event)
+  {
+    id: 'first_deposit',
+    name: 'First Deposit Bonus',
+    patterns: [
+      /first\s*deposit/i,
+      /deposit\s*pertama/i,
+      /depo\s*pertama/i,
+    ],
+    category: 'B',
+    archetype: 'formula_based',
+    reason: 'FIRST DEPOSIT → Event Program (one-time fixed)',
+    defaults: {
+      reward_mode: 'fixed',
+      trigger_event: 'First Deposit',
+      promo_type: 'First Deposit Bonus',
+      intent_category: 'Acquisition',
+      claim_frequency: 'sekali',
+    },
+  },
+  
+  // Leaderboard Referral (rank-based)
+  {
+    id: 'leaderboard_referral',
+    name: 'Leaderboard Referral',
+    patterns: [
+      /leaderboard.*referral/i,
+      /referral.*leaderboard/i,
+      /top.*referrer/i,
+      /referral\s*race/i,
+      /monthly.*referral.*race/i,
+    ],
+    category: 'B',
+    archetype: 'event_table',
+    reason: 'LEADERBOARD REFERRAL → Event Program (rank-based)',
+    defaults: {
+      reward_mode: 'tier',
+      tier_archetype: 'tier_level',
+      trigger_event: 'Mission Completed',
+      promo_type: 'Leaderboard Referral',
+      intent_category: 'Acquisition',
+    },
+  },
+  
+  // Prize Terbalik / Consolation (togel)
+  {
+    id: 'prize_terbalik',
+    name: 'Prize Terbalik',
+    patterns: [
+      /prize\s*terbalik/i,
+      /hadiah\s*terbalik/i,
+      /consolation/i,
+      /hadiah\s*hiburan/i,
+    ],
+    category: 'B',
+    archetype: 'event_table',
+    reason: 'PRIZE TERBALIK → Event Program (consolation)',
+    defaults: {
+      reward_mode: 'tier',
+      trigger_event: 'Bet',
+      promo_type: 'Prize Terbalik',
+      intent_category: 'Retention',
+    },
+  },
+  
+  // ========================
   // CATEGORY C - System Rule (Informational)
   // ========================
   
