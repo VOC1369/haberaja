@@ -147,6 +147,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
       claim_frequency: 'tahunan',
       intent_category: 'Retention',
       calculation_base: '',                // Birthday tidak pakai dasar perhitungan
+      fixed_calculation_base: '',          // Form wizard field - juga kosong
     },
   },
   

@@ -3551,6 +3551,17 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_reward_type: (() => {
       if (modeDetection.mode !== 'fixed' || !extracted.subcategories[0]) return '';
       
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
+      
+      // Birthday + "bisa WD" = Uang Tunai (override LLM)
+      const canWithdraw = /bisa\s*(di)?\s*wd|bisa\s*di\s*tarik|withdraw\s*langsung|bisa\s*withdraw/i.test(termsText);
+      if (isBirthdayPromo && canWithdraw) {
+        console.log('[Extractor] Birthday + WD = uang_tunai');
+        return 'uang_tunai';
+      }
+      
       // Source 1: LLM extracted reward_type (trust if specific)
       const extractedType = extracted.subcategories[0].reward_type?.toLowerCase();
       if (extractedType && !['credit_game', 'other', ''].includes(extractedType)) {
@@ -3566,9 +3577,20 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       
       return extractedType || 'credit_game';
     })(),
-    fixed_calculation_base: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? (extracted.subcategories[0].calculation_base || 'deposit')
-      : '',
+    fixed_calculation_base: (() => {
+      if (modeDetection.mode !== 'fixed') return '';
+      
+      // Birthday promo guard - tidak pakai calculation_base
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
+      
+      if (isBirthdayPromo) {
+        console.log('[Extractor] Birthday promo - setting calculation_base to empty');
+        return '';
+      }
+      
+      return extracted.subcategories[0]?.calculation_base || 'deposit';
+    })(),
     fixed_calculation_method: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].calculation_method || 'percentage')
       : '',
@@ -3667,13 +3689,22 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       const extractedTO = extracted.subcategories[0]?.turnover_rule;
       if (extractedTO && Number(extractedTO) > 0) return `${extractedTO}x`;
       
-      // Source 2: Pattern detection from terms
+      // Source 2: Expanded pattern detection from terms
       const termsText = extracted.terms_conditions?.join(' ') || '';
-      const toPattern = /(?:turnover|to|minimal turnover)\s*(\d+)\s*[xX]/i;
-      const toMatch = termsText.match(toPattern);
-      if (toMatch) {
-        console.log('[Extractor] Detected turnover from terms:', toMatch[1] + 'x');
-        return `${toMatch[1]}x`;
+      const patterns = [
+        /(?:turnover|to|syarat\s*to|minimal\s*turnover)\s*(\d+)\s*[xX]/i,
+        /(\d+)\s*[xX]\s*(?:turnover|to)/i,
+        /turnover\s*(\d+)\s*kali/i,
+        /to\s*(\d+)\s*(?:untuk|sebelum|wd)/i,
+        /syarat\s*(?:main|wd).*?(\d+)\s*[xX]/i,
+      ];
+      
+      for (const pattern of patterns) {
+        const match = termsText.match(pattern);
+        if (match) {
+          console.log('[Extractor] Detected turnover from terms:', match[1] + 'x');
+          return `${match[1]}x`;
+        }
       }
       
       return '0x';
