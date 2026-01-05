@@ -532,10 +532,16 @@ export interface PromoFormData {
   // CANONICAL FIELDS (v2.1-FINAL)
   // ===============================
   
+  // Trigger Canonical
+  trigger_min_value?: number | null;        // NEW: v2.1 - minimum value to trigger promo
+  
   // Reward Canonical
   reward_unit?: string;                    // NEW: 'percent' | 'fixed' | 'unit'
   max_bonus?: number | null;               // NEW: canonical (replaces max_claim semantic)
   max_bonus_unlimited?: boolean;           // NEW: canonical
+  
+  // Calculation Canonical
+  payout_direction?: 'depan' | 'belakang' | null;  // NEW: v2.1 - reward direction (before/after turnover)
   
   // Claim Canonical
   claim_method?: 'auto' | 'manual' | 'cs_request' | '';  // NEW: canonical
@@ -544,6 +550,7 @@ export interface PromoFormData {
   // Turnover Canonical
   turnover_enabled?: boolean;              // NEW: canonical (replaces turnover_rule_enabled for output)
   turnover_multiplier?: number | null;     // NEW: canonical (number, replaces turnover_rule string)
+  min_withdraw_after_bonus?: number | null; // NEW: v2.1 - min WD after bonus
   
   // Distribution Canonical
   distribution_mode?: string;              // NEW: canonical (replaces reward_distribution)
@@ -1255,6 +1262,7 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   canonical.intent_category = data.intent_category || '';
   canonical.target_segment = data.target_segment || '';
   canonical.trigger_event = data.trigger_event || '';
+  canonical.trigger_min_value = data.trigger_min_value ?? null;
   
   // ===============================
   // VALIDITY
@@ -1269,6 +1277,7 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   canonical.reward_type = data.reward_type || data.dinamis_reward_type || data.fixed_reward_type || '';
   canonical.reward_amount = data.reward_amount ?? data.dinamis_reward_amount ?? null;
   canonical.reward_unit = data.calculation_method === 'percentage' ? 'percent' : 'fixed';
+  canonical.reward_is_percentage = data.calculation_method === 'percentage';
   canonical.max_bonus = data.max_bonus ?? data.max_claim ?? data.dinamis_max_claim ?? null;
   canonical.max_bonus_unlimited = data.max_bonus_unlimited ?? data.dinamis_max_claim_unlimited ?? data.fixed_max_claim_unlimited ?? false;
   
@@ -1277,6 +1286,7 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   canonical.calculation_basis = data.calculation_base || '';
   canonical.min_calculation = data.min_calculation ?? null;
+  canonical.payout_direction = (data.payout_direction as 'depan' | 'belakang') || null;
   canonical.conversion_formula = data.conversion_formula || '';
   
   // ===============================
@@ -1297,6 +1307,7 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   
   canonical.turnover_enabled = data.turnover_enabled ?? turnoverEnabled ?? false;
   canonical.turnover_multiplier = data.turnover_multiplier ?? parseMultiplier(turnoverRule) ?? null;
+  canonical.min_withdraw_after_bonus = data.min_withdraw_after_bonus ?? null;
   
   // ===============================
   // DISTRIBUTION
@@ -1308,7 +1319,9 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   // TIERS (UNIVERSAL)
   // ===============================
-  canonical.tiers = unifyTiers(data);
+  const unifiedTiers = unifyTiers(data);
+  canonical.tier_count = unifiedTiers.length;
+  canonical.tiers = unifiedTiers;
   
   // ===============================
   // GAME SCOPE
@@ -1500,11 +1513,13 @@ function canonicalizeSubcategories(data: PromoFormData): CanonicalSubCategory[] 
     game_types: sub.game_types || [],
     game_providers: sub.game_providers || [],
     reward_amount: sub.calculation_value ?? null,
+    reward_is_percentage: sub.calculation_method === 'percentage',
     max_bonus: sub.max_bonus_same_as_global ? (data.global_max_bonus ?? null) : (sub.max_bonus ?? null),
     min_deposit: sub.minimum_base_enabled ? (sub.minimum_base ?? null) : null,
     turnover_multiplier: sub.turnover_rule_enabled 
       ? parseMultiplier(sub.turnover_rule) 
       : null,
+    payout_direction: (sub.payout_direction as 'depan' | 'belakang') || null,
   }));
 }
 
