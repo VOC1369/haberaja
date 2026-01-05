@@ -107,3 +107,21 @@ export {
   type FieldApplicabilityRule,
   type ApplicabilityResult,
 } from './field-applicability-map';
+
+// Canonical Guard (v2.1-FINAL enforcement)
+export {
+  enforceCanonicalGuard,
+  checkHardFail,
+  stripUIPrefix,
+  isEngineLogicField,
+  enforceGameExclusions,
+  CANONICAL_FIELD_WHITELIST,
+  TAXONOMY_RULES,
+  CANONICAL_OUTPUT_PROMPT,
+  type CanonicalFieldName,
+  type CanonicalCategory,
+  type CanonicalMode,
+  type CanonicalTierArchetype,
+  type CanonicalGuardResult,
+  type HardFailResult,
+} from '../canonical-guard';

@@ -2069,6 +2069,22 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
       warnings: validationResult.warnings
     };
     
+    // ============================================
+    // CANONICAL GUARD - POST-EXTRACTION ENFORCEMENT (IMAGE)
+    // Same as content extraction for consistency
+    // ============================================
+    try {
+      const { enforceCanonicalGuard } = await import('./canonical-guard');
+      const guardResult = enforceCanonicalGuard(downgraded as unknown as Record<string, unknown>);
+      
+      if (!guardResult.valid) {
+        console.warn('[extractPromoFromImage] CANONICAL GUARD warnings:', guardResult.errors);
+        (downgraded._extraction_meta as Record<string, unknown>).canonical_guard_warnings = guardResult.errors;
+      }
+    } catch (guardError) {
+      console.warn('[extractPromoFromImage] Canonical guard failed (non-fatal):', guardError);
+    }
+    
     return downgraded;
   } catch (parseError) {
     console.error("Failed to parse OpenAI Vision response:", resultText);
@@ -2702,6 +2718,28 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     
     // DERIVE ready_to_commit from validation - never hardcode
     parsed.ready_to_commit = validationResult.status === 'ready' && validationResult.warnings.length === 0;
+    
+    // ============================================
+    // CANONICAL GUARD - POST-EXTRACTION ENFORCEMENT
+    // Final line of defense for schema compliance
+    // ============================================
+    try {
+      const { enforceCanonicalGuard } = await import('./canonical-guard');
+      const guardResult = enforceCanonicalGuard(parsed as unknown as Record<string, unknown>);
+      
+      if (!guardResult.valid) {
+        console.warn('[Extractor] CANONICAL GUARD warnings:', guardResult.errors);
+        // Store guard warnings in extraction meta for UI display
+        (parsed._extraction_meta as Record<string, unknown>).canonical_guard_warnings = guardResult.errors;
+      }
+      
+      // Log any skipped fields
+      if (guardResult.warnings.length > 0) {
+        console.debug('[Extractor] Canonical guard skipped fields:', guardResult.warnings);
+      }
+    } catch (guardError) {
+      console.warn('[Extractor] Canonical guard failed (non-fatal):', guardError);
+    }
     
     return parsed;
   } catch (parseError) {
