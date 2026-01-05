@@ -3827,32 +3827,52 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_cash_reward_amount: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? extracted.subcategories[0].cash_reward_amount
       : undefined,
-    // ✅ Fixed Mode - Turnover Rule toggle (TITLE-FIRST DETECTION)
-    // SEMANTIC CONTRACT:
-    // - turnover_rule = kelipatan sebelum WD (multiplier, e.g. 3x, 5x)
+    // ✅ Fixed Mode - Turnover Rule toggle (MULTIPLIER-ONLY DETECTION)
+    // SEMANTIC CONTRACT - NON-NEGOTIABLE:
+    // - turnover_rule = kelipatan sebelum WD (multiplier, e.g. 3x, 5x) → MAX 100
     // - minimum TO qualify (e.g. Rp 5.000.000) MUST go to fixed_min_calculation, NOT turnover_rule
+    // - THRESHOLD MUST NEVER auto-enable this toggle
     fixed_turnover_rule_enabled: (() => {
       if (modeDetection.mode !== 'fixed') return false;
 
-      // PRIORITY 1: Keyword-based defaults
-      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
-      if (keywordDefaults?.fixed_turnover_rule_enabled !== undefined) {
-        console.log('[Extractor] Using keyword-rules for fixed_turnover_rule_enabled:', keywordDefaults.fixed_turnover_rule_enabled);
-        return keywordDefaults.fixed_turnover_rule_enabled;
+      // DO NOT use keyword defaults for WD toggle - must be explicit from terms
+      // This prevents SS01 bug where WD was auto-enabled by promo type
+
+      // ONLY enable if we find EXPLICIT multiplier pattern in terms (3x, 5x, etc)
+      const termsText = extracted.terms_conditions?.join(' ') || '';
+      const multiplierPatterns = [
+        /(?:turnover|to|syarat\s*to|syarat\s*wd)\s*(\d+)\s*[xX]/i,
+        /(\d+)\s*[xX]\s*(?:turnover|to|wd)/i,
+        /turnover\s*(\d+)\s*kali/i,
+        /syarat\s*(?:main|wd).*?(\d+)\s*(?:[xX]|kali)/i,
+        /kelipatan\s*(\d+)/i,
+        /(\d+)\s*kali\s*(?:main|lipat)/i,
+      ];
+
+      for (const pattern of multiplierPatterns) {
+        const match = termsText.match(pattern);
+        if (match) {
+          const n = Number(match[1]);
+          // GUARD: Only valid multipliers (1-100), NOT thresholds
+          if (Number.isFinite(n) && n > 0 && n <= 100) {
+            console.log('[Extractor] Found explicit WD multiplier, enabling toggle:', n);
+            return true;
+          }
+        }
       }
 
-      // PRIORITY 2: LLM extracted turnover_rule (guard: multiplier-only)
+      // LLM extracted turnover_rule - GUARD: only if it looks like a multiplier
       const extractedTO = extracted.subcategories[0]?.turnover_rule;
-      const extractedNum = extractedTO ? Number(String(extractedTO).replace(/[^0-9]/g, '')) : 0;
-      if (extractedNum > 0 && extractedNum <= 100) return true;
-
-      // PRIORITY 3: Pattern detection from terms (multiplier-only)
-      const termsText = extracted.terms_conditions?.join(' ') || '';
-      const toPattern = /(?:turnover|to)\s*(\d+)\s*[xX]/i;
-      const toMatch = termsText.match(toPattern);
-      if (toMatch) {
-        const n = Number(toMatch[1]);
-        if (n > 0 && n <= 100) return true;
+      if (extractedTO) {
+        const extractedStr = String(extractedTO).toLowerCase();
+        const extractedNum = Number(extractedStr.replace(/[^0-9]/g, ''));
+        // Only enable if it's a small number (multiplier range)
+        if (extractedNum > 0 && extractedNum <= 100) return true;
+        // If > 100, this is a threshold - DO NOT enable WD
+        if (extractedNum > 100) {
+          console.log('[Extractor] Detected threshold in turnover_rule, NOT enabling WD:', extractedNum);
+          return false;
+        }
       }
 
       return false;
@@ -3862,8 +3882,17 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
 
       // Source 1: LLM extracted turnover_rule (guard: multiplier-only)
       const extractedTO = extracted.subcategories[0]?.turnover_rule;
-      const extractedNum = extractedTO ? Number(String(extractedTO).replace(/[^0-9]/g, '')) : 0;
-      if (extractedNum > 0 && extractedNum <= 100) return `${extractedNum}x`;
+      if (extractedTO) {
+        const extractedStr = String(extractedTO).toLowerCase();
+        const extractedNum = Number(extractedStr.replace(/[^0-9]/g, ''));
+        // Only accept if it's a valid multiplier (1-100)
+        if (extractedNum > 0 && extractedNum <= 100) return `${extractedNum}x`;
+        // If > 100, this is a threshold - DO NOT store here
+        if (extractedNum > 100) {
+          console.log('[Extractor] Threshold value rejected from turnover_rule:', extractedNum);
+          return '';
+        }
+      }
 
       // Source 2: Expanded pattern detection from terms (multiplier-only)
       const termsText = extracted.terms_conditions?.join(' ') || '';
@@ -3872,6 +3901,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
         /(\d+)\s*[xX]\s*(?:turnover|to)/i,
         /turnover\s*(\d+)\s*kali/i,
         /syarat\s*(?:main|wd).*?(\d+)\s*(?:[xX]|kali)/i,
+        /kelipatan\s*(\d+)/i,
       ];
 
       for (const pattern of patterns) {

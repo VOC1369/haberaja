@@ -2,6 +2,7 @@
  * PROMO FIELD NORMALIZER
  * 
  * Converts legacy dinamis_* fields to canonical base fields.
+ * Also handles turnover semantic migration (threshold vs multiplier separation).
  * 
  * CLASSIFICATION (LOCKED):
  * - Base fields (reward_type, max_reward_claim, etc) = Canonical source of truth
@@ -10,11 +11,17 @@
  * - global_* = NOT alias (context provider, stays separate)
  * - subcategory.* = NOT alias (scoped value, stays separate)
  * 
+ * TURNOVER SEMANTIC CONTRACT:
+ * - Threshold (qualify) = min_calculation / fixed_min_calculation
+ * - Multiplier WD = turnover_rule / fixed_turnover_rule
+ * - Large numeric values (> 100) in turnover_rule fields are MIGRATED to min_calculation
+ * 
  * This module does NOT delete fields - it copies values to canonical locations
  * while preserving all original fields for backward compatibility.
  */
 
 import type { PromoFormData } from '@/components/VOCDashboard/PromoFormWizard/types';
+import { migrateLegacyTurnoverData } from './promo-turnover-guard';
 
 // ============================================
 // LEGACY ALIASES (ONLY dinamis_* prefix)
@@ -68,12 +75,14 @@ export function hasMeaningfulValue(value: unknown): boolean {
 
 /**
  * Normalize legacy dinamis_* fields to canonical base fields.
+ * Also applies turnover semantic migration (threshold vs multiplier separation).
  * 
  * RULES:
  * 1. Only dinamis_* fields are normalized (copied to base)
  * 2. Copy only if base field is inert AND legacy field has value
  * 3. Original dinamis_* fields are NOT deleted (backward compat)
- * 4. fixed_* and global_* are NEVER touched
+ * 4. fixed_* and global_* are NEVER touched (except turnover migration)
+ * 5. Turnover migration: large values in turnover_rule → min_calculation
  * 
  * @param data - Raw promo data (from storage or extraction)
  * @returns Normalized promo data with canonical fields populated
@@ -82,9 +91,16 @@ export function normalizeToStandard<T extends Partial<PromoFormData>>(data: T): 
   if (!data) return data;
   
   // Create a shallow copy to avoid mutating original
-  const normalized = { ...data } as Record<string, unknown>;
+  let normalized = { ...data } as Record<string, unknown>;
   
-  // Process each legacy alias
+  // Step 1: Migrate legacy turnover data (threshold → multiplier separation)
+  const { data: turnoverMigrated, migrated } = migrateLegacyTurnoverData(normalized as Partial<PromoFormData>);
+  if (migrated) {
+    console.log('[Normalizer] Applied turnover semantic migration');
+    normalized = { ...turnoverMigrated } as Record<string, unknown>;
+  }
+  
+  // Step 2: Process each legacy alias (dinamis_* → base)
   for (const [legacyField, canonicalField] of Object.entries(LEGACY_ALIASES)) {
     const legacyValue = normalized[legacyField];
     const canonicalValue = normalized[canonicalField as string];
