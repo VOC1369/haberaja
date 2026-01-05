@@ -1821,52 +1821,6 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleTrigger>
             <CollapsibleContent className="collapsible-content">
               <div className="space-y-4">
-                {/* Contact Channel with Toggle */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
-                    <Switch
-                      checked={data.contact_channel_enabled ?? false}
-                      onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })}
-                    />
-                    <div>
-                      <div className="font-medium text-sm text-button-hover flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        Contact Channel
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Aktifkan jika promo memerlukan kontak khusus untuk klaim
-                      </p>
-                    </div>
-                  </div>
-
-                  {data.contact_channel_enabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Channel</Label>
-                        <SelectWithAddNew
-                          value={data.contact_channel || ''}
-                          onValueChange={(value) => onChange({ contact_channel: value })}
-                          options={[
-                            { value: 'whatsapp', label: 'WhatsApp' },
-                            { value: 'telegram', label: 'Telegram' },
-                            { value: 'livechat', label: 'Live Chat' },
-                            { value: 'email', label: 'Email' },
-                          ]}
-                          placeholder="Pilih channel"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Link/Nomor</Label>
-                        <Input
-                          value={data.contact_link || ''}
-                          onChange={(e) => onChange({ contact_link: e.target.value })}
-                          placeholder="Contoh: +628123456789"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 {/* Syarat Khusus (Badges) */}
                 <div className="space-y-3">
                   <Label>Syarat Khusus Lainnya</Label>
