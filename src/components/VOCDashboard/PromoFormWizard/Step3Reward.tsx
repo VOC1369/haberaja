@@ -588,6 +588,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     if (value === 'uang_tunai' || value === 'hadiah_fisik') {
                       inertUpdates.fixed_calculation_value_enabled = false;
                       inertUpdates.fixed_calculation_value = undefined;
+                      // Transparency toast for auto-toggle
+                      toast("Auto-adjustment", {
+                        description: `Nilai Bonus dimatikan karena jenis reward "${value === 'uang_tunai' ? 'Uang Tunai' : 'Hadiah Fisik'}" tidak memerlukan kalkulasi.`
+                      });
                     } else {
                       // ON untuk reward type lain (perlu kalkulasi bonus)
                       inertUpdates.fixed_calculation_value_enabled = true;
