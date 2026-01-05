@@ -3456,12 +3456,34 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   // Build base PromoFormData
   const promoData: PromoFormData = {
     // Step 1 - Identitas (with exact enum value mappings)
+    // ✅ Apply keyword-based overrides for promo_type, trigger_event
     client_id: extracted.client_id || '',  // Auto-detected from content
     promo_name: extracted.promo_name || 'Promo Baru',
-    promo_type: promoTypeMap[extracted.promo_type?.toLowerCase()] || extracted.promo_type || 'Deposit Bonus',
-    intent_category: 'Retention',  // Default - not extracted from source
+    promo_type: (() => {
+      // Priority 1: Keyword-based override (Birthday, Lucky Spin, etc.)
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.promo_type) {
+        console.log('[Extractor] Using keyword promo_type override:', keywordDefaults.promo_type);
+        return keywordDefaults.promo_type as string;
+      }
+      // Priority 2: LLM extracted → map to enum
+      return promoTypeMap[extracted.promo_type?.toLowerCase()] || extracted.promo_type || 'Deposit Bonus';
+    })(),
+    intent_category: (() => {
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      return (keywordDefaults?.intent_category as string) || 'Retention';
+    })(),
     target_segment: targetUserMap[extracted.target_user?.toLowerCase()] || 'Semua',
-    trigger_event: getTriggerEventDefault(extracted.promo_type || ''),  // Context-aware default
+    trigger_event: (() => {
+      // Priority 1: Keyword-based override (Birthday → Login, Referral → Referral)
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.trigger_event) {
+        console.log('[Extractor] Using keyword trigger_event override:', keywordDefaults.trigger_event);
+        return keywordDefaults.trigger_event as string;
+      }
+      // Priority 2: Default based on promo_type
+      return getTriggerEventDefault(extracted.promo_type || '');
+    })(),
 
     // Step 2 - Reward Mode (NOW WITH AUTO-DETECTION)
     reward_mode: modeDetection.mode,
@@ -3564,12 +3586,56 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       : 'after',
     fixed_admin_fee_enabled: false,
     fixed_admin_fee_percentage: undefined,
-    fixed_min_calculation_enabled: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? (extracted.subcategories[0].minimum_base || 0) > 0
-      : false,
-    fixed_min_calculation: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? extracted.subcategories[0].minimum_base
-      : undefined,
+    // ✅ Fixed Mode - Min Calculation with Birthday/Historical Eligibility Guard
+    fixed_min_calculation_enabled: (() => {
+      if (modeDetection.mode !== 'fixed') return false;
+      
+      const rawValue = extracted.subcategories[0]?.minimum_base;
+      if (!rawValue || rawValue <= 0) return false;
+      
+      // Check for historical eligibility patterns
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const hasHistoricalEligibility = 
+        /turnover.*bulan/i.test(termsText) ||
+        /dalam\s*\d+\s*bulan/i.test(termsText) ||
+        /\d+\s*bulan\s*terakhir/i.test(termsText) ||
+        /total\s*turnover/i.test(termsText);
+      
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
+      
+      // Birthday + Historical = disable, move to special_requirements
+      if (isBirthdayPromo && hasHistoricalEligibility) {
+        console.log('[Extractor] Birthday promo - disabling fixed_min_calculation');
+        return false;
+      }
+      
+      return true;
+    })(),
+    fixed_min_calculation: (() => {
+      if (modeDetection.mode !== 'fixed') return undefined;
+      
+      const rawValue = extracted.subcategories[0]?.minimum_base;
+      if (!rawValue || rawValue <= 0) return undefined;
+      
+      // Same guard as above
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const hasHistoricalEligibility = 
+        /turnover.*bulan/i.test(termsText) ||
+        /dalam\s*\d+\s*bulan/i.test(termsText) ||
+        /\d+\s*bulan\s*terakhir/i.test(termsText) ||
+        /total\s*turnover/i.test(termsText);
+      
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
+      
+      if (isBirthdayPromo && hasHistoricalEligibility) {
+        console.log('[Extractor] Birthday promo - nullifying fixed_min_calculation');
+        return undefined;
+      }
+      
+      return rawValue;
+    })(),
     fixed_physical_reward_name: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].physical_reward_name || '')
       : '',

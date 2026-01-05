@@ -180,10 +180,15 @@ export const extractClientId = (
  * Must be: 3+ chars, contains letter, contains number (typical iGaming brand pattern)
  */
 const isValidBrandName = (name: string): boolean => {
-  if (!name || name.length < 3 || name.length > 15) return false;
+  if (!name || name.length < 3 || name.length > 20) return false; // Extended max length
   const upper = name.toUpperCase();
-  // Must have letters AND numbers (typical brand pattern like CITRA77, SLOT25)
-  return /[A-Z]/.test(upper) && /\d/.test(upper);
+  // Accept brands with:
+  // 1. Letters + numbers (CITRA77, SLOT25, WIN88)
+  // 2. OR long letter-only names (PRESIDENSLOT, RAJAHOKI) - intentional brand names
+  return /[A-Z]/.test(upper) && (
+    /\d/.test(upper) ||           // Has number (CITRA77)
+    upper.length >= 8             // OR long enough to be intentional (PRESIDENSLOT)
+  );
 };
 
 /**
@@ -191,9 +196,12 @@ const isValidBrandName = (name: string): boolean => {
  * IMPORTANT: In production, this should come from DB/config per tenant
  */
 const getDefaultKnownBrands = (): string[] => [
+  // Letter + Number brands
   'CITRA77', 'WIN25', 'SLOT25', 'WG77', 'NEXUS88', 'HOKI777',
   'SLOT88', 'WIN88', 'MEGA88', 'MAJU77', 'HOKI77', 'ZEUS77',
   'NAGA77', 'RAJA77', 'SULTAN77', 'INDO88', 'ASIA88', 'ROYAL88',
+  // Letter-only brands (no numbers)
+  'PRESIDENSLOT', 'RAJAHOKI', 'SULTANHOKI', 'SULTANSLOT', 'MEGASLOT',
   // Add more as needed, but prefer tenant-scoped config
 ];
 
