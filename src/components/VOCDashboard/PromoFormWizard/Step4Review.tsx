@@ -1,8 +1,10 @@
-import { PromoFormData, GAME_RESTRICTIONS, GAME_PROVIDERS, GAME_NAMES, CONTACT_CHANNELS, GEO_RESTRICTIONS, PLATFORM_ACCESS, CALCULATION_BASES, CALCULATION_METHODS, CLAIM_FREQUENCIES, REWARD_DISTRIBUTIONS, DINAMIS_REWARD_TYPES, REWARD_TYPES, PROMO_RISK_LEVELS, buildPKBPayload, TIER_ARCHETYPE_OPTIONS, LP_EARN_BASIS_OPTIONS } from "./types";
+import { PromoFormData, GAME_RESTRICTIONS, GAME_PROVIDERS, GAME_NAMES, CONTACT_CHANNELS, GEO_RESTRICTIONS, PLATFORM_ACCESS, CALCULATION_BASES, CALCULATION_METHODS, CLAIM_FREQUENCIES, REWARD_DISTRIBUTIONS, DINAMIS_REWARD_TYPES, REWARD_TYPES, PROMO_RISK_LEVELS, buildPKBPayload, buildCanonicalPayload, TIER_ARCHETYPE_OPTIONS, LP_EARN_BASIS_OPTIONS } from "./types";
+import { validateCanonicalPromo } from "@/lib/canonical-promo-schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, AlertCircle, ChevronDown, Edit2, FileText, Copy, ClipboardCheck, Sparkles, XCircle, Download, Zap } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CheckCircle2, AlertCircle, ChevronDown, Edit2, FileText, Copy, ClipboardCheck, Sparkles, XCircle, Download, Zap, AlertTriangle } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -1214,10 +1216,17 @@ const CollapsibleSection = ({
 
 export function Step4Review({ data, onGoToStep }: Step4Props) {
   const [jsonOpen, setJsonOpen] = useState(false);
+  const [jsonMode, setJsonMode] = useState<'canonical' | 'legacy'>('canonical');
   const { toast } = useToast();
   
-  // Build PKB payload for JSON preview (clean, canonical format)
+  // Build PKB payload for JSON preview (legacy format)
   const pkbPayload = buildPKBPayload(data);
+  
+  // Build Canonical payload for JSON preview (v2.1-FINAL format)
+  const canonicalPayload = useMemo(() => buildCanonicalPayload(data), [data]);
+  
+  // Validate canonical payload (non-blocking)
+  const canonicalValidation = useMemo(() => validateCanonicalPromo(canonicalPayload), [canonicalPayload]);
 
   const isStep1Complete = data.client_id && data.promo_name && data.promo_type;
   const isStep2Complete = data.reward_mode && (
@@ -2365,65 +2374,160 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
           <Collapsible open={jsonOpen} onOpenChange={setJsonOpen}>
             {/* Header with title and copy button */}
             <div className={cn(
-              "flex items-center justify-between bg-card border border-border p-6",
+              "flex flex-col gap-4 bg-card border border-border p-6",
               jsonOpen ? "rounded-t-xl" : "rounded-xl"
             )}>
-              <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                <ChevronDown className={cn(
-                  "h-4 w-4 transition-transform",
-                  jsonOpen && "rotate-180"
-                )} />
-                <span>JSON Output Preview</span>
-              </CollapsibleTrigger>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const csvContent = convertPromoToCSV(
-                      pkbPayload, 
-                      data.has_subcategories ? data.subcategories : undefined
-                    );
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `promo_${data.promo_name?.replace(/\s+/g, '_') || 'export'}_${new Date().toISOString().split('T')[0]}.csv`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                    toast({
-                      title: "Berhasil!",
-                      description: "CSV telah didownload"
-                    });
-                  }}
-                  className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-                >
-                  <Download className="h-4 w-4" />
-                  Download CSV
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(JSON.stringify(pkbPayload, null, 2));
-                    toast({
-                      title: "Berhasil disalin!",
-                      description: "PKB JSON telah disalin ke clipboard"
-                    });
-                  }}
-                  className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-                >
-                  <Copy className="h-4 w-4" />
-                  Salin JSON
-                </Button>
+              <div className="flex items-center justify-between">
+                <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                  <ChevronDown className={cn(
+                    "h-4 w-4 transition-transform",
+                    jsonOpen && "rotate-180"
+                  )} />
+                  <span>JSON Output Preview</span>
+                  {jsonMode === 'canonical' && (
+                    <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
+                      v2.1
+                    </Badge>
+                  )}
+                </CollapsibleTrigger>
+                <div className="flex items-center gap-2">
+                  {/* JSON Mode Toggle */}
+                  <div className="flex items-center border border-border rounded-lg overflow-hidden">
+                    <Button
+                      variant={jsonMode === 'canonical' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setJsonMode('canonical');
+                      }}
+                      className={cn(
+                        "rounded-none border-0 gap-1.5",
+                        jsonMode === 'canonical' && "bg-success hover:bg-success/90 text-success-foreground"
+                      )}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      Canonical v2.1
+                    </Button>
+                    <Button
+                      variant={jsonMode === 'legacy' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setJsonMode('legacy');
+                      }}
+                      className="rounded-none border-0"
+                    >
+                      Legacy
+                    </Button>
+                  </div>
+                  
+                  {/* Download Canonical JSON */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const blob = new Blob(
+                        [JSON.stringify(canonicalPayload, null, 2)], 
+                        { type: 'application/json' }
+                      );
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `promo_canonical_v2.1_${data.promo_name?.replace(/\s+/g, '_') || 'export'}.json`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                      toast({
+                        title: "Berhasil!",
+                        description: "Canonical JSON v2.1 telah didownload"
+                      });
+                    }}
+                    className="gap-2 border-success/50 text-success hover:bg-success hover:text-success-foreground hover:border-success"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Canonical
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const csvContent = convertPromoToCSV(
+                        pkbPayload, 
+                        data.has_subcategories ? data.subcategories : undefined
+                      );
+                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = `promo_${data.promo_name?.replace(/\s+/g, '_') || 'export'}_${new Date().toISOString().split('T')[0]}.csv`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(url);
+                      toast({
+                        title: "Berhasil!",
+                        description: "CSV telah didownload"
+                      });
+                    }}
+                    className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download CSV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const jsonToCopy = jsonMode === 'canonical' ? canonicalPayload : pkbPayload;
+                      navigator.clipboard.writeText(JSON.stringify(jsonToCopy, null, 2));
+                      toast({
+                        title: "Berhasil disalin!",
+                        description: `${jsonMode === 'canonical' ? 'Canonical' : 'Legacy'} JSON telah disalin ke clipboard`
+                      });
+                    }}
+                    className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Salin JSON
+                  </Button>
+                </div>
               </div>
             </div>
             <CollapsibleContent>
               <div className="bg-card border border-t-0 border-border rounded-b-xl p-6 space-y-4">
+                {/* Validation Alerts (non-blocking) */}
+                {canonicalValidation.errors.length > 0 && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Validasi Gagal</AlertTitle>
+                    <AlertDescription>
+                      <ul className="list-disc list-inside space-y-1 mt-2">
+                        {canonicalValidation.errors.map((err, i) => (
+                          <li key={i} className="text-sm">{err}</li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {canonicalValidation.warnings.length > 0 && (
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Peringatan</AlertTitle>
+                    <AlertDescription>
+                      <ul className="list-disc list-inside space-y-1 mt-2">
+                        {canonicalValidation.warnings.map((warn, i) => (
+                          <li key={i} className="text-sm">{warn}</li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
                 {/* Check if has subcategories - show split view */}
                 {data.has_subcategories && data.subcategories && data.subcategories.length > 0 ? (
                   <>
@@ -2436,15 +2540,26 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           <Badge variant="outline" className="text-xs">
                             {data.promo_name || 'Promo'}
                           </Badge>
+                          {jsonMode === 'canonical' && (
+                            <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
+                              schema_version: "2.1"
+                            </Badge>
+                          )}
                         </div>
                       </CollapsibleTrigger>
                       
                       <CollapsibleContent className="mt-2 border border-border rounded-xl overflow-hidden bg-[#1E1E1E]">
                         <pre className="font-mono text-[12px] leading-[1.6] text-foreground whitespace-pre-wrap break-words p-4 max-h-[200px] overflow-y-auto">
-                          {JSON.stringify({
-                            ...pkbPayload,
-                            subcategories: `[${data.subcategories.length} varian - lihat di bawah]`
-                          }, null, 2)}
+                          {jsonMode === 'canonical' 
+                            ? JSON.stringify({
+                                ...canonicalPayload,
+                                subcategories: `[${data.subcategories.length} varian - lihat di bawah]`
+                              }, null, 2)
+                            : JSON.stringify({
+                                ...pkbPayload,
+                                subcategories: `[${data.subcategories.length} varian - lihat di bawah]`
+                              }, null, 2)
+                          }
                         </pre>
                       </CollapsibleContent>
                     </Collapsible>
@@ -2476,10 +2591,10 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     ))}
                   </>
                 ) : (
-                  /* Single promo mode - show full JSON */
+                  /* Single promo mode - show full JSON based on mode */
                   <div className="rounded-xl overflow-hidden bg-[#1E1E1E] border border-border">
                     <pre className="font-mono text-[12px] leading-[1.6] text-foreground whitespace-pre-wrap break-words p-4 max-h-[300px] overflow-y-auto">
-                      {JSON.stringify(pkbPayload, null, 2)}
+                      {JSON.stringify(jsonMode === 'canonical' ? canonicalPayload : pkbPayload, null, 2)}
                     </pre>
                   </div>
                 )}

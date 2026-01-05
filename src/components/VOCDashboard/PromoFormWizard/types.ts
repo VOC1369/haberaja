@@ -1341,7 +1341,45 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   canonical.special_conditions = data.special_requirements || [];
   canonical.custom_terms = data.custom_terms || '';
-  canonical.extra_config = data.extra_config || {};
+  
+  // Build extra_config with derived fields audit trail
+  const baseExtraConfig = data.extra_config || {};
+  const derivedFields: Record<string, { derived_from: string; source_value: unknown; result: unknown }> = {};
+  
+  // Track auto-derived trigger_event
+  if (!data.trigger_event && canonical.trigger_event) {
+    derivedFields.trigger_event = {
+      derived_from: 'calculation_basis',
+      source_value: data.calculation_base || '',
+      result: canonical.trigger_event
+    };
+  }
+  
+  // Track auto-derived currency_scope (check via intent_category or reward_type)
+  const inferredCurrencyScope = data.reward_type === 'lp' ? 'lp' : 
+    data.reward_type === 'exp' ? 'exp' : 
+    data.reward_type === 'credit_game' ? 'credit' : '';
+  if (inferredCurrencyScope && !data.currency_scope) {
+    derivedFields.currency_scope = {
+      derived_from: 'reward_type',
+      source_value: data.reward_type || data.fixed_reward_type || '',
+      result: inferredCurrencyScope
+    };
+  }
+  
+  // Track auto-derived category
+  if (canonical.category && !data.category) {
+    derivedFields.category = {
+      derived_from: 'program_classification',
+      source_value: data.program_classification || '',
+      result: canonical.category
+    };
+  }
+  
+  // Merge derived fields into extra_config if any
+  canonical.extra_config = Object.keys(derivedFields).length > 0
+    ? { ...baseExtraConfig, _derived_fields: derivedFields }
+    : baseExtraConfig;
   
   // ===============================
   // SUBCATEGORIES
