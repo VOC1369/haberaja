@@ -947,47 +947,18 @@ export function PseudoKnowledgeSection() {
             )}
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-3 flex-wrap">
+            {/* Row 1: Title + Status Badge (right-aligned) */}
+            <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-semibold text-foreground">
                 {extractedPromo.promo_name || "Promo Tanpa Nama"}
               </h3>
-              <Badge variant="outline" className={`
-                ${extractedPromo.promo_mode === 'multi' 
-                  ? 'bg-purple-500/20 text-purple-400 border-purple-500/40' 
-                  : 'bg-muted text-muted-foreground'}
-              `}>
-                {/* REFERRAL OVERRIDE: Show "Tiered Referral" instead of "Multi Variant" */}
-                {/referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '')
-                  ? `Tiered Referral (${extractedPromo.subcategories?.length || 0} Tier)`
-                  : formatPromoMode(extractedPromo.promo_mode)}
-              </Badge>
               <Badge variant="outline" className={getStatusBadgeStyle(status)}>
                 {status === 'ready' && <CheckCircle2 className="w-3 h-3 mr-1" />}
                 {status === 'draft' && <Info className="w-3 h-3 mr-1" />}
                 {getStatusLabel(status)}
               </Badge>
-              {/* Auto-detected Mode Badge */}
-              {mappedPreview?._mode_auto_detected && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/30 gap-1 cursor-help">
-                        <Sparkles className="w-3 h-3" />
-                        Suggested: {mappedPreview.reward_mode === 'fixed' ? 'Fixed' : 'Formula'}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p className="text-sm">
-                        {mappedPreview._mode_detection_reason}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Mode disarankan AI dan dapat diubah.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
             </div>
+            {/* Row 2: Other badges */}
             <div className="flex gap-2 mt-2 flex-wrap">
               {/* Client/Website Badge */}
               {extractedPromo.client_id && (
@@ -998,8 +969,11 @@ export function PseudoKnowledgeSection() {
                   )}
                 </Badge>
               )}
+              {/* Promo Type Badge - Override "Mini Game" to "Lucky Spin" when applicable */}
               <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-button-hover/40">
-                {formatPromoType(extractedPromo.promo_type)}
+                {/lucky\s*spin/i.test(extractedPromo.promo_name || '') 
+                  ? 'Lucky Spin' 
+                  : formatPromoType(extractedPromo.promo_type)}
               </Badge>
               {(() => {
                 const domain = detectGameDomain(extractedPromo);
@@ -1026,13 +1000,6 @@ export function PseudoKnowledgeSection() {
                 }
                 return null;
               })()}
-              {/* Only show sub-kategori badge for non-referral (referral already has "Tiered Referral" badge above) */}
-              {extractedPromo.subcategories.length > 1 && 
-               !/referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') && (
-                <Badge variant="outline" className="text-xs">
-                  {extractedPromo.subcategories.length} Sub Kategori
-                </Badge>
-              )}
             </div>
           </div>
         </div>
