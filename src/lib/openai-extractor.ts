@@ -3555,10 +3555,29 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       const promoName = (extracted.promo_name || '').toLowerCase();
       const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
       
-      // Birthday + "bisa WD" = Uang Tunai (override LLM)
-      const canWithdraw = /bisa\s*(di)?\s*wd|bisa\s*di\s*tarik|withdraw\s*langsung|bisa\s*withdraw/i.test(termsText);
+      // Expanded "withdrawable" pattern detection
+      const canWithdraw = 
+        /bisa\s*(di)?\s*wd/i.test(termsText) ||
+        /bisa\s*(di)?\s*tarik/i.test(termsText) ||
+        /dapat\s*(di)?\s*(wd|withdraw|tarik)/i.test(termsText) ||
+        /withdraw(?:able)?/i.test(termsText) ||
+        /uang\s*tunai/i.test(termsText) ||
+        /bonus\s*tunai/i.test(termsText) ||
+        /saldo\s*(utama|real)/i.test(termsText) ||
+        /masuk\s*(ke)?\s*saldo/i.test(termsText) ||
+        /dicairkan|cair/i.test(termsText);
+      
+      // Birthday promo with withdrawable evidence = Uang Tunai
       if (isBirthdayPromo && canWithdraw) {
-        console.log('[Extractor] Birthday + WD = uang_tunai');
+        console.log('[Extractor] Birthday + WD evidence = uang_tunai');
+        return 'uang_tunai';
+      }
+      
+      // Birthday + fixed nominal without explicit credit_game restriction = default Uang Tunai
+      const hasCreditGameRestriction = /credit\s*game|bonus\s*main|dalam\s*game/i.test(termsText);
+      const hasFixedNominal = (extracted.subcategories[0]?.calculation_value || 0) > 0;
+      if (isBirthdayPromo && hasFixedNominal && !hasCreditGameRestriction) {
+        console.log('[Extractor] Birthday + fixed nominal = uang_tunai (default)');
         return 'uang_tunai';
       }
       
@@ -3580,16 +3599,41 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_calculation_base: (() => {
       if (modeDetection.mode !== 'fixed') return '';
       
-      // Birthday promo guard - tidak pakai calculation_base
       const promoName = (extracted.promo_name || '').toLowerCase();
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
       const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
       
+      // Birthday promo guard - tidak pakai calculation_base
       if (isBirthdayPromo) {
         console.log('[Extractor] Birthday promo - setting calculation_base to empty');
         return '';
       }
       
-      return extracted.subcategories[0]?.calculation_base || 'deposit';
+      // Priority 1: Keyword defaults
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.fixed_calculation_base) {
+        return keywordDefaults.fixed_calculation_base as string;
+      }
+      
+      // Priority 2: LLM extraction
+      const llmBase = extracted.subcategories[0]?.calculation_base?.toLowerCase();
+      if (llmBase && ['turnover', 'deposit', 'loss', 'winlose', 'bet'].includes(llmBase)) {
+        return llmBase;
+      }
+      
+      // Priority 3: Heuristic - detect "minimum TO X juta" pattern (turnover-based eligibility)
+      const turnoverPattern = 
+        /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?)?[\s:]?\d/i.test(termsText) ||
+        /syarat\s*to\s*(?:rp\.?)?[\s:]?\d/i.test(termsText) ||
+        /total\s*to\s*(?:rp\.?)?[\s:]?\d/i.test(termsText);
+      
+      if (turnoverPattern) {
+        console.log('[Extractor] Detected turnover-based eligibility from terms');
+        return 'turnover';
+      }
+      
+      // Fallback: deposit
+      return 'deposit';
     })(),
     fixed_calculation_method: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].calculation_method || 'percentage')
@@ -3612,51 +3656,75 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_min_calculation_enabled: (() => {
       if (modeDetection.mode !== 'fixed') return false;
       
-      const rawValue = extracted.subcategories[0]?.minimum_base;
-      if (!rawValue || rawValue <= 0) return false;
-      
-      // Check for historical eligibility patterns
       const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
-      const hasHistoricalEligibility = 
-        /turnover.*bulan/i.test(termsText) ||
-        /dalam\s*\d+\s*bulan/i.test(termsText) ||
-        /\d+\s*bulan\s*terakhir/i.test(termsText) ||
-        /total\s*turnover/i.test(termsText);
-      
       const promoName = (extracted.promo_name || '').toLowerCase();
       const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
       
-      // Birthday + Historical = disable, move to special_requirements
+      // Guard: Historical eligibility patterns
+      const hasHistoricalEligibility = 
+        /turnover.*bulan/i.test(termsText) ||
+        /dalam\s*\d+\s*bulan/i.test(termsText) ||
+        /\d+\s*bulan\s*terakhir/i.test(termsText);
+      
+      // Birthday + Historical = disable
       if (isBirthdayPromo && hasHistoricalEligibility) {
-        console.log('[Extractor] Birthday promo - disabling fixed_min_calculation');
+        console.log('[Extractor] Birthday + historical = disabling fixed_min_calculation');
         return false;
       }
       
-      return true;
+      // Check LLM value
+      const llmValue = extracted.subcategories[0]?.minimum_base;
+      if (llmValue && llmValue > 0) return true;
+      
+      // Check pattern "Minimum TO Rp X" (immediate, not historical)
+      const minTOPattern = /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i;
+      if (minTOPattern.test(termsText) && !hasHistoricalEligibility) {
+        return true;
+      }
+      
+      return false;
     })(),
     fixed_min_calculation: (() => {
       if (modeDetection.mode !== 'fixed') return undefined;
       
-      const rawValue = extracted.subcategories[0]?.minimum_base;
-      if (!rawValue || rawValue <= 0) return undefined;
-      
-      // Same guard as above
       const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
-      const hasHistoricalEligibility = 
-        /turnover.*bulan/i.test(termsText) ||
-        /dalam\s*\d+\s*bulan/i.test(termsText) ||
-        /\d+\s*bulan\s*terakhir/i.test(termsText) ||
-        /total\s*turnover/i.test(termsText);
-      
       const promoName = (extracted.promo_name || '').toLowerCase();
       const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
       
+      // Guard: Historical eligibility patterns (e.g., "dalam 3 bulan terakhir")
+      const hasHistoricalEligibility = 
+        /turnover.*bulan/i.test(termsText) ||
+        /dalam\s*\d+\s*bulan/i.test(termsText) ||
+        /\d+\s*bulan\s*terakhir/i.test(termsText);
+      
+      // Birthday + Historical = disable (move to special_requirements)
       if (isBirthdayPromo && hasHistoricalEligibility) {
-        console.log('[Extractor] Birthday promo - nullifying fixed_min_calculation');
+        console.log('[Extractor] Birthday + historical = nullifying fixed_min_calculation');
         return undefined;
       }
       
-      return rawValue;
+      // Source 1: LLM extracted minimum_base
+      const llmValue = extracted.subcategories[0]?.minimum_base;
+      if (llmValue && llmValue > 0) return llmValue;
+      
+      // Source 2: Pattern extraction - "Minimum TO Rp 5.000.000" (immediate, not historical)
+      const minTOPattern = /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?|idr)?[\s:]*([0-9.,]+)\s*(?:jt|juta|rb|ribu|k)?/i;
+      const toMatch = termsText.match(minTOPattern);
+      if (toMatch && !hasHistoricalEligibility) {
+        const rawNum = toMatch[1].replace(/[.,]/g, '');
+        let amount = parseInt(rawNum, 10);
+        
+        // Handle shorthand: "5jt" = 5_000_000, "500rb" = 500_000
+        const suffix = toMatch[0].toLowerCase();
+        if (/jt|juta/i.test(suffix) && amount < 1000) amount *= 1_000_000;
+        else if (/rb|ribu|k/i.test(suffix) && amount < 10000) amount *= 1000;
+        else if (amount < 10000) amount *= 1_000_000; // assume juta if small number
+        
+        console.log('[Extractor] Extracted minimum TO from terms:', amount);
+        return amount;
+      }
+      
+      return undefined;
     })(),
     fixed_physical_reward_name: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].physical_reward_name || '')

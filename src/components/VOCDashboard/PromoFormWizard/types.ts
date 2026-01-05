@@ -1567,8 +1567,17 @@ export const REWARD_TYPES = [
 export const TURNOVER_RULES = [
   { value: '0x', label: '0x — Tanpa Syarat Main' },
   { value: '1x', label: '1x — Main 1 Kali' },
+  { value: '2x', label: '2x — Main 2 Kali' },
+  { value: '3x', label: '3x — Main 3 Kali' },
+  { value: '4x', label: '4x — Main 4 Kali' },
   { value: '5x', label: '5x — Main 5 Kali' },
+  { value: '6x', label: '6x — Main 6 Kali' },
+  { value: '7x', label: '7x — Main 7 Kali' },
   { value: '8x', label: '8x — Main 8 Kali' },
+  { value: '10x', label: '10x — Main 10 Kali' },
+  { value: '12x', label: '12x — Main 12 Kali' },
+  { value: '15x', label: '15x — Main 15 Kali' },
+  { value: '20x', label: '20x — Main 20 Kali' },
   { value: 'custom', label: 'Custom — Tentukan Manual' },
 ];
 export const CLAIM_FREQUENCIES = [
