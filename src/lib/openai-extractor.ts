@@ -3183,6 +3183,28 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     console.log('[Event Level Up] Detected Level Up promo, will map to level_up_rewards[]');
   }
 
+  // ============================================
+  // EVENT LUCKY SPIN PRIZE DETECTION (POST-PROCESSING)
+  // Lucky Spin dengan hadiah fisik/credit = Dinamis + Voucher, BUKAN Lucky Spin Tiket
+  // Ini adalah "undian hadiah" bukan "tiket spin"
+  // ============================================
+  const hasMultipleSubcategories = extracted.subcategories && extracted.subcategories.length > 1;
+  const hasNonSpinRewards = extracted.subcategories?.some(sub =>
+    sub.reward_type === 'hadiah_fisik' ||
+    sub.reward_type === 'credit_game' ||
+    sub.reward_type === 'uang_tunai' ||
+    /honda|iphone|samsung|emas|motor|mobil|laptop|xiaomi|pajero|yamaha|vespa|oppo|vivo|realme/i.test(sub.sub_name || '') ||
+    /honda|iphone|samsung|emas|motor|mobil|laptop|xiaomi|pajero|yamaha|vespa|oppo|vivo|realme/i.test(sub.physical_reward_name || '')
+  );
+  
+  // Jika promo "lucky spin" tapi punya subcategories dengan hadiah fisik/credit:
+  // Ini adalah EVENT LUCKY SPIN (undian hadiah), bukan LUCKY SPIN TIKET
+  const isEventLuckySpinPrize = hasMultipleSubcategories && hasNonSpinRewards;
+  
+  if (isEventLuckySpinPrize) {
+    console.log('[Event Lucky Spin Prize] Detected prize table event, switching to Dinamis + Voucher mode');
+  }
+
   // Helper: Extract min_downline from terms or pattern
   const extractMinDownline = (
     sub: typeof extracted.subcategories[0], 
@@ -3823,6 +3845,19 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       turnover_rule: '',
       turnover_rule_enabled: false,
       claim_frequency: 'sekali',  // 1x per level naik
+    }),
+    
+    // Override for Event Lucky Spin Prize: switch to Dinamis + Voucher
+    // Lucky Spin dengan hadiah fisik/credit = undian hadiah, BUKAN tiket spin
+    ...(isEventLuckySpinPrize && {
+      reward_mode: 'formula' as const,
+      dinamis_reward_type: 'voucher',  // Undian = Voucher/Ticket
+      // Clear Lucky Spin tiket flags (inert values)
+      fixed_reward_type: '',
+      fixed_lucky_spin_enabled: false,
+      fixed_lucky_spin_id_enabled: false,
+      fixed_lucky_spin_id: '',
+      fixed_lucky_spin_max_per_day: null,
     }),
 
     // Step 4 - AI Templates (empty defaults)
