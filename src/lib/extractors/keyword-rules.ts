@@ -164,6 +164,9 @@ export const KEYWORD_RULES: KeywordRule[] = [
       /roda\s*keberuntungan/i,
       /spin\s*the\s*wheel/i,
       /putar\s*roda/i,
+      /spin\s*gratis/i,
+      /free\s*spin/i,
+      /spin\s*harian/i,
     ],
     category: 'B',
     archetype: 'event_table',
@@ -172,6 +175,48 @@ export const KEYWORD_RULES: KeywordRule[] = [
       reward_mode: 'fixed',
       trigger_event: 'Login',
       intent_category: 'Retention',
+      fixed_reward_type: 'lucky_spin',
+      fixed_lucky_spin_enabled: true,
+    },
+  },
+  
+  // Voucher / Kupon
+  {
+    id: 'voucher',
+    name: 'Voucher / Kupon',
+    patterns: [
+      /voucher/i,
+      /kupon/i,
+    ],
+    category: 'B',
+    archetype: 'event_table',
+    reason: 'VOUCHER → Event Program',
+    defaults: {
+      reward_mode: 'fixed',
+      trigger_event: 'Deposit',
+      intent_category: 'Retention',
+      fixed_reward_type: 'voucher',
+    },
+  },
+  
+  // Ticket / Undian
+  {
+    id: 'ticket',
+    name: 'Ticket / Undian',
+    patterns: [
+      /ticket/i,
+      /tiket/i,
+      /undian/i,
+      /lottery/i,
+    ],
+    category: 'B',
+    archetype: 'event_table',
+    reason: 'TICKET → Event Program',
+    defaults: {
+      reward_mode: 'fixed',
+      trigger_event: 'Deposit',
+      intent_category: 'Retention',
+      fixed_reward_type: 'ticket',
     },
   },
   
