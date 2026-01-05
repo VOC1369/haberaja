@@ -3524,12 +3524,39 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_cash_reward_amount: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? extracted.subcategories[0].cash_reward_amount
       : undefined,
-    fixed_turnover_rule_enabled: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? (extracted.subcategories[0].turnover_rule || 0) > 0
-      : false,
-    fixed_turnover_rule: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? `${extracted.subcategories[0].turnover_rule || 0}x`
-      : '',
+    fixed_turnover_rule_enabled: (() => {
+      if (modeDetection.mode !== 'fixed') return false;
+      
+      // Source 1: LLM extracted turnover_rule
+      const extractedTO = extracted.subcategories[0]?.turnover_rule;
+      if (extractedTO && Number(extractedTO) > 0) return true;
+      
+      // Source 2: Pattern detection from terms
+      const termsText = extracted.terms_conditions?.join(' ') || '';
+      const toPattern = /(?:turnover|to)\s*(\d+)\s*[xX]/i;
+      const toMatch = termsText.match(toPattern);
+      if (toMatch) return true;
+      
+      return false;
+    })(),
+    fixed_turnover_rule: (() => {
+      if (modeDetection.mode !== 'fixed') return '';
+      
+      // Source 1: LLM extracted turnover_rule
+      const extractedTO = extracted.subcategories[0]?.turnover_rule;
+      if (extractedTO && Number(extractedTO) > 0) return `${extractedTO}x`;
+      
+      // Source 2: Pattern detection from terms
+      const termsText = extracted.terms_conditions?.join(' ') || '';
+      const toPattern = /(?:turnover|to|minimal turnover)\s*(\d+)\s*[xX]/i;
+      const toMatch = termsText.match(toPattern);
+      if (toMatch) {
+        console.log('[Extractor] Detected turnover from terms:', toMatch[1] + 'x');
+        return `${toMatch[1]}x`;
+      }
+      
+      return '0x';
+    })(),
     fixed_turnover_rule_custom: '',
     
     // Fixed Mode - Voucher / Ticket / Lucky Spin fields (WAJIB DIISI dari extraction)
@@ -3549,9 +3576,35 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_voucher_valid_unlimited: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].voucher_valid_unlimited || false)
       : false,
-    fixed_lucky_spin_max_per_day: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? (extracted.subcategories[0].lucky_spin_max_per_day ?? null)
-      : null,
+    // ✅ Lucky Spin Max Per Day - also check max_bonus for unit-based rewards
+    fixed_lucky_spin_max_per_day: (() => {
+      if (modeDetection.mode !== 'fixed') return null;
+      
+      // Source 1: LLM extracted lucky_spin_max_per_day
+      const directValue = extracted.subcategories[0]?.lucky_spin_max_per_day;
+      if (directValue != null) return directValue;
+      
+      // Source 2: For Lucky Spin, max_bonus often represents max claims
+      const rewardType = extracted.subcategories[0]?.reward_type?.toLowerCase();
+      if (['lucky_spin', 'ticket', 'voucher'].includes(rewardType || '')) {
+        const maxBonus = extracted.subcategories[0]?.max_bonus;
+        if (maxBonus != null && maxBonus > 0) {
+          console.log('[Extractor] Using max_bonus as max_per_day for unit reward:', maxBonus);
+          return maxBonus;
+        }
+      }
+      
+      // Source 3: Pattern detection from terms ("Maksimal Claim X")
+      const termsText = extracted.terms_conditions?.join(' ') || '';
+      const maxClaimPattern = /(?:maksimal|max)\s*(?:claim|klaim)?\s*(\d+)/i;
+      const match = termsText.match(maxClaimPattern);
+      if (match) {
+        console.log('[Extractor] Detected max_per_day from terms:', match[1]);
+        return parseInt(match[1], 10);
+      }
+      
+      return null;
+    })(),
     // ✅ Uses keyword-rules.ts for auto-enable detection
     fixed_lucky_spin_enabled: (() => {
       if (modeDetection.mode !== 'fixed') return false;
