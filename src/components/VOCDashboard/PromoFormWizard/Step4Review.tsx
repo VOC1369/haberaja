@@ -2,7 +2,7 @@ import { PromoFormData, GAME_RESTRICTIONS, GAME_PROVIDERS, GAME_NAMES, CONTACT_C
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, AlertCircle, ChevronDown, Edit2, FileText, Copy, ClipboardCheck, Sparkles, XCircle, Download } from "lucide-react";
+import { CheckCircle2, AlertCircle, ChevronDown, Edit2, FileText, Copy, ClipboardCheck, Sparkles, XCircle, Download, Zap } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -1928,6 +1928,48 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
             </div>
           )}
         </div>
+
+          {/* Syarat Khusus Section */}
+          {data.special_requirements && data.special_requirements.length > 0 && (
+            <div className="rounded-xl overflow-hidden bg-card border border-border">
+              <div className="flex items-center justify-between p-6 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                    <Zap className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">Syarat Khusus</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Syarat kelayakan historis dan kondisi spesial
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => onGoToStep?.(3, 'section-special-requirements')}
+                  className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+                >
+                  <Edit2 className="h-4 w-4" />
+                  Edit
+                </Button>
+              </div>
+              
+              <div className="p-6">
+                <div className="flex flex-wrap gap-2">
+                  {data.special_requirements.map((req, idx) => (
+                    <Badge 
+                      key={idx} 
+                      variant="outline" 
+                      className="bg-amber-500/20 text-amber-400 border-amber-500/40 py-1.5"
+                    >
+                      {req}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
         {/* Syarat dan Ketentuan Card */}
         <div className="mt-6">
