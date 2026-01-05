@@ -55,6 +55,12 @@ export const KEYWORD_RULES: KeywordRule[] = [
       trigger_event: 'Loss',  // ✅ Cashback = Loss-based, NOT Turnover!
       target_segment: 'Semua',
       intent_category: 'Retention',
+      // ✅ Toggle defaults - Cashback = percentage-based
+      fixed_calculation_value_enabled: true,
+      fixed_max_claim_enabled: true,
+      fixed_admin_fee_enabled: false,
+      fixed_min_depo_enabled: false,
+      fixed_min_calculation_enabled: true,
     },
   },
   
@@ -77,6 +83,12 @@ export const KEYWORD_RULES: KeywordRule[] = [
       trigger_event: 'First Deposit',
       target_segment: 'Baru',
       intent_category: 'Acquisition',
+      // ✅ Toggle defaults - Welcome = deposit-based percentage
+      fixed_calculation_value_enabled: true,
+      fixed_max_claim_enabled: true,
+      fixed_admin_fee_enabled: false,
+      fixed_min_depo_enabled: true,
+      fixed_turnover_rule_enabled: true,
     },
   },
   
@@ -101,6 +113,12 @@ export const KEYWORD_RULES: KeywordRule[] = [
       trigger_event: 'Deposit',
       target_segment: 'Semua',
       intent_category: 'Retention',
+      // ✅ Toggle defaults - Deposit Bonus = percentage of deposit
+      fixed_calculation_value_enabled: true,
+      fixed_max_claim_enabled: true,
+      fixed_admin_fee_enabled: false,
+      fixed_min_depo_enabled: true,
+      fixed_turnover_rule_enabled: true,
     },
   },
   
@@ -125,6 +143,11 @@ export const KEYWORD_RULES: KeywordRule[] = [
       target_segment: 'Semua',
       intent_category: 'Retention',
       claim_frequency: 'harian',
+      // ✅ Toggle defaults - Freechip = fixed nominal, no deposit requirement
+      fixed_calculation_value_enabled: false,
+      fixed_max_claim_enabled: false,
+      fixed_admin_fee_enabled: false,
+      fixed_min_depo_enabled: false,
     },
   },
   
@@ -148,6 +171,12 @@ export const KEYWORD_RULES: KeywordRule[] = [
       intent_category: 'Retention',
       calculation_base: '',                // Birthday tidak pakai dasar perhitungan
       fixed_calculation_base: '',          // Form wizard field - juga kosong
+      // ✅ Toggle defaults - Birthday = fixed nominal uang tunai
+      fixed_calculation_value_enabled: false, // Nilai Bonus OFF (nominal eksplisit)
+      fixed_max_claim_enabled: false,         // Max Bonus OFF (nominal sudah fix)
+      fixed_admin_fee_enabled: false,         // Admin Fee OFF
+      // NOTE: fixed_min_depo_enabled dan fixed_min_calculation_enabled
+      // tidak di-set default karena bergantung pada terms (some have TO, some have historical)
     },
   },
   
@@ -169,6 +198,13 @@ export const KEYWORD_RULES: KeywordRule[] = [
       target_segment: 'Semua',
       intent_category: 'Retention',
       claim_frequency: 'mingguan',
+      // ✅ Toggle defaults - Rollingan = percentage, biasanya unlimited
+      fixed_calculation_value_enabled: true,
+      fixed_max_claim_enabled: false,
+      fixed_max_claim_unlimited: true,
+      fixed_admin_fee_enabled: false,
+      fixed_min_depo_enabled: false,
+      fixed_min_calculation_enabled: true,
     },
   },
   
@@ -198,6 +234,13 @@ export const KEYWORD_RULES: KeywordRule[] = [
       target_segment: 'Semua',
       intent_category: 'Acquisition',
       claim_frequency: 'unlimited',
+      // ✅ Toggle defaults - Referral = commission-based, unlimited
+      fixed_calculation_value_enabled: true,
+      fixed_max_claim_enabled: false,
+      fixed_max_claim_unlimited: true,
+      fixed_admin_fee_enabled: false,
+      fixed_min_depo_enabled: false,
+      fixed_min_calculation_enabled: false,
     },
   },
   
@@ -228,6 +271,11 @@ export const KEYWORD_RULES: KeywordRule[] = [
       intent_category: 'Retention',
       fixed_reward_type: 'lucky_spin',
       fixed_lucky_spin_enabled: true,
+      // ✅ Toggle defaults - Lucky Spin = unit-based
+      fixed_calculation_value_enabled: false,
+      fixed_max_claim_enabled: false,
+      fixed_admin_fee_enabled: false,
+      fixed_min_depo_enabled: true, // Lucky Spin sering ada min depo
     },
   },
   
@@ -247,6 +295,11 @@ export const KEYWORD_RULES: KeywordRule[] = [
       trigger_event: 'Deposit',
       intent_category: 'Retention',
       fixed_reward_type: 'voucher',
+      // ✅ Toggle defaults - Voucher = unit-based
+      fixed_calculation_value_enabled: false,
+      fixed_max_claim_enabled: false,
+      fixed_admin_fee_enabled: false,
+      fixed_min_depo_enabled: true,
     },
   },
   
@@ -268,6 +321,11 @@ export const KEYWORD_RULES: KeywordRule[] = [
       trigger_event: 'Deposit',
       intent_category: 'Retention',
       fixed_reward_type: 'ticket',
+      // ✅ Toggle defaults - Ticket = unit-based
+      fixed_calculation_value_enabled: false,
+      fixed_max_claim_enabled: false,
+      fixed_admin_fee_enabled: false,
+      fixed_min_depo_enabled: true,
     },
   },
   

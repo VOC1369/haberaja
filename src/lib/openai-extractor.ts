@@ -3644,27 +3644,79 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_max_claim: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].max_bonus ?? undefined)
       : undefined,
-    fixed_max_claim_enabled: modeDetection.mode === 'fixed',
-    fixed_max_claim_unlimited: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? extracted.subcategories[0].max_bonus === null
-      : false,
+    // ✅ Fixed Mode - Max Bonus toggle (TITLE-FIRST DETECTION)
+    fixed_max_claim_enabled: (() => {
+      if (modeDetection.mode !== 'fixed') return false;
+      
+      // PRIORITY 1: Keyword-based defaults (promo title = detector utama!)
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.fixed_max_claim_enabled !== undefined) {
+        console.log('[Extractor] Using keyword-rules for fixed_max_claim_enabled:', keywordDefaults.fixed_max_claim_enabled);
+        return keywordDefaults.fixed_max_claim_enabled;
+      }
+      
+      // PRIORITY 2: Reward type detection (fallback)
+      const rewardType = extracted.subcategories[0]?.reward_type?.toLowerCase() || '';
+      if (['uang_tunai', 'hadiah_fisik', 'cash', 'physical', 'lucky_spin', 'voucher', 'ticket'].includes(rewardType)) {
+        return false; // Fixed nominal / unit = no max bonus needed
+      }
+      
+      // Default true untuk mode fixed lainnya
+      return true;
+    })(),
+    fixed_max_claim_unlimited: (() => {
+      if (modeDetection.mode !== 'fixed') return false;
+      
+      // PRIORITY 1: Keyword-based defaults
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.fixed_max_claim_unlimited !== undefined) {
+        console.log('[Extractor] Using keyword-rules for fixed_max_claim_unlimited:', keywordDefaults.fixed_max_claim_unlimited);
+        return keywordDefaults.fixed_max_claim_unlimited;
+      }
+      
+      // PRIORITY 2: LLM extraction
+      return extracted.subcategories[0]?.max_bonus === null;
+    })(),
     fixed_payout_direction: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].payout_direction === 'depan' ? 'before' : 'after')
       : 'after',
-    fixed_admin_fee_enabled: false,
+    // ✅ Fixed Mode - Admin Fee toggle (TITLE-FIRST DETECTION)
+    fixed_admin_fee_enabled: (() => {
+      if (modeDetection.mode !== 'fixed') return false;
+      
+      // PRIORITY 1: Keyword-based defaults
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.fixed_admin_fee_enabled !== undefined) {
+        console.log('[Extractor] Using keyword-rules for fixed_admin_fee_enabled:', keywordDefaults.fixed_admin_fee_enabled);
+        return keywordDefaults.fixed_admin_fee_enabled;
+      }
+      
+      // Default: OFF
+      return false;
+    })(),
     fixed_admin_fee_percentage: undefined,
-    // ✅ Fixed Mode - Nilai Bonus auto-toggle based on reward type
+    // ✅ Fixed Mode - Nilai Bonus toggle (TITLE-FIRST DETECTION)
     fixed_calculation_value_enabled: (() => {
       if (modeDetection.mode !== 'fixed') return false;
+      
+      // PRIORITY 1: Keyword-based defaults (promo title = detector utama!)
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.fixed_calculation_value_enabled !== undefined) {
+        console.log('[Extractor] Using keyword-rules for fixed_calculation_value_enabled:', keywordDefaults.fixed_calculation_value_enabled);
+        return keywordDefaults.fixed_calculation_value_enabled;
+      }
+      
+      // PRIORITY 2: Reward type detection (fallback)
       const rewardType = extracted.subcategories[0]?.reward_type?.toLowerCase() || '';
-      // Auto-OFF untuk Uang Tunai dan Hadiah Fisik (sudah ada nominal eksplisit)
-      if (['uang_tunai', 'hadiah_fisik', 'cash', 'physical'].includes(rewardType)) {
+      // Auto-OFF untuk Uang Tunai, Hadiah Fisik, dan unit-based rewards
+      if (['uang_tunai', 'hadiah_fisik', 'cash', 'physical', 'lucky_spin', 'voucher', 'ticket'].includes(rewardType)) {
         return false;
       }
+      
       // Default ON untuk reward type lain yang memerlukan kalkulasi
       return true;
     })(),
-    // ✅ Fixed Mode - Min Calculation with Birthday/Historical Eligibility Guard
+    // ✅ Fixed Mode - Min Calculation toggle (TITLE-FIRST + TERMS OVERRIDE)
     fixed_min_calculation_enabled: (() => {
       if (modeDetection.mode !== 'fixed') return false;
       
@@ -3678,21 +3730,36 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
         /dalam\s*\d+\s*bulan/i.test(termsText) ||
         /\d+\s*bulan\s*terakhir/i.test(termsText);
       
+      // Check for IMMEDIATE TO requirement pattern
+      const hasImmediateTORequirement = 
+        /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText) &&
+        !hasHistoricalEligibility;
+      
       // Birthday + Historical = disable
-      if (isBirthdayPromo && hasHistoricalEligibility) {
+      if (isBirthdayPromo && hasHistoricalEligibility && !hasImmediateTORequirement) {
         console.log('[Extractor] Birthday + historical = disabling fixed_min_calculation');
         return false;
       }
       
-      // Check LLM value
+      // Birthday + Immediate TO = ENABLE (terms override keyword defaults)
+      if (isBirthdayPromo && hasImmediateTORequirement) {
+        console.log('[Extractor] Birthday + immediate TO = enabling fixed_min_calculation');
+        return true;
+      }
+      
+      // PRIORITY 1: Keyword-based defaults
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.fixed_min_calculation_enabled !== undefined) {
+        console.log('[Extractor] Using keyword-rules for fixed_min_calculation_enabled:', keywordDefaults.fixed_min_calculation_enabled);
+        return keywordDefaults.fixed_min_calculation_enabled;
+      }
+      
+      // PRIORITY 2: LLM value or pattern detection
       const llmValue = extracted.subcategories[0]?.minimum_base;
       if (llmValue && llmValue > 0) return true;
       
       // Check pattern "Minimum TO Rp X" (immediate, not historical)
-      const minTOPattern = /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i;
-      if (minTOPattern.test(termsText) && !hasHistoricalEligibility) {
-        return true;
-      }
+      if (hasImmediateTORequirement) return true;
       
       return false;
     })(),
@@ -3747,14 +3814,22 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_cash_reward_amount: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? extracted.subcategories[0].cash_reward_amount
       : undefined,
+    // ✅ Fixed Mode - Turnover Rule toggle (TITLE-FIRST DETECTION)
     fixed_turnover_rule_enabled: (() => {
       if (modeDetection.mode !== 'fixed') return false;
       
-      // Source 1: LLM extracted turnover_rule
+      // PRIORITY 1: Keyword-based defaults
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.fixed_turnover_rule_enabled !== undefined) {
+        console.log('[Extractor] Using keyword-rules for fixed_turnover_rule_enabled:', keywordDefaults.fixed_turnover_rule_enabled);
+        return keywordDefaults.fixed_turnover_rule_enabled;
+      }
+      
+      // PRIORITY 2: LLM extracted turnover_rule
       const extractedTO = extracted.subcategories[0]?.turnover_rule;
       if (extractedTO && Number(extractedTO) > 0) return true;
       
-      // Source 2: Pattern detection from terms
+      // PRIORITY 3: Pattern detection from terms
       const termsText = extracted.terms_conditions?.join(' ') || '';
       const toPattern = /(?:turnover|to)\s*(\d+)\s*[xX]/i;
       const toMatch = termsText.match(toPattern);
@@ -3791,32 +3866,48 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     })(),
     fixed_turnover_rule_custom: '',
     
-    // ✅ Fixed Mode - Min Depo with Birthday/Historical Eligibility Guard
+    // ✅ Fixed Mode - Min Depo toggle (TITLE-FIRST + TERMS OVERRIDE)
     fixed_min_depo_enabled: (() => {
       if (modeDetection.mode !== 'fixed') return false;
       
-      const rawMinDeposit = extracted.min_deposit || extracted.subcategories[0]?.minimum_base;
-      if (!rawMinDeposit || rawMinDeposit <= 0) return false;
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
       
       // Check for historical eligibility patterns
-      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
       const hasHistoricalEligibility = 
         /turnover.*bulan/i.test(termsText) ||
         /dalam\s*\d+\s*bulan/i.test(termsText) ||
         /\d+\s*bulan\s*terakhir/i.test(termsText) ||
         /total\s*turnover/i.test(termsText);
       
-      // Birthday promo detection
-      const promoName = (extracted.promo_name || '').toLowerCase();
-      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
+      // Check for IMMEDIATE TO requirement (mutual exclusive with min_depo)
+      const hasImmediateTORequirement = 
+        /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText) &&
+        !hasHistoricalEligibility;
       
-      // If Birthday + Historical, disable min_depo (move to special_requirements)
+      // If using TO eligibility, disable min_depo (mutual exclusive)
+      if (hasImmediateTORequirement) {
+        console.log('[Extractor] Using TO eligibility = disable min_depo');
+        return false;
+      }
+      
+      // Birthday + Historical = disable min_depo (move to special_requirements)
       if (isBirthdayPromo && hasHistoricalEligibility) {
         console.log('[Extractor] Birthday promo with historical eligibility - disabling fixed_min_depo');
         return false;
       }
       
-      return true;
+      // PRIORITY 1: Keyword-based defaults
+      const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
+      if (keywordDefaults?.fixed_min_depo_enabled !== undefined) {
+        console.log('[Extractor] Using keyword-rules for fixed_min_depo_enabled:', keywordDefaults.fixed_min_depo_enabled);
+        return keywordDefaults.fixed_min_depo_enabled;
+      }
+      
+      // PRIORITY 2: LLM value
+      const rawMinDeposit = extracted.min_deposit || extracted.subcategories[0]?.minimum_base;
+      return rawMinDeposit && rawMinDeposit > 0;
     })(),
     
     fixed_min_depo: (() => {
