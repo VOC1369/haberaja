@@ -653,6 +653,12 @@ export function PseudoKnowledgeSection() {
               }
               
               // Default: Min Deposit for other promo types
+              // ✅ For Fixed Mode, read from mappedPreview (guarded values)
+              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+              const minDepoValue = isFixedMode 
+                ? mappedPreview?.fixed_min_depo 
+                : sub.minimum_base;
+              
               return (
                 <>
                   <span className="text-muted-foreground text-xs block mb-1">Min Deposit</span>
@@ -660,7 +666,7 @@ export function PseudoKnowledgeSection() {
                     <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
                   ) : (
                     <span className="text-foreground font-medium">
-                      {sub.minimum_base ? `Rp ${sub.minimum_base.toLocaleString('id-ID')}` : "-"}
+                      {minDepoValue ? `Rp ${Number(minDepoValue).toLocaleString('id-ID')}` : "-"}
                     </span>
                   )}
                 </>

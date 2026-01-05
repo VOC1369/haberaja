@@ -3614,6 +3614,59 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     })(),
     fixed_turnover_rule_custom: '',
     
+    // ✅ Fixed Mode - Min Depo with Birthday/Historical Eligibility Guard
+    fixed_min_depo_enabled: (() => {
+      if (modeDetection.mode !== 'fixed') return false;
+      
+      const rawMinDeposit = extracted.min_deposit || extracted.subcategories[0]?.minimum_base;
+      if (!rawMinDeposit || rawMinDeposit <= 0) return false;
+      
+      // Check for historical eligibility patterns
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const hasHistoricalEligibility = 
+        /turnover.*bulan/i.test(termsText) ||
+        /dalam\s*\d+\s*bulan/i.test(termsText) ||
+        /\d+\s*bulan\s*terakhir/i.test(termsText) ||
+        /total\s*turnover/i.test(termsText);
+      
+      // Birthday promo detection
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
+      
+      // If Birthday + Historical, disable min_depo (move to special_requirements)
+      if (isBirthdayPromo && hasHistoricalEligibility) {
+        console.log('[Extractor] Birthday promo with historical eligibility - disabling fixed_min_depo');
+        return false;
+      }
+      
+      return true;
+    })(),
+    
+    fixed_min_depo: (() => {
+      if (modeDetection.mode !== 'fixed') return null;
+      
+      const rawMinDeposit = extracted.min_deposit || extracted.subcategories[0]?.minimum_base;
+      if (!rawMinDeposit || rawMinDeposit <= 0) return null;
+      
+      // Same guard logic as fixed_min_depo_enabled
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const hasHistoricalEligibility = 
+        /turnover.*bulan/i.test(termsText) ||
+        /dalam\s*\d+\s*bulan/i.test(termsText) ||
+        /\d+\s*bulan\s*terakhir/i.test(termsText) ||
+        /total\s*turnover/i.test(termsText);
+      
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
+      
+      if (isBirthdayPromo && hasHistoricalEligibility) {
+        console.log('[Extractor] Birthday promo - nullifying fixed_min_depo, value goes to special_requirements');
+        return null; // Block mapping
+      }
+      
+      return rawMinDeposit;
+    })(),
+    
     // Fixed Mode - Voucher / Ticket / Lucky Spin fields (WAJIB DIISI dari extraction)
     fixed_reward_quantity: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].reward_quantity || 1)
