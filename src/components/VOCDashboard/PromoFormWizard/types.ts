@@ -189,7 +189,7 @@ export interface PromoFormData {
   claim_date_until: string;
 
   // Tier mode
-  tier_archetype?: 'tier_level' | 'tier_point_store' | 'tier_network';  // UI-gating only (optional for backward compat)
+  tier_archetype?: 'tier_level' | 'tier_point_store' | 'tier_network' | 'tier_formula';  // UI-gating only (optional for backward compat)
   tier_claim_mode?: 'otomatis' | 'manual';  // Mode claim untuk tier rewards
   promo_unit: 'lp' | 'exp' | 'hybrid';
   exp_mode: 'level_up' | 'exp_store' | 'both';
@@ -991,6 +991,71 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   }
   
   // ============================================
+  // PATCH 11C: tier_point_store (LP/EXP Redeem) Semantic Rules
+  // Root calculation fields = INERT, truth is in redeem_items[]
+  // ============================================
+  if (data.tier_archetype === 'tier_point_store') {
+    console.log('[buildPKBPayload] Applying tier_point_store (LP Redeem) semantic rules');
+    
+    // Point Store: Root calculation fields = INERT
+    pkbData.calculation_base = "";       // Truth is in lp_earn_* fields
+    pkbData.calculation_value = null;
+    pkbData.min_deposit = null;
+    pkbData.turnover_rule = "";
+    pkbData.min_calculation = null;
+    
+    // Fixed mode fields = INERT
+    pkbData.fixed_reward_type = "";
+    pkbData.fixed_calculation_value = null;
+    pkbData.fixed_max_claim = null;
+    
+    // Referral fields = INERT
+    pkbData.referral_tiers = [];
+    pkbData.referral_calculation_basis = "";
+    pkbData.referral_admin_fee_enabled = false;
+    pkbData.referral_admin_fee_percentage = null;
+    
+    // tiers[] for level up = INERT (use redeem_items instead)
+    pkbData.tiers = [];
+    pkbData.level_up_rewards = [];
+    
+    // Ensure tier_archetype is set
+    pkbData.tier_archetype = 'tier_point_store';
+  }
+  
+  // ============================================
+  // PATCH 11D: tier_formula (VIP Rebate/Cashback %) Semantic Rules
+  // Tier percentage table = tiers[], with formula-based rewards per tier
+  // ============================================
+  if (data.tier_archetype === 'tier_formula') {
+    console.log('[buildPKBPayload] Applying tier_formula (VIP % Table) semantic rules');
+    
+    // VIP Percentage: calculation_base stays (turnover/loss), truth in tiers[]
+    // Each tier has different reward percentage based on VIP level
+    
+    // Fixed mode fields = INERT
+    pkbData.fixed_reward_type = "";
+    pkbData.fixed_calculation_value = null;
+    pkbData.fixed_max_claim = null;
+    
+    // Referral fields = INERT
+    pkbData.referral_tiers = [];
+    pkbData.referral_calculation_basis = "";
+    pkbData.referral_admin_fee_enabled = false;
+    pkbData.referral_admin_fee_percentage = null;
+    
+    // Point store fields = INERT
+    pkbData.redeem_items = [];
+    pkbData.redeem_jenis_reward = "";
+    pkbData.lp_earn_basis = "";
+    pkbData.lp_earn_amount = null;
+    pkbData.lp_earn_point_amount = null;
+    
+    // Ensure tier_archetype is set
+    pkbData.tier_archetype = 'tier_formula';
+  }
+  
+  // ============================================
   // PATCH 11: Apply Field Applicability Rules (Final Guard)
   // ARSITEKTUR: promo_type → set non-applicable fields to inert
   // ============================================
@@ -1474,21 +1539,27 @@ export async function getPromoById(id: string): Promise<PromoItem | undefined> {
 }
 
 // Tier Archetype Options (UI-gating only, NOT business logic)
+// Taxonomy: 3 Tier Archetypes per category
 export const TIER_ARCHETYPE_OPTIONS = [
   { 
     value: 'tier_level' as const, 
     label: 'Sistem Level / Tier',
-    description: 'Event berbasis level atau milestone (NALEN, VIP Upgrade)'
+    description: 'Event berbasis level atau milestone (NALEN, VIP Upgrade, Winstreak)'
   },
   { 
     value: 'tier_point_store' as const, 
-    label: 'Sistem Point (Loyalty / Experience)',
-    description: 'Loyalty point atau experience redemption store'
+    label: 'Sistem Point (LP/EXP)',
+    description: 'Point exchange, redemption store (Loyalty Program)'
   },
   { 
     value: 'tier_network' as const, 
-    label: 'Network Metric (External)',
-    description: 'Tier ditentukan oleh metrik eksternal (jumlah downline, referral count, network activity)'
+    label: 'Network Metric (Referral)',
+    description: 'Commission berbasis jumlah downline (Referral Commission)'
+  },
+  { 
+    value: 'tier_formula' as const, 
+    label: 'Tier Percentage',
+    description: 'Persentase berbeda per VIP level (VIP Rebate, VIP Cashback, VIP Max Bonus)'
   },
 ] as const;
 
@@ -1732,6 +1803,7 @@ export const STATUS_OPTIONS = [
 ];
 
 // Dinamis Mode Options
+// Taxonomy: All calculation bases for Category REWARD & EVENT
 export const CALCULATION_BASES = [
   { value: 'turnover', label: 'Turnover (TO)' },
   { value: 'deposit', label: 'Deposit' },
@@ -1740,6 +1812,10 @@ export const CALCULATION_BASES = [
   { value: 'bet_amount', label: 'Bet Amount' },
   { value: 'loyalty_point', label: 'Loyalty Point' },
   { value: 'experience_point', label: 'Experience Point' },
+  { value: 'level', label: 'Level' },           // NEW: VIP level-based
+  { value: 'streak', label: 'Streak Count' },   // NEW: Winstreak, login streak
+  { value: 'rank', label: 'Ranking' },          // NEW: Leaderboard, tournament
+  { value: 'withdraw', label: 'Withdraw' },     // NEW: Bonus withdraw milestone
 ];
 
 export const CALCULATION_METHODS = [
