@@ -3469,9 +3469,42 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
 
     // Fixed Mode - SEPARATE fields (prefix: fixed_)
     // Phase 1B: Map from subcategories[0] when mode is 'fixed'
-    fixed_reward_type: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? ((extracted.subcategories[0].reward_type || 'credit_game').toLowerCase())
-      : '',
+    // ✅ SMART DETECTION: Auto-detect Lucky Spin from promo_name if LLM missed it
+    fixed_reward_type: (() => {
+      if (modeDetection.mode !== 'fixed' || !extracted.subcategories[0]) return '';
+      
+      // Source 1: LLM extracted reward_type
+      const extractedType = extracted.subcategories[0].reward_type?.toLowerCase();
+      if (extractedType && extractedType !== 'credit_game' && extractedType !== 'other') {
+        return extractedType; // Trust LLM if it found specific type
+      }
+      
+      // Source 2: Auto-detect from promo_name patterns
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const promoType = (extracted.promo_type || '').toLowerCase();
+      const combined = `${promoName} ${promoType}`;
+      
+      // Lucky Spin detection
+      if (/lucky\s*spin|spin\s*gratis|free\s*spin|spin\s*wheel|roda\s*keberuntungan|spin\s*harian/i.test(combined)) {
+        console.log('[Extractor] Auto-detected Lucky Spin from promo name/type');
+        return 'lucky_spin';
+      }
+      
+      // Voucher detection
+      if (/voucher|kupon|tiket\s*gratis/i.test(combined)) {
+        console.log('[Extractor] Auto-detected Voucher from promo name/type');
+        return 'voucher';
+      }
+      
+      // Ticket detection
+      if (/ticket|tiket|undian/i.test(combined)) {
+        console.log('[Extractor] Auto-detected Ticket from promo name/type');
+        return 'ticket';
+      }
+      
+      // Fallback to extracted or default
+      return extractedType || 'credit_game';
+    })(),
     fixed_calculation_base: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].calculation_base || 'deposit')
       : '',
@@ -3535,6 +3568,23 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_lucky_spin_max_per_day: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].lucky_spin_max_per_day ?? null)
       : null,
+    // ✅ NEW: Auto-enable Lucky Spin if reward_type is 'lucky_spin'
+    fixed_lucky_spin_enabled: (() => {
+      if (modeDetection.mode !== 'fixed' || !extracted.subcategories[0]) return false;
+      
+      // Check if LLM extracted lucky_spin
+      const extractedType = extracted.subcategories[0].reward_type?.toLowerCase();
+      if (extractedType === 'lucky_spin') return true;
+      
+      // Auto-detect from promo_name
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const promoType = (extracted.promo_type || '').toLowerCase();
+      const combined = `${promoName} ${promoType}`;
+      return /lucky\s*spin|spin\s*gratis|free\s*spin|spin\s*wheel|roda\s*keberuntungan|spin\s*harian/i.test(combined);
+    })(),
+    fixed_lucky_spin_id: modeDetection.mode === 'fixed' && extracted.subcategories[0]
+      ? (extracted.subcategories[0].lucky_spin_id || '')
+      : '',
 
     // Tier mode defaults
     promo_unit: 'lp',
