@@ -3485,13 +3485,24 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       // Check if this "min_deposit" is actually a historical eligibility requirement
       // by looking for patterns in terms_conditions
       const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      
+      // More robust patterns - capture various ways historical eligibility is written
       const hasHistoricalEligibility = 
-        /turnover.*bulan\s*terakhir/i.test(termsText) ||
-        /dalam\s*\d+\s*bulan/i.test(termsText) ||
-        /periode.*bulan/i.test(termsText);
+        /turnover.*bulan/i.test(termsText) ||           // "turnover ... bulan"
+        /dalam\s*\d+\s*bulan/i.test(termsText) ||       // "dalam 3 bulan"
+        /\d+\s*bulan\s*terakhir/i.test(termsText) ||    // "3 bulan terakhir"
+        /aktif.*bulan/i.test(termsText) ||               // "aktif dalam X bulan"
+        /periode.*bulan/i.test(termsText) ||             // "periode X bulan"
+        /total\s*turnover/i.test(termsText);             // "total turnover" (usually historical)
+      
+      // Detect Birthday promo more broadly
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isBirthdayPromo = 
+        /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName) ||
+        /birthday|ulang\s*tahun/i.test(termsText);
       
       // If detected as Birthday promo with historical turnover, nullify min_deposit
-      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah/i.test(extracted.promo_name || '');
+      // and move to special_requirements instead
       if (isBirthdayPromo && hasHistoricalEligibility) {
         console.log('[Extractor] Birthday promo detected with historical eligibility - nullifying min_deposit');
         return null;
@@ -3746,20 +3757,30 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // ✅ FIX: Populate special_requirements from LLM extraction OR filter from terms_conditions
     special_requirements: extracted.special_requirements?.length > 0 
       ? extracted.special_requirements 
-      : (extracted.terms_conditions || []).filter((term: string) => 
-          // Eligibility patterns (bukan deposit untuk klaim, tapi syarat historis)
-          /turnover.*bulan/i.test(term) ||
-          /bermain.*bulan/i.test(term) ||
-          /terdaftar.*bulan/i.test(term) ||
-          /deposit.*kali/i.test(term) ||
-          /verifikasi|ktp|sim/i.test(term) ||
-          // Payout split patterns
-          /withdraw.*%|wd.*%/i.test(term) ||
-          /sisanya.*to|sisa.*to/i.test(term) ||
-          // Birthday/special claim patterns
-          /ulang\s*tahun|birthday/i.test(term) ||
-          /klaim.*tanggal/i.test(term)
-        ),
+      : (extracted.terms_conditions || []).filter((term: string) => {
+          const t = term.toLowerCase();
+          return (
+            // Eligibility patterns (bukan deposit untuk klaim, tapi syarat historis)
+            /turnover.*bulan/i.test(t) ||
+            /total\s*turnover/i.test(t) ||         // "Total Turnover Minimal Rp X"
+            /wajib\s*aktif.*bulan/i.test(t) ||     // "Wajib Aktif Dalam 3 BULAN"
+            /bermain.*bulan/i.test(t) ||
+            /terdaftar.*bulan/i.test(t) ||
+            /deposit.*kali/i.test(t) ||
+            /verifikasi|ktp|sim/i.test(t) ||
+            /melampirkan.*foto/i.test(t) ||         // "Melampirkan Foto KTP/SIM"
+            // Payout split patterns
+            /withdraw.*%|wd.*%/i.test(t) ||
+            /sisanya.*to|sisa.*to/i.test(t) ||
+            /dikenai\s*syarat\s*to/i.test(t) ||     // "Dikenai Syarat TO 3X"
+            /bisa\s*di\s*withdraw/i.test(t) ||      // "Bisa di Withdraw 50%"
+            // Birthday/special claim patterns
+            /ulang\s*tahun|birthday/i.test(t) ||
+            /klaim.*tanggal/i.test(t) ||
+            /tepat.*tanggal/i.test(t) ||            // "Tepat di Tanggal Ulang Tahun"
+            /hanya\s*dapat\s*di\s*klaim/i.test(t)   // "Hanya Dapat di Klaim di Tanggal"
+          );
+        }),
 
     // Dinamis mode - from first subcategory as base
     calculation_base: subcategories[0]?.calculation_base || 'deposit',
