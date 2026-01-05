@@ -142,9 +142,11 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'BIRTHDAY → Bonus Instan',
     defaults: {
       reward_mode: 'fixed',
-      trigger_event: 'Login',
+      promo_type: 'Birthday Bonus',        // Override LLM default
+      trigger_event: 'Login',              // Birthday = Login-based, not First Deposit
       claim_frequency: 'tahunan',
       intent_category: 'Retention',
+      calculation_base: '',                // Birthday tidak pakai dasar perhitungan
     },
   },
   
