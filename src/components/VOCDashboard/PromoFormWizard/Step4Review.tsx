@@ -4,7 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle2, AlertCircle, ChevronDown, Edit2, FileText, Copy, ClipboardCheck, Sparkles, XCircle, Download, Zap, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertCircle, ChevronDown, Edit2, FileText, Copy, ClipboardCheck, Sparkles, XCircle, Download, Zap, AlertTriangle, MoreHorizontal, FileSpreadsheet } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Collapsible,
   CollapsibleContent,
@@ -2462,81 +2468,97 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     </Button>
                   </div>
                   
-                  {/* Download JSON - Context-aware based on toggle */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const jsonToDownload = jsonMode === 'canonical' ? canonicalPayload : pkbPayload;
-                      const blob = new Blob(
-                        [JSON.stringify(jsonToDownload, null, 2)], 
-                        { type: 'application/json' }
-                      );
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      const modeLabel = jsonMode === 'canonical' ? 'canonical_v2.1' : 'legacy';
-                      link.download = `promo_${modeLabel}_${data.promo_name?.replace(/\s+/g, '_') || 'export'}.json`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(url);
-                      toast({
-                        title: "Berhasil!",
-                        description: `${jsonMode === 'canonical' ? 'Canonical v2.1' : 'Legacy'} JSON telah didownload`
-                      });
-                    }}
-                    className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-                  >
-                    <Download className="h-4 w-4" />
-                    Download JSON
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const csvContent = convertPromoToCSV(
-                        pkbPayload, 
-                        data.has_subcategories ? data.subcategories : undefined
-                      );
-                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                      const url = URL.createObjectURL(blob);
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.download = `promo_${data.promo_name?.replace(/\s+/g, '_') || 'export'}_${new Date().toISOString().split('T')[0]}.csv`;
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                      URL.revokeObjectURL(url);
-                      toast({
-                        title: "Berhasil!",
-                        description: "CSV telah didownload"
-                      });
-                    }}
-                    className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-                  >
-                    <Download className="h-4 w-4" />
-                    Download CSV
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const jsonToCopy = jsonMode === 'canonical' ? canonicalPayload : pkbPayload;
-                      navigator.clipboard.writeText(JSON.stringify(jsonToCopy, null, 2));
-                      toast({
-                        title: "Berhasil disalin!",
-                        description: `${jsonMode === 'canonical' ? 'Canonical' : 'Legacy'} JSON telah disalin ke clipboard`
-                      });
-                    }}
-                    className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-                  >
-                    <Copy className="h-4 w-4" />
-                    Salin JSON
-                  </Button>
+                  {/* Export Actions Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 hover:bg-button-hover hover:text-button-hover-foreground"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-card border-border w-48">
+                      {/* Download JSON */}
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const jsonToDownload = jsonMode === 'canonical' ? canonicalPayload : pkbPayload;
+                          const blob = new Blob(
+                            [JSON.stringify(jsonToDownload, null, 2)], 
+                            { type: 'application/json' }
+                          );
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          const modeLabel = jsonMode === 'canonical' ? 'canonical_v2.1' : 'legacy';
+                          link.download = `promo_${modeLabel}_${data.promo_name?.replace(/\s+/g, '_') || 'export'}.json`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(url);
+                          toast({
+                            title: "Berhasil!",
+                            description: `${jsonMode === 'canonical' ? 'Canonical v2.1' : 'Legacy'} JSON telah didownload`
+                          });
+                        }}
+                        className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
+                      >
+                        <div className="h-7 w-7 rounded-full bg-blue-500/20 flex items-center justify-center mr-3">
+                          <Download className="h-4 w-4 text-blue-500" />
+                        </div>
+                        <span>Download JSON</span>
+                      </DropdownMenuItem>
+                      
+                      {/* Download CSV */}
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const csvContent = convertPromoToCSV(
+                            pkbPayload, 
+                            data.has_subcategories ? data.subcategories : undefined
+                          );
+                          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = `promo_${data.promo_name?.replace(/\s+/g, '_') || 'export'}_${new Date().toISOString().split('T')[0]}.csv`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(url);
+                          toast({
+                            title: "Berhasil!",
+                            description: "CSV telah didownload"
+                          });
+                        }}
+                        className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
+                      >
+                        <div className="h-7 w-7 rounded-full bg-purple-500/20 flex items-center justify-center mr-3">
+                          <FileSpreadsheet className="h-4 w-4 text-purple-500" />
+                        </div>
+                        <span>Download CSV</span>
+                      </DropdownMenuItem>
+                      
+                      {/* Salin JSON */}
+                      <DropdownMenuItem
+                        onClick={() => {
+                          const jsonToCopy = jsonMode === 'canonical' ? canonicalPayload : pkbPayload;
+                          navigator.clipboard.writeText(JSON.stringify(jsonToCopy, null, 2));
+                          toast({
+                            title: "Berhasil disalin!",
+                            description: `${jsonMode === 'canonical' ? 'Canonical' : 'Legacy'} JSON telah disalin ke clipboard`
+                          });
+                        }}
+                        className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
+                      >
+                        <div className="h-7 w-7 rounded-full bg-success/20 flex items-center justify-center mr-3">
+                          <Copy className="h-4 w-4 text-success" />
+                        </div>
+                        <span>Salin JSON</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>
