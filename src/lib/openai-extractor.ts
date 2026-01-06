@@ -3256,17 +3256,39 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     const extractPrizeList = () => {
       const prizes: string[] = [];
       
-      // Source 1: From subcategories with physical/cash rewards
+      // Source 1: From subcategories - ALL reward types for Lucky Spin
+      // Lucky Spin prizes include: hadiah fisik, credit game, uang tunai
       extracted.subcategories?.forEach(sub => {
+        // Priority 1: Physical reward with name
         if (sub.physical_reward_name) {
           const qty = sub.physical_reward_quantity || 1;
           prizes.push(`${qty} ${sub.physical_reward_name.toUpperCase()}`);
-        } else if (sub.cash_reward_amount && sub.cash_reward_amount > 0) {
+        } 
+        // Priority 2: Credit game rewards (from sub_name or cash_reward_amount)
+        else if (sub.reward_type === 'credit_game') {
+          if (sub.sub_name) {
+            // Format: "Credit Game Rp 5.000.000" -> keep as is
+            prizes.push(sub.sub_name.toUpperCase());
+          } else if (sub.cash_reward_amount && sub.cash_reward_amount > 0) {
+            prizes.push(`CREDIT GAME RP ${sub.cash_reward_amount.toLocaleString('id-ID')}`);
+          }
+        }
+        // Priority 3: Cash/uang tunai rewards
+        else if (sub.cash_reward_amount && sub.cash_reward_amount > 0) {
           prizes.push(`SALDO RP ${sub.cash_reward_amount.toLocaleString('id-ID')}`);
-        } else if (sub.reward_type === 'hadiah_fisik' && sub.sub_name) {
-          // Try to extract from sub_name
+        } 
+        // Priority 4: Physical reward from sub_name
+        else if (sub.reward_type === 'hadiah_fisik' && sub.sub_name) {
           const qty = sub.physical_reward_quantity || 1;
           prizes.push(`${qty} ${sub.sub_name.toUpperCase()}`);
+        }
+        // Priority 5: Uang tunai with sub_name
+        else if (sub.reward_type === 'uang_tunai' && sub.sub_name) {
+          prizes.push(sub.sub_name.toUpperCase());
+        }
+        // Priority 6: Any other sub with sub_name (catch-all for Lucky Spin prizes)
+        else if (sub.sub_name && isLuckySpinPromo) {
+          prizes.push(sub.sub_name.toUpperCase());
         }
       });
       
@@ -3277,8 +3299,17 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
           prizes.push(`${qty} ${prize.physical_reward_name.toUpperCase()}`);
         } else if (prize.reward_type === 'uang_tunai' && prize.cash_reward_amount) {
           prizes.push(`UANG TUNAI RP ${prize.cash_reward_amount.toLocaleString('id-ID')}`);
+        } else if (prize.reward_type === 'credit_game') {
+          if (prize.prize) {
+            prizes.push(prize.prize.toUpperCase());
+          } else if (prize.cash_reward_amount) {
+            prizes.push(`CREDIT GAME RP ${prize.cash_reward_amount.toLocaleString('id-ID')}`);
+          }
         } else if (prize.reward_type === 'hadiah_fisik' && prize.prize) {
           prizes.push(`1 ${prize.prize.toUpperCase()}`);
+        } else if (prize.prize && isLuckySpinPromo) {
+          // Catch-all for any prize in Lucky Spin context
+          prizes.push(prize.prize.toUpperCase());
         }
       });
       
