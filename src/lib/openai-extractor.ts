@@ -3959,9 +3959,29 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_physical_reward_quantity: modeDetection.mode === 'fixed' && extracted.subcategories[0]
       ? (extracted.subcategories[0].physical_reward_quantity || 1)
       : 1,
-    fixed_cash_reward_amount: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? extracted.subcategories[0].cash_reward_amount
-      : undefined,
+    fixed_cash_reward_amount: (() => {
+      if (modeDetection.mode !== 'fixed') return undefined;
+      
+      const rawAmount = extracted.subcategories[0]?.cash_reward_amount;
+      if (!rawAmount) return undefined;
+      
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
+      
+      // GUARD: Birthday promo biasanya max Rp 500.000
+      // Jika > 1.000.000 → kemungkinan parsing error (x1000)
+      if (isBirthdayPromo && rawAmount > 1000000) {
+        console.warn('[Extractor] Birthday cash_reward_amount suspiciously high:', rawAmount);
+        // Attempt correction: divide by 1000 if it looks like x1000 error
+        if (rawAmount % 1000 === 0 && rawAmount >= 10000000) {
+          const corrected = rawAmount / 1000;
+          console.log('[Extractor] Correcting cash_reward_amount x1000 error:', rawAmount, '→', corrected);
+          return corrected;
+        }
+      }
+      
+      return rawAmount;
+    })(),
     // ✅ Fixed Mode - Turnover Rule toggle (MULTIPLIER-ONLY DETECTION)
     // SEMANTIC CONTRACT - NON-NEGOTIABLE:
     // - turnover_rule = kelipatan sebelum WD (multiplier, e.g. 3x, 5x) → MAX 100

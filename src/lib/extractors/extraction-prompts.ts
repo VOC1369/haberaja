@@ -108,6 +108,24 @@ EXCEPTION untuk "uang_tunai":
 
 🎂 BIRTHDAY / SPECIAL PROMO DETECTION (CRITICAL!):
 
+📐 FORMAT ANGKA INDONESIA (BIRTHDAY - KRITIS!):
+
+Birthday Bonus biasanya KECIL (< Rp 500.000). HATI-HATI parsing!
+
+CONTOH BENAR:
+- "Rp 100.000,-" → cash_reward_amount: 100000 (seratus ribu)
+- "Rp 50.000,-" → cash_reward_amount: 50000 (lima puluh ribu)
+- "Rp 500.000" → cash_reward_amount: 500000 (lima ratus ribu)
+
+CONTOH SALAH (JANGAN!):
+- "Rp 100.000,-" → cash_reward_amount: 100000000 ❌ (itu 100 juta!)
+- "Rp 50.000,-" → cash_reward_amount: 50000000 ❌ (itu 50 juta!)
+
+ATURAN:
+- TITIK = pemisah ribuan di Indonesia
+- "100.000" = 100 * 1000 = 100.000 (seratus ribu)
+- Birthday bonus di Indonesia TIDAK PERNAH jutaan rupiah!
+
 ⚠️ BEDAKAN "Syarat Eligibility Historis" vs "Min Deposit Promo":
 
 SYARAT ELIGIBILITY HISTORIS (→ special_requirements, BUKAN min_deposit!):
