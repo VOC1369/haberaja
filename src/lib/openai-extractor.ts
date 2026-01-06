@@ -3672,11 +3672,27 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     turnover_rule: subcategories[0]?.turnover_rule || '',
     turnover_rule_enabled: subcategories[0]?.turnover_rule_enabled ?? (subcategories[0]?.turnover_rule && subcategories[0]?.turnover_rule !== '' && subcategories[0]?.turnover_rule !== '0x'),
     turnover_rule_custom: subcategories[0]?.turnover_rule_custom || '',
-    // claim_frequency dari extracted, atau infer dari promo_type
-    claim_frequency: extracted.claim_frequency || 
-      (['cashback', 'rebate', 'rollingan', 'rollingan cashback'].includes(extracted.promo_type?.toLowerCase() || '') 
-        ? 'mingguan' 
-        : 'sekali'),
+    // claim_frequency - PRIORITY: Birthday=tahunan, then keyword defaults, then LLM
+    claim_frequency: (() => {
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
+      
+      // ✅ PRIORITY 1: Birthday = tahunan (yearly)
+      if (isBirthdayPromo) {
+        console.log('[Extractor] Birthday promo = claim_frequency: tahunan');
+        return 'tahunan';
+      }
+      
+      // PRIORITY 2: LLM extracted
+      if (extracted.claim_frequency) return extracted.claim_frequency;
+      
+      // PRIORITY 3: Infer dari promo_type
+      if (['cashback', 'rebate', 'rollingan', 'rollingan cashback'].includes(extracted.promo_type?.toLowerCase() || '')) {
+        return 'mingguan';
+      }
+      
+      return 'sekali';
+    })(),
     claim_date_from: '',
     claim_date_until: '',
 
@@ -3690,11 +3706,13 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       const promoName = (extracted.promo_name || '').toLowerCase();
       const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
       
-      // Expanded "withdrawable" pattern detection
+      // ✅ ENHANCED: Expanded "withdrawable" pattern detection (covers "Withdraw 50%", "WD 50%")
       const canWithdraw = 
         /bisa\s*(di)?\s*wd/i.test(termsText) ||
         /bisa\s*(di)?\s*tarik/i.test(termsText) ||
         /dapat\s*(di)?\s*(wd|withdraw|tarik)/i.test(termsText) ||
+        /withdraw\s*\d+%/i.test(termsText) ||           // "Withdraw 50%"
+        /wd\s*\d+%/i.test(termsText) ||                  // "WD 50%"
         /withdraw(?:able)?/i.test(termsText) ||
         /uang\s*tunai/i.test(termsText) ||
         /bonus\s*tunai/i.test(termsText) ||
@@ -3825,9 +3843,30 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       // PRIORITY 2: LLM extraction
       return extracted.subcategories[0]?.max_bonus === null;
     })(),
-    fixed_payout_direction: modeDetection.mode === 'fixed' && extracted.subcategories[0]
-      ? (extracted.subcategories[0].payout_direction === 'depan' ? 'before' : 'after')
-      : 'after',
+    // ✅ Fixed Mode - Payout Direction (WD context detection)
+    fixed_payout_direction: (() => {
+      if (modeDetection.mode !== 'fixed' || !extracted.subcategories[0]) return 'after';
+      
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      
+      // ✅ Detect "WD X% sebelum/dulu" pattern = BEFORE turnover
+      const wdBeforePattern = 
+        /(?:wd|withdraw)\s*\d+%/i.test(termsText) ||     // "WD 50%" implies partial withdraw first
+        /bisa\s*(?:di)?wd.*?(?:sisa|sisanya)/i.test(termsText) || // "bisa WD...sisanya" = partial WD
+        /withdraw.*?(?:sisa|sisanya)/i.test(termsText);
+      
+      if (wdBeforePattern) {
+        console.log('[Extractor] WD pattern detected = payout_direction: before');
+        return 'before';
+      }
+      
+      // Fallback to LLM extraction
+      const llmDirection = extracted.subcategories[0].payout_direction;
+      if (llmDirection === 'depan') return 'before';
+      if (llmDirection === 'belakang') return 'after';
+      
+      return 'after'; // default
+    })(),
     // ✅ Fixed Mode - Admin Fee toggle (TITLE-FIRST DETECTION)
     fixed_admin_fee_enabled: (() => {
       if (modeDetection.mode !== 'fixed') return false;
@@ -3962,11 +4001,31 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     fixed_cash_reward_amount: (() => {
       if (modeDetection.mode !== 'fixed') return undefined;
       
-      const rawAmount = extracted.subcategories[0]?.cash_reward_amount;
-      if (!rawAmount) return undefined;
-      
       const promoName = (extracted.promo_name || '').toLowerCase();
       const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
+      
+      // Source 1: Direct cash_reward_amount
+      let rawAmount = extracted.subcategories[0]?.cash_reward_amount;
+      
+      // ✅ Source 2: Fallback to max_bonus for Birthday + uang_tunai
+      if (!rawAmount && isBirthdayPromo) {
+        const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+        const canWithdraw = 
+          /bisa\s*(di)?\s*wd/i.test(termsText) ||
+          /withdraw\s*\d+%/i.test(termsText) ||
+          /wd\s*\d+%/i.test(termsText) ||
+          /dicairkan|cair/i.test(termsText);
+        
+        if (canWithdraw) {
+          const maxBonus = extracted.subcategories[0]?.max_bonus;
+          if (maxBonus && maxBonus > 0) {
+            console.log('[Extractor] Birthday: using max_bonus as cash_reward_amount:', maxBonus);
+            rawAmount = maxBonus;
+          }
+        }
+      }
+      
+      if (!rawAmount) return undefined;
       
       // GUARD: Birthday promo biasanya max Rp 500.000
       // Jika > 1.000.000 → kemungkinan parsing error (x1000)
