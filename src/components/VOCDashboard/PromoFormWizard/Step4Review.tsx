@@ -2462,33 +2462,35 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     </Button>
                   </div>
                   
-                  {/* Download Canonical JSON */}
+                  {/* Download JSON - Context-aware based on toggle */}
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
+                      const jsonToDownload = jsonMode === 'canonical' ? canonicalPayload : pkbPayload;
                       const blob = new Blob(
-                        [JSON.stringify(canonicalPayload, null, 2)], 
+                        [JSON.stringify(jsonToDownload, null, 2)], 
                         { type: 'application/json' }
                       );
                       const url = URL.createObjectURL(blob);
                       const link = document.createElement('a');
                       link.href = url;
-                      link.download = `promo_canonical_v2.1_${data.promo_name?.replace(/\s+/g, '_') || 'export'}.json`;
+                      const modeLabel = jsonMode === 'canonical' ? 'canonical_v2.1' : 'legacy';
+                      link.download = `promo_${modeLabel}_${data.promo_name?.replace(/\s+/g, '_') || 'export'}.json`;
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);
                       URL.revokeObjectURL(url);
                       toast({
                         title: "Berhasil!",
-                        description: "Canonical JSON v2.1 telah didownload"
+                        description: `${jsonMode === 'canonical' ? 'Canonical v2.1' : 'Legacy'} JSON telah didownload`
                       });
                     }}
-                    className="gap-2 border-success/50 text-success hover:bg-success hover:text-success-foreground hover:border-success"
+                    className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
                   >
                     <Download className="h-4 w-4" />
-                    Download Canonical
+                    Download JSON
                   </Button>
                   <Button
                     variant="outline"
