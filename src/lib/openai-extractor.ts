@@ -4396,16 +4396,26 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       fixed_lucky_spin_id: '',
       fixed_lucky_spin_max_per_day: null,
       // ✅ AUTO-CASCADE: Section 6 - Penukaran Hadiah / Lucky Spin
+      // Non-prefixed (Dinamis mode)
       ticket_exchange_enabled: true,
       ticket_exchange_mode: 'lucky_spin' as const,
       lucky_spin_rewards: luckySpinRewards,
+      // Prefixed (Fixed mode)
+      fixed_ticket_exchange_enabled: true,
+      fixed_ticket_exchange_mode: 'lucky_spin' as const,
+      fixed_lucky_spin_rewards: luckySpinRewards,
     }),
     
     // AUTO-CASCADE: Section 6 for Lucky Spin promos (when not already overridden)
     ...(!isEventLuckySpinPrize && isLuckySpinPromo && {
+      // Non-prefixed (Dinamis mode)
       ticket_exchange_enabled: true,
       ticket_exchange_mode: 'lucky_spin' as const,
       lucky_spin_rewards: luckySpinRewards,
+      // Prefixed (Fixed mode)
+      fixed_ticket_exchange_enabled: true,
+      fixed_ticket_exchange_mode: 'lucky_spin' as const,
+      fixed_lucky_spin_rewards: luckySpinRewards,
     }),
 
     // Step 4 - AI Templates (empty defaults)

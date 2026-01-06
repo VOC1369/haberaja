@@ -279,8 +279,12 @@ export const KEYWORD_RULES: KeywordRule[] = [
       fixed_admin_fee_enabled: false,
       fixed_min_depo_enabled: true, // Lucky Spin sering ada min depo
       // ✅ AUTO-CASCADE: Section 6 - Penukaran Hadiah / Lucky Spin
+      // Non-prefixed (Dinamis mode)
       ticket_exchange_enabled: true,
       ticket_exchange_mode: 'lucky_spin' as const,
+      // Prefixed (Fixed mode)
+      fixed_ticket_exchange_enabled: true,
+      fixed_ticket_exchange_mode: 'lucky_spin' as const,
     },
   },
   
