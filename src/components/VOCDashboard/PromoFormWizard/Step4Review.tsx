@@ -977,19 +977,49 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
     // Step 4: Konfigurasi Reward (Event Config)
     let step4Fields: boolean[] = [];
     if (data.reward_mode === 'fixed') {
-      step4Fields = [
-        !!data.reward_mode,
-        !!data.reward_type,
-        data.reward_amount > 0
-      ];
+      const isUnitBasedReward = ['lucky_spin', 'voucher', 'ticket'].includes(data.fixed_reward_type || '');
+      
+      if (isUnitBasedReward) {
+        // Unit-based: Lucky Spin, Voucher, Ticket - no reward_amount needed
+        step4Fields = [
+          !!data.reward_mode,
+          !!data.fixed_reward_type,
+          // Must have prizes list OR min deposit OR reward quantity
+          (data.fixed_lucky_spin_rewards?.length || 0) > 0 || 
+            (data.fixed_min_depo || 0) > 0 ||
+            (data.fixed_reward_quantity || 0) > 0
+        ];
+      } else {
+        // Standard reward: Credit Game, Cash, etc.
+        step4Fields = [
+          !!data.reward_mode,
+          !!data.reward_type,
+          data.reward_amount > 0
+        ];
+      }
     } else if (data.reward_mode === 'formula') {
-      step4Fields = [
-        !!data.reward_mode,
-        !!data.calculation_base,
-        !!data.calculation_method,
-        data.calculation_value > 0,
-        !!data.dinamis_reward_type
-      ];
+      const isUnitBasedReward = ['lucky_spin', 'voucher', 'ticket'].includes(data.dinamis_reward_type || '');
+      
+      if (isUnitBasedReward) {
+        // Unit-based in Dinamis mode
+        step4Fields = [
+          !!data.reward_mode,
+          !!data.dinamis_reward_type,
+          // Must have prizes list OR min deposit OR reward quantity
+          (data.lucky_spin_rewards?.length || 0) > 0 || 
+            (data.reward_quantity || 0) > 0 ||
+            (data.min_deposit || 0) > 0
+        ];
+      } else {
+        // Standard formula mode
+        step4Fields = [
+          !!data.reward_mode,
+          !!data.calculation_base,
+          !!data.calculation_method,
+          data.calculation_value > 0,
+          !!data.dinamis_reward_type
+        ];
+      }
     } else if (data.reward_mode === 'tier') {
       // Check for tier_network (Referral) vs standard tier
       if (data.tier_archetype === 'tier_network') {
@@ -1229,8 +1259,18 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
   const canonicalValidation = useMemo(() => validateCanonicalPromo(canonicalPayload), [canonicalPayload]);
 
   const isStep1Complete = data.client_id && data.promo_name && data.promo_type;
+  
+  // Unit-based reward detection for validation
+  const isFixedUnitBased = ['lucky_spin', 'voucher', 'ticket'].includes(data.fixed_reward_type || '');
+  const isFormulaUnitBased = ['lucky_spin', 'voucher', 'ticket'].includes(data.dinamis_reward_type || '');
+  
   const isStep2Complete = data.reward_mode && (
-    (data.reward_mode === 'fixed' && data.reward_type && data.reward_amount > 0) ||
+    // Fixed Mode
+    (data.reward_mode === 'fixed' && (
+      isFixedUnitBased 
+        ? (data.fixed_reward_type && ((data.fixed_lucky_spin_rewards?.length || 0) > 0 || (data.fixed_min_depo || 0) > 0 || (data.fixed_reward_quantity || 0) > 0))
+        : (data.reward_type && data.reward_amount > 0)
+    )) ||
     // Tier mode: Pisahkan validasi tier_network (Referral) vs standard tier
     (data.reward_mode === 'tier' && (
       data.tier_archetype === 'tier_network' 
@@ -1238,11 +1278,12 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
            data.referral_tiers?.every(t => t.min_downline > 0 && t.commission_percentage > 0))
         : !!data.promo_unit
     )) ||
-    (data.reward_mode === 'formula' && 
-      data.calculation_base && 
-      data.calculation_method && 
-      data.calculation_value && data.calculation_value > 0 &&
-      data.dinamis_reward_type)
+    // Formula Mode
+    (data.reward_mode === 'formula' && (
+      isFormulaUnitBased
+        ? (data.dinamis_reward_type && ((data.lucky_spin_rewards?.length || 0) > 0 || (data.min_deposit || 0) > 0 || (data.reward_quantity || 0) > 0))
+        : (data.calculation_base && data.calculation_method && data.calculation_value && data.calculation_value > 0 && data.dinamis_reward_type)
+    ))
   );
   const isStep3Complete = data.platform_access && data.status;
 
