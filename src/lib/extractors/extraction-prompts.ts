@@ -229,12 +229,38 @@ Pola ekstraksi WAJIB:
 - min_deposit WAJIB diisi dari "Minimal Deposit Rp X" atau "Deposit X"
 - turnover_rule WAJIB diisi dari "Minimal Turnover X" atau "TO X"
 
+🎰 LUCKY SPIN PRIZE LIST EXTRACTION (SECTION 6 AUTO-CASCADE):
+Jika promo Lucky Spin memiliki daftar hadiah/prize, WAJIB extract ke lucky_spin_rewards:
+
+PATTERN DETECTION:
+- "Grand Prize: 1 unit Honda PCX" → lucky_spin_rewards: ["1 HONDA PCX"]
+- "Hadiah: iPhone 16 Pro Max, Emas 100gr" → lucky_spin_rewards: ["1 IPHONE 16 PRO MAX", "1 EMAS 100GR"]
+- Table format:
+  | Hadiah | Jumlah |
+  | Motor Honda | 1 unit |
+  | HP Samsung | 5 unit |
+  → lucky_spin_rewards: ["1 MOTOR HONDA", "5 HP SAMSUNG"]
+
+OUTPUT FORMAT untuk lucky_spin_rewards:
+- Array of strings: ["QUANTITY PRODUCT_NAME", ...]
+- Quantity di depan (1, 2, 5, dll)
+- Nama produk UPPERCASE
+- Jika tidak ada jumlah, assume 1
+
+FIELD TAMBAHAN untuk Lucky Spin Prize:
+{
+  "lucky_spin_rewards": ["1 HONDA PCX", "1 IPHONE 16 PRO MAX", "3 EMAS ANTAM 10GR", "100 SALDO 50RB"] | [],
+  "ticket_exchange_enabled": true,
+  "ticket_exchange_mode": "lucky_spin"
+}
+
 🚫 ATURAN:
 1. Jika data tidak eksplisit → null
 2. JANGAN mengarang angka
 3. calculation_value harus angka, bukan string "%"
 4. Jika ada tabel dengan multiple baris → has_subcategories = true
 5. Untuk voucher/ticket/lucky_spin, reward_quantity WAJIB diisi jika ada di teks
+6. Untuk Lucky Spin dengan hadiah fisik, WAJIB isi lucky_spin_rewards
 
 📤 OUTPUT: JSON VALID saja, tanpa markdown.
 `;

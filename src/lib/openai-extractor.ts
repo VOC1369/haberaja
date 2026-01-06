@@ -3238,10 +3238,76 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   
   // Jika promo "lucky spin" tapi punya subcategories dengan hadiah fisik/credit:
   // Ini adalah EVENT LUCKY SPIN (undian hadiah), bukan LUCKY SPIN TIKET
+  const isLuckySpinPromo = /lucky\s*spin|spin\s*gratis|free\s*spin|spin\s*harian/i.test(extracted.promo_name || '');
   const isEventLuckySpinPrize = hasMultipleSubcategories && hasNonSpinRewards;
   
   if (isEventLuckySpinPrize) {
     console.log('[Event Lucky Spin Prize] Detected prize table event, switching to Dinamis + Voucher mode');
+  }
+  
+  // ============================================
+  // LUCKY SPIN PRIZE LIST EXTRACTION (Section 6 Auto-Cascade)
+  // Extract hadiah fisik dari subcategories untuk Section 6 lucky_spin_rewards
+  // ============================================
+  let luckySpinRewards: string[] = [];
+  
+  if (isLuckySpinPromo || isEventLuckySpinPrize) {
+    // Extract prize list from subcategories or prizes
+    const extractPrizeList = () => {
+      const prizes: string[] = [];
+      
+      // Source 1: From subcategories with physical/cash rewards
+      extracted.subcategories?.forEach(sub => {
+        if (sub.physical_reward_name) {
+          const qty = sub.physical_reward_quantity || 1;
+          prizes.push(`${qty} ${sub.physical_reward_name.toUpperCase()}`);
+        } else if (sub.cash_reward_amount && sub.cash_reward_amount > 0) {
+          prizes.push(`SALDO RP ${sub.cash_reward_amount.toLocaleString('id-ID')}`);
+        } else if (sub.reward_type === 'hadiah_fisik' && sub.sub_name) {
+          // Try to extract from sub_name
+          const qty = sub.physical_reward_quantity || 1;
+          prizes.push(`${qty} ${sub.sub_name.toUpperCase()}`);
+        }
+      });
+      
+      // Source 2: From prizes array (Category B events)
+      extracted.prizes?.forEach(prize => {
+        if (prize.physical_reward_name) {
+          const qty = prize.physical_reward_quantity || 1;
+          prizes.push(`${qty} ${prize.physical_reward_name.toUpperCase()}`);
+        } else if (prize.reward_type === 'uang_tunai' && prize.cash_reward_amount) {
+          prizes.push(`UANG TUNAI RP ${prize.cash_reward_amount.toLocaleString('id-ID')}`);
+        } else if (prize.reward_type === 'hadiah_fisik' && prize.prize) {
+          prizes.push(`1 ${prize.prize.toUpperCase()}`);
+        }
+      });
+      
+      // Source 3: Pattern detection from terms_conditions
+      const termsText = extracted.terms_conditions?.join(' ') || '';
+      const prizePatterns = [
+        /(\d+)\s*(?:unit|pcs|buah)?\s*(honda|yamaha|iphone|samsung|emas|motor|mobil|laptop|xiaomi|pajero|vespa|oppo|vivo|realme)[^,;.]*/gi,
+        /grand\s*prize[:\s]+([^,;.]+)/gi,
+        /hadiah\s*(?:utama|pertama|1st)[:\s]+([^,;.]+)/gi,
+      ];
+      
+      prizePatterns.forEach(pattern => {
+        let match;
+        while ((match = pattern.exec(termsText)) !== null) {
+          const prizeText = match[0].replace(/grand\s*prize[:\s]+|hadiah\s*(?:utama|pertama|1st)[:\s]+/gi, '').trim();
+          if (prizeText && !prizes.some(p => p.toLowerCase().includes(prizeText.toLowerCase().substring(0, 10)))) {
+            prizes.push(prizeText.toUpperCase());
+          }
+        }
+      });
+      
+      return prizes;
+    };
+    
+    luckySpinRewards = extractPrizeList();
+    
+    if (luckySpinRewards.length > 0) {
+      console.log('[Lucky Spin Prize] Extracted prize list for Section 6:', luckySpinRewards);
+    }
   }
 
   // Helper: Extract min_downline from terms or pattern
@@ -4329,6 +4395,17 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       fixed_lucky_spin_id_enabled: false,
       fixed_lucky_spin_id: '',
       fixed_lucky_spin_max_per_day: null,
+      // ✅ AUTO-CASCADE: Section 6 - Penukaran Hadiah / Lucky Spin
+      ticket_exchange_enabled: true,
+      ticket_exchange_mode: 'lucky_spin' as const,
+      lucky_spin_rewards: luckySpinRewards,
+    }),
+    
+    // AUTO-CASCADE: Section 6 for Lucky Spin promos (when not already overridden)
+    ...(!isEventLuckySpinPrize && isLuckySpinPromo && {
+      ticket_exchange_enabled: true,
+      ticket_exchange_mode: 'lucky_spin' as const,
+      lucky_spin_rewards: luckySpinRewards,
     }),
 
     // Step 4 - AI Templates (empty defaults)
