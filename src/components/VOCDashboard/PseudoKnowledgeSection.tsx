@@ -615,7 +615,7 @@ export function PseudoKnowledgeSection() {
             return (
               <div className="bg-muted rounded-lg p-3">
                 <span className="text-muted-foreground text-xs block mb-1">
-                  {sub.calculation_method === 'threshold' ? 'Target' : 'Nilai Bonus'}
+                  {sub.calculation_method === 'threshold' ? 'Target' : 'Perhitungan Bonus'}
                 </span>
                 {getFieldStatus('calculation_value', archetype) === 'not_applicable' ? (
                   <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>

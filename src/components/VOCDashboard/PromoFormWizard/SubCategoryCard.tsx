@@ -681,7 +681,7 @@ export function SubCategoryCard({
               />
             </div>
             <div className="space-y-2">
-              <Label>Nilai Bonus</Label>
+              <Label>Perhitungan Bonus</Label>
               <div className="relative">
                 {subCategory.calculation_method === 'percentage' ? (
                   // Percentage mode: allow decimals, no thousand separator

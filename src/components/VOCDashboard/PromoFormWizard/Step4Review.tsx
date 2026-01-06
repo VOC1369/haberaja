@@ -1456,9 +1456,9 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       label="Jenis Perhitungan" 
                       value={CALCULATION_METHODS.find(c => c.value === data.fixed_calculation_method)?.label || data.fixed_calculation_method} 
                     />
-                    {/* Nilai Bonus */}
+                    {/* Perhitungan Bonus */}
                     <ValueBox 
-                      label="Nilai Bonus" 
+                      label="Perhitungan Bonus" 
                       value={data.fixed_calculation_value ? `${data.fixed_calculation_value}${data.fixed_calculation_method === 'percentage' ? '%' : ''}` : undefined} 
                     />
                     {/* Jenis Reward */}
@@ -1591,7 +1591,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                     {/* Reward Config */}
                     <ValueBox label="Dasar Perhitungan Bonus" value={CALCULATION_BASES.find(b => b.value === data.calculation_base)?.label || data.calculation_base} />
                     <ValueBox label="Jenis Perhitungan" value={CALCULATION_METHODS.find(c => c.value === data.calculation_method)?.label || data.calculation_method} />
-                    <ValueBox label="Nilai Bonus" value={data.calculation_value ? `${data.calculation_value}${data.calculation_method === 'percentage' ? '%' : ''}` : undefined} />
+                    <ValueBox label="Perhitungan Bonus" value={data.calculation_value ? `${data.calculation_value}${data.calculation_method === 'percentage' ? '%' : ''}` : undefined} />
                     <ValueBox label="Jenis Bonus" value={DINAMIS_REWARD_TYPES.find(r => r.value === data.dinamis_reward_type)?.label || data.dinamis_reward_type} />
                     <ValueBox label="Batas Maksimal Bonus" value={data.dinamis_max_claim_unlimited ? 'Unlimited' : (data.dinamis_max_claim ? `Rp ${data.dinamis_max_claim.toLocaleString('id-ID')}` : undefined)} />
                     <ValueBox label={`Minimal Perhitungan ${CALCULATION_BASES.find(b => b.value === data.calculation_base)?.label || ''}`} value={data.min_calculation_enabled ? (data.min_calculation ? `Rp ${data.min_calculation.toLocaleString('id-ID')}` : undefined) : 'Tidak ada batas minimal'} />
