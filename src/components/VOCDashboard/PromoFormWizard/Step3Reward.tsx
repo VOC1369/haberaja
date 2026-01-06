@@ -1256,10 +1256,10 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     )}
                   </div>
                   
-                  {/* Nilai Bonus - DISABLED untuk eligibility-based rewards DAN hadiah fisik/uang tunai */}
+                  {/* Perhitungan Bonus - DISABLED untuk eligibility-based rewards DAN hadiah fisik/uang tunai */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className={(isEligibilityMode || !data.fixed_calculation_value_enabled) ? 'text-muted-foreground' : ''}>Nilai Bonus</Label>
+                      <Label className={(isEligibilityMode || !data.fixed_calculation_value_enabled) ? 'text-muted-foreground' : ''}>Perhitungan Bonus</Label>
                       {!isEligibilityMode && (
                         <div className="flex items-center gap-2">
                           <span className="text-sm text-muted-foreground">Aktifkan</span>
