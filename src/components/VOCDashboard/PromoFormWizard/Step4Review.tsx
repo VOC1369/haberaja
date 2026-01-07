@@ -996,11 +996,11 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
             (data.fixed_reward_quantity || 0) > 0
         ];
       } else {
-        // Standard reward: Credit Game, Cash, etc.
+        // Standard Fixed Mode reward: Credit Game, Cash, etc.
         step4Fields = [
           !!data.reward_mode,
-          !!data.reward_type,
-          data.reward_amount > 0
+          !!data.fixed_reward_type,
+          (data.fixed_cash_reward_amount || data.reward_amount || 0) > 0
         ];
       }
     } else if (data.reward_mode === 'formula') {
