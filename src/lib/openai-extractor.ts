@@ -3683,10 +3683,22 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
         return 'tahunan';
       }
       
-      // PRIORITY 2: LLM extracted
+      // ✅ PRIORITY 2: "HARIAN" in promo name = daily
+      if (/harian|daily|setiap\s*hari/i.test(promoName)) {
+        console.log('[Extractor] HARIAN in promo name = claim_frequency: harian');
+        return 'harian';
+      }
+      
+      // ✅ PRIORITY 3: "MINGGUAN" in promo name = weekly
+      if (/mingguan|weekly|setiap\s*minggu/i.test(promoName)) {
+        console.log('[Extractor] MINGGUAN in promo name = claim_frequency: mingguan');
+        return 'mingguan';
+      }
+      
+      // PRIORITY 4: LLM extracted
       if (extracted.claim_frequency) return extracted.claim_frequency;
       
-      // PRIORITY 3: Infer dari promo_type
+      // PRIORITY 5: Infer dari promo_type
       if (['cashback', 'rebate', 'rollingan', 'rollingan cashback'].includes(extracted.promo_type?.toLowerCase() || '')) {
         return 'mingguan';
       }
@@ -4386,6 +4398,24 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // ✅ FIX: Map dinamis_reward_type from first subcategory (was hardcoded to 'Freechip')
     dinamis_reward_type: (subcategories[0]?.jenis_hadiah || subcategories[0]?.dinamis_reward_type || 'credit_game').toLowerCase(),  // lowercase to match DINAMIS_REWARD_TYPES
     dinamis_reward_amount: 0,
+    
+    // ✅ FIX: payout_direction default for deposit bonus with turnover
+    payout_direction: (() => {
+      const llmDirection = subcategories[0]?.payout_direction as string | undefined;
+      if (llmDirection === 'depan' || llmDirection === 'before') return 'depan';
+      if (llmDirection === 'belakang' || llmDirection === 'after') return 'belakang';
+      
+      // Default: Deposit bonus dengan TO = bonus di depan (before WD)
+      const calcBase = (subcategories[0]?.calculation_base || '').toLowerCase();
+      // Use turnover_rule since turnover_multiplier may not exist on PromoSubCategory
+      const hasTurnover = !!(subcategories[0]?.turnover_rule && subcategories[0]?.turnover_rule !== '0x');
+      
+      if (calcBase === 'deposit' && hasTurnover) {
+        return 'depan';  // Bonus dulu, WD setelah TO
+      }
+      
+      return null;
+    })() as 'depan' | 'belakang' | null,
     dinamis_max_claim: subcategories[0]?.max_bonus || 0,
     dinamis_max_claim_unlimited: hasUnlimitedMaxBonus,
     // ✅ ONTOLOGY FIX: Read payout threshold from subcategory BEFORE it gets emptied
