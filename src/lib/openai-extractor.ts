@@ -3911,27 +3911,26 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       const promoName = (extracted.promo_name || '').toLowerCase();
       const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
       
+      // ✅ Check for explicit TO threshold (regardless of historical context)
+      const hasTOThreshold = 
+        /(?:total\s*)?(?:to|turnover)\s*(?:minimal|min\.?)?\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText);
+      
       // Guard: Historical eligibility patterns
       const hasHistoricalEligibility = 
         /turnover.*bulan/i.test(termsText) ||
         /dalam\s*\d+\s*bulan/i.test(termsText) ||
         /\d+\s*bulan\s*terakhir/i.test(termsText);
       
-      // Check for IMMEDIATE TO requirement pattern
-      const hasImmediateTORequirement = 
-        /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?|idr)?[\s:]*[0-9.,]+/i.test(termsText) &&
-        !hasHistoricalEligibility;
-      
-      // Birthday + Historical = disable
-      if (isBirthdayPromo && hasHistoricalEligibility && !hasImmediateTORequirement) {
-        console.log('[Extractor] Birthday + historical = disabling fixed_min_calculation');
-        return false;
+      // ✅ Birthday + explicit TO threshold = ENABLE (regardless of historical context)
+      if (isBirthdayPromo && hasTOThreshold) {
+        console.log('[Extractor] Birthday + explicit TO threshold = enabling fixed_min_calculation');
+        return true;
       }
       
-      // Birthday + Immediate TO = ENABLE (terms override keyword defaults)
-      if (isBirthdayPromo && hasImmediateTORequirement) {
-        console.log('[Extractor] Birthday + immediate TO = enabling fixed_min_calculation');
-        return true;
+      // Historical WITHOUT explicit threshold = disable
+      if (isBirthdayPromo && hasHistoricalEligibility && !hasTOThreshold) {
+        console.log('[Extractor] Birthday + historical WITHOUT threshold = disabling');
+        return false;
       }
       
       // PRIORITY 1: Keyword-based defaults
@@ -3945,8 +3944,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       const llmValue = extracted.subcategories[0]?.minimum_base;
       if (llmValue && llmValue > 0) return true;
       
-      // Check pattern "Minimum TO Rp X" (immediate, not historical)
-      if (hasImmediateTORequirement) return true;
+      // Check pattern "Minimum TO Rp X"
+      if (hasTOThreshold) return true;
       
       return false;
     })(),
@@ -3957,26 +3956,33 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       const promoName = (extracted.promo_name || '').toLowerCase();
       const isBirthdayPromo = /birthday|ulang\s*tahun|ultah|bday|ulangtahun/i.test(promoName);
       
-      // Guard: Historical eligibility patterns (e.g., "dalam 3 bulan terakhir")
-      const hasHistoricalEligibility = 
-        /turnover.*bulan/i.test(termsText) ||
-        /dalam\s*\d+\s*bulan/i.test(termsText) ||
-        /\d+\s*bulan\s*terakhir/i.test(termsText);
+      // ✅ Birthday + explicit TO threshold = EXTRACT VALUE (regardless of historical)
+      const toThresholdMatch = termsText.match(
+        /(?:total\s*)?(?:to|turnover)\s*(?:minimal|min\.?)?\s*(?:rp\.?|idr)?[\s:]*([0-9.,]+)\s*(?:jt|juta|rb|ribu|k)?/i
+      );
       
-      // Birthday + Historical = disable (move to special_requirements)
-      if (isBirthdayPromo && hasHistoricalEligibility) {
-        console.log('[Extractor] Birthday + historical = nullifying fixed_min_calculation');
-        return undefined;
+      if (isBirthdayPromo && toThresholdMatch) {
+        const rawNum = toThresholdMatch[1].replace(/[.,]/g, '');
+        let amount = parseInt(rawNum, 10);
+        
+        // Handle shorthand & Indonesian format
+        const suffix = toThresholdMatch[0].toLowerCase();
+        if (/jt|juta/i.test(suffix) && amount < 1000) amount *= 1_000_000;
+        else if (/rb|ribu|k/i.test(suffix) && amount < 10000) amount *= 1000;
+        else if (amount < 10000) amount *= 1_000_000; // assume juta if small number
+        
+        console.log('[Extractor] Birthday TO threshold extracted:', amount);
+        return amount;
       }
       
       // Source 1: LLM extracted minimum_base
       const llmValue = extracted.subcategories[0]?.minimum_base;
       if (llmValue && llmValue > 0) return llmValue;
       
-      // Source 2: Pattern extraction - "Minimum TO Rp 5.000.000" (immediate, not historical)
+      // Source 2: Pattern extraction - "Minimum TO Rp 5.000.000"
       const minTOPattern = /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:rp\.?|idr)?[\s:]*([0-9.,]+)\s*(?:jt|juta|rb|ribu|k)?/i;
       const toMatch = termsText.match(minTOPattern);
-      if (toMatch && !hasHistoricalEligibility) {
+      if (toMatch) {
         const rawNum = toMatch[1].replace(/[.,]/g, '');
         let amount = parseInt(rawNum, 10);
         
