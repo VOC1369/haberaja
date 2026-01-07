@@ -1275,7 +1275,19 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // REWARD CORE
   // ===============================
   canonical.reward_type = data.reward_type || data.dinamis_reward_type || data.fixed_reward_type || '';
-  canonical.reward_amount = data.reward_amount ?? data.dinamis_reward_amount ?? null;
+  // ✅ FIX: For formula mode, reward_amount = calculation_value (the percentage)
+  canonical.reward_amount = (() => {
+    // Mode formula: percentage stored in calculation_value
+    if (data.reward_mode === 'formula' && data.calculation_value) {
+      return data.calculation_value;
+    }
+    // Mode fixed: use fixed_cash_reward_amount
+    if (data.reward_mode === 'fixed' && data.fixed_cash_reward_amount) {
+      return data.fixed_cash_reward_amount;
+    }
+    // Fallback
+    return data.reward_amount ?? data.dinamis_reward_amount ?? null;
+  })();
   canonical.reward_unit = data.calculation_method === 'percentage' ? 'percent' : 'fixed';
   canonical.reward_is_percentage = data.calculation_method === 'percentage';
   canonical.max_bonus = data.max_bonus ?? data.max_claim ?? data.dinamis_max_claim ?? null;
