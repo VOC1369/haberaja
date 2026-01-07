@@ -1340,7 +1340,18 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   canonical.game_scope = data.game_restriction || '';
   canonical.game_types = data.game_types || [];
-  canonical.game_providers = data.game_providers || [];
+  canonical.game_providers = (() => {
+    // Explicit providers take priority
+    if (data.game_providers?.length > 0) return data.game_providers;
+    
+    // Default to ["Semua"] if no specific game scope restriction
+    const scope = (data.game_restriction || '').toLowerCase();
+    if (scope === 'semua' || scope === 'all_games' || scope === '' || scope === 'specific_game') {
+      return ['Semua'];
+    }
+    
+    return [];
+  })();
   canonical.game_exclusions = data.game_exclusions || consolidateGameExclusions(
     data.game_types_blacklist,
     data.game_providers_blacklist,
@@ -1439,16 +1450,25 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
 }
 
 /**
- * Helper: Normalize claim_frequency to English enum
+ * Helper: Normalize claim_frequency to Indonesian enum (canonical standard)
  */
 function normalizeClaimFrequency(freq?: string): string {
   if (!freq) return '';
   const map: Record<string, string> = {
-    'harian': 'daily',
-    'mingguan': 'weekly',
-    'bulanan': 'monthly',
-    'sekali': 'once',
-    'per_transaksi': 'per_transaction',
+    // English → Indonesian (normalize to Indonesian)
+    'daily': 'harian',
+    'weekly': 'mingguan',
+    'monthly': 'bulanan',
+    'yearly': 'tahunan',
+    'once': 'sekali',
+    'per_transaction': 'per_transaksi',
+    // Keep Indonesian as-is
+    'harian': 'harian',
+    'mingguan': 'mingguan',
+    'bulanan': 'bulanan',
+    'tahunan': 'tahunan',
+    'sekali': 'sekali',
+    'per_transaksi': 'per_transaksi',
   };
   return map[freq.toLowerCase()] || freq;
 }
