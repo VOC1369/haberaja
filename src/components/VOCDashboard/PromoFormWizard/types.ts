@@ -1304,7 +1304,21 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   // CLAIM RULES
   // ===============================
-  canonical.min_deposit = data.min_deposit ?? data.fixed_min_depo ?? null;
+  canonical.min_deposit = (() => {
+    // Explicit min_deposit takes priority
+    if (data.min_deposit) return data.min_deposit;
+    if (data.fixed_min_depo) return data.fixed_min_depo;
+    
+    // Auto-sync: For deposit-based promos, min_deposit = min_calculation
+    const trigger = (data.trigger_event || '').toLowerCase();
+    const calcBase = (data.calculation_base || '').toLowerCase();
+    
+    if ((trigger.includes('deposit') || calcBase === 'deposit') && data.min_calculation) {
+      return data.min_calculation;
+    }
+    
+    return null;
+  })();
   canonical.max_claim = data.max_claim ?? null;
   canonical.max_claim_unlimited = data.dinamis_max_claim_unlimited || data.fixed_max_claim_unlimited || false;
   canonical.claim_frequency = normalizeClaimFrequency(data.claim_frequency);
