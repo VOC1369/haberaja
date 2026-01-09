@@ -409,19 +409,15 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
             <SidebarMenuButton
               onClick={handleAccountClick}
               isActive={activeSection === "account"}
-              tooltip="Account"
-              className="p-3 h-auto group"
+              className="p-3 h-auto"
             >
               <Avatar className="h-8 w-8 shrink-0">
                 <AvatarImage src="" />
                 <AvatarFallback className="text-xs bg-button-hover text-button-hover-foreground font-semibold">EG</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium truncate text-button-hover group-hover:text-button-hover-foreground">Emilia Greene</span>
-                <span className={cn(
-                  "text-xs truncate group-hover:text-button-hover-foreground/70",
-                  activeSection === "account" ? "text-button-hover-foreground/70" : "text-muted-foreground"
-                )}>emilia.greene@example.com</span>
+                <span className="text-sm font-medium truncate text-button-hover group-hover/menu-button:text-button-hover-foreground group-data-[active=true]/menu-button:text-button-hover-foreground">Emilia Greene</span>
+                <span className="text-xs truncate text-muted-foreground group-hover/menu-button:text-button-hover-foreground/70 group-data-[active=true]/menu-button:text-button-hover-foreground/70">emilia.greene@example.com</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
