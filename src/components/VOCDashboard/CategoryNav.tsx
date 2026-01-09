@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Database, BookOpen, Settings, Shield, LogOut, LucideIcon, HelpCircle, ChevronDown, Ticket, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import vocLogo from "@/assets/voc-logo.png";
+import predictoLogo from "@/assets/predicto-logo.svg";
 import {
   Sidebar,
   SidebarContent,
@@ -87,12 +87,11 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
       )}>
         <div className="flex items-center justify-center">
           <img
-            src={vocLogo}
-            alt="Vault of Codex"
+            src={predictoLogo}
+            alt="Predicto"
             className={cn(
               "object-contain transition-all duration-300",
-              isCollapsed ? "h-6 w-6" : "h-5 w-auto",
-              "brightness-0 invert"
+              isCollapsed ? "h-6 w-6" : "h-5 w-auto"
             )}
           />
         </div>
