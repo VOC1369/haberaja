@@ -455,7 +455,11 @@ const SidebarMenuButton = React.forwardRef<
     />
   );
 
-  if (!tooltip) {
+  // Only wrap with Tooltip when sidebar is collapsed AND not mobile
+  // This prevents Radix Tooltip from interfering with hover events when expanded
+  const shouldShowTooltip = tooltip && state === "collapsed" && !isMobile;
+
+  if (!shouldShowTooltip) {
     return button;
   }
 
@@ -468,7 +472,7 @@ const SidebarMenuButton = React.forwardRef<
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="right" align="center" hidden={state !== "collapsed" || isMobile} {...tooltip} />
+      <TooltipContent side="right" align="center" {...tooltip} />
     </Tooltip>
   );
 });
