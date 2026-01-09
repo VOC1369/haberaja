@@ -112,7 +112,7 @@ describe('APK Download Extraction E2E', () => {
       
       // APK gate enforced
       expect(sanitized.require_apk).toBe(true);
-      expect(sanitized.trigger_event).toBe('Download_APK');
+      expect(sanitized.trigger_event).toBe('APK Download');
     });
     
     it('should force require_apk=true when APK in promo name', () => {
@@ -200,7 +200,7 @@ describe('APK Download Extraction E2E', () => {
       expect(sanitized.min_calculation).toBeNull();
       expect(sanitized.turnover_multiplier).toBeNull();
       expect(sanitized.require_apk).toBe(true);
-      expect(sanitized.trigger_event).toBe('Download_APK');
+      expect(sanitized.trigger_event).toBe('APK Download');
     });
     
     it('should handle formula mode promo differently (preserve calculation fields)', () => {
