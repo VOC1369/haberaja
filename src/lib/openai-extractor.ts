@@ -22,6 +22,28 @@ import { generateUUID } from './supabase-client';
 import { enforceFieldApplicability } from './extractors/field-applicability-map';
 import { getDefaultsFromKeywords } from './extractors/keyword-rules';
 
+// NEW: Reasoning-First Architecture imports (v2.0)
+import { 
+  reasonPromoIntent, 
+  calculateIntentConfidence, 
+  detectIntentConflicts,
+  type PromoIntent 
+} from './extractors/promo-intent-reasoner';
+import { 
+  routeMechanic, 
+  checkInvariants, 
+  getMechanicDisplayName,
+  type MechanicRouterResult,
+  type LockedFields,
+  type PromoMode
+} from './extractors/mechanic-router';
+import { 
+  arbitrate, 
+  formatConflicts,
+  type ArbitrationResult,
+  type ArbitrationInput
+} from './extractors/arbitration-rules';
+
 // ============= CONFIDENCE LEVELS (EXPANDED + NOT_APPLICABLE) =============
 export type ConfidenceLevel = 
   | 'explicit'           // tertulis jelas di halaman
@@ -2147,7 +2169,93 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
   }
 
   // ============================================
-  // STEP 1: AI Extraction - NOW RECEIVES CLEAN HTML
+  // STEP 0.75: PROMO INTENT REASONING (Reasoning-First Architecture v2.0)
+  // LLM answers 6 core questions BEFORE extraction
+  // This determines mechanic type and locked fields
+  // ============================================
+  let promoIntent: PromoIntent | null = null;
+  let mechanicResult: MechanicRouterResult | null = null;
+
+  try {
+    console.log('[Extractor] Starting Step-0.75: Promo Intent Reasoning...');
+    promoIntent = await reasonPromoIntent(normalizedContent);
+    
+    console.log('[Extractor] Promo Intent Result:', {
+      primary_action: promoIntent.primary_action,
+      reward_nature: promoIntent.reward_nature,
+      distribution_path: promoIntent.distribution_path,
+      value_shape: promoIntent.value_shape,
+      confidence: promoIntent.confidence,
+      evidence_count: promoIntent.intent_evidence.length,
+    });
+    
+    // Route to mechanic and get locked fields
+    mechanicResult = routeMechanic(promoIntent);
+    console.log('[Extractor] Mechanic Router Result:', {
+      mechanic_type: mechanicResult.mechanic_type,
+      mode: mechanicResult.locked_fields.mode,
+      calculation_basis: mechanicResult.locked_fields.calculation_basis,
+      reward_is_percentage: mechanicResult.locked_fields.reward_is_percentage,
+      invariant_violations: mechanicResult.invariant_violations,
+    });
+    
+  } catch (intentError) {
+    console.warn('[Extractor] Intent reasoning failed, continuing with legacy flow:', intentError);
+    // Non-fatal: continue without Step-0.75 (fallback to legacy behavior)
+  }
+
+  // ============================================
+  // STEP 0.85: ARBITRATION - Resolve conflicts between Q1-Q4 and Step-0
+  // Step-0 WINS for operational fields (mode, calculation_basis, reward_is_percentage)
+  // Q1-Q4 WINS for classification fields (category, intent_category, UI routing)
+  // ============================================
+  let arbitrationResult: ArbitrationResult | null = null;
+
+  if (classificationResult && promoIntent && mechanicResult) {
+    try {
+      arbitrationResult = arbitrate({
+        classification: classificationResult,
+        intent: promoIntent,
+        mechanic: mechanicResult,
+      });
+      
+      console.log('[Extractor] Arbitration Result:', {
+        final_mode: arbitrationResult.mode,
+        final_calc_basis: arbitrationResult.calculation_basis,
+        mechanic_type: arbitrationResult.mechanic_type,
+        conflicts: arbitrationResult.conflicts.length,
+        needs_human_review: arbitrationResult.needs_human_review,
+      });
+    } catch (arbError) {
+      console.warn('[Extractor] Arbitration failed:', arbError);
+    }
+  }
+
+  // ============================================
+  // BUILD LOCKED FIELDS CONTEXT FOR LLM
+  // This guides the LLM, but code will override after extraction
+  // ============================================
+  let lockedFieldsContext = '';
+  if (mechanicResult?.locked_fields) {
+    const locks = mechanicResult.locked_fields;
+    lockedFieldsContext = `
+
+⚠️ FIELD TERKUNCI OLEH SISTEM (Reasoning-First Architecture v2.0):
+Sistem telah menentukan tipe mekanik promo ini berdasarkan reasoning.
+
+- mechanic_type: ${mechanicResult.mechanic_type} (${getMechanicDisplayName(mechanicResult.mechanic_type)})
+- mode: ${locks.mode} (${locks.mode_reason})
+- calculation_basis: ${locks.calculation_basis === null ? 'NULL (tidak ada kalkulasi)' : locks.calculation_basis}
+- reward_is_percentage: ${locks.reward_is_percentage}
+
+⚠️ PENTING: Jangan mengubah nilai field di atas. Fokus pada ekstraksi field lainnya.
+Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
+  }
+
+  const enhancedPromptWithLocks = `${extractionPromptWithCount}${lockedFieldsContext}`;
+
+  // ============================================
+  // STEP 1: AI Extraction - NOW RECEIVES CLEAN HTML + LOCKED FIELDS CONTEXT
   // AI will see tables with ALL cells filled (no "-" for rowspan)
   // ============================================
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -2159,7 +2267,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: extractionPromptWithCount },
+        { role: "system", content: enhancedPromptWithLocks },
         { role: "user", content: `Ekstrak informasi promo dari konten berikut:\n\n${normalizedContent}` }
       ],
       temperature: 0.1,
@@ -2658,6 +2766,165 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
       }
     }));
     
+    // ============================================
+    // STEP POST-EXTRACTION: APPLY LOCKED FIELDS (CODE ENFORCED)
+    // This is the HARD OVERRIDE from Reasoning-First Architecture v2.0
+    // These values override LLM output regardless of what LLM returned
+    // ============================================
+    if (mechanicResult?.locked_fields) {
+      const locks = mechanicResult.locked_fields;
+      
+      console.log('[Extractor] Applying LOCKED FIELDS from Reasoning-First Architecture...');
+      
+      // Override promo_mode (mode)
+      if (locks.mode !== undefined) {
+        const oldMode = (parsed as any).promo_mode || (parsed as any).reward_mode;
+        (parsed as any).promo_mode = locks.mode;
+        (parsed as any).reward_mode = locks.mode; // Legacy alias
+        console.log(`[Extractor] LOCKED mode: ${oldMode} → ${locks.mode}`);
+      }
+      
+      // Override calculation_basis / calculation_base
+      if (locks.calculation_basis !== undefined) {
+        const oldCalcBasis = (parsed as any).calculation_base || (parsed as any).calculation_basis;
+        (parsed as any).calculation_base = locks.calculation_basis;
+        (parsed as any).calculation_basis = locks.calculation_basis;
+        
+        // Also apply to subcategories
+        parsed.subcategories = parsed.subcategories?.map((sub: any) => ({
+          ...sub,
+          calculation_base: locks.calculation_basis,
+          confidence: {
+            ...sub.confidence,
+            calculation_base: locks.calculation_basis === null ? 'not_applicable' : 'derived'
+          }
+        })) || [];
+        
+        console.log(`[Extractor] LOCKED calculation_basis: ${oldCalcBasis} → ${locks.calculation_basis}`);
+      }
+      
+      // Override reward_is_percentage
+      if (locks.reward_is_percentage !== undefined) {
+        const oldIsPercentage = (parsed as any).reward_is_percentage;
+        (parsed as any).reward_is_percentage = locks.reward_is_percentage;
+        
+        // Also update calculation_method in subcategories
+        parsed.subcategories = parsed.subcategories?.map((sub: any) => ({
+          ...sub,
+          calculation_method: locks.reward_is_percentage ? 'percentage' : 'fixed'
+        })) || [];
+        
+        console.log(`[Extractor] LOCKED reward_is_percentage: ${oldIsPercentage} → ${locks.reward_is_percentage}`);
+      }
+      
+      // Store mechanic_type for display/audit
+      (parsed as any).mechanic_type = mechanicResult.mechanic_type;
+      (parsed as any).mechanic_display_name = getMechanicDisplayName(mechanicResult.mechanic_type);
+      
+      // ========================================
+      // SPECIAL: APK DOWNLOAD PROMO OVERRIDES
+      // If mechanic is apk_download_reward, enforce specific fields
+      // ========================================
+      if (mechanicResult.mechanic_type === 'apk_download_reward') {
+        console.log('[Extractor] APK Download promo detected → applying special overrides');
+        
+        // require_apk MUST be true
+        (parsed as any).require_apk = true;
+        
+        // trigger_event MUST be APK related
+        if (!(parsed as any).trigger_event || (parsed as any).trigger_event === 'Login') {
+          (parsed as any).trigger_event = 'Download APK';
+        }
+        
+        // calculation_basis MUST be null (no formula)
+        (parsed as any).calculation_base = null;
+        (parsed as any).calculation_basis = null;
+        
+        // mode MUST NOT be formula
+        if ((parsed as any).promo_mode === 'formula') {
+          (parsed as any).promo_mode = 'event';
+          (parsed as any).reward_mode = 'event';
+        }
+        
+        console.log('[Extractor] APK overrides applied:', {
+          require_apk: true,
+          trigger_event: (parsed as any).trigger_event,
+          mode: (parsed as any).promo_mode,
+        });
+      }
+      
+      // ========================================
+      // SPECIAL: BIRTHDAY PROMO OVERRIDES
+      // ========================================
+      if (mechanicResult.mechanic_type === 'birthday_reward') {
+        (parsed as any).trigger_event = 'Birthday';
+        console.log('[Extractor] Birthday promo → trigger_event = Birthday');
+      }
+      
+      // ========================================
+      // SPECIAL: FREECHIP / VOUCHER OVERRIDES
+      // ========================================
+      if (['voucher_exchange', 'point_redeem'].includes(mechanicResult.mechanic_type)) {
+        (parsed as any).calculation_base = null;
+        (parsed as any).calculation_basis = null;
+        console.log('[Extractor] Voucher/Point promo → calculation_basis = null');
+      }
+    }
+    
+    // ============================================
+    // STEP: SET HUMAN REVIEW FLAG FROM REASONING
+    // Based on confidence and arbitration results
+    // ============================================
+    if (promoIntent && promoIntent.confidence < 0.6) {
+      parsed.ready_to_commit = false;
+      (parsed as any).needs_human_review = true;
+      (parsed as any).review_reason = `Intent confidence too low: ${promoIntent.confidence.toFixed(2)}`;
+      console.log('[Extractor] LOW CONFIDENCE → needs human review');
+    }
+    
+    if (arbitrationResult?.needs_human_review) {
+      parsed.ready_to_commit = false;
+      (parsed as any).needs_human_review = true;
+      (parsed as any).review_reason = arbitrationResult.review_reason;
+      console.log('[Extractor] ARBITRATION → needs human review:', arbitrationResult.review_reason);
+    }
+    
+    // ============================================
+    // STEP: STORE AUDIT TRAIL IN extra_config
+    // For debugging and transparency
+    // ============================================
+    (parsed as any).extra_config = {
+      ...(parsed as any).extra_config,
+      _reasoning_v2: {
+        promo_intent: promoIntent ? {
+          primary_action: promoIntent.primary_action,
+          reward_nature: promoIntent.reward_nature,
+          value_determiner: promoIntent.value_determiner,
+          time_scope: promoIntent.time_scope,
+          distribution_path: promoIntent.distribution_path,
+          value_shape: promoIntent.value_shape,
+          intent_evidence: promoIntent.intent_evidence,
+          confidence: promoIntent.confidence,
+          reasoner_version: promoIntent.reasoner_version,
+        } : null,
+        mechanic_selection: mechanicResult ? {
+          mechanic_type: mechanicResult.mechanic_type,
+          locked_fields: mechanicResult.locked_fields,
+          invariant_violations: mechanicResult.invariant_violations,
+          router_version: mechanicResult.router_version,
+        } : null,
+        arbitration: arbitrationResult ? {
+          mode: arbitrationResult.mode,
+          calculation_basis: arbitrationResult.calculation_basis,
+          mechanic_type: arbitrationResult.mechanic_type,
+          conflicts: arbitrationResult.conflicts,
+          needs_human_review: arbitrationResult.needs_human_review,
+          review_reason: arbitrationResult.review_reason,
+          arbitration_version: arbitrationResult.arbitration_version,
+        } : null,
+      },
+    };
+
     // Run validation
     const validationResult = validateExtractedPromo(parsed);
     parsed.validation = {
