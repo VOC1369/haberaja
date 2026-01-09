@@ -21,6 +21,7 @@ import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
 import { generateUUID } from './supabase-client';
 import { enforceFieldApplicability } from './extractors/field-applicability-map';
 import { getDefaultsFromKeywords } from './extractors/keyword-rules';
+import { sanitizeByMode, NON_FORMULA_MODES } from './sanitize-by-mode';
 
 // NEW: Reasoning-First Architecture imports (v2.0)
 import { 
@@ -3237,6 +3238,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     });
   }
 
+
   // Map promo type to exact PROMO_TYPES values
   const promoTypeMap: Record<string, string> = {
     'combo': 'Rollingan (Turnover-based)',
@@ -3519,6 +3521,18 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   };
   
   const modeDetection = detectRewardMode();
+
+  // ============================================
+  // SKIP FORMULA DEFAULTS FOR NON-FORMULA MODES
+  // If mode is event/fixed/tier, DO NOT apply formula defaults
+  // This prevents "ghost" formula fields in event promos
+  // ============================================
+  const initialMode = (lockedFields?.mode || modeDetection.mode) as string;
+  const skipFormulaDefaults = NON_FORMULA_MODES.includes(initialMode as typeof NON_FORMULA_MODES[number]);
+  
+  if (skipFormulaDefaults) {
+    console.log('[mapExtractedToPromoFormData] Mode is', initialMode, '— skipping formula defaults');
+  }
   
   // ============================================
   // REFERRAL MULTI-TIER DETECTION & MAPPING
@@ -4728,11 +4742,12 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
         }),
 
     // Dinamis mode - from first subcategory as base
-    calculation_base: subcategories[0]?.calculation_base || 'deposit',
-    calculation_method: subcategories[0]?.calculation_method || 'percentage',
-    calculation_value: subcategories[0]?.calculation_value || 0,
-    min_calculation: subcategories[0]?.minimum_base || 0,  // Renamed from minimum_base
-    min_calculation_enabled: (subcategories[0]?.minimum_base || 0) > 0,
+    // ✅ FIX: Skip formula defaults for non-formula modes (event/fixed/tier)
+    calculation_base: skipFormulaDefaults ? '' : (subcategories[0]?.calculation_base || 'deposit'),
+    calculation_method: skipFormulaDefaults ? '' : (subcategories[0]?.calculation_method || 'percentage'),
+    calculation_value: skipFormulaDefaults ? null : (subcategories[0]?.calculation_value || 0),
+    min_calculation: skipFormulaDefaults ? null : (subcategories[0]?.minimum_base || 0),
+    min_calculation_enabled: skipFormulaDefaults ? false : ((subcategories[0]?.minimum_base || 0) > 0),
     
     // ✅ FIX: Map dinamis_reward_type from first subcategory (was hardcoded to 'Freechip')
     dinamis_reward_type: (subcategories[0]?.jenis_hadiah || subcategories[0]?.dinamis_reward_type || 'credit_game').toLowerCase(),  // lowercase to match DINAMIS_REWARD_TYPES
@@ -4938,5 +4953,19 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       inerted_fields.map(f => `${f.field}: ${JSON.stringify(f.from)} → ${JSON.stringify(f.to)}`));
   }
 
-  return enforcedData as unknown as PromoFormData;
+  // ============================================
+  // FINAL SAFETY NET: sanitizeByMode()
+  // Mematikan impossible state berdasarkan mode
+  // This is the last line of defense against ghost fields
+  // ============================================
+  const sanitizedData = sanitizeByMode(enforcedData);
+  
+  console.log('[mapExtractedToPromoFormData] Applied sanitizeByMode:', {
+    mode: sanitizedData.reward_mode,
+    calculation_basis: sanitizedData.calculation_basis,
+    require_apk: sanitizedData.require_apk,
+    trigger_event: sanitizedData.trigger_event,
+  });
+
+  return sanitizedData as unknown as PromoFormData;
 }
