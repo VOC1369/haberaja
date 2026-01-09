@@ -152,10 +152,10 @@ export function sanitizeByMode(promo: Record<string, unknown>): Record<string, u
   if (isApkContext || out.require_apk === true) {
     out.require_apk = true;
     
-    // For event mode APK promos: trigger MUST be Download_APK (absolute)
+    // For event mode APK promos: trigger MUST be 'APK Download' (matches enum)
     // "Login", "Deposit", etc. are not valid triggers for APK-gated promos
     if (mode === 'event') {
-      out.trigger_event = 'Download_APK';
+      out.trigger_event = 'APK Download';
     }
   }
 

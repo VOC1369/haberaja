@@ -3224,7 +3224,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   // ============================================
   const reasoningV2 = extracted._reasoning_v2;
   
-  const lockedFields = reasoningV2?.mechanic_selection?.locked_fields;
+  // Cast to LockedFields type to access all fields including v3.0 additions
+  const lockedFields = reasoningV2?.mechanic_selection?.locked_fields as LockedFields | undefined;
   const mechanicType = reasoningV2?.mechanic_selection?.mechanic_type;
   
   // Log if locked fields exist
@@ -4954,11 +4955,58 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   }
 
   // ============================================
+  // COMPLETE LOCKED FIELDS APPLICATION (v3.0)
+  // Apply ALL locked fields from Reasoning-First Architecture
+  // These are PHYSICS LAWS - cannot be overridden by UI or keyword defaults
+  // ============================================
+  let dataWithLockedFields = enforcedData;
+  
+  if (lockedFields) {
+    console.log('[mapExtractedToPromoFormData] Applying COMPLETE locked fields as LAW:', {
+      trigger_event: lockedFields.trigger_event,
+      require_apk: lockedFields.require_apk,
+      reward_amount: lockedFields.reward_amount,
+      max_claim: lockedFields.max_claim,
+      turnover_enabled: lockedFields.turnover_enabled,
+    });
+    
+    // Apply each locked field as non-negotiable law
+    if (lockedFields.trigger_event !== undefined) {
+      dataWithLockedFields.trigger_event = lockedFields.trigger_event;
+    }
+    if (lockedFields.require_apk !== undefined) {
+      dataWithLockedFields.require_apk = lockedFields.require_apk;
+    }
+    if (lockedFields.reward_amount !== undefined) {
+      dataWithLockedFields.reward_amount = lockedFields.reward_amount;
+    }
+    if (lockedFields.max_bonus !== undefined) {
+      dataWithLockedFields.max_bonus = lockedFields.max_bonus;
+    }
+    if (lockedFields.max_claim !== undefined) {
+      dataWithLockedFields.max_claim = lockedFields.max_claim;
+    }
+    if (lockedFields.max_claim_unlimited !== undefined) {
+      dataWithLockedFields.max_claim_unlimited = lockedFields.max_claim_unlimited;
+    }
+    if (lockedFields.turnover_enabled !== undefined) {
+      dataWithLockedFields.turnover_enabled = lockedFields.turnover_enabled;
+      dataWithLockedFields.turnover_rule_enabled = lockedFields.turnover_enabled;
+    }
+    if (lockedFields.turnover_multiplier !== undefined) {
+      dataWithLockedFields.turnover_multiplier = lockedFields.turnover_multiplier;
+    }
+    if (lockedFields.min_deposit !== undefined) {
+      dataWithLockedFields.min_deposit = lockedFields.min_deposit;
+    }
+  }
+
+  // ============================================
   // FINAL SAFETY NET: sanitizeByMode()
   // Mematikan impossible state berdasarkan mode
   // This is the last line of defense against ghost fields
   // ============================================
-  const sanitizedData = sanitizeByMode(enforcedData);
+  const sanitizedData = sanitizeByMode(dataWithLockedFields);
   
   console.log('[mapExtractedToPromoFormData] Applied sanitizeByMode:', {
     mode: sanitizedData.reward_mode,

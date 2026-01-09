@@ -77,6 +77,21 @@ export interface LockedFields {
   calculation_basis: string | null;
   reward_is_percentage: boolean;
   
+  // ============================================
+  // NEW: Complete Field Locking (v3.0)
+  // These fields are LOCKED by Step-0 reasoning
+  // UI CANNOT override these values
+  // ============================================
+  trigger_event?: string;
+  require_apk?: boolean;
+  reward_amount?: number | null;
+  max_bonus?: number | null;
+  max_claim?: number | null;
+  max_claim_unlimited?: boolean;
+  turnover_enabled?: boolean;
+  turnover_multiplier?: number | null;
+  min_deposit?: number | null;
+  
   // Required one-of constraints
   required_one_of?: string[][];
   
@@ -372,6 +387,53 @@ export function routeMechanic(intent: PromoIntent): MechanicRouterResult {
     required_fields: enforced_locks.required_fields,
     forbidden_fields: {},
   };
+  
+  // ============================================
+  // Step 6: Mechanic-Specific Field Locking (v3.0)
+  // These are PHYSICS LAWS - cannot be overridden
+  // ============================================
+  
+  // APK Download Reward: Event mode, no formula, must require APK
+  if (mechanic_type === 'apk_download_reward') {
+    locked_fields.trigger_event = 'APK Download';
+    locked_fields.require_apk = true;
+    locked_fields.reward_amount = null;      // APK promos use range, not fixed amount
+    locked_fields.max_bonus = null;          // Not applicable for event
+    locked_fields.max_claim = 1;             // Typically once per user
+    locked_fields.max_claim_unlimited = false;
+    locked_fields.turnover_enabled = false;
+    locked_fields.turnover_multiplier = null;
+    locked_fields.min_deposit = null;        // No deposit required for APK
+    
+    console.log('[routeMechanic] APK_DOWNLOAD_REWARD: Complete field locking applied');
+  }
+  
+  // Birthday Reward: Fixed/Event mode, login trigger, once per year
+  if (mechanic_type === 'birthday_reward') {
+    locked_fields.trigger_event = 'Login';
+    locked_fields.max_claim = 1;
+    locked_fields.max_claim_unlimited = false;
+    locked_fields.turnover_enabled = false;  // Birthday typically no turnover
+    
+    console.log('[routeMechanic] BIRTHDAY_REWARD: Complete field locking applied');
+  }
+  
+  // Mission Completion: Event mode, no deposit requirement
+  if (mechanic_type === 'mission_completion') {
+    locked_fields.min_deposit = null;
+    locked_fields.turnover_enabled = false;
+    
+    console.log('[routeMechanic] MISSION_COMPLETION: Complete field locking applied');
+  }
+  
+  // Redemption Store: Event/Tier mode, no calculation
+  if (mechanic_type === 'redemption_store' || mechanic_type === 'point_redeem') {
+    locked_fields.reward_amount = null;      // User chooses from catalog
+    locked_fields.max_bonus = null;          // Not applicable
+    locked_fields.turnover_enabled = false;
+    
+    console.log('[routeMechanic] REDEMPTION: Complete field locking applied');
+  }
   
   // Add forbidden values based on mode
   if (mode !== 'formula') {
