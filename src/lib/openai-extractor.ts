@@ -739,6 +739,39 @@ export interface ExtractedPromo {
     warnings: string[];  // All issues are warnings, not blocking errors
   };
   
+  // NEW: Reasoning-First Architecture v2.0 audit trail
+  _reasoning_v2?: {
+    promo_intent?: {
+      primary_action?: string;
+      reward_nature?: string;
+      distribution_path?: string;
+      value_shape?: string;
+      intent_evidence?: string[];
+      confidence?: number;
+    };
+    mechanic_selection?: {
+      mechanic_type?: string;
+      locked_fields?: {
+        mode?: string;
+        calculation_basis?: string | null;
+        reward_is_percentage?: boolean;
+        trigger_event?: string;
+        require_apk?: boolean;
+      };
+      invariant_violations?: string[];
+    };
+    arbitration?: {
+      conflicts?: Array<{
+        field: string;
+        q1q4_value: unknown;
+        step0_value: unknown;
+        winner: string;
+        reason: string;
+      }>;
+      needs_human_review?: boolean;
+    };
+  };
+  
   ready_to_commit: boolean;  // SELALU false sampai user confirm
 }
 
@@ -2890,39 +2923,36 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     }
     
     // ============================================
-    // STEP: STORE AUDIT TRAIL IN extra_config
-    // For debugging and transparency
+    // STEP: STORE AUDIT TRAIL DIRECTLY ON ExtractedPromo
+    // For debugging, transparency, and use by mapExtractedToPromoFormData
     // ============================================
-    (parsed as any).extra_config = {
-      ...(parsed as any).extra_config,
-      _reasoning_v2: {
-        promo_intent: promoIntent ? {
-          primary_action: promoIntent.primary_action,
-          reward_nature: promoIntent.reward_nature,
-          value_determiner: promoIntent.value_determiner,
-          time_scope: promoIntent.time_scope,
-          distribution_path: promoIntent.distribution_path,
-          value_shape: promoIntent.value_shape,
-          intent_evidence: promoIntent.intent_evidence,
-          confidence: promoIntent.confidence,
-          reasoner_version: promoIntent.reasoner_version,
-        } : null,
-        mechanic_selection: mechanicResult ? {
-          mechanic_type: mechanicResult.mechanic_type,
-          locked_fields: mechanicResult.locked_fields,
-          invariant_violations: mechanicResult.invariant_violations,
-          router_version: mechanicResult.router_version,
-        } : null,
-        arbitration: arbitrationResult ? {
-          mode: arbitrationResult.mode,
-          calculation_basis: arbitrationResult.calculation_basis,
-          mechanic_type: arbitrationResult.mechanic_type,
-          conflicts: arbitrationResult.conflicts,
-          needs_human_review: arbitrationResult.needs_human_review,
-          review_reason: arbitrationResult.review_reason,
-          arbitration_version: arbitrationResult.arbitration_version,
-        } : null,
-      },
+    (parsed as any)._reasoning_v2 = {
+      promo_intent: promoIntent ? {
+        primary_action: promoIntent.primary_action,
+        reward_nature: promoIntent.reward_nature,
+        value_determiner: promoIntent.value_determiner,
+        time_scope: promoIntent.time_scope,
+        distribution_path: promoIntent.distribution_path,
+        value_shape: promoIntent.value_shape,
+        intent_evidence: promoIntent.intent_evidence,
+        confidence: promoIntent.confidence,
+        reasoner_version: promoIntent.reasoner_version,
+      } : null,
+      mechanic_selection: mechanicResult ? {
+        mechanic_type: mechanicResult.mechanic_type,
+        locked_fields: mechanicResult.locked_fields,
+        invariant_violations: mechanicResult.invariant_violations,
+        router_version: mechanicResult.router_version,
+      } : null,
+      arbitration: arbitrationResult ? {
+        mode: arbitrationResult.mode,
+        calculation_basis: arbitrationResult.calculation_basis,
+        mechanic_type: arbitrationResult.mechanic_type,
+        conflicts: arbitrationResult.conflicts,
+        needs_human_review: arbitrationResult.needs_human_review,
+        review_reason: arbitrationResult.review_reason,
+        arbitration_version: arbitrationResult.arbitration_version,
+      } : null,
     };
 
     // Run validation
@@ -3187,6 +3217,26 @@ function ensureCalculationBaseConsistency(data: PromoFormData): PromoFormData {
  * This function is used inside useMemo and relies on referential stability.
  */
 export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFormData {
+  // ============================================
+  // PRIORITY 0: Extract locked fields from Reasoning-First Architecture
+  // These OVERRIDE all other sources (keyword defaults, LLM extraction)
+  // ============================================
+  const reasoningV2 = extracted._reasoning_v2;
+  
+  const lockedFields = reasoningV2?.mechanic_selection?.locked_fields;
+  const mechanicType = reasoningV2?.mechanic_selection?.mechanic_type;
+  
+  // Log if locked fields exist
+  if (lockedFields) {
+    console.log('[mapExtractedToPromoFormData] Using locked fields from Reasoning-First:', {
+      mode: lockedFields.mode,
+      calculation_basis: lockedFields.calculation_basis,
+      trigger_event: lockedFields.trigger_event,
+      require_apk: lockedFields.require_apk,
+      mechanic_type: mechanicType,
+    });
+  }
+
   // Map promo type to exact PROMO_TYPES values
   const promoTypeMap: Record<string, string> = {
     'combo': 'Rollingan (Turnover-based)',
@@ -3230,6 +3280,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     'login': 'Login',
     'loss_streak': 'Loss Streak',
     'apk_download': 'APK Download',
+    'download_apk': 'Download APK',  // Added for Step-0 output
     'turnover': 'Turnover',
     'mission_completed': 'Mission Completed',
     'user_request': 'First Deposit',  // Fallback for generic trigger
@@ -3877,6 +3928,11 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     })(),
     target_segment: targetUserMap[extracted.target_user?.toLowerCase()] || 'Semua',
     trigger_event: (() => {
+      // PRIORITY 0: Locked fields from Reasoning-First Architecture (HIGHEST)
+      if (lockedFields?.trigger_event) {
+        console.log('[Extractor] Using LOCKED trigger_event from Step-0:', lockedFields.trigger_event);
+        return triggerEventMap[lockedFields.trigger_event.toLowerCase()] || lockedFields.trigger_event;
+      }
       // Priority 1: Keyword-based override (Birthday → Login, Referral → Referral)
       const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
       if (keywordDefaults?.trigger_event) {
@@ -3887,8 +3943,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       return getTriggerEventDefault(extracted.promo_type || '');
     })(),
 
-    // Step 2 - Reward Mode (NOW WITH AUTO-DETECTION)
-    reward_mode: modeDetection.mode,
+    // Step 2 - Reward Mode (NOW WITH AUTO-DETECTION + LOCKED FIELDS OVERRIDE)
+    reward_mode: lockedFields?.mode || modeDetection.mode,
     
     // Metadata for UI to show auto-detection badge
     _mode_auto_detected: modeDetection.auto_detected,
@@ -4029,7 +4085,23 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       return extractedType || 'credit_game';
     })(),
     fixed_calculation_base: (() => {
-      if (modeDetection.mode !== 'fixed') return '';
+      // PRIORITY 0: Locked fields from Reasoning-First Architecture
+      // If calculation_basis is explicitly null, return empty string (no calculation needed)
+      if (lockedFields?.calculation_basis === null) {
+        console.log('[Extractor] Using LOCKED calculation_basis: null → empty string');
+        return '';
+      }
+      if (lockedFields?.calculation_basis) {
+        console.log('[Extractor] Using LOCKED calculation_basis:', lockedFields.calculation_basis);
+        return lockedFields.calculation_basis;
+      }
+      
+      if (modeDetection.mode !== 'fixed' && !lockedFields?.mode) return '';
+      // If mode is 'event', no calculation basis needed
+      if (lockedFields?.mode === 'event') {
+        console.log('[Extractor] Mode is "event" → no calculation_basis needed');
+        return '';
+      }
       
       const promoName = (extracted.promo_name || '').toLowerCase();
       const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
@@ -4728,7 +4800,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     valid_until_unlimited: !extracted.valid_until,
     status: 'draft',
     geo_restriction: 'indonesia',  // Default wilayah Indonesia
-    require_apk: false,
+    require_apk: lockedFields?.require_apk ?? false,
     promo_risk_level: 'medium',
 
     // Admin Fee (untuk Referral Bonus)
