@@ -325,4 +325,56 @@ describe('sanitizeByMode — Final Safety Net v1.0', () => {
       });
     });
   });
+
+  // ========================================
+  // I. V1.1 ADDITIONS
+  // ========================================
+  describe('I. V1.1 Additions', () => {
+    it('T11: uses mode field when reward_mode is missing (canonical export)', () => {
+      const input = {
+        mode: 'event',  // canonical uses 'mode', not 'reward_mode'
+        calculation_basis: 'deposit',
+      };
+      const result = sanitizeByMode(input);
+      expect(result.calculation_basis).toBeNull();
+    });
+
+    it('T12: APK context with deposit trigger forces Download_APK', () => {
+      const input = {
+        reward_mode: 'event',
+        promo_name: 'Download APK Bonus',
+        trigger_event: 'First Deposit',
+      };
+      const result = sanitizeByMode(input);
+      expect(result.trigger_event).toBe('Download_APK');
+    });
+
+    it('T13: event mode with empty category defaults to REWARD', () => {
+      const input = {
+        reward_mode: 'event',
+        category: '',
+      };
+      const result = sanitizeByMode(input);
+      expect(result.category).toBe('REWARD');
+    });
+
+    it('T13b: event mode with existing category is preserved', () => {
+      const input = {
+        reward_mode: 'event',
+        category: 'BONUS',
+      };
+      const result = sanitizeByMode(input);
+      expect(result.category).toBe('BONUS');
+    });
+
+    it('T12b: APK context preserves non-deposit trigger', () => {
+      const input = {
+        reward_mode: 'event',
+        promo_name: 'Download APK Bonus',
+        trigger_event: 'Registration',
+      };
+      const result = sanitizeByMode(input);
+      expect(result.trigger_event).toBe('Registration');
+    });
+  });
 });
