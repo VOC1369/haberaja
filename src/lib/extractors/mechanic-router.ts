@@ -1,0 +1,433 @@
+/**
+ * Mechanic Router
+ * Version: v1.0.0+2025-01-09
+ * 
+ * REASONING-FIRST ARCHITECTURE:
+ * This module routes PromoIntent to specific mechanics.
+ * It enforces INVARIANTS (things that MUST NOT happen).
+ * It determines MODE (things that MUST happen).
+ * 
+ * KEY PRINCIPLE:
+ * - Invariants = PROHIBITIONS (mode ≠ formula)
+ * - Router = DETERMINATIONS (mode = event)
+ * 
+ * This separation prevents "confident but wrong" extractions.
+ */
+
+import type { PromoIntent, PrimaryAction, ValueShape, DistributionPath } from './promo-intent-reasoner';
+
+// ============================================
+// CURATED MECHANIC ENUM (20-40 types)
+// ============================================
+
+export type MechanicType =
+  // === Deposit-based (formula) ===
+  | 'deposit_bonus_percent'    // Bonus X% dari deposit
+  | 'deposit_bonus_fixed'      // Bonus tetap per deposit
+  | 'welcome_bonus'            // New member bonus
+  | 'reload_bonus'             // Reload/next deposit bonus
+  
+  // === Loss-based ===
+  | 'cashback_loss'            // Cashback dari kekalahan
+  | 'rebate_loss'              // Rebate dari loss
+  
+  // === Turnover-based ===
+  | 'rollingan_turnover'       // Rollingan % dari turnover
+  | 'komisi_turnover'          // Komisi harian/mingguan
+  
+  // === Event/Action-based ===
+  | 'apk_download_reward'      // Download APK dapat reward
+  | 'mission_completion'       // Selesaikan misi
+  | 'daily_checkin'            // Login harian
+  | 'level_up_reward'          // Naik level dapat bonus
+  | 'birthday_reward'          // Birthday bonus
+  | 'verification_reward'      // Verifikasi dapat bonus
+  
+  // === Redemption ===
+  | 'redemption_store'         // Tukar poin di store
+  | 'voucher_exchange'         // Tukar voucher
+  | 'point_redeem'             // Redeem poin
+  
+  // === Referral ===
+  | 'referral_commission'      // Komisi dari referral
+  | 'referral_bonus'           // Bonus per referral
+  
+  // === Event/Game ===
+  | 'lucky_spin'               // Lucky spin/gacha
+  | 'tournament'               // Tournament/leaderboard
+  | 'provider_event'           // Pragmatic, PG Soft events
+  | 'scatter_bonus'            // Scatter achievement
+  
+  // === Fallback ===
+  | 'unknown';                 // Tidak bisa ditentukan
+
+// ============================================
+// MODE TYPES
+// ============================================
+
+export type PromoMode = 'formula' | 'fixed' | 'tier' | 'event' | 'unknown';
+
+// ============================================
+// LOCKED FIELDS INTERFACE
+// ============================================
+
+export interface LockedFields {
+  mode: PromoMode;
+  mode_reason: string;
+  calculation_basis: string | null;
+  reward_is_percentage: boolean;
+  
+  // Required one-of constraints
+  required_one_of?: string[][];
+  
+  // Fields that MUST NOT have certain values
+  forbidden_fields?: Record<string, unknown[]>;
+  
+  // Fields that MUST have values
+  required_fields?: string[];
+}
+
+export interface MechanicRouterResult {
+  mechanic_type: MechanicType;
+  locked_fields: LockedFields;
+  invariant_violations: string[];
+  router_version: string;
+}
+
+// ============================================
+// INVARIANTS (PROHIBITIONS ONLY)
+// ============================================
+
+/**
+ * Check invariants and return violations.
+ * Invariants are PROHIBITIONS - things that MUST NOT happen.
+ */
+export function checkInvariants(intent: PromoIntent): {
+  violations: string[];
+  enforced_locks: Partial<LockedFields>;
+} {
+  const violations: string[] = [];
+  const enforced_locks: Partial<LockedFields> = {};
+  
+  // INVARIANT 1: Range/Catalog can NEVER be formula mode
+  // If value is a range or catalog, it's not calculated - it's given
+  if (intent.value_shape === 'range' || intent.value_shape === 'catalog') {
+    enforced_locks.mode = 'event'; // Could also be 'fixed' or 'tier'
+    enforced_locks.mode_reason = `value_shape=${intent.value_shape} prohibits formula mode`;
+    enforced_locks.reward_is_percentage = false;
+    enforced_locks.calculation_basis = null;
+    
+    // Log if intent said calculated (this is a correction)
+    if (intent.reward_nature === 'calculated') {
+      violations.push(`CORRECTED: value_shape=${intent.value_shape} with reward_nature=calculated is invalid`);
+    }
+  }
+  
+  // INVARIANT 2: Given rewards can NEVER be percentage
+  if (intent.reward_nature === 'given') {
+    enforced_locks.reward_is_percentage = false;
+    
+    // If somehow percent shape with given nature, that's invalid
+    if (intent.value_shape === 'percent') {
+      violations.push(`CONFLICT: reward_nature=given with value_shape=percent is contradictory`);
+      // Force to fixed shape
+      enforced_locks.mode = 'fixed';
+      enforced_locks.mode_reason = 'reward_nature=given requires fixed/event mode';
+    }
+  }
+  
+  // INVARIANT 3: Calculated rewards MUST have calculation_basis
+  if (intent.reward_nature === 'calculated') {
+    enforced_locks.required_fields = ['calculation_basis'];
+    enforced_locks.reward_is_percentage = true; // Usually
+  }
+  
+  // INVARIANT 4: Redemption store requires claim method OR distribution note
+  if (intent.distribution_path === 'redemption_store') {
+    enforced_locks.required_one_of = [
+      ['claim_method', 'distribution_note']
+    ];
+    enforced_locks.calculation_basis = null; // No calculation for redemption
+  }
+  
+  // INVARIANT 5: User choice (catalog/redemption) can't be formula
+  if (intent.value_determiner === 'user_choice') {
+    if (!enforced_locks.mode) {
+      enforced_locks.mode = 'tier'; // or 'event'
+      enforced_locks.mode_reason = 'user_choice requires tier/event mode (not formula)';
+    }
+  }
+  
+  return { violations, enforced_locks };
+}
+
+// ============================================
+// ROUTER (DETERMINATIONS)
+// ============================================
+
+/**
+ * Determine mechanic type from intent axes.
+ * This is a deterministic mapping, NOT LLM-based.
+ */
+function determineMechanicType(intent: PromoIntent): MechanicType {
+  const { primary_action, reward_nature, value_shape, distribution_path } = intent;
+  
+  // === APK Download ===
+  if (primary_action === 'download_apk') {
+    return 'apk_download_reward';
+  }
+  
+  // === Birthday ===
+  if (primary_action === 'birthday') {
+    return 'birthday_reward';
+  }
+  
+  // === Verification ===
+  if (primary_action === 'verify') {
+    return 'verification_reward';
+  }
+  
+  // === Referral ===
+  if (primary_action === 'referral') {
+    return reward_nature === 'calculated' ? 'referral_commission' : 'referral_bonus';
+  }
+  
+  // === Level Up ===
+  if (primary_action === 'level_up') {
+    return 'level_up_reward';
+  }
+  
+  // === Mission/Quest ===
+  if (primary_action === 'mission') {
+    return 'mission_completion';
+  }
+  
+  // === Redemption ===
+  if (primary_action === 'redeem' || distribution_path === 'redemption_store') {
+    if (value_shape === 'catalog') {
+      return 'redemption_store';
+    }
+    return 'point_redeem';
+  }
+  
+  // === Login ===
+  if (primary_action === 'login') {
+    return 'daily_checkin';
+  }
+  
+  // === Loss-based ===
+  if (primary_action === 'loss') {
+    return 'cashback_loss';
+  }
+  
+  // === Turnover-based ===
+  if (primary_action === 'turnover') {
+    return 'rollingan_turnover';
+  }
+  
+  // === Deposit-based ===
+  if (primary_action === 'deposit') {
+    if (reward_nature === 'given') {
+      return 'deposit_bonus_fixed';
+    }
+    return 'deposit_bonus_percent';
+  }
+  
+  // === Bet-based ===
+  if (primary_action === 'bet') {
+    return 'komisi_turnover'; // Or could be scatter_bonus
+  }
+  
+  // === Register ===
+  if (primary_action === 'register') {
+    return 'welcome_bonus';
+  }
+  
+  return 'unknown';
+}
+
+/**
+ * Determine mode from intent and mechanic.
+ * Router DETERMINES mode (different from invariant PROHIBITIONS).
+ */
+function determineMode(intent: PromoIntent, mechanic: MechanicType): PromoMode {
+  // Check invariant locks first
+  const { enforced_locks } = checkInvariants(intent);
+  if (enforced_locks.mode) {
+    return enforced_locks.mode;
+  }
+  
+  // === Mechanics that are ALWAYS formula ===
+  const formulaMechanics: MechanicType[] = [
+    'deposit_bonus_percent',
+    'cashback_loss',
+    'rebate_loss',
+    'rollingan_turnover',
+    'komisi_turnover',
+    'referral_commission',
+  ];
+  if (formulaMechanics.includes(mechanic)) {
+    return 'formula';
+  }
+  
+  // === Mechanics that are ALWAYS fixed ===
+  const fixedMechanics: MechanicType[] = [
+    'deposit_bonus_fixed',
+    'birthday_reward',
+    'verification_reward',
+    'daily_checkin',
+  ];
+  if (fixedMechanics.includes(mechanic)) {
+    return 'fixed';
+  }
+  
+  // === Mechanics that are ALWAYS tier ===
+  const tierMechanics: MechanicType[] = [
+    'redemption_store',
+    'level_up_reward',
+    'referral_bonus',
+    'point_redeem',
+  ];
+  if (tierMechanics.includes(mechanic)) {
+    return 'tier';
+  }
+  
+  // === Mechanics that are ALWAYS event ===
+  const eventMechanics: MechanicType[] = [
+    'apk_download_reward',
+    'mission_completion',
+    'lucky_spin',
+    'tournament',
+    'provider_event',
+    'scatter_bonus',
+    'voucher_exchange',
+  ];
+  if (eventMechanics.includes(mechanic)) {
+    return 'event';
+  }
+  
+  // === Fallback based on reward_nature ===
+  if (intent.reward_nature === 'calculated') {
+    return 'formula';
+  }
+  
+  return 'fixed'; // Safe default
+}
+
+/**
+ * Determine calculation basis from intent.
+ */
+function determineCalculationBasis(intent: PromoIntent, mode: PromoMode): string | null {
+  // Non-formula modes don't have calculation basis
+  if (mode !== 'formula') {
+    return null;
+  }
+  
+  // Map primary_action to calculation_basis
+  switch (intent.primary_action) {
+    case 'deposit':
+    case 'register':
+      return 'deposit';
+    case 'loss':
+      return 'loss';
+    case 'turnover':
+    case 'bet':
+      return 'turnover';
+    case 'referral':
+      return 'referral_turnover';
+    default:
+      return null;
+  }
+}
+
+// ============================================
+// MAIN ROUTER FUNCTION
+// ============================================
+
+const ROUTER_VERSION = 'v1.0.0+2025-01-09';
+
+/**
+ * Route PromoIntent to MechanicType and determine locked fields.
+ */
+export function routeMechanic(intent: PromoIntent): MechanicRouterResult {
+  // Step 1: Check invariants
+  const { violations, enforced_locks } = checkInvariants(intent);
+  
+  // Step 2: Determine mechanic type
+  const mechanic_type = determineMechanicType(intent);
+  
+  // Step 3: Determine mode (respecting invariant locks)
+  const mode = enforced_locks.mode || determineMode(intent, mechanic_type);
+  
+  // Step 4: Determine calculation basis
+  const calculation_basis = determineCalculationBasis(intent, mode);
+  
+  // Step 5: Build locked fields
+  const locked_fields: LockedFields = {
+    mode,
+    mode_reason: enforced_locks.mode_reason || `Determined from mechanic=${mechanic_type}`,
+    calculation_basis,
+    reward_is_percentage: enforced_locks.reward_is_percentage ?? (mode === 'formula'),
+    required_one_of: enforced_locks.required_one_of,
+    required_fields: enforced_locks.required_fields,
+    forbidden_fields: {},
+  };
+  
+  // Add forbidden values based on mode
+  if (mode !== 'formula') {
+    locked_fields.forbidden_fields = {
+      ...locked_fields.forbidden_fields,
+      reward_mode: ['formula'], // Can't be formula
+    };
+  }
+  
+  return {
+    mechanic_type,
+    locked_fields,
+    invariant_violations: violations,
+    router_version: ROUTER_VERSION,
+  };
+}
+
+// ============================================
+// UTILITY: Get mechanic display name
+// ============================================
+
+export function getMechanicDisplayName(mechanic: MechanicType): string {
+  const names: Record<MechanicType, string> = {
+    deposit_bonus_percent: 'Bonus Deposit (%)',
+    deposit_bonus_fixed: 'Bonus Deposit (Fixed)',
+    welcome_bonus: 'Welcome Bonus',
+    reload_bonus: 'Reload Bonus',
+    cashback_loss: 'Cashback Kekalahan',
+    rebate_loss: 'Rebate',
+    rollingan_turnover: 'Rollingan',
+    komisi_turnover: 'Komisi Turnover',
+    apk_download_reward: 'Bonus Download APK',
+    mission_completion: 'Bonus Misi',
+    daily_checkin: 'Bonus Login Harian',
+    level_up_reward: 'Bonus Level Up',
+    birthday_reward: 'Bonus Ulang Tahun',
+    verification_reward: 'Bonus Verifikasi',
+    redemption_store: 'Redemption Store',
+    voucher_exchange: 'Tukar Voucher',
+    point_redeem: 'Tukar Poin',
+    referral_commission: 'Komisi Referral',
+    referral_bonus: 'Bonus Referral',
+    lucky_spin: 'Lucky Spin',
+    tournament: 'Tournament',
+    provider_event: 'Event Provider',
+    scatter_bonus: 'Bonus Scatter',
+    unknown: 'Unknown',
+  };
+  
+  return names[mechanic] || mechanic;
+}
+
+// ============================================
+// EXPORTS
+// ============================================
+
+export {
+  ROUTER_VERSION,
+};

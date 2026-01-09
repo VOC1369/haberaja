@@ -6,6 +6,12 @@
  * - Source tracking (meta_tag/copyright/content_mention/etc)
  * - Field-aware propagation rules
  * - LLM-based classification (Q1-Q4 reasoning)
+ * 
+ * === REASONING-FIRST ARCHITECTURE (v2.0) ===
+ * New modules added 2025-01-09:
+ * - promo-intent-reasoner: Step-0 LLM reasoning (6 core questions)
+ * - mechanic-router: Deterministic mechanic routing with invariants
+ * - arbitration-rules: Q1-Q4 vs Step-0 conflict resolution
  */
 
 // Client ID extraction
@@ -125,3 +131,48 @@ export {
   type CanonicalGuardResult,
   type HardFailResult,
 } from '../canonical-guard';
+
+// ============================================
+// REASONING-FIRST ARCHITECTURE (v2.0)
+// ============================================
+
+// Promo Intent Reasoner (Step-0)
+export {
+  reasonPromoIntent,
+  calculateIntentConfidence,
+  detectIntentConflicts,
+  REASONER_VERSION,
+  INTENT_REASONER_PROMPT,
+  type PromoIntent,
+  type PrimaryAction,
+  type RewardNature,
+  type ValueDeterminer,
+  type TimeScope,
+  type DistributionPath,
+  type ValueShape,
+} from './promo-intent-reasoner';
+
+// Mechanic Router
+export {
+  routeMechanic,
+  checkInvariants,
+  getMechanicDisplayName,
+  ROUTER_VERSION,
+  type MechanicType,
+  type PromoMode,
+  type LockedFields,
+  type MechanicRouterResult,
+} from './mechanic-router';
+
+// Arbitration Rules
+export {
+  arbitrate,
+  formatConflicts,
+  ARBITRATION_VERSION,
+  categoryToUIRouting,
+  actionToSuggestedCategory,
+  isStrongNonPromo,
+  type ArbitrationInput,
+  type ArbitrationResult,
+  type ConflictRecord,
+} from './arbitration-rules';
