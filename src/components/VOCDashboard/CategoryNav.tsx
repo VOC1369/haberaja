@@ -97,7 +97,7 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
         </div>
       </SidebarHeader>
 
-      <SidebarContent className={cn("transition-all", isCollapsed ? "px-1" : "px-3")}>
+      <SidebarContent className={cn("transition-all", isCollapsed ? "px-0" : "px-3")}>
         <SidebarGroup>
           <SidebarGroupLabel className={cn(
             "text-xs text-button-hover uppercase tracking-wide mb-3 transition-all",
