@@ -1,5 +1,16 @@
 import { cn } from "@/lib/utils";
-import { Database, BookOpen, Settings, Shield, LogOut, LucideIcon, HelpCircle, ChevronDown, Ticket, MessageCircle } from "lucide-react";
+import {
+  Database,
+  BookOpen,
+  Settings,
+  Shield,
+  LogOut,
+  LucideIcon,
+  HelpCircle,
+  ChevronDown,
+  Ticket,
+  MessageCircle,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import predictoLogo from "@/assets/predicto-logo.svg";
 import {
@@ -50,7 +61,16 @@ interface CategoryNavProps {
   onKnowledgeCategoryChange: (key: string) => void;
 }
 
-export function CategoryNav({ activeSection, onSectionChange, activeCategory, onCategoryChange, activeTicketCategory, onTicketCategoryChange, activeKnowledgeCategory, onKnowledgeCategoryChange }: CategoryNavProps) {
+export function CategoryNav({
+  activeSection,
+  onSectionChange,
+  activeCategory,
+  onCategoryChange,
+  activeTicketCategory,
+  onTicketCategoryChange,
+  activeKnowledgeCategory,
+  onKnowledgeCategoryChange,
+}: CategoryNavProps) {
   const navigate = useNavigate();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -81,28 +101,31 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
-      <SidebarHeader className={cn(
-        "h-[57px] flex items-center border-b border-border transition-all",
-        isCollapsed ? "justify-center px-0" : "justify-center px-3"
-      )}>
+      <SidebarHeader
+        className={cn(
+          "h-[57px] flex items-center border-b border-border transition-all",
+          isCollapsed ? "justify-center px-0" : "justify-center px-3",
+        )}
+      >
         <div className="flex items-center justify-center">
           <img
             src={predictoLogo}
             alt="Predicto"
-            className={cn(
-              "object-contain transition-all duration-300",
-              isCollapsed ? "h-6 w-6" : "h-5 w-auto"
-            )}
+            className={cn("object-contain transition-all duration-300", isCollapsed ? "h-6 w-6" : "h-5 w-auto")}
           />
         </div>
       </SidebarHeader>
 
-      <SidebarContent className={cn("transition-all", isCollapsed ? "px-0" : "px-3")}>
-        <SidebarGroup className={cn(isCollapsed && "p-0 py-2")}>
-          <SidebarGroupLabel className={cn(
-            "text-xs text-button-hover uppercase tracking-wide mb-3 transition-all",
-            isCollapsed ? "px-0 text-center" : "px-3"
-          )}>{isCollapsed ? "" : "Main"}</SidebarGroupLabel>
+      <SidebarContent className={cn("transition-all", isCollapsed ? "px-3" : "px-3")}>
+        <SidebarGroup>
+          <SidebarGroupLabel
+            className={cn(
+              "text-xs text-button-hover uppercase tracking-wide mb-3 transition-all",
+              isCollapsed ? "px-0 text-center" : "px-3",
+            )}
+          >
+            {isCollapsed ? "" : "Main"}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {mainSections.map((section) => {
@@ -124,18 +147,32 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                             className="w-full"
                             onClick={() => onSectionChange("inputData")}
                           >
-                            <Icon className={cn(
-                              "h-5 w-5 shrink-0 transition-colors",
-                              isActive ? "text-button-hover-foreground" : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground"
-                            )} />
-                            <span className={cn(
-                              "text-sm transition-colors",
-                              isActive ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                            )}>{section.name}</span>
-                            <ChevronDown className={cn(
-                              "ml-auto h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180 transition-colors",
-                              isActive ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                            )} />
+                            <Icon
+                              className={cn(
+                                "h-5 w-5 shrink-0 transition-colors",
+                                isActive
+                                  ? "text-button-hover-foreground"
+                                  : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground",
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                "text-sm transition-colors",
+                                isActive
+                                  ? "text-button-hover-foreground"
+                                  : "group-hover/menu-button:text-button-hover-foreground",
+                              )}
+                            >
+                              {section.name}
+                            </span>
+                            <ChevronDown
+                              className={cn(
+                                "ml-auto h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180 transition-colors",
+                                isActive
+                                  ? "text-button-hover-foreground"
+                                  : "group-hover/menu-button:text-button-hover-foreground",
+                              )}
+                            />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
@@ -151,18 +188,24 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                                     className="py-2 transition-colors duration-200 !bg-transparent hover:!bg-transparent data-[active=true]:!bg-transparent"
                                     data-active={isSubActive}
                                   >
-                                    <SubIcon className={cn(
-                                      "h-5 w-5 shrink-0 transition-colors",
-                                      isSubActive
-                                        ? "text-button-hover"
-                                        : "text-foreground/60 hover:text-button-hover"
-                                    )} />
-                                    <span className={cn(
-                                      "text-sm transition-colors",
-                                      isSubActive
-                                        ? "text-button-hover font-bold"
-                                        : "text-foreground/80 hover:text-button-hover"
-                                    )}>{subCat.name}</span>
+                                    <SubIcon
+                                      className={cn(
+                                        "h-5 w-5 shrink-0 transition-colors",
+                                        isSubActive
+                                          ? "text-button-hover"
+                                          : "text-foreground/60 hover:text-button-hover",
+                                      )}
+                                    />
+                                    <span
+                                      className={cn(
+                                        "text-sm transition-colors",
+                                        isSubActive
+                                          ? "text-button-hover font-bold"
+                                          : "text-foreground/80 hover:text-button-hover",
+                                      )}
+                                    >
+                                      {subCat.name}
+                                    </span>
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                               );
@@ -189,25 +232,40 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                             className="w-full"
                             onClick={() => onSectionChange("knowledgeBase")}
                           >
-                            <Icon className={cn(
-                              "h-5 w-5 shrink-0 transition-colors",
-                              isActive ? "text-button-hover-foreground" : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground"
-                            )} />
-                            <span className={cn(
-                              "text-sm transition-colors",
-                              isActive ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                            )}>{section.name}</span>
-                            <ChevronDown className={cn(
-                              "ml-auto h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180 transition-colors",
-                              isActive ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                            )} />
+                            <Icon
+                              className={cn(
+                                "h-5 w-5 shrink-0 transition-colors",
+                                isActive
+                                  ? "text-button-hover-foreground"
+                                  : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground",
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                "text-sm transition-colors",
+                                isActive
+                                  ? "text-button-hover-foreground"
+                                  : "group-hover/menu-button:text-button-hover-foreground",
+                              )}
+                            >
+                              {section.name}
+                            </span>
+                            <ChevronDown
+                              className={cn(
+                                "ml-auto h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180 transition-colors",
+                                isActive
+                                  ? "text-button-hover-foreground"
+                                  : "group-hover/menu-button:text-button-hover-foreground",
+                              )}
+                            />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub className="space-y-1.5 mt-2">
                             {knowledgeBaseSubCategories.map((subCat) => {
                               const SubIcon = subCat.icon;
-                              const isSubActive = activeSection === "knowledgeBase" && activeKnowledgeCategory === subCat.key;
+                              const isSubActive =
+                                activeSection === "knowledgeBase" && activeKnowledgeCategory === subCat.key;
 
                               return (
                                 <SidebarMenuSubItem key={subCat.key}>
@@ -216,18 +274,24 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                                     className="py-2 transition-colors duration-200 !bg-transparent hover:!bg-transparent data-[active=true]:!bg-transparent"
                                     data-active={isSubActive}
                                   >
-                                    <SubIcon className={cn(
-                                      "h-5 w-5 shrink-0 transition-colors",
-                                      isSubActive
-                                        ? "text-button-hover"
-                                        : "text-foreground/60 hover:text-button-hover"
-                                    )} />
-                                    <span className={cn(
-                                      "text-sm transition-colors",
-                                      isSubActive
-                                        ? "text-button-hover font-bold"
-                                        : "text-foreground/80 hover:text-button-hover"
-                                    )}>{subCat.name}</span>
+                                    <SubIcon
+                                      className={cn(
+                                        "h-5 w-5 shrink-0 transition-colors",
+                                        isSubActive
+                                          ? "text-button-hover"
+                                          : "text-foreground/60 hover:text-button-hover",
+                                      )}
+                                    />
+                                    <span
+                                      className={cn(
+                                        "text-sm transition-colors",
+                                        isSubActive
+                                          ? "text-button-hover font-bold"
+                                          : "text-foreground/80 hover:text-button-hover",
+                                      )}
+                                    >
+                                      {subCat.name}
+                                    </span>
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                               );
@@ -254,25 +318,40 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                             className="w-full"
                             onClick={() => onSectionChange("ticket")}
                           >
-                            <Icon className={cn(
-                              "h-5 w-5 shrink-0 transition-colors",
-                              isActive ? "text-button-hover-foreground" : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground"
-                            )} />
-                            <span className={cn(
-                              "text-sm transition-colors",
-                              isActive ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                            )}>{section.name}</span>
-                            <ChevronDown className={cn(
-                              "ml-auto h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180 transition-colors",
-                              isActive ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                            )} />
+                            <Icon
+                              className={cn(
+                                "h-5 w-5 shrink-0 transition-colors",
+                                isActive
+                                  ? "text-button-hover-foreground"
+                                  : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground",
+                              )}
+                            />
+                            <span
+                              className={cn(
+                                "text-sm transition-colors",
+                                isActive
+                                  ? "text-button-hover-foreground"
+                                  : "group-hover/menu-button:text-button-hover-foreground",
+                              )}
+                            >
+                              {section.name}
+                            </span>
+                            <ChevronDown
+                              className={cn(
+                                "ml-auto h-5 w-5 shrink-0 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180 transition-colors",
+                                isActive
+                                  ? "text-button-hover-foreground"
+                                  : "group-hover/menu-button:text-button-hover-foreground",
+                              )}
+                            />
                           </SidebarMenuButton>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub className="space-y-1.5 mt-2">
                             {ticketSubCategories.map((ticketCat) => {
                               const TicketIcon = ticketCat.icon;
-                              const isTicketActive = activeSection === "ticket" && activeTicketCategory === ticketCat.key;
+                              const isTicketActive =
+                                activeSection === "ticket" && activeTicketCategory === ticketCat.key;
 
                               return (
                                 <SidebarMenuSubItem key={ticketCat.key}>
@@ -281,18 +360,24 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                                     className="py-2 transition-colors duration-200 !bg-transparent hover:!bg-transparent data-[active=true]:!bg-transparent"
                                     data-active={isTicketActive}
                                   >
-                                    <TicketIcon className={cn(
-                                      "h-5 w-5 shrink-0 transition-colors",
-                                      isTicketActive
-                                        ? "text-button-hover"
-                                        : "text-foreground/60 hover:text-button-hover"
-                                    )} />
-                                    <span className={cn(
-                                      "text-sm transition-colors",
-                                      isTicketActive
-                                        ? "text-button-hover font-bold"
-                                        : "text-foreground/80 hover:text-button-hover"
-                                    )}>{ticketCat.name}</span>
+                                    <TicketIcon
+                                      className={cn(
+                                        "h-5 w-5 shrink-0 transition-colors",
+                                        isTicketActive
+                                          ? "text-button-hover"
+                                          : "text-foreground/60 hover:text-button-hover",
+                                      )}
+                                    />
+                                    <span
+                                      className={cn(
+                                        "text-sm transition-colors",
+                                        isTicketActive
+                                          ? "text-button-hover font-bold"
+                                          : "text-foreground/80 hover:text-button-hover",
+                                      )}
+                                    >
+                                      {ticketCat.name}
+                                    </span>
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
                               );
@@ -312,14 +397,24 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                       tooltip={section.name}
                       className="w-full"
                     >
-                      <Icon className={cn(
-                        "h-5 w-5 shrink-0 transition-colors",
-                        isActive ? "text-button-hover-foreground" : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground"
-                      )} />
-                      <span className={cn(
-                        "text-sm transition-colors",
-                        isActive ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                      )}>{section.name}</span>
+                      <Icon
+                        className={cn(
+                          "h-5 w-5 shrink-0 transition-colors",
+                          isActive
+                            ? "text-button-hover-foreground"
+                            : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground",
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "text-sm transition-colors",
+                          isActive
+                            ? "text-button-hover-foreground"
+                            : "group-hover/menu-button:text-button-hover-foreground",
+                        )}
+                      >
+                        {section.name}
+                      </span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -328,12 +423,15 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
           </SidebarGroupContent>
         </SidebarGroup>
 
-
-        <SidebarGroup className={cn(isCollapsed && "p-0 py-2")}>
-          <SidebarGroupLabel className={cn(
-            "text-xs text-button-hover uppercase tracking-wide mb-3 transition-all",
-            isCollapsed ? "px-0 text-center" : "px-3"
-          )}>{isCollapsed ? "" : "Chat"}</SidebarGroupLabel>
+        <SidebarGroup>
+          <SidebarGroupLabel
+            className={cn(
+              "text-xs text-button-hover uppercase tracking-wide mb-3 transition-all",
+              isCollapsed ? "px-0 text-center" : "px-3",
+            )}
+          >
+            {isCollapsed ? "" : "Chat"}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               <SidebarMenuItem>
@@ -342,27 +440,39 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                   onClick={() => onSectionChange("liveChat")}
                   tooltip="Live Chat"
                 >
-                  <MessageCircle className={cn(
-                    "h-5 w-5 shrink-0 transition-colors",
-                    activeSection === "liveChat" ? "text-button-hover-foreground" : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground"
-                  )} />
-                  <span className={cn(
-                    "text-sm transition-colors",
-                    activeSection === "liveChat" ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                  )}>Live Chat</span>
+                  <MessageCircle
+                    className={cn(
+                      "h-5 w-5 shrink-0 transition-colors",
+                      activeSection === "liveChat"
+                        ? "text-button-hover-foreground"
+                        : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground",
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "text-sm transition-colors",
+                      activeSection === "liveChat"
+                        ? "text-button-hover-foreground"
+                        : "group-hover/menu-button:text-button-hover-foreground",
+                    )}
+                  >
+                    Live Chat
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        
-
-        <SidebarGroup className={cn(isCollapsed && "p-0 py-2")}>
-          <SidebarGroupLabel className={cn(
-            "text-xs text-button-hover uppercase tracking-wide mb-3 transition-all",
-            isCollapsed ? "px-0 text-center" : "px-3"
-          )}>{isCollapsed ? "" : "Settings"}</SidebarGroupLabel>
+        <SidebarGroup>
+          <SidebarGroupLabel
+            className={cn(
+              "text-xs text-button-hover uppercase tracking-wide mb-3 transition-all",
+              isCollapsed ? "px-0 text-center" : "px-3",
+            )}
+          >
+            {isCollapsed ? "" : "Settings"}
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               <SidebarMenuItem>
@@ -371,14 +481,24 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                   onClick={() => onSectionChange("legalSupport")}
                   tooltip="Legal & Support"
                 >
-                  <HelpCircle className={cn(
-                    "h-5 w-5 shrink-0 transition-colors",
-                    activeSection === "legalSupport" ? "text-button-hover-foreground" : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground"
-                  )} />
-                  <span className={cn(
-                    "text-sm transition-colors",
-                    activeSection === "legalSupport" ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                  )}>Legal & Support</span>
+                  <HelpCircle
+                    className={cn(
+                      "h-5 w-5 shrink-0 transition-colors",
+                      activeSection === "legalSupport"
+                        ? "text-button-hover-foreground"
+                        : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground",
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "text-sm transition-colors",
+                      activeSection === "legalSupport"
+                        ? "text-button-hover-foreground"
+                        : "group-hover/menu-button:text-button-hover-foreground",
+                    )}
+                  >
+                    Legal & Support
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
@@ -388,14 +508,24 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                   onClick={() => onSectionChange("apiData")}
                   tooltip="API Data"
                 >
-                  <Settings className={cn(
-                    "h-5 w-5 shrink-0 transition-colors",
-                    activeSection === "apiData" ? "text-button-hover-foreground" : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground"
-                  )} />
-                  <span className={cn(
-                    "text-sm transition-colors",
-                    activeSection === "apiData" ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                  )}>API Data</span>
+                  <Settings
+                    className={cn(
+                      "h-5 w-5 shrink-0 transition-colors",
+                      activeSection === "apiData"
+                        ? "text-button-hover-foreground"
+                        : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground",
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      "text-sm transition-colors",
+                      activeSection === "apiData"
+                        ? "text-button-hover-foreground"
+                        : "group-hover/menu-button:text-button-hover-foreground",
+                    )}
+                  >
+                    API Data
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -414,14 +544,22 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
             >
               <Avatar className="h-8 w-8 shrink-0">
                 <AvatarImage src="" />
-                <AvatarFallback className="text-xs bg-button-hover text-button-hover-foreground font-semibold">EG</AvatarFallback>
+                <AvatarFallback className="text-xs bg-button-hover text-button-hover-foreground font-semibold">
+                  EG
+                </AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium truncate text-button-hover group-hover:text-button-hover-foreground">Emilia Greene</span>
-                <span className={cn(
-                  "text-xs truncate group-hover:text-button-hover-foreground/70",
-                  activeSection === "account" ? "text-button-hover-foreground/70" : "text-muted-foreground"
-                )}>emilia.greene@example.com</span>
+                <span className="text-sm font-medium truncate text-button-hover group-hover:text-button-hover-foreground">
+                  Emilia Greene
+                </span>
+                <span
+                  className={cn(
+                    "text-xs truncate group-hover:text-button-hover-foreground/70",
+                    activeSection === "account" ? "text-button-hover-foreground/70" : "text-muted-foreground",
+                  )}
+                >
+                  emilia.greene@example.com
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
