@@ -3,6 +3,7 @@ import { promoKB } from '@/lib/promo-storage';
 import { generateUUID } from '@/lib/supabase-client';
 import { applyInertValuesToPayload } from '@/lib/extractors/field-applicability-map';
 import { calculateAllReferralTiers, getDefaultReferralFormulaMetadata } from '@/lib/referral-tier-calculator';
+import { sanitizeByMode } from '@/lib/sanitize-by-mode';
 // PKB FIELD WHITELIST
 // ============================================
 
@@ -1460,7 +1461,14 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     console.debug('[buildCanonicalPayload] Validation warnings:', validation.warnings);
   }
   
-  return canonical;
+  // ===============================
+  // FINAL SAFETY NET: sanitizeByMode()
+  // Mematikan impossible state berdasarkan mode
+  // This runs AFTER validation to fix any remaining issues
+  // ===============================
+  const sanitized = sanitizeByMode(canonical as unknown as Record<string, unknown>);
+  
+  return sanitized as unknown as CanonicalPromoKB;
 }
 
 /**

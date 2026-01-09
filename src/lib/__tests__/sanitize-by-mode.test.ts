@@ -367,14 +367,24 @@ describe('sanitizeByMode — Final Safety Net v1.0', () => {
       expect(result.category).toBe('BONUS');
     });
 
-    it('T12b: APK context preserves non-deposit trigger', () => {
+    it('T12b: APK context forces Download_APK even for non-deposit triggers', () => {
       const input = {
         reward_mode: 'event',
         promo_name: 'Download APK Bonus',
+        trigger_event: 'Login',  // Should be overwritten
+      };
+      const result = sanitizeByMode(input);
+      expect(result.trigger_event).toBe('Download_APK');
+    });
+
+    it('T14: require_apk=true forces Download_APK trigger', () => {
+      const input = {
+        mode: 'event',
+        require_apk: true,
         trigger_event: 'Registration',
       };
       const result = sanitizeByMode(input);
-      expect(result.trigger_event).toBe('Registration');
+      expect(result.trigger_event).toBe('Download_APK');
     });
   });
 });
