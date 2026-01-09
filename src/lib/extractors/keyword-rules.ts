@@ -1,6 +1,15 @@
 /**
  * Keyword Rules - Single Source of Truth
  * 
+ * ⚠️ DEPRECATION WARNING (2025-01-09):
+ * This module is being deprecated in favor of Reasoning-First Architecture.
+ * New code should use:
+ * - promo-intent-reasoner.ts (Step-0 LLM reasoning)
+ * - mechanic-router.ts (deterministic routing)
+ * - arbitration-rules.ts (conflict resolution)
+ * 
+ * Keywords are NO LONGER used as fallback. See shouldUseFallback() below.
+ * 
  * This module centralizes ALL keyword-based logic for:
  * - Category classification (A/B/C)
  * - Archetype detection (formula_based, event_table, referral, tiered_fixed)
