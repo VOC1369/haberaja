@@ -51,7 +51,8 @@ export function resetInvariantLogCounter(): void {
  */
 export function sanitizeByMode(promo: Record<string, unknown>): Record<string, unknown> {
   const out = { ...promo };
-  const mode = out.reward_mode as string;
+  // Support both reward_mode (form) and mode (canonical export)
+  const mode = (out.reward_mode || out.mode) as string;
   const promoName = String(out.promo_name || '').toLowerCase();
   const terms = String(out.custom_terms || '').toLowerCase();
 
@@ -95,8 +96,8 @@ export function sanitizeByMode(promo: Record<string, unknown>): Record<string, u
     out.reward_amount = null;
   }
   
-  // max_bonus=0 when not unlimited → null (ambiguous state)
-  if (out.max_bonus === 0 && out.max_bonus_unlimited !== true) {
+  // max_bonus=0 → null (0 is never a valid business value)
+  if (out.max_bonus === 0) {
     out.max_bonus = null;
   }
   
@@ -151,14 +152,26 @@ export function sanitizeByMode(promo: Record<string, unknown>): Record<string, u
   if (isApkContext) {
     out.require_apk = true;
     
-    // For event mode APK promos, set specific trigger
+    // For event mode APK promos: override trigger if empty or deposit-based
+    // (deposit trigger is impossible for APK-gated promos)
     if (mode === 'event') {
-      out.trigger_event = 'Download_APK';
+      if (!out.trigger_event || 
+          String(out.trigger_event).toLowerCase().includes('deposit')) {
+        out.trigger_event = 'Download_APK';
+      }
     }
   }
 
   // ============================================
-  // 6. FINAL INVARIANT ASSERTION
+  // 6. CATEGORY GUARANTEE (Post-routing safety net)
+  // Event promos without category default to REWARD
+  // ============================================
+  if (!out.category && mode === 'event') {
+    out.category = 'REWARD';
+  }
+
+  // ============================================
+  // 7. FINAL INVARIANT ASSERTION
   // ABSOLUTE LAW: event can never have calculation_basis
   // Force-null instead of throw (fail-safe for production)
   // ============================================
