@@ -98,7 +98,7 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
       </SidebarHeader>
 
       <SidebarContent className={cn("transition-all", isCollapsed ? "px-0" : "px-3")}>
-        <SidebarGroup>
+        <SidebarGroup className={cn(isCollapsed && "p-0 py-2")}>
           <SidebarGroupLabel className={cn(
             "text-xs text-button-hover uppercase tracking-wide mb-3 transition-all",
             isCollapsed ? "px-0 text-center" : "px-3"
@@ -329,7 +329,7 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
         </SidebarGroup>
 
 
-        <SidebarGroup>
+        <SidebarGroup className={cn(isCollapsed && "p-0 py-2")}>
           <SidebarGroupLabel className={cn(
             "text-xs text-button-hover uppercase tracking-wide mb-3 transition-all",
             isCollapsed ? "px-0 text-center" : "px-3"
@@ -358,7 +358,7 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
 
         
 
-        <SidebarGroup>
+        <SidebarGroup className={cn(isCollapsed && "p-0 py-2")}>
           <SidebarGroupLabel className={cn(
             "text-xs text-button-hover uppercase tracking-wide mb-3 transition-all",
             isCollapsed ? "px-0 text-center" : "px-3"
