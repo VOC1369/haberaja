@@ -287,21 +287,178 @@ export function detectIntentConflicts(intent: PromoIntent): string[] {
 }
 
 // ============================================
+// DETERMINISTIC INTENT DETECTION (Contract of Thinking v1.0)
+// NO API CALL for obvious cases - pattern matching only
+// ============================================
+
+/**
+ * Extract evidence snippets from content for audit trail
+ */
+function extractEvidence(content: string, keywords: string[]): string[] {
+  const evidence: string[] = [];
+  for (const kw of keywords) {
+    const regex = new RegExp(`.{0,25}${kw}.{0,25}`, 'i');
+    const match = content.match(regex);
+    if (match) evidence.push(match[0].trim());
+  }
+  return evidence.slice(0, 4); // Max 4 evidence
+}
+
+/**
+ * DETERMINISTIC detection for obvious cases.
+ * NO API call needed - pattern matching only.
+ * Returns high confidence (0.9+) for definitive patterns.
+ * 
+ * CONTRACT OF THINKING v1.0 - Section B & F:
+ * - REASON before DECIDE
+ * - Confidence >= 0.9 → skip LLM
+ * - Confidence < 0.6 → UNCERTAINTY MODE
+ */
+export function detectObviousIntent(content: string): PromoIntent | null {
+  const lower = content.toLowerCase();
+  
+  // ========== APK DOWNLOAD - DEFINITE pattern ==========
+  if (/download\s*(aplikasi|apk)|install\s*apk|unduh\s*(app|aplikasi)/i.test(lower)) {
+    const hasRedemptionStore = /redemption\s*store|tukar|pilih\s*(credit|hadiah|sendiri)|store/i.test(lower);
+    const hasRange = /\d+[kK]?\s*[-–]\s*\d+[kK]?/i.test(lower);
+    
+    console.log('[Intent Reasoner] DETERMINISTIC: APK Download detected');
+    return {
+      primary_action: 'download_apk',
+      reward_nature: 'given',
+      value_determiner: hasRedemptionStore ? 'user_choice' : 'fixed',
+      distribution_path: hasRedemptionStore ? 'redemption_store' : 'auto',
+      value_shape: hasRange ? 'range' : 'fixed',
+      time_scope: 'ongoing',
+      intent_evidence: extractEvidence(lower, ['download', 'apk', 'aplikasi', 'freechip', 'credit']),
+      confidence: 0.95,
+      reasoning: 'Deterministic: APK Download pattern detected - mode=event, no calculation needed',
+      reasoner_version: REASONER_VERSION,
+      processed_at: new Date().toISOString(),
+    };
+  }
+  
+  // ========== BIRTHDAY - DEFINITE pattern ==========
+  if (/ulang\s*tahun|birthday|ultah|bday|ulangtahun/i.test(lower)) {
+    console.log('[Intent Reasoner] DETERMINISTIC: Birthday detected');
+    return {
+      primary_action: 'birthday',
+      reward_nature: 'given',
+      value_determiner: 'fixed',
+      distribution_path: 'auto',
+      value_shape: 'fixed',
+      time_scope: 'ongoing',
+      intent_evidence: extractEvidence(lower, ['ulang tahun', 'birthday', 'ultah', 'bonus']),
+      confidence: 0.95,
+      reasoning: 'Deterministic: Birthday pattern detected - fixed reward, yearly claim',
+      reasoner_version: REASONER_VERSION,
+      processed_at: new Date().toISOString(),
+    };
+  }
+  
+  // ========== REFERRAL - DEFINITE pattern ==========
+  if (/referral|referal|refferal|ajak\s*teman|invite|undang\s*teman|rekrut/i.test(lower)) {
+    console.log('[Intent Reasoner] DETERMINISTIC: Referral detected');
+    return {
+      primary_action: 'referral',
+      reward_nature: 'calculated',
+      value_determiner: 'system_calculate',
+      distribution_path: 'auto',
+      value_shape: 'tier_table',
+      time_scope: 'ongoing',
+      intent_evidence: extractEvidence(lower, ['referral', 'ajak teman', 'invite', 'komisi', 'downline']),
+      confidence: 0.92,
+      reasoning: 'Deterministic: Referral pattern detected - commission-based, tier table',
+      reasoner_version: REASONER_VERSION,
+      processed_at: new Date().toISOString(),
+    };
+  }
+  
+  // ========== CASHBACK / LOSS-BASED - DEFINITE pattern ==========
+  if (/cashback|cash\s*back|rebate/i.test(lower) && /kekalahan|loss|kalah/i.test(lower)) {
+    console.log('[Intent Reasoner] DETERMINISTIC: Cashback (loss-based) detected');
+    return {
+      primary_action: 'loss',
+      reward_nature: 'calculated',
+      value_determiner: 'system_calculate',
+      distribution_path: 'auto',
+      value_shape: 'percent',
+      time_scope: 'ongoing',
+      intent_evidence: extractEvidence(lower, ['cashback', 'kekalahan', 'loss', '%']),
+      confidence: 0.92,
+      reasoning: 'Deterministic: Cashback loss-based pattern detected - percentage of loss',
+      reasoner_version: REASONER_VERSION,
+      processed_at: new Date().toISOString(),
+    };
+  }
+  
+  // ========== ROLLINGAN / TURNOVER-BASED - DEFINITE pattern ==========
+  if (/rollingan|roll(ing)?an/i.test(lower) || (/turnover|to\s*bonus/i.test(lower) && /%/i.test(lower))) {
+    console.log('[Intent Reasoner] DETERMINISTIC: Rollingan (turnover-based) detected');
+    return {
+      primary_action: 'turnover',
+      reward_nature: 'calculated',
+      value_determiner: 'system_calculate',
+      distribution_path: 'auto',
+      value_shape: 'percent',
+      time_scope: 'ongoing',
+      intent_evidence: extractEvidence(lower, ['rollingan', 'turnover', '%', 'mingguan']),
+      confidence: 0.90,
+      reasoning: 'Deterministic: Rollingan/turnover pattern detected - percentage of TO',
+      reasoner_version: REASONER_VERSION,
+      processed_at: new Date().toISOString(),
+    };
+  }
+  
+  // ========== LUCKY SPIN / MINI GAME - DEFINITE pattern ==========
+  if (/lucky\s*spin|mini\s*game|roda\s*keberuntungan|spin\s*gratis|putar\s*roda/i.test(lower)) {
+    console.log('[Intent Reasoner] DETERMINISTIC: Lucky Spin detected');
+    return {
+      primary_action: 'redeem',
+      reward_nature: 'given',
+      value_determiner: 'user_choice',
+      distribution_path: 'redemption_store',
+      value_shape: 'catalog',
+      time_scope: 'ongoing',
+      intent_evidence: extractEvidence(lower, ['lucky spin', 'spin', 'putar', 'hadiah']),
+      confidence: 0.90,
+      reasoning: 'Deterministic: Lucky Spin pattern detected - catalog redemption',
+      reasoner_version: REASONER_VERSION,
+      processed_at: new Date().toISOString(),
+    };
+  }
+  
+  return null; // Let LLM handle ambiguous cases
+}
+
+// ============================================
 // MAIN REASONER FUNCTION
 // ============================================
 
-const REASONER_VERSION = 'v1.0.0+2025-01-09';
+const REASONER_VERSION = 'v1.1.0+contract-of-thinking';
 
 /**
  * Run Step-0 Intent Reasoning on promo content.
  * Returns PromoIntent with evidence and confidence.
+ * 
+ * CONTRACT OF THINKING v1.0:
+ * - STEP 0: Deterministic detection (no API call)
+ * - STEP 1: LLM reasoning (if API key exists)
+ * - STEP 2: UNCERTAINTY MODE (if no API key or LLM fails)
  */
 export async function reasonPromoIntent(content: string): Promise<PromoIntent> {
-  const apiKey = getOpenAIKey();
+  // STEP 0: Deterministic detection FIRST (NO API CALL)
+  const obviousIntent = detectObviousIntent(content);
+  if (obviousIntent && obviousIntent.confidence >= 0.9) {
+    console.log('[Intent Reasoner] DETERMINISTIC: Skipping LLM call, confidence =', obviousIntent.confidence);
+    return obviousIntent;
+  }
   
+  // STEP 1: Try LLM if API key exists
+  const apiKey = getOpenAIKey();
   if (!apiKey) {
-    console.warn('[Intent Reasoner] No API key, returning fallback intent');
-    return createFallbackIntent(content);
+    console.warn('[Intent Reasoner] No API key → UNCERTAINTY MODE');
+    return createUncertainIntent(content);
   }
   
   try {
@@ -390,52 +547,39 @@ function parseIntentResponse(rawContent: string): Partial<PromoIntent> {
 }
 
 /**
- * Create fallback intent when LLM fails.
- * Uses basic heuristics, NOT keyword matching.
+ * UNCERTAINTY MODE - Contract of Thinking v1.0 Section F
+ * 
+ * When confidence < 0.6 OR evidence < 2:
+ * - needs_human_review = true
+ * - mode = unknown (safe default)
+ * - calculation_basis = null
+ * 
+ * JANGAN fallback keyword. Lebih baik unknown daripada confident-but-wrong.
  */
-function createFallbackIntent(content: string): PromoIntent {
-  const contentLower = content.toLowerCase();
-  
-  // Very basic heuristics - conservative defaults
-  let primary_action: PrimaryAction = 'deposit';
-  let reward_nature: RewardNature = 'calculated';
-  let value_shape: ValueShape = 'percent';
-  
-  // Download detection
-  if (/download|apk|aplikasi/i.test(contentLower)) {
-    primary_action = 'download_apk';
-    reward_nature = 'given';
-    value_shape = 'range';
-  }
-  
-  // Loss-based detection
-  if (/kekalahan|loss|cashback/i.test(contentLower)) {
-    primary_action = 'loss';
-  }
-  
-  // Turnover detection
-  if (/rollingan|turnover/i.test(contentLower)) {
-    primary_action = 'turnover';
-  }
-  
-  // Referral detection
-  if (/referral|ajak teman/i.test(contentLower)) {
-    primary_action = 'referral';
-  }
+function createUncertainIntent(content: string): PromoIntent {
+  console.log('[Intent Reasoner] UNCERTAINTY MODE activated');
   
   return {
-    primary_action,
-    reward_nature,
-    value_determiner: reward_nature === 'given' ? 'fixed' : 'system_calculate',
+    primary_action: 'deposit', // Safe default - most common
+    reward_nature: 'given',    // Assume given (safer than calculated - no formula errors)
+    value_determiner: 'fixed',
     time_scope: 'ongoing',
     distribution_path: 'auto',
-    value_shape,
-    intent_evidence: ['[FALLBACK] No evidence extracted'],
-    confidence: 0.3, // Low confidence for fallback
-    reasoning: 'Fallback intent created due to LLM failure',
+    value_shape: 'fixed',
+    intent_evidence: ['[UNCERTAIN] Insufficient evidence - needs human review'],
+    confidence: 0.3, // LOW - triggers human review
+    reasoning: 'UNCERTAINTY MODE: No API key and pattern not obvious. Human review required. DO NOT assume mode=formula.',
     reasoner_version: REASONER_VERSION,
     processed_at: new Date().toISOString(),
   };
+}
+
+/**
+ * @deprecated Use createUncertainIntent instead
+ * Kept for backward compatibility
+ */
+function createFallbackIntent(content: string): PromoIntent {
+  return createUncertainIntent(content);
 }
 
 // ============================================
