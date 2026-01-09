@@ -403,7 +403,7 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-2 border-t mt-auto">
+      <SidebarFooter className="p-2 border-t shrink-0 bg-sidebar sticky bottom-0">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
