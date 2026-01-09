@@ -8,7 +8,8 @@
  * - mechanic-router.ts (deterministic routing)
  * - arbitration-rules.ts (conflict resolution)
  * 
- * Keywords are NO LONGER used as fallback. See shouldUseFallback() below.
+ * Keywords are NO LONGER used as fallback per CONTRACT OF THINKING v1.0.
+ * See shouldUseKeywordFallback() below - it returns FALSE.
  * 
  * This module centralizes ALL keyword-based logic for:
  * - Category classification (A/B/C)
@@ -17,6 +18,27 @@
  * 
  * VERSION: Update KEYWORD_OVERRIDE_VERSION in category-classifier.ts when modifying rules
  */
+
+// ============================================
+// CONTRACT OF THINKING v1.0 - FALLBACK GATE
+// ============================================
+
+/**
+ * CONTRACT OF THINKING v1.0 - Section F
+ * Keyword fallback is DISABLED.
+ * 
+ * This function returns FALSE to block all keyword fallback usage.
+ * The Reasoning-First Architecture (promo-intent-reasoner.ts + mechanic-router.ts)
+ * is the sole source of truth for mode, calculation_basis, and trigger_event.
+ * 
+ * If this returns true, it means we're violating the contract.
+ */
+export function shouldUseKeywordFallback(): boolean {
+  // DISABLED per Contract of Thinking v1.0
+  // Reasoning-First Architecture is the source of truth
+  // Keywords are only used for UI defaults and category classification
+  return false;
+}
 
 import type { PromoFormData } from '@/components/VOCDashboard/PromoFormWizard/types';
 
