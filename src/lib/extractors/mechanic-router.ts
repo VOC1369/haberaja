@@ -35,6 +35,10 @@ export type MechanicType =
   | 'rollingan_turnover'       // Rollingan % dari turnover
   | 'komisi_turnover'          // Komisi harian/mingguan
   
+  // === Withdraw-based ===
+  | 'withdraw_bonus_percent'   // Bonus X% dari withdraw
+  | 'withdraw_bonus_fixed'     // Bonus tetap per withdraw
+  
   // === Event/Action-based ===
   | 'apk_download_reward'      // Download APK dapat reward
   | 'mission_completion'       // Selesaikan misi
@@ -248,6 +252,14 @@ function determineMechanicType(intent: PromoIntent): MechanicType {
     return 'deposit_bonus_percent';
   }
   
+  // === Withdraw-based ===
+  if (primary_action === 'withdraw') {
+    if (reward_nature === 'given') {
+      return 'withdraw_bonus_fixed';
+    }
+    return 'withdraw_bonus_percent';
+  }
+  
   // === Bet-based ===
   if (primary_action === 'bet') {
     return 'komisi_turnover'; // Or could be scatter_bonus
@@ -280,6 +292,7 @@ function determineMode(intent: PromoIntent, mechanic: MechanicType): PromoMode {
     'rollingan_turnover',
     'komisi_turnover',
     'referral_commission',
+    'withdraw_bonus_percent',
   ];
   if (formulaMechanics.includes(mechanic)) {
     return 'formula';
@@ -348,6 +361,8 @@ function determineCalculationBasis(intent: PromoIntent, mode: PromoMode): string
     case 'turnover':
     case 'bet':
       return 'turnover';
+    case 'withdraw':
+      return 'withdraw';
     case 'referral':
       return 'referral_turnover';
     default:
@@ -465,6 +480,8 @@ export function getMechanicDisplayName(mechanic: MechanicType): string {
     rebate_loss: 'Rebate',
     rollingan_turnover: 'Rollingan',
     komisi_turnover: 'Komisi Turnover',
+    withdraw_bonus_percent: 'Bonus Withdraw (%)',
+    withdraw_bonus_fixed: 'Bonus Withdraw (Fixed)',
     apk_download_reward: 'Bonus Download APK',
     mission_completion: 'Bonus Misi',
     daily_checkin: 'Bonus Login Harian',

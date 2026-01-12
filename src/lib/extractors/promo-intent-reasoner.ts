@@ -26,6 +26,7 @@ export type PrimaryAction =
   | 'deposit'       // User deposits money
   | 'loss'          // User loses money (cashback)
   | 'turnover'      // User accumulates turnover (rollingan)
+  | 'withdraw'      // User withdraws money (WD bonus)
   | 'download_apk'  // User downloads app
   | 'login'         // User logs in
   | 'referral'      // User refers friends
@@ -405,6 +406,25 @@ export function detectObviousIntent(content: string): PromoIntent | null {
       intent_evidence: extractEvidence(lower, ['rollingan', 'turnover', '%', 'mingguan']),
       confidence: 0.90,
       reasoning: 'Deterministic: Rollingan/turnover pattern detected - percentage of TO',
+      reasoner_version: REASONER_VERSION,
+      processed_at: new Date().toISOString(),
+    };
+  }
+  
+  // ========== WITHDRAW-BASED - DEFINITE pattern ==========
+  // Patterns: bonus wd, bonus withdraw, extra wd, bonus penarikan, wd bonus
+  if (/bonus\s*(extra\s*)?(wd|withdraw|penarikan)|extra\s*(wd|withdraw)|wd\s*bonus/i.test(lower)) {
+    console.log('[Intent Reasoner] DETERMINISTIC: Withdraw bonus detected');
+    return {
+      primary_action: 'withdraw',
+      reward_nature: 'calculated',
+      value_determiner: 'system_calculate',
+      distribution_path: 'manual_cs',  // Per terms: "claim ke livechat"
+      value_shape: 'percent',
+      time_scope: 'ongoing',
+      intent_evidence: extractEvidence(lower, ['bonus', 'wd', 'withdraw', '%', 'penarikan']),
+      confidence: 0.92,
+      reasoning: 'Deterministic: Withdraw bonus pattern - percentage of withdrawal amount',
       reasoner_version: REASONER_VERSION,
       processed_at: new Date().toISOString(),
     };

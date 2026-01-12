@@ -155,6 +155,35 @@ export const KEYWORD_RULES: KeywordRule[] = [
     },
   },
   
+  // Withdraw Bonus (WD Bonus)
+  {
+    id: 'withdraw_bonus',
+    name: 'Withdraw Bonus',
+    patterns: [
+      /bonus\s*(extra\s*)?(wd|withdraw)/i,
+      /extra\s*(wd|withdraw)/i,
+      /wd\s*bonus/i,
+      /bonus\s*penarikan/i,
+    ],
+    category: 'A',
+    archetype: 'formula_based',
+    reason: 'WITHDRAW BONUS → Reward Program (withdraw-based)',
+    defaults: {
+      reward_mode: 'formula',
+      calculation_base: 'withdraw',
+      trigger_event: 'Withdraw',
+      target_segment: 'Semua',
+      intent_category: 'Retention',
+      // ✅ Toggle defaults - Withdraw Bonus = percentage of WD
+      fixed_calculation_value_enabled: true,
+      fixed_max_claim_enabled: true,
+      fixed_admin_fee_enabled: false,
+      fixed_min_depo_enabled: false,
+      fixed_min_calculation_enabled: true,  // Minimal WD
+      fixed_turnover_rule_enabled: true,    // Usually has TO requirement
+    },
+  },
+  
   // Freechip / Freebet
   {
     id: 'freechip',
