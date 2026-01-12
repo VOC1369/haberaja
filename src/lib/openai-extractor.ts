@@ -3285,6 +3285,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     'apk_download': 'APK Download',
     'download_apk': 'Download APK',  // Added for Step-0 output
     'turnover': 'Turnover',
+    'withdraw': 'Withdraw',          // Added for withdraw-based promos
     'mission_completed': 'Mission Completed',
     'user_request': 'First Deposit',  // Fallback for generic trigger
   };
@@ -4007,8 +4008,54 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     })(),
     max_claim: null,
     // ✅ FIX: turnover_rule default "" (inert), not "0x"
-    turnover_rule: subcategories[0]?.turnover_rule || '',
-    turnover_rule_enabled: subcategories[0]?.turnover_rule_enabled ?? (subcategories[0]?.turnover_rule && subcategories[0]?.turnover_rule !== '' && subcategories[0]?.turnover_rule !== '0x'),
+    // ✅ ENHANCED: Extract turnover multiplier from terms for formula mode
+    turnover_rule: (() => {
+      // PRIORITY 0: Check if this is a formula mode with turnover in terms
+      if (lockedFields?.mode === 'formula') {
+        const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+        // Pattern: "TO x 1", "syarat main 3x", "kelipatan 5x"
+        const multiplierPatterns = [
+          /(?:to|turnover|syarat\s*main)\s*(?:x|kali)?\s*(\d+)/i,
+          /(\d+)\s*(?:x|kali)\s*(?:to|turnover)/i,
+          /kelipatan\s*(\d+)/i,
+        ];
+        for (const pattern of multiplierPatterns) {
+          const match = termsText.match(pattern);
+          if (match) {
+            const n = Number(match[1]);
+            if (n > 0 && n <= 100) {
+              console.log('[Extractor] Extracted turnover multiplier for formula mode:', `${n}x`);
+              return `${n}x`;
+            }
+          }
+        }
+      }
+      // PRIORITY 1: Subcategory extraction
+      return subcategories[0]?.turnover_rule || '';
+    })(),
+    turnover_rule_enabled: (() => {
+      // PRIORITY 0: Check if this is a formula mode with turnover in terms
+      if (lockedFields?.mode === 'formula') {
+        const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+        const multiplierPatterns = [
+          /(?:to|turnover|syarat\s*main)\s*(?:x|kali)?\s*(\d+)/i,
+          /(\d+)\s*(?:x|kali)\s*(?:to|turnover)/i,
+          /kelipatan\s*(\d+)/i,
+        ];
+        for (const pattern of multiplierPatterns) {
+          const match = termsText.match(pattern);
+          if (match) {
+            const n = Number(match[1]);
+            if (n > 0 && n <= 100) {
+              console.log('[Extractor] Enabling turnover_rule for formula mode');
+              return true;
+            }
+          }
+        }
+      }
+      // PRIORITY 1: Subcategory extraction
+      return subcategories[0]?.turnover_rule_enabled ?? (subcategories[0]?.turnover_rule && subcategories[0]?.turnover_rule !== '' && subcategories[0]?.turnover_rule !== '0x');
+    })(),
     turnover_rule_custom: subcategories[0]?.turnover_rule_custom || '',
     // claim_frequency - PRIORITY: Birthday=tahunan, then keyword defaults, then LLM
     claim_frequency: (() => {
@@ -4744,11 +4791,76 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
 
     // Dinamis mode - from first subcategory as base
     // ✅ FIX: Skip formula defaults for non-formula modes (event/fixed/tier)
-    calculation_base: skipFormulaDefaults ? '' : (subcategories[0]?.calculation_base || 'deposit'),
+    // ✅ CRITICAL: Use lockedFields?.calculation_basis FIRST (Step-0 wins)
+    calculation_base: (() => {
+      if (skipFormulaDefaults) return '';
+      // PRIORITY 0: Locked fields from Reasoning-First Architecture
+      if (lockedFields?.calculation_basis) {
+        console.log('[Extractor Dinamis] Using LOCKED calculation_basis:', lockedFields.calculation_basis);
+        return lockedFields.calculation_basis;
+      }
+      // PRIORITY 1: Subcategory extraction
+      return subcategories[0]?.calculation_base || 'deposit';
+    })(),
     calculation_method: skipFormulaDefaults ? '' : (subcategories[0]?.calculation_method || 'percentage'),
-    calculation_value: skipFormulaDefaults ? null : (subcategories[0]?.calculation_value || 0),
-    min_calculation: skipFormulaDefaults ? null : (subcategories[0]?.minimum_base || 0),
-    min_calculation_enabled: skipFormulaDefaults ? false : ((subcategories[0]?.minimum_base || 0) > 0),
+    // ✅ FIX: For formula mode, extract calculation_value from terms if not in subcategory
+    calculation_value: (() => {
+      if (skipFormulaDefaults) return null;
+      // PRIORITY 0: Locked fields reward amount/percentage
+      if (lockedFields?.reward_is_percentage && lockedFields?.mode === 'formula') {
+        // Try to extract percentage from promo name or terms
+        const combined = `${extracted.promo_name || ''} ${(extracted.terms_conditions || []).join(' ')}`;
+        const percentMatch = combined.match(/(\d+(?:[.,]\d+)?)\s*%/);
+        if (percentMatch) {
+          const percent = parseFloat(percentMatch[1].replace(',', '.'));
+          console.log('[Extractor Dinamis] Extracted percentage from content:', percent);
+          return percent;
+        }
+      }
+      // PRIORITY 1: Subcategory extraction
+      return subcategories[0]?.calculation_value || 0;
+    })(),
+    // ✅ FIX: For formula mode, extract min_calculation from terms ("Minimal WD Rp X")
+    min_calculation: (() => {
+      if (skipFormulaDefaults) return null;
+      
+      // PRIORITY 0: Extract from terms for withdraw-based promos
+      const isWithdrawBased = lockedFields?.calculation_basis === 'withdraw';
+      if (isWithdrawBased) {
+        const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+        // Pattern: "Minimal WD sebesar 200.000", "Min WD Rp 200rb"
+        const minWDPattern = /min(?:imal|imum)?\s*(?:wd|withdraw|penarikan)\s*(?:sebesar\s*)?(?:rp\.?|idr)?[\s:]*([0-9.,]+)\s*(?:jt|juta|rb|ribu|k)?/i;
+        const match = termsText.match(minWDPattern);
+        if (match) {
+          const rawNum = match[1].replace(/[.,]/g, '');
+          let amount = parseInt(rawNum, 10);
+          const suffix = match[0].toLowerCase();
+          if (/jt|juta/i.test(suffix) && amount < 1000) amount *= 1_000_000;
+          else if (/rb|ribu|k/i.test(suffix) && amount < 10000) amount *= 1000;
+          console.log('[Extractor Dinamis] Extracted min_calculation for WD promo:', amount);
+          return amount;
+        }
+      }
+      
+      // PRIORITY 1: Subcategory extraction
+      return subcategories[0]?.minimum_base || 0;
+    })(),
+    min_calculation_enabled: (() => {
+      if (skipFormulaDefaults) return false;
+      
+      // For withdraw-based promos, check if we extracted a value
+      const isWithdrawBased = lockedFields?.calculation_basis === 'withdraw';
+      if (isWithdrawBased) {
+        const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+        const minWDPattern = /min(?:imal|imum)?\s*(?:wd|withdraw|penarikan)/i;
+        if (minWDPattern.test(termsText)) {
+          console.log('[Extractor Dinamis] Enabling min_calculation for WD promo');
+          return true;
+        }
+      }
+      
+      return (subcategories[0]?.minimum_base || 0) > 0;
+    })(),
     
     // ✅ FIX: Map dinamis_reward_type from first subcategory (was hardcoded to 'Freechip')
     dinamis_reward_type: (subcategories[0]?.jenis_hadiah || subcategories[0]?.dinamis_reward_type || 'credit_game').toLowerCase(),  // lowercase to match DINAMIS_REWARD_TYPES
@@ -4771,7 +4883,30 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       
       return null;
     })() as 'depan' | 'belakang' | null,
-    dinamis_max_claim: subcategories[0]?.max_bonus || 0,
+    // ✅ ENHANCED: Extract max_claim from terms for formula mode
+    dinamis_max_claim: (() => {
+      // PRIORITY 0: Check subcategory first
+      if (subcategories[0]?.max_bonus) return subcategories[0].max_bonus;
+      
+      // PRIORITY 1: Extract from terms for formula mode
+      if (lockedFields?.mode === 'formula') {
+        const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+        // Pattern: "Maksimal bonus 50.000", "Max bonus Rp 100rb"
+        const maxBonusPattern = /(?:maksimal|max|maks)\s*(?:bonus|claim)?\s*(?:sebesar\s*)?(?:rp\.?|idr)?[\s:]*([0-9.,]+)\s*(?:jt|juta|rb|ribu|k)?/i;
+        const match = termsText.match(maxBonusPattern);
+        if (match) {
+          const rawNum = match[1].replace(/\./g, '').replace(',', '');
+          let amount = parseInt(rawNum, 10);
+          const suffix = match[0].toLowerCase();
+          if (/jt|juta/i.test(suffix) && amount < 1000) amount *= 1_000_000;
+          else if (/rb|ribu|k/i.test(suffix) && amount < 10000) amount *= 1000;
+          console.log('[Extractor Dinamis] Extracted max_claim from terms:', amount);
+          return amount;
+        }
+      }
+      
+      return 0;
+    })(),
     dinamis_max_claim_unlimited: hasUnlimitedMaxBonus,
     // ✅ ONTOLOGY FIX: Read payout threshold from subcategory BEFORE it gets emptied
     // Truth must flow from extraction → mapping → UI

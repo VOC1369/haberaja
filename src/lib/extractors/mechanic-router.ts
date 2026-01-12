@@ -450,6 +450,24 @@ export function routeMechanic(intent: PromoIntent): MechanicRouterResult {
     console.log('[routeMechanic] REDEMPTION: Complete field locking applied');
   }
   
+  // Withdraw Bonus: Formula mode, withdraw trigger, percentage-based
+  if (mechanic_type === 'withdraw_bonus_percent') {
+    locked_fields.trigger_event = 'Withdraw';
+    locked_fields.require_apk = false;
+    locked_fields.reward_is_percentage = true;
+    // Note: reward_amount, max_bonus, turnover are extracted from terms, not locked
+    
+    console.log('[routeMechanic] WITHDRAW_BONUS_PERCENT: Complete field locking applied');
+  }
+  
+  if (mechanic_type === 'withdraw_bonus_fixed') {
+    locked_fields.trigger_event = 'Withdraw';
+    locked_fields.require_apk = false;
+    locked_fields.reward_is_percentage = false;
+    
+    console.log('[routeMechanic] WITHDRAW_BONUS_FIXED: Complete field locking applied');
+  }
+  
   // Add forbidden values based on mode
   if (mode !== 'formula') {
     locked_fields.forbidden_fields = {

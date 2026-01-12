@@ -1706,6 +1706,9 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
       'winlose': 'loss',
       'win_loss': 'loss',
       'win-loss': 'loss',
+      // Withdraw-based
+      'wd': 'withdraw',
+      'penarikan': 'withdraw',
     };
     normalized.calculation_base = baseMapping[lowerBase] || 'turnover';
   }
@@ -2136,6 +2139,7 @@ export const TRIGGER_EVENTS = [
   'Deposit',          // Next/Daily Deposit, Reload Bonus
   'Turnover',         // Rollingan, Rebate (TO-based)
   'Loss',             // Cashback (Loss-based)
+  'Withdraw',         // Withdraw Bonus (WD-based)
   'Bet',              // Betting-triggered promos
   'Referral',         // Referral Bonus
   'Login',            // Daily Login Bonus
