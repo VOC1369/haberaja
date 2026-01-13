@@ -341,11 +341,24 @@ export function PseudoKnowledgeSection() {
     try {
       let result: ExtractedPromo;
       
-      // Priority: Image > URL > HTML (auto-detect)
+      // Priority: Hybrid (Image+Text) > Image > URL > HTML
       if (imageBase64) {
-        setInputMode('image');
-        toast.info("Mengekstrak dari image dengan VOC AI Knowledge...");
-        result = await extractPromoFromImage(imageBase64);
+        // Check if we also have text context for HYBRID mode
+        const hasTextContext = currentInput.trim().length > 50;
+        
+        if (hasTextContext) {
+          // HYBRID MODE: Best of both worlds
+          setInputMode('hybrid');
+          toast.info("Mengekstrak dengan mode HYBRID (Image + Text)...", {
+            description: "Text = angka & syarat. Image = layout & konteks."
+          });
+          result = await extractPromoFromImage(imageBase64, currentInput.trim());
+        } else {
+          // IMAGE ONLY mode
+          setInputMode('image');
+          toast.info("Mengekstrak dari image dengan VOC AI Knowledge...");
+          result = await extractPromoFromImage(imageBase64);
+        }
       } else if (currentInput.trim()) {
         const detectedType = detectInputType(currentInput.trim());
         setInputMode(detectedType);
@@ -365,7 +378,9 @@ export function PseudoKnowledgeSection() {
             return;
           }
         } else {
-          toast.info("Mengekstrak dari konten HTML...");
+          // TEXT mode (includes both HTML and plain text)
+          setInputMode('text');
+          toast.info("Mengekstrak dari konten teks...");
           result = await extractPromoFromContent(currentInput);
         }
       } else {
@@ -1481,11 +1496,24 @@ export function PseudoKnowledgeSection() {
                 </Badge>
               </div>
 
-              {/* Hint Text */}
+              {/* Hint Text - Updated for Hybrid mode */}
               {!imagePreview && !currentInput && (
                 <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/70 mb-8">
                   <Lightbulb className="w-4 h-4" />
-                  <span>Contoh: URL promo, HTML content, atau drag & drop screenshot</span>
+                  <span>Untuk hasil terbaik: paste S&K + upload screenshot (mode HYBRID)</span>
+                </div>
+              )}
+
+              {/* Hybrid Mode Indicator */}
+              {imagePreview && currentInput.trim().length > 50 && (
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <Badge className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400">
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Mode HYBRID aktif
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Text = angka & syarat | Image = layout
+                  </span>
                 </div>
               )}
 

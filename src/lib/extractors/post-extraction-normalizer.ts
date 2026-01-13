@@ -1,5 +1,5 @@
 /**
- * Post-Extraction Normalizer v1.0
+ * Post-Extraction Normalizer v1.1
  * 
  * FILOSOFI: "Setiap pintu masuk hanya mengantar data mentah. 
  *            Satu normalizer menyamakan makna. 
@@ -8,12 +8,25 @@
  * Ini adalah SINGLE POINT OF NORMALIZATION setelah LLM extraction,
  * sebelum data masuk ke Form State (mappedPreview).
  * 
- * 5 NORMALIZATION RULES:
+ * 🔒 10 ATURAN WAJIB (SOP Hybrid Extraction):
+ * 1. Source Priority: TEXT > IMAGE > HEURISTIC. Jika konflik → TEXT menang.
+ * 2. Nilai vs Tampilan: Data inti TANPA suffix. UI yang menambahkan % / x / Rp.
+ * 3. Percent Guard: Jika konteks = bonus & ada % → set reward_unit=percent.
+ * 4. Terms = Sumber Kebenaran Constraint: Min WD/TO/Claim freq dari Terms.
+ * 5. TO Detection (Relasional): Frasa apapun bermakna TO x N → turnover_enabled=true.
+ * 6. Gate ≠ Basis: Gate (klaim) vs Basis (hitung) tidak boleh campur.
+ * 7. Withdraw Bonus Rule: trigger=Withdraw != basis=withdraw.
+ * 8. Game Type Resolution: Terms spesifik override "Semua".
+ * 9. Multi Validation: Badge "Multi" hanya jika >1 subcategory valid.
+ * 10. Confidence Tagging: hybrid/text → high, image → medium.
+ * 
+ * 6 NORMALIZATION RULES:
  * 1. normalizeNumericValues - Strip suffixes (%, x, Rp) → pure numbers
  * 2. deriveCalculationMethod - Force from promo_name (% detection)
  * 3. validateTriggerContext - Robust Withdraw detection + payout_direction
  * 4. dedupeSubcategories - Remove ghost/duplicate subcategories
  * 5. syncCalculationMethod - Ensure consistency across subcategories
+ * 6. inferTurnoverFromTerms - Fallback TO inference from terms (for image-only)
  */
 
 export interface NormalizablePromo {
@@ -38,10 +51,13 @@ export interface NormalizableSubCategory {
   [key: string]: unknown;
 }
 
-export type ExtractionSource = 'html' | 'image' | 'text';
+export type ExtractionSource = 'html' | 'image' | 'text' | 'hybrid';
 
 /**
- * Main normalizer function - applies all 5 rules in sequence
+ * Main normalizer function - applies all 6 rules in sequence
+ * 
+ * @param extracted - Raw extracted promo data from LLM
+ * @param source - Extraction source: 'html' | 'image' | 'text' | 'hybrid'
  */
 export function normalizeExtractedPromo<T extends NormalizablePromo>(
   extracted: T,
@@ -64,10 +80,13 @@ export function normalizeExtractedPromo<T extends NormalizablePromo>(
   // Step 5: Sync calculation_method across subcategories
   result = syncCalculationMethod(result);
 
-  // Step 6: Infer turnover from terms (fallback for OCR gaps in image extraction)
-  result = inferTurnoverFromTerms(result);
+  // Step 6: Infer turnover from terms (ONLY for image-only mode)
+  // Hybrid mode already has TEXT as source of truth for TO
+  if (source !== 'hybrid' && source !== 'text') {
+    result = inferTurnoverFromTerms(result);
+  }
 
-  console.log(`[PostNormalizer] Source: ${source}, applied 6 normalization rules`);
+  console.log(`[PostNormalizer] Source: ${source}, applied normalization rules. Hybrid: ${source === 'hybrid'}`);
   return result;
 }
 

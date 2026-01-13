@@ -371,7 +371,7 @@ export const promoKB = {
 // SESSION STORAGE (tetap di browser)
 // ============================================
 
-export type InputMode = 'url' | 'html' | 'image';
+export type InputMode = 'url' | 'html' | 'image' | 'text' | 'hybrid';
 
 export interface EditHistoryItem {
   command: string;

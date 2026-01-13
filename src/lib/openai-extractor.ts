@@ -1921,11 +1921,71 @@ function forceConfidenceDowngradeForImage(promo: ExtractedPromo): ExtractedPromo
  * CRITICAL: 
  * - Uses gpt-4o (NOT gpt-4o-mini) for vision capability
  * - All numeric confidence downgraded to "derived"
+ * - Supports HYBRID mode: Image + Text context for best results
+ * 
+ * @param base64Image - Base64 encoded image data
+ * @param textContext - Optional text context (S&K) for hybrid extraction
  */
-export async function extractPromoFromImage(base64Image: string): Promise<ExtractedPromo> {
+export async function extractPromoFromImage(
+  base64Image: string,
+  textContext?: string
+): Promise<ExtractedPromo> {
   if (!base64Image) {
     throw new Error("Image data tidak boleh kosong");
   }
+
+  const isHybrid = textContext && textContext.trim().length > 50;
+  
+  // Build content parts dynamically
+  const contentParts: Array<{type: string; text?: string; image_url?: {url: string; detail: string}}> = [];
+
+  // 1. Add text context FIRST if hybrid mode (TEXT = source of truth)
+  if (isHybrid) {
+    contentParts.push({
+      type: "text",
+      text: `🔒 KONTEKS TEXT DARI USER (SUMBER KEBENARAN):
+---
+${textContext!.trim()}
+---
+
+⚠️ ATURAN HYBRID EXTRACTION:
+1. TEXT MENANG jika ada konflik dengan Image
+2. Gunakan TEXT untuk: min_calculation, turnover_rule, terms_conditions, angka %
+3. Gunakan IMAGE untuk: layout tabel, struktur subcategory, judul promo
+4. Data inti TANPA suffix (%, x, Rp) - UI yang menambahkan nanti`
+    });
+  }
+
+  // 2. Add main extraction prompt
+  contentParts.push({
+    type: "text",
+    text: `${EXTRACTION_PROMPT}
+
+⚠️ INSTRUKSI KHUSUS - MODE: ${isHybrid ? 'HYBRID (Image + Text)' : 'IMAGE ONLY'}
+
+${isHybrid ? `
+🔒 PRIORITAS HYBRID:
+- Angka (Min WD, TO, %) → AMBIL DARI TEXT CONTEXT DI ATAS
+- Layout & struktur → AMBIL DARI IMAGE
+- Jika konflik → TEXT MENANG TANPA DEBAT
+- confidence: "explicit" untuk data dari text
+` : `
+Karena ini IMAGE-ONLY, SEMUA field numerik WAJIB menggunakan:
+- confidence: "derived" (BUKAN "explicit")
+Alasan: OCR dari image bisa salah baca.
+`}
+
+Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan syarat & ketentuan yang terlihat.`
+  });
+
+  // 3. Add image
+  contentParts.push({
+    type: "image_url",
+    image_url: {
+      url: base64Image,
+      detail: "high" // High detail untuk baca tabel/angka kecil
+    }
+  });
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -1938,33 +1998,7 @@ export async function extractPromoFromImage(base64Image: string): Promise<Extrac
       messages: [
         {
           role: "user",
-          content: [
-            {
-              type: "text",
-              text: `${EXTRACTION_PROMPT}
-
-⚠️ INSTRUKSI KHUSUS UNTUK IMAGE EXTRACTION:
-Karena ini dari screenshot/image, SEMUA field numerik WAJIB menggunakan:
-- confidence: "derived" (BUKAN "explicit")
-
-Alasan: OCR dari image bisa salah baca. User akan verify via edit command jika perlu.
-
-Kecuali jika:
-- Angka sangat besar dan jelas terbaca
-- Format tabel sangat clean dan high-resolution
-
-Jika ragu, gunakan "derived" atau "unknown".
-
-Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan syarat & ketentuan yang terlihat.`
-            },
-            {
-              type: "image_url",
-              image_url: {
-                url: base64Image,
-                detail: "high" // High detail untuk baca tabel/angka kecil
-              }
-            }
-          ]
+          content: contentParts
         }
       ],
       temperature: 0.1,
