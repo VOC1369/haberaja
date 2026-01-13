@@ -413,7 +413,11 @@ export function detectObviousIntent(content: string): PromoIntent | null {
   
   // ========== WITHDRAW-BASED - DEFINITE pattern ==========
   // Patterns: bonus wd, bonus withdraw, extra wd, bonus penarikan, wd bonus
-  if (/bonus\s*(extra\s*)?(wd|withdraw|penarikan)|extra\s*(wd|withdraw)|wd\s*bonus/i.test(lower)) {
+  // ✅ FIX: Match "BONUS EXTRA WD 5% SETIAP HARI" - allow numbers/% between words
+  if (/bonus\s*extra\s*(?:\d+%?\s*)?wd/i.test(lower) ||
+      /extra\s*(?:\d+%?\s*)?wd/i.test(lower) ||
+      /bonus\s*(extra\s*)?(wd|withdraw|penarikan)/i.test(lower) ||
+      /wd\s*bonus/i.test(lower)) {
     console.log('[Intent Reasoner] DETERMINISTIC: Withdraw bonus detected');
     return {
       primary_action: 'withdraw',
@@ -422,9 +426,9 @@ export function detectObviousIntent(content: string): PromoIntent | null {
       distribution_path: 'manual_cs',  // Per terms: "claim ke livechat"
       value_shape: 'percent',
       time_scope: 'ongoing',
-      intent_evidence: extractEvidence(lower, ['bonus', 'wd', 'withdraw', '%', 'penarikan']),
+      intent_evidence: extractEvidence(lower, ['bonus', 'wd', 'withdraw', '%', 'penarikan', 'extra']),
       confidence: 0.92,
-      reasoning: 'Deterministic: Withdraw bonus pattern - percentage of withdrawal amount',
+      reasoning: 'Deterministic: Withdraw bonus pattern - triggered on WD, calculated from turnover evidence',
       reasoner_version: REASONER_VERSION,
       processed_at: new Date().toISOString(),
     };

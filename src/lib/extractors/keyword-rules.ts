@@ -162,10 +162,14 @@ export const KEYWORD_RULES: KeywordRule[] = [
     id: 'withdraw_bonus',
     name: 'Withdraw Bonus',
     patterns: [
-      /bonus\s*(extra\s*)?(wd|withdraw)/i,
-      /extra\s*(wd|withdraw)/i,
-      /wd\s*bonus/i,
-      /bonus\s*penarikan/i,
+      // ✅ FIX: More flexible patterns to match "BONUS EXTRA WD 5%", "BONUS EXTRA WD 5% SETIAP HARI"
+      /bonus\s*extra\s*(?:\d+%?\s*)?wd/i,         // "BONUS EXTRA WD", "BONUS EXTRA 5% WD", "BONUS EXTRA WD 5%"
+      /extra\s*(?:\d+%?\s*)?wd/i,                  // "EXTRA WD", "EXTRA 5% WD"
+      /bonus\s*(?:extra\s*)?(wd|withdraw)\s*\d/i,  // "BONUS WD 5%", "BONUS EXTRA WD 5%"
+      /bonus\s*(extra\s*)?(wd|withdraw)/i,         // "BONUS WD", "BONUS EXTRA WD"
+      /extra\s*(wd|withdraw)/i,                    // "EXTRA WD", "EXTRA WITHDRAW"
+      /wd\s*bonus/i,                               // "WD BONUS"
+      /bonus\s*penarikan/i,                        // "BONUS PENARIKAN"
     ],
     category: 'A',
     archetype: 'formula_based',

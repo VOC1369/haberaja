@@ -1788,7 +1788,7 @@ Return HANYA JSON valid tanpa markdown code block.
 FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
 {
   "promo_name": "nama promo utama",
-  "promo_type": "Welcome Bonus|Deposit Bonus|Rollingan Cashback|Referral Bonus|Event Level Up|Mini Game|Freechip|Loyalty Point|Merchandise|Campaign Informational",
+  "promo_type": "Welcome Bonus|Deposit Bonus|Withdraw Bonus|Cashback|Rollingan|Referral Bonus|Event Level Up|Mini Game|Freechip|Loyalty Point|Merchandise|Campaign Informational|Birthday Bonus",
   "target_user": "new_member|all|vip",
   "promo_mode": "single|multi",
   "valid_from": "YYYY-MM-DD atau null",
