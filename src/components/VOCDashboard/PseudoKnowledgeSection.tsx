@@ -540,7 +540,22 @@ export function PseudoKnowledgeSection() {
   // RENDER SUB CATEGORY CARD
   // ============================================
   
-  const renderSubCategoryCard = (sub: ExtractedPromoSubCategory, idx: number, archetype: RewardArchetype) => {
+  const renderSubCategoryCard = (
+    sub: ExtractedPromoSubCategory, 
+    idx: number, 
+    archetype: RewardArchetype,
+    normalizedSub?: Partial<typeof sub> // ✅ Accept normalized data from mappedPreview
+  ) => {
+    // ✅ Merge: normalized data takes priority over raw extraction
+    const displaySub = {
+      ...sub,
+      calculation_value: normalizedSub?.calculation_value ?? sub.calculation_value,
+      calculation_method: normalizedSub?.calculation_method ?? sub.calculation_method,
+      turnover_rule: normalizedSub?.turnover_rule ?? sub.turnover_rule,
+      payout_direction: normalizedSub?.payout_direction ?? sub.payout_direction,
+      min_calculation: (normalizedSub as any)?.min_calculation ?? (sub as any).min_calculation,
+    };
+    
     const hasBlacklist = sub.blacklist?.enabled && (
       (sub.blacklist.types?.length || 0) > 0 ||
       (sub.blacklist.providers?.length || 0) > 0 || 
@@ -574,6 +589,9 @@ export function PseudoKnowledgeSection() {
       return <span className="text-muted-foreground">-</span>;
     };
     
+    // ✅ Use normalized subcategory count for badge display
+    const effectiveSubCount = mappedPreview?.subcategories?.length || extractedPromo?.subcategories.length || 1;
+    
     return (
       <div 
         key={idx} 
@@ -584,7 +602,7 @@ export function PseudoKnowledgeSection() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
           <h4 className="text-base font-semibold text-button-hover">
-              {sub.sub_name || (extractedPromo?.subcategories.length === 1 
+              {displaySub.sub_name || (effectiveSubCount === 1 
                 ? extractedPromo?.promo_name 
                 : `Varian ${idx + 1}`)}
             </h4>
@@ -595,7 +613,7 @@ export function PseudoKnowledgeSection() {
               </Badge>
             )}
           </div>
-          {extractedPromo && extractedPromo.subcategories.length > 1 && (
+          {effectiveSubCount > 1 && (
             <Badge variant="outline" className="text-xs text-muted-foreground">
               Varian {idx + 1}
             </Badge>
@@ -606,27 +624,31 @@ export function PseudoKnowledgeSection() {
           {/* ✅ Hide "Nilai Bonus" for unit-based rewards (Lucky Spin/Voucher/Ticket) in Fixed mode */}
           {(() => {
             const isFixedMode = mappedPreview?.reward_mode === 'fixed';
-            const rewardType = isFixedMode ? mappedPreview?.fixed_reward_type : sub.reward_type;
+            const rewardType = isFixedMode ? mappedPreview?.fixed_reward_type : displaySub.reward_type;
             const isUnitBased = isFixedMode && ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
             
             // Skip rendering for unit-based rewards - "Jumlah Reward" shown in detail section instead
             if (isUnitBased) return null;
             
+            // ✅ FIX: Use displaySub (normalized) for calculation display
+            const calcMethod = displaySub.calculation_method;
+            const calcValue = displaySub.calculation_value;
+            
             return (
               <div className="bg-muted rounded-lg p-3">
                 <span className="text-muted-foreground text-xs block mb-1">
-                  {sub.calculation_method === 'threshold' ? 'Target' : 'Perhitungan Bonus'}
+                  {calcMethod === 'threshold' ? 'Target' : 'Perhitungan Bonus'}
                 </span>
                 {getFieldStatus('calculation_value', archetype) === 'not_applicable' ? (
                   <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
                 ) : (
                   <span className="text-button-hover font-semibold">
-                    {sub.calculation_value != null 
-                      ? (sub.calculation_method === 'threshold'
-                          ? `Rp ${Number(sub.calculation_value).toLocaleString('id-ID')}`
-                          : sub.calculation_method === 'percentage'
-                            ? `${sub.calculation_value}%`
-                            : `Rp ${Number(sub.calculation_value).toLocaleString('id-ID')}`)
+                    {calcValue != null 
+                      ? (calcMethod === 'threshold'
+                          ? `Rp ${Number(calcValue).toLocaleString('id-ID')}`
+                          : calcMethod === 'percentage'
+                            ? `${calcValue}%`
+                            : `Rp ${Number(calcValue).toLocaleString('id-ID')}`)
                       : '-'}
                   </span>
                 )}
@@ -1200,7 +1222,8 @@ export function PseudoKnowledgeSection() {
                     })
                     .map((sub, idx) => {
                     const archetype = detectRewardArchetype(extractedPromo);
-                    return renderSubCategoryCard(sub, idx, archetype);
+                    // ✅ Pass normalized subcategory data from mappedPreview (cast to any for compatibility)
+                    return renderSubCategoryCard(sub, idx, archetype, mappedPreview?.subcategories?.[idx] as any);
                   })}
                 </div>
               </div>
