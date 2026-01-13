@@ -58,6 +58,10 @@ export function getPromoSubTypeDisplay(
   const type = (promoType || '').toLowerCase();
   
   // Priority 1: Keyword-based override dari promo_name
+  // ✅ Withdraw Bonus - MUST be checked before other patterns
+  if (/bonus\s*extra\s*(?:\d+%?\s*)?wd/i.test(name) || /extra\s*(?:\d+%?\s*)?wd/i.test(name) || /bonus\s*wd/i.test(name) || /wd\s*bonus/i.test(name) || /bonus\s*withdraw/i.test(name)) {
+    return 'Withdraw Bonus';
+  }
   if (/birthday/i.test(name) || /ulang\s*tahun/i.test(name) || /ultah/i.test(name)) {
     return 'Birthday Bonus';
   }
@@ -102,6 +106,10 @@ export function getPromoSubTypeDisplay(
     'lucky_draw': 'Undian',
     'welcome_bonus': 'Welcome Bonus',
     'deposit_bonus': 'Deposit Bonus',
+    'withdraw_bonus': 'Withdraw Bonus',  // ✅ ADD
+    'withdraw bonus': 'Withdraw Bonus',  // ✅ ADD
+    'bonus withdraw': 'Withdraw Bonus',  // ✅ ADD
+    'bonus wd': 'Withdraw Bonus',        // ✅ ADD
     'cashback': 'Cashback',
     'rollingan': 'Rollingan',
     'referral': 'Referral',
