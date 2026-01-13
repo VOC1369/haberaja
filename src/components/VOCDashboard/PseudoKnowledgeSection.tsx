@@ -806,10 +806,14 @@ export function PseudoKnowledgeSection() {
               
               // If mappedPreview has turnover data, use it
               if (turnoverEnabled && turnoverValue) {
+                // ✅ FIX: Prevent double suffix (e.g., "1xx")
+                const displayTurnover = String(turnoverValue).toLowerCase().endsWith('x')
+                  ? turnoverValue
+                  : `${turnoverValue}x`;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Turnover</span>
-                    <span className="text-foreground font-medium">{turnoverValue}x</span>
+                    <span className="text-foreground font-medium">{displayTurnover}</span>
                   </>
                 );
               }
@@ -837,9 +841,13 @@ export function PseudoKnowledgeSection() {
                           return '-';
                         }
                         
-                        return isMinRupiahFormat
-                          ? `Rp ${Number(displayValue).toLocaleString('id-ID')}`
-                          : `${displayValue}x`;
+                        // ✅ FIX: Prevent double suffix
+                        if (isMinRupiahFormat) {
+                          return `Rp ${Number(displayValue).toLocaleString('id-ID')}`;
+                        }
+                        // Check if already has 'x' suffix
+                        const strVal = String(displayValue);
+                        return strVal.toLowerCase().endsWith('x') ? strVal : `${strVal}x`;
                       })()}
                     </span>
                   )}
@@ -849,9 +857,17 @@ export function PseudoKnowledgeSection() {
           </div>
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Payout</span>
-            <span className={`font-semibold ${sub.payout_direction === 'depan' ? 'text-success' : 'text-warning'}`}>
-              {sub.payout_direction === 'depan' ? 'DEPAN' : sub.payout_direction === 'belakang' ? 'BELAKANG' : '-'}
-            </span>
+            {(() => {
+              // ✅ FIX: Use mappedPreview as source of truth (post-normalized)
+              const payoutValue = mappedPreview?.payout_direction || sub.payout_direction;
+              const isDepan = payoutValue === 'depan';
+              const isBelakang = payoutValue === 'belakang';
+              return (
+                <span className={`font-semibold ${isDepan ? 'text-success' : isBelakang ? 'text-warning' : 'text-muted-foreground'}`}>
+                  {isDepan ? 'DEPAN' : isBelakang ? 'BELAKANG' : '-'}
+                </span>
+              );
+            })()}
           </div>
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Jenis Game</span>
