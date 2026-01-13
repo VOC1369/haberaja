@@ -4930,14 +4930,13 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       // PRIORITY 1: Subcategory extraction
       return subcategories[0]?.calculation_value || 0;
     })(),
-    // ✅ FIX: For formula mode, extract min_calculation from terms
+    // ✅ FIX v2: For formula mode, extract min_calculation from terms
     // Works for both "Minimal WD" (withdraw trigger) and "Minimal TO" (turnover basis)
+    // CRITICAL: Withdraw-triggered promos BYPASS skipFormulaDefaults for min_calculation
     min_calculation: (() => {
-      if (skipFormulaDefaults) return null;
-      
       const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
       
-      // ✅ PRIORITY 0: Extract from terms for withdraw-triggered promos
+      // ✅ PRIORITY 0: WITHDRAW-TRIGGERED PROMOS ALWAYS EXTRACT (BYPASS skipFormulaDefaults)
       const isWithdrawTriggered = lockedFields?.trigger_event === 'Withdraw' ||
                                    extracted.promo_name?.toLowerCase().includes('wd') ||
                                    extracted.promo_name?.toLowerCase().includes('withdraw');
@@ -4952,10 +4951,20 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
           const suffix = match[0].toLowerCase();
           if (/jt|juta/i.test(suffix) && amount < 1000) amount *= 1_000_000;
           else if (/rb|ribu|k/i.test(suffix) && amount < 10000) amount *= 1000;
-          console.log('[Extractor Dinamis] Extracted min_calculation for WD promo:', amount);
+          console.log('[Extractor Dinamis] WD OVERRIDE - Extracted min_calculation:', amount);
           return amount;
         }
+        
+        // FALLBACK: Use subcategory minimum_base (dari LLM)
+        const subMinBase = subcategories[0]?.minimum_base;
+        if (subMinBase && subMinBase > 0) {
+          console.log('[Extractor Dinamis] WD OVERRIDE - Using subcategory minimum_base:', subMinBase);
+          return subMinBase;
+        }
       }
+      
+      // Non-withdraw promos: respect skipFormulaDefaults
+      if (skipFormulaDefaults) return null;
       
       // ✅ PRIORITY 0.5: Extract min TO from terms
       const minTOPattern = /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:sebesar\s*)?(?:rp\.?|idr)?[\s:]*([0-9.,]+)\s*(?:jt|juta|rb|ribu|k)?/i;
@@ -4974,11 +4983,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       return subcategories[0]?.minimum_base || 0;
     })(),
     min_calculation_enabled: (() => {
-      if (skipFormulaDefaults) return false;
-      
       const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
       
-      // For withdraw-triggered promos, check for "Minimal WD"
+      // ✅ PRIORITY 0: WITHDRAW-TRIGGERED PROMOS ALWAYS ENABLE (BYPASS skipFormulaDefaults)
       const isWithdrawTriggered = lockedFields?.trigger_event === 'Withdraw' ||
                                    extracted.promo_name?.toLowerCase().includes('wd') ||
                                    extracted.promo_name?.toLowerCase().includes('withdraw');
@@ -4986,10 +4993,18 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       if (isWithdrawTriggered) {
         const minWDPattern = /min(?:imal|imum)?\s*(?:wd|withdraw|penarikan)/i;
         if (minWDPattern.test(termsText)) {
-          console.log('[Extractor Dinamis] Enabling min_calculation for WD promo');
+          console.log('[Extractor Dinamis] WD OVERRIDE - Enabling min_calculation');
+          return true;
+        }
+        // Also enable if subcategory has minimum_base
+        if ((subcategories[0]?.minimum_base || 0) > 0) {
+          console.log('[Extractor Dinamis] WD OVERRIDE - Enabling via subcategory minimum_base');
           return true;
         }
       }
+      
+      // Non-withdraw promos: respect skipFormulaDefaults
+      if (skipFormulaDefaults) return false;
       
       // Also enable for any "Minimal TO" pattern
       const minTOPattern = /min(?:imal|imum)?\s*(?:to|turnover)/i;
