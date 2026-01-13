@@ -3254,6 +3254,12 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     'loyalty_point': 'Loyalty Point',
     'merchandise': 'Merchandise',
     'campaign': 'Campaign / Informational',
+    // ✅ Withdraw Bonus synonyms for badge display
+    'withdraw bonus': 'Withdraw Bonus',
+    'bonus withdraw': 'Withdraw Bonus',
+    'bonus wd': 'Withdraw Bonus',
+    'extra wd': 'Withdraw Bonus',
+    'bonus extra wd': 'Withdraw Bonus',
   };
 
   // Map target user to exact TARGET_SEGMENTS values
@@ -4014,10 +4020,17 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       if (lockedFields?.mode === 'formula') {
         const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
         // Pattern: "TO x 1", "syarat main 3x", "kelipatan 5x"
+        // ✅ ROBUST TO REGEX: Handles many variations
+        // "TO x 1", "to x1", "minimal to x 1", "dengan to x 1", "syarat main 3x", "1x TO"
         const multiplierPatterns = [
           /(?:to|turnover|syarat\s*main)\s*(?:x|kali)?\s*(\d+)/i,
           /(\d+)\s*(?:x|kali)\s*(?:to|turnover)/i,
           /kelipatan\s*(\d+)/i,
+          /minimal\s*(?:to|turnover)\s*(?:x|kali)?\s*(\d+)/i,    // ✅ "minimal to x 1"
+          /dengan\s*(?:to|turnover)\s*x?\s*(\d+)/i,              // ✅ "dengan to x 1"
+          /(?:to|turnover)\s*x\s*(\d+)/i,                        // ✅ "to x 1" exact
+          /(?:claim|wd)\s*dengan\s*(?:minimal|min)?\s*(?:to|turnover)?\s*x?\s*(\d+)/i, // ✅ "claim dengan minimal to x1"
+          /dapat\s*(?:wd|withdraw|claim).*?(?:to|turnover)\s*x?\s*(\d+)/i, // ✅ "dapat wd... to x 1"
         ];
         for (const pattern of multiplierPatterns) {
           const match = termsText.match(pattern);
@@ -4037,10 +4050,16 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       // PRIORITY 0: Check if this is a formula mode with turnover in terms
       if (lockedFields?.mode === 'formula') {
         const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+        // ✅ ROBUST TO REGEX: Same patterns as turnover_rule
         const multiplierPatterns = [
           /(?:to|turnover|syarat\s*main)\s*(?:x|kali)?\s*(\d+)/i,
           /(\d+)\s*(?:x|kali)\s*(?:to|turnover)/i,
           /kelipatan\s*(\d+)/i,
+          /minimal\s*(?:to|turnover)\s*(?:x|kali)?\s*(\d+)/i,
+          /dengan\s*(?:to|turnover)\s*x?\s*(\d+)/i,
+          /(?:to|turnover)\s*x\s*(\d+)/i,
+          /(?:claim|wd)\s*dengan\s*(?:minimal|min)?\s*(?:to|turnover)?\s*x?\s*(\d+)/i,
+          /dapat\s*(?:wd|withdraw|claim).*?(?:to|turnover)\s*x?\s*(\d+)/i,
         ];
         for (const pattern of multiplierPatterns) {
           const match = termsText.match(pattern);
@@ -4799,6 +4818,47 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
         console.log('[Extractor Dinamis] Using LOCKED calculation_basis:', lockedFields.calculation_basis);
         return lockedFields.calculation_basis;
       }
+      
+      // ✅ PRIORITY 0.5: Evidence-based detection for Withdraw Bonus
+      // If trigger = Withdraw, look for calculation evidence in terms
+      const isWithdrawTrigger = lockedFields?.trigger_event === 'Withdraw' || 
+                                 extracted.promo_name?.toLowerCase().includes('wd') ||
+                                 extracted.promo_name?.toLowerCase().includes('withdraw');
+      
+      if (isWithdrawTrigger) {
+        const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+        const promoName = (extracted.promo_name || '').toLowerCase();
+        const combinedText = termsText + ' ' + promoName;
+        
+        // Evidence: "5% dari turnover", "minimal to", "syarat to"
+        const hasTurnoverEvidence = 
+          /dari\s*(to|turnover)/i.test(combinedText) ||
+          /minimal\s*to/i.test(combinedText) ||
+          /syarat\s*to/i.test(combinedText) ||
+          /(?:to|turnover)\s*x\s*\d/i.test(combinedText) ||  // "TO x 1"
+          /\d+\s*%.*(?:to|turnover)/i.test(combinedText) ||  // "5% turnover"
+          /(?:to|turnover).*\d+\s*%/i.test(combinedText);    // "turnover 5%"
+        
+        if (hasTurnoverEvidence) {
+          console.log('[Extractor Dinamis] Withdraw Bonus with TURNOVER evidence → calculation_base: turnover');
+          return 'turnover';
+        }
+        
+        // Evidence: "dari WD", "dari penarikan"
+        const hasWithdrawBasisEvidence = 
+          /dari\s*(wd|withdraw|penarikan)/i.test(combinedText) ||
+          /\d+\s*%\s*dari\s*(wd|withdraw)/i.test(combinedText);
+        
+        if (hasWithdrawBasisEvidence) {
+          console.log('[Extractor Dinamis] Withdraw Bonus with WITHDRAW evidence → calculation_base: withdraw');
+          return 'withdraw';
+        }
+        
+        // Default for Withdraw Bonus without clear evidence: turnover (most common)
+        console.log('[Extractor Dinamis] Withdraw Bonus default → calculation_base: turnover');
+        return 'turnover';
+      }
+      
       // PRIORITY 1: Subcategory extraction
       return subcategories[0]?.calculation_base || 'deposit';
     })(),
@@ -4820,14 +4880,19 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       // PRIORITY 1: Subcategory extraction
       return subcategories[0]?.calculation_value || 0;
     })(),
-    // ✅ FIX: For formula mode, extract min_calculation from terms ("Minimal WD Rp X")
+    // ✅ FIX: For formula mode, extract min_calculation from terms
+    // Works for both "Minimal WD" (withdraw trigger) and "Minimal TO" (turnover basis)
     min_calculation: (() => {
       if (skipFormulaDefaults) return null;
       
-      // PRIORITY 0: Extract from terms for withdraw-based promos
-      const isWithdrawBased = lockedFields?.calculation_basis === 'withdraw';
-      if (isWithdrawBased) {
-        const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      
+      // ✅ PRIORITY 0: Extract from terms for withdraw-triggered promos
+      const isWithdrawTriggered = lockedFields?.trigger_event === 'Withdraw' ||
+                                   extracted.promo_name?.toLowerCase().includes('wd') ||
+                                   extracted.promo_name?.toLowerCase().includes('withdraw');
+      
+      if (isWithdrawTriggered) {
         // Pattern: "Minimal WD sebesar 200.000", "Min WD Rp 200rb"
         const minWDPattern = /min(?:imal|imum)?\s*(?:wd|withdraw|penarikan)\s*(?:sebesar\s*)?(?:rp\.?|idr)?[\s:]*([0-9.,]+)\s*(?:jt|juta|rb|ribu|k)?/i;
         const match = termsText.match(minWDPattern);
@@ -4842,21 +4907,45 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
         }
       }
       
+      // ✅ PRIORITY 0.5: Extract min TO from terms
+      const minTOPattern = /min(?:imal|imum)?\s*(?:to|turnover)\s*(?:sebesar\s*)?(?:rp\.?|idr)?[\s:]*([0-9.,]+)\s*(?:jt|juta|rb|ribu|k)?/i;
+      const toMatch = termsText.match(minTOPattern);
+      if (toMatch) {
+        const rawNum = toMatch[1].replace(/[.,]/g, '');
+        let amount = parseInt(rawNum, 10);
+        const suffix = toMatch[0].toLowerCase();
+        if (/jt|juta/i.test(suffix) && amount < 1000) amount *= 1_000_000;
+        else if (/rb|ribu|k/i.test(suffix) && amount < 10000) amount *= 1000;
+        console.log('[Extractor Dinamis] Extracted min_calculation (TO) from terms:', amount);
+        return amount;
+      }
+      
       // PRIORITY 1: Subcategory extraction
       return subcategories[0]?.minimum_base || 0;
     })(),
     min_calculation_enabled: (() => {
       if (skipFormulaDefaults) return false;
       
-      // For withdraw-based promos, check if we extracted a value
-      const isWithdrawBased = lockedFields?.calculation_basis === 'withdraw';
-      if (isWithdrawBased) {
-        const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      
+      // For withdraw-triggered promos, check for "Minimal WD"
+      const isWithdrawTriggered = lockedFields?.trigger_event === 'Withdraw' ||
+                                   extracted.promo_name?.toLowerCase().includes('wd') ||
+                                   extracted.promo_name?.toLowerCase().includes('withdraw');
+      
+      if (isWithdrawTriggered) {
         const minWDPattern = /min(?:imal|imum)?\s*(?:wd|withdraw|penarikan)/i;
         if (minWDPattern.test(termsText)) {
           console.log('[Extractor Dinamis] Enabling min_calculation for WD promo');
           return true;
         }
+      }
+      
+      // Also enable for any "Minimal TO" pattern
+      const minTOPattern = /min(?:imal|imum)?\s*(?:to|turnover)/i;
+      if (minTOPattern.test(termsText)) {
+        console.log('[Extractor Dinamis] Enabling min_calculation for TO pattern');
+        return true;
       }
       
       return (subcategories[0]?.minimum_base || 0) > 0;
@@ -4930,7 +5019,47 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     // Step 2 - Batasan & Akses
     platform_access: 'semua',
     game_restriction: 'specific_game',
-    game_types: subcategories[0]?.game_types || [],
+    // ✅ EVIDENCE-BASED game_types extraction from terms
+    game_types: (() => {
+      // Priority 1: Subcategory extraction
+      if (subcategories[0]?.game_types?.length > 0) {
+        return subcategories[0].game_types;
+      }
+      
+      // Priority 2: Extract from terms/promo name (evidence-based)
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const combinedText = termsText + ' ' + promoName;
+      
+      const detectedTypes: string[] = [];
+      
+      // ✅ Robust pattern matching for game types
+      if (/\b(slot|slots)\b|bermain\s*slot|khusus\s*slot|game\s*slot|untuk\s*slot/i.test(combinedText)) {
+        detectedTypes.push('slot');
+      }
+      if (/\b(casino|live\s*casino|baccarat|roulette|blackjack)\b/i.test(combinedText)) {
+        detectedTypes.push('live_casino');
+      }
+      if (/\b(togel|lottery|lotre|4d|3d|2d)\b/i.test(combinedText)) {
+        detectedTypes.push('togel');
+      }
+      if (/\b(sportsbook|taruhan\s*bola|handicap|parlay|sports)\b/i.test(combinedText)) {
+        detectedTypes.push('sportsbook');
+      }
+      if (/\b(poker|domino|ceme|capsa)\b/i.test(combinedText)) {
+        detectedTypes.push('poker');
+      }
+      if (/\b(arcade|fishing|tembak\s*ikan)\b/i.test(combinedText)) {
+        detectedTypes.push('arcade');
+      }
+      
+      if (detectedTypes.length > 0) {
+        console.log('[Extractor] Detected game_types from terms:', detectedTypes);
+        return detectedTypes;
+      }
+      
+      return [];
+    })(),
     eligible_providers: extracted.eligible_providers || subcategories[0]?.eligible_providers || [],  // ← NEW
     game_providers: subcategories[0]?.game_providers || [],
     game_names: subcategories[0]?.game_names || [],

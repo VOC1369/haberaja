@@ -156,6 +156,8 @@ export const KEYWORD_RULES: KeywordRule[] = [
   },
   
   // Withdraw Bonus (WD Bonus)
+  // ✅ ARCHITECTURE FIX: trigger_event = Withdraw (gate), calculation_base = FROM EVIDENCE
+  // DO NOT hardcode calculation_base - let extraction determine from terms
   {
     id: 'withdraw_bonus',
     name: 'Withdraw Bonus',
@@ -167,19 +169,20 @@ export const KEYWORD_RULES: KeywordRule[] = [
     ],
     category: 'A',
     archetype: 'formula_based',
-    reason: 'WITHDRAW BONUS → Reward Program (withdraw-based)',
+    reason: 'WITHDRAW BONUS → Reward Program (trigger=Withdraw, basis=from terms)',
     defaults: {
+      promo_type: 'Withdraw Bonus',       // ✅ Force correct badge label
       reward_mode: 'formula',
-      calculation_base: 'withdraw',
-      trigger_event: 'Withdraw',
+      // ❌ REMOVED: calculation_base: 'withdraw' - this MUST come from evidence!
+      trigger_event: 'Withdraw',          // ✅ Gate/trigger = when WD
       target_segment: 'Semua',
       intent_category: 'Retention',
-      // ✅ Toggle defaults - Withdraw Bonus = percentage of WD
+      // ✅ Toggle defaults
       fixed_calculation_value_enabled: true,
       fixed_max_claim_enabled: true,
       fixed_admin_fee_enabled: false,
       fixed_min_depo_enabled: false,
-      fixed_min_calculation_enabled: true,  // Minimal WD
+      fixed_min_calculation_enabled: true,  // Minimal WD untuk eligible
       fixed_turnover_rule_enabled: true,    // Usually has TO requirement
     },
   },
@@ -596,27 +599,10 @@ export const KEYWORD_RULES: KeywordRule[] = [
     },
   },
   
-  // Bonus Withdraw (milestone-based)
-  {
-    id: 'bonus_withdraw',
-    name: 'Bonus Withdraw',
-    patterns: [
-      /bonus\s*withdraw/i,
-      /bonus\s*wd/i,
-      /withdraw\s*bonus/i,
-      /bonus\s*penarikan/i,
-    ],
-    category: 'B',
-    archetype: 'tiered_fixed',
-    reason: 'BONUS WITHDRAW → Event Program (milestone-based)',
-    defaults: {
-      reward_mode: 'tier',
-      tier_archetype: 'tier_level',
-      trigger_event: 'Withdraw',
-      promo_type: 'Bonus Withdraw',
-      intent_category: 'Retention',
-    },
-  },
+  // ❌ DELETED: Duplicate bonus_withdraw rule - conflicts with withdraw_bonus (line 158)
+  // The withdraw_bonus rule at line 158 handles ALL withdraw bonus patterns
+  // This duplicate was causing incorrect tier mode detection
+  // Removal date: 2025-01-13
   
   // Winstreak (streak-based)
   {

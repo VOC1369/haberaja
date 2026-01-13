@@ -2099,18 +2099,22 @@ export type LpEarnBasis = typeof LP_EARN_BASIS_OPTIONS[number]['value'];
 // FIX: Pisahkan Rollingan dan Cashback - ini adalah promo yang BERBEDA secara ontologi!
 // - Cashback = kompensasi kekalahan (loss-based)
 // - Rollingan = akumulasi turnover (turnover-based)
+// - Withdraw Bonus = trigger saat WD, basis dari evidence (turnover/withdraw)
 export const PROMO_TYPES = [
   'Cashback (Loss-based)',        // Kompensasi kekalahan
   'Rollingan (Turnover-based)',   // Akumulasi turnover
   'Welcome Bonus',
   'Deposit Bonus',
+  'Withdraw Bonus',               // ✅ NEW: Bonus WD (trigger=Withdraw, basis=evidence)
   'Freechip',
   'Loyalty Point',
   'Event / Level Up',
   'Mini Game (Spin, Lucky Draw)',
   'Merchandise',
   'Referral Bonus',
-  'Campaign / Informational'
+  'Campaign / Informational',
+  'Birthday Bonus',               // ✅ Bonus Ulang Tahun
+  'Togel Discount',               // ✅ Togel-specific
 ];
 
 // Deposit method options for payment-specific promos
