@@ -64,7 +64,10 @@ export function normalizeExtractedPromo<T extends NormalizablePromo>(
   // Step 5: Sync calculation_method across subcategories
   result = syncCalculationMethod(result);
 
-  console.log(`[PostNormalizer] Source: ${source}, applied 5 normalization rules`);
+  // Step 6: Infer turnover from terms (fallback for OCR gaps in image extraction)
+  result = inferTurnoverFromTerms(result);
+
+  console.log(`[PostNormalizer] Source: ${source}, applied 6 normalization rules`);
   return result;
 }
 
@@ -247,6 +250,61 @@ function syncCalculationMethod<T extends NormalizablePromo>(data: T): T {
     }
   }
 
+  return result;
+}
+
+/**
+ * Rule 6: Infer turnover from terms
+ * - Fallback for image/OCR extraction that misses structured turnover data
+ * - Parses terms_conditions for patterns like "to x 1", "minimal to x1", "dengan to x 1"
+ */
+function inferTurnoverFromTerms<T extends NormalizablePromo>(data: T): T {
+  const result = { ...data };
+  
+  // Skip if turnover already exists at root or in any subcategory
+  const hasExistingTurnover = 
+    (result.turnover_rule && Number(result.turnover_rule) > 0) ||
+    result.subcategories?.some(sub => sub.turnover_rule && Number(sub.turnover_rule) > 0);
+  
+  if (hasExistingTurnover) {
+    return result;
+  }
+  
+  const termsText = (result.terms_conditions || []).join(' ').toLowerCase();
+  
+  // Pattern matching for turnover multipliers
+  const patterns = [
+    /(?:to|turnover)\s*(?:x|kali)\s*(\d+)/i,           // "to x 1", "turnover x 3"
+    /(\d+)\s*(?:x|kali)\s*(?:to|turnover)/i,           // "1x to", "3 kali turnover"
+    /minimal\s*(?:to|turnover)\s*(?:x|kali)?\s*(\d+)/i, // "minimal to x 1"
+    /dengan\s*(?:to|turnover)\s*x?\s*(\d+)/i,          // "dengan to x1"
+    /claim\s*dengan.*?(?:to|turnover)\s*x?\s*(\d+)/i,  // "claim dengan minimal to x1"
+    /syarat\s*(?:to|turnover)\s*(?:x|kali)?\s*(\d+)/i, // "syarat to x 1"
+    /wajib\s*(?:to|turnover)\s*(?:x|kali)?\s*(\d+)/i,  // "wajib to x 1"
+  ];
+  
+  for (const pattern of patterns) {
+    const match = termsText.match(pattern);
+    if (match && match[1]) {
+      const multiplier = parseInt(match[1], 10);
+      if (multiplier > 0 && multiplier <= 100) {
+        console.log(`[PostNormalizer] Inferred turnover_rule=${multiplier} from terms`);
+        
+        // Set at root level
+        result.turnover_rule = multiplier;
+        
+        // Also apply to subcategories that don't have turnover
+        if (result.subcategories && Array.isArray(result.subcategories)) {
+          result.subcategories = result.subcategories.map(sub => ({
+            ...sub,
+            turnover_rule: sub.turnover_rule ?? multiplier,
+          }));
+        }
+        break;
+      }
+    }
+  }
+  
   return result;
 }
 
