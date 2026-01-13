@@ -652,6 +652,24 @@ export function PseudoKnowledgeSection() {
                 );
               }
               
+              // ✅ Withdraw Bonus: use min_calculation as "Min WD", not min_deposit
+              const isWithdrawTrigger = mappedPreview?.trigger_event === 'Withdraw' || 
+                /withdraw|bonus.*wd|extra.*wd/i.test(extractedPromo?.promo_name || '');
+              
+              if (isWithdrawTrigger) {
+                const minWdValue = mappedPreview?.min_calculation_enabled 
+                  ? mappedPreview?.min_calculation 
+                  : null;
+                return (
+                  <>
+                    <span className="text-muted-foreground text-xs block mb-1">Min WD</span>
+                    <span className="text-foreground font-medium">
+                      {minWdValue ? `Rp ${Number(minWdValue).toLocaleString('id-ID')}` : "-"}
+                    </span>
+                  </>
+                );
+              }
+              
               // Default: Min Deposit for other promo types
               // ✅ For Fixed Mode, read from mappedPreview (guarded values)
               const isFixedMode = mappedPreview?.reward_mode === 'fixed';
@@ -782,7 +800,21 @@ export function PseudoKnowledgeSection() {
                 );
               }
               
-              // Dinamis mode: original logic
+              // Dinamis mode: ✅ Read from mappedPreview (single source of truth)
+              const turnoverEnabled = mappedPreview?.turnover_rule_enabled;
+              const turnoverValue = mappedPreview?.turnover_rule;
+              
+              // If mappedPreview has turnover data, use it
+              if (turnoverEnabled && turnoverValue) {
+                return (
+                  <>
+                    <span className="text-muted-foreground text-xs block mb-1">Turnover</span>
+                    <span className="text-foreground font-medium">{turnoverValue}x</span>
+                  </>
+                );
+              }
+              
+              // Fallback: original logic from sub (legacy/extraction)
               const isMinRupiahFormat = sub.turnover_rule_format === 'min_rupiah' 
                 || sub.calculation_base === 'turnover';
               return (
