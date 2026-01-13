@@ -22,6 +22,7 @@ import { generateUUID } from './supabase-client';
 import { enforceFieldApplicability } from './extractors/field-applicability-map';
 import { getDefaultsFromKeywords } from './extractors/keyword-rules';
 import { sanitizeByMode, NON_FORMULA_MODES } from './sanitize-by-mode';
+import { normalizeExtractedPromo, type ExtractionSource } from './extractors/post-extraction-normalizer';
 
 // NEW: Reasoning-First Architecture imports (v2.0)
 import { 
@@ -2141,6 +2142,10 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
       console.warn('[extractPromoFromImage] Canonical guard failed (non-fatal):', guardError);
     }
     
+    // Tag extraction source for normalizer
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (downgraded as any)._source_type = 'image';
+    
     return downgraded;
   } catch (parseError) {
     console.error("Failed to parse OpenAI Vision response:", resultText);
@@ -3039,6 +3044,10 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
       console.warn('[Extractor] Canonical guard failed (non-fatal):', guardError);
     }
     
+    // Tag extraction source for normalizer (HTML/text detection)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (parsed as any)._source_type = content.includes('<html') || content.includes('<table') ? 'html' : 'text';
+    
     return parsed;
   } catch (parseError) {
     console.error("Failed to parse OpenAI response:", resultText);
@@ -3217,7 +3226,7 @@ function ensureCalculationBaseConsistency(data: PromoFormData): PromoFormData {
  * 
  * This function is used inside useMemo and relies on referential stability.
  */
-export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFormData {
+export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: ExtractionSource): PromoFormData {
   // ============================================
   // PRIORITY 0: Extract locked fields from Reasoning-First Architecture
   // These OVERRIDE all other sources (keyword defaults, LLM extraction)
@@ -3228,6 +3237,12 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
   const lockedFields = reasoningV2?.mechanic_selection?.locked_fields as LockedFields | undefined;
   const mechanicType = reasoningV2?.mechanic_selection?.mechanic_type;
   
+  // Detect extraction source if not provided
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const extractionSource: ExtractionSource = source || 
+    ((extracted as any)._source_type as ExtractionSource) || 
+    'html';  // Default to 'html' as it's most common
+  
   // Log if locked fields exist
   if (lockedFields) {
     console.log('[mapExtractedToPromoFormData] Using locked fields from Reasoning-First:', {
@@ -3236,6 +3251,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
       trigger_event: lockedFields.trigger_event,
       require_apk: lockedFields.require_apk,
       mechanic_type: mechanicType,
+      source: extractionSource,
     });
   }
 
@@ -5279,5 +5295,20 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo): PromoFor
     trigger_event: sanitizedData.trigger_event,
   });
 
-  return sanitizedData as unknown as PromoFormData;
+  // ============================================
+  // POST-EXTRACTION NORMALIZER (v1.0)
+  // Single Point of Normalization untuk semua pintu masuk
+  // - Strip suffixes (%, x, Rp) → pure numbers
+  // - Force calculation_method dari promo_name
+  // - Validate Withdraw context → payout_direction
+  // - Dedupe ghost subcategories
+  // ============================================
+  const normalizedData = normalizeExtractedPromo(
+    sanitizedData as Record<string, unknown>,
+    extractionSource || 'html'
+  );
+  
+  console.log('[mapExtractedToPromoFormData] Applied Post-Extraction Normalizer');
+
+  return normalizedData as unknown as PromoFormData;
 }
