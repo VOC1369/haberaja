@@ -1,14 +1,22 @@
 /**
- * EVIDENCE COLLECTOR v1.0
+ * EVIDENCE COLLECTOR v1.2 — CLEAN-ROOM READY
  * Regex sebagai HINT, bukan DECISION.
  * Returns evidence untuk primitive inference.
+ * 
+ * ⚠️ FORBIDDEN: This file may NOT decide mode. ⚠️
+ * Decision logic lives in promo-primitive-gate.ts ONLY.
  * 
  * PRINSIP KRITIS:
  * - Regex mengumpulkan EVIDENCE (bukti)
  * - Evidence dikirim ke Primitive Gate untuk DECISION
  * - Regex TIDAK PERNAH langsung menentukan mode
  * 
- * VERSION: v1.0.0+2025-01-14
+ * v1.2 CHANGES:
+ * - Split "level" pattern: access vs tiered (no dual-match)
+ * - Expanded SPECIAL CASE for APK + financial (more inclusive)
+ * - Added confidence scoring + ambiguity flags
+ * 
+ * VERSION: v1.2.0+2025-01-14
  */
 
 import type { TaskDomain, RewardNature } from './promo-primitive-gate';
@@ -99,16 +107,17 @@ export function collectPrimitiveEvidence(content: string): PrimitiveEvidence {
       /imlek/,
     ]),
     
+    // v1.2: Split "level" pattern — access = VIP/privilege context
     access_hints: extractMatches(lower, [
-      /vip\s*(level)?/,
+      /vip\s*(level)?\s*\d*/,        // VIP Level 5 (privilege)
       /unlock/,
       /privilege/,
       /redemption\s*store/,
-      /level\s*\d/,
       /akses\s*(khusus)?/,
-      /naik\s*level/,
-      /level\s*up/,
+      /naik\s*level/,                // Naik level (status change)
+      /level\s*up/,                  // Level up (status change)
       /rank\s*up/,
+      /member\s*(vip|gold|silver|platinum)/,
     ]),
     
     // ====================================
@@ -126,8 +135,9 @@ export function collectPrimitiveEvidence(content: string): PrimitiveEvidence {
       /kalkulasi/,
     ]),
     
+    // v1.2: Split "level" pattern — tiered = threshold table context
     tiered_hints: extractMatches(lower, [
-      /level\s*\d/,
+      /level\s*\d+\s*[→=:]\s*\d/,    // Level 1 → 100rb (tier indicator)
       /tier\s*\d/,
       /threshold/,
       /\d+[jmt]\s*[→=]\s*(rp)?\s*\d+/,
@@ -135,6 +145,7 @@ export function collectPrimitiveEvidence(content: string): PrimitiveEvidence {
       /\d+\s*-\s*\d+\s*[jmt]/,
       /hadiah\s*(mobil|motor|hp|iphone)/,
       /to\s+\d+[jmt]/,
+      /bronze|silver|gold|platinum\s*[→=:]/,  // Tier names with arrow
     ]),
     
     chance_hints: extractMatches(lower, [
@@ -184,13 +195,22 @@ export function inferTaskDomain(
   const hasFinancial = evidence.financial_hints.length > 0;
   const hasPlatform = evidence.platform_hints.length > 0;
   
-  // SPECIAL CASE: APK promo with calculation
+  // SPECIAL CASE: APK promo with calculation (v1.2 — expanded)
   // If there's calculation AND platform hint, check which is primary
   if (hasPlatform && hasFinancial && hasCalculated) {
-    // If content mentions "X% dari deposit/loss/turnover", financial is primary
     const lower = (content || '').toLowerCase();
-    if (/\d+\s*%\s*(dari|of)\s*(deposit|loss|turnover|wd)/i.test(lower)) {
-      return 'financial';
+    
+    // v1.2: More inclusive pattern for financial calculation detection
+    const hasFinancialCalculation = 
+      // Original pattern (strict)
+      /\d+\s*%\s*(dari|of)\s*(deposit|loss|turnover|wd)/i.test(lower) ||
+      // New patterns (inclusive) — "Bonus 10% untuk pengguna APK"
+      /(cashback|bonus|rebate)\s*\d+\s*%/i.test(lower) ||
+      /\d+\s*%\s*(untuk|khusus)?\s*(member|apk|pengguna)/i.test(lower) ||
+      /(rollingan|komisi)\s*\d+/i.test(lower);
+    
+    if (hasFinancialCalculation) {
+      return 'financial'; // Financial is primary, APK is constraint
     }
     // Otherwise, platform is primary (APK freechip case)
   }
@@ -307,7 +327,86 @@ export function summarizeEvidence(evidence: PrimitiveEvidence): string {
 }
 
 // ============================================
+// CONFIDENCE SCORING (v1.2)
+// ============================================
+
+export interface PrimitiveInference {
+  task_domain: TaskDomain;
+  reward_nature: RewardNature;
+  confidence: 'high' | 'medium' | 'low';
+  ambiguity_flags: string[];
+}
+
+/**
+ * inferPrimitivesWithConfidence
+ * 
+ * Infers task_domain and reward_nature with confidence scoring.
+ * Returns ambiguity flags for cases that need human review.
+ */
+export function inferPrimitivesWithConfidence(
+  evidence: PrimitiveEvidence,
+  content?: string
+): PrimitiveInference {
+  const domain = inferTaskDomain(evidence, content);
+  const nature = inferRewardNature(evidence);
+  
+  const ambiguity_flags: string[] = [];
+  let confidence: 'high' | 'medium' | 'low' = 'high';
+  
+  // ====================================
+  // Check for conflicting evidence
+  // ====================================
+  
+  // Platform + Financial conflict (APK + Deposit/Cashback)
+  if (evidence.platform_hints.length > 0 && evidence.financial_hints.length > 0) {
+    ambiguity_flags.push('platform_financial_conflict');
+    confidence = 'medium';
+  }
+  
+  // Access + Tiered overlap (VIP level table vs VIP unlock)
+  if (evidence.access_hints.length > 0 && evidence.tiered_hints.length > 0) {
+    ambiguity_flags.push('access_tiered_overlap');
+    confidence = 'medium';
+  }
+  
+  // Calculated + Chance conflict (shouldn't happen)
+  if (evidence.calculated_hints.length > 0 && evidence.chance_hints.length > 0) {
+    ambiguity_flags.push('calculated_chance_conflict');
+    confidence = 'medium';
+  }
+  
+  // ====================================
+  // Check for no/minimal evidence
+  // ====================================
+  const totalHints = [
+    ...evidence.platform_hints,
+    ...evidence.financial_hints,
+    ...evidence.gameplay_hints,
+    ...evidence.temporal_hints,
+    ...evidence.access_hints,
+    ...evidence.calculated_hints,
+    ...evidence.tiered_hints,
+    ...evidence.chance_hints,
+  ].length;
+  
+  if (totalHints === 0) {
+    ambiguity_flags.push('no_evidence');
+    confidence = 'low';
+  } else if (totalHints <= 2) {
+    ambiguity_flags.push('minimal_hints');
+    if (confidence === 'high') confidence = 'medium';
+  }
+  
+  return {
+    task_domain: domain,
+    reward_nature: nature,
+    confidence,
+    ambiguity_flags,
+  };
+}
+
+// ============================================
 // VERSION
 // ============================================
 
-export const EVIDENCE_COLLECTOR_VERSION = 'v1.0.0+2025-01-14';
+export const EVIDENCE_COLLECTOR_VERSION = 'v1.2.0+2025-01-14';

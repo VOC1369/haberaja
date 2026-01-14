@@ -1,22 +1,26 @@
 /**
- * Mechanic Router
- * Version: v1.1.0+2025-01-14
+ * Mechanic Router v1.2
+ * 
+ * ⚠️ FORBIDDEN: This file may NOT decide mode directly. ⚠️
+ * Mode decision MUST delegate to promo-primitive-gate.ts.
  * 
  * REASONING-FIRST ARCHITECTURE:
  * This module routes PromoIntent to specific mechanics.
  * It enforces INVARIANTS (things that MUST NOT happen).
- * It determines MODE (things that MUST happen).
+ * It determines MODE via Primitive Gate (things that MUST happen).
  * 
  * KEY PRINCIPLE:
  * - Invariants = PROHIBITIONS (mode ≠ formula)
- * - Router = DETERMINATIONS (mode = event)
+ * - Router = ROUTING (mechanic → gate → mode)
  * 
- * PROMO PRIMITIVE GATE v1.1 INTEGRATION:
+ * PROMO PRIMITIVE GATE v1.2 INTEGRATION:
  * - Mode is now determined by Primitive Gate (task_domain × reward_nature)
  * - APK is treated as CONSTRAINT, not mode determinant
  * - Regex-based detection serves as EVIDENCE, not DECISION
  * 
  * This separation prevents "confident but wrong" extractions.
+ * 
+ * Version: v1.2.0+2025-01-14
  */
 
 import type { PromoIntent, PrimaryAction, ValueShape, DistributionPath } from './promo-intent-reasoner';
@@ -382,7 +386,7 @@ function determineCalculationBasis(intent: PromoIntent, mode: PromoMode): string
 // MAIN ROUTER FUNCTION
 // ============================================
 
-const ROUTER_VERSION = 'v1.1.0+2025-01-14';
+const ROUTER_VERSION = 'v1.2.0+2025-01-14';
 
 /**
  * Route PromoIntent to MechanicType and determine locked fields.

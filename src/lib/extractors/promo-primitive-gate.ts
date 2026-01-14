@@ -1,16 +1,23 @@
 /**
- * PROMO PRIMITIVE GATE v1.1
+ * PROMO PRIMITIVE GATE v1.2 — CLEAN-ROOM READY
  * Single Source of Truth untuk Mode Decision
+ * 
+ * ⚠️ THIS IS THE ONLY FILE THAT DECIDES MODE ⚠️
+ * All other files must import and use resolveModFromPrimitive()
  * 
  * PRINSIP: Mode ditentukan oleh LOGIKA (task_domain + reward_nature),
  * BUKAN keyword. Regex hanya sebagai EVIDENCE.
  * 
  * ARCHITECTURE:
  * - Evidence Collector → gathers hints (regex)
- * - Primitive Gate → decides mode (logic)
+ * - Primitive Gate → decides mode (logic) ← YOU ARE HERE
  * - Invariant Checker → enforces consistency (assertion)
  * 
- * VERSION: v1.1.0+2025-01-14
+ * DECISION TABLE COVERAGE: 20/20 (100%)
+ * - 17 explicit rules
+ * - 3 via early returns (chance, tiered, default)
+ * 
+ * VERSION: v1.2.0+2025-01-14
  */
 
 // ============================================
@@ -162,6 +169,20 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
   }
   
   // ====================================
+  // RULE 2B: FINANCIAL + FIXED → fixed (EXPLICIT v1.2)
+  // Bonus Deposit 50rb (fixed amount, not %)
+  // Freechip WD 10rb (fixed amount)
+  // Cashback 100rb flat (not calculated)
+  // ====================================
+  if (task_domain === 'financial' && reward_nature === 'fixed') {
+    return {
+      mode: 'fixed',
+      constraints: {},
+      reasoning: 'task_domain=financial + reward_nature=fixed → mode=fixed (EXPLICIT: not fallback)'
+    };
+  }
+  
+  // ====================================
   // RULE 3: PLATFORM + FIXED → fixed
   // APK Download, Install, Register bonus
   // Platform actions with fixed rewards
@@ -285,4 +306,4 @@ export const MODE_DISPLAY: Record<CanonicalMode, string> = {
 // VERSION
 // ============================================
 
-export const PRIMITIVE_GATE_VERSION = 'v1.1.0+2025-01-14';
+export const PRIMITIVE_GATE_VERSION = 'v1.2.0+2025-01-14';
