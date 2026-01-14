@@ -1,6 +1,13 @@
 /**
  * OpenAI Promo Extractor v4.2 — BLACKLIST PARSING FIX
  * 
+ * ⛔ MODE DECISION FORBIDDEN HERE
+ * This file may NOT assign: mode, reward_mode, category
+ * Mode decisions live ONLY in: promo-primitive-gate.ts
+ * Violation = Architecture breach
+ * 
+ * SIGNAL CONTRACT: docs/architecture/promo-primitive-gate.signal-contract.md
+ * 
  * FIXES APPLIED:
  * - Phase 1: Max Bonus & Turnover Rule prioritas TABEL (explicit)
  * - Phase 2: Confidence Assignment hierarchy yang jelas
