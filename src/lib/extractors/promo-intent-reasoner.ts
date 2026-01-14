@@ -22,6 +22,20 @@ import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
 // TYPES
 // ============================================
 
+/**
+ * PrimaryAction (TASK)
+ * 
+ * SEMANTIC CONTRACT v1.0:
+ * - TASK = Aksi pemicu paling awal yang mengubah state user menjadi ELIGIBLE
+ * - BUKAN seluruh flow klaim
+ * - BUKAN gabungan trigger + langkah redemption
+ * 
+ * Contoh BENAR:
+ * - APK Download promo → primary_action: 'download_apk' (BUKAN 'download lalu login')
+ * - Deposit Bonus → primary_action: 'deposit' (BUKAN 'deposit dan klaim')
+ * 
+ * Lihat: memory/features/extraction/task-vs-flow-semantic-contract-v1.md
+ */
 export type PrimaryAction = 
   | 'deposit'       // User deposits money
   | 'loss'          // User loses money (cashback)
