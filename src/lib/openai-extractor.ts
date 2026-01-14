@@ -3533,6 +3533,27 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   type DetectedRewardMode = 'formula' | 'fixed' | 'tier';
   
   const detectRewardMode = (): { mode: DetectedRewardMode; auto_detected: boolean; reason: string } => {
+    // ============================================
+    // GUARD A: WITHDRAW BONUS + PERCENTAGE = MUST BE FORMULA
+    // This OVERRIDES all other detection logic to prevent false "fixed" classification
+    // ============================================
+    const promoNameLower = (extracted.promo_name || '').toLowerCase();
+    const promoTypeLower = (extracted.promo_type || '').toLowerCase();
+    const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+    const allText = `${promoNameLower} ${promoTypeLower} ${termsText}`;
+    
+    const isWithdrawContext = /withdraw|wd|bonus\s*wd|extra\s*wd|penarikan/i.test(allText);
+    const hasPercentage = /\d+\s*%/.test(extracted.promo_name || '') || /\d+\s*%/.test(termsText);
+    
+    if (isWithdrawContext && hasPercentage) {
+      console.log('[detectRewardMode] GUARD A: Withdraw bonus + percentage → FORCING formula mode');
+      return { 
+        mode: 'formula', 
+        auto_detected: true, 
+        reason: 'Withdraw bonus percentage-based MUST be formula (Guard A)'
+      };
+    }
+    
     // Case 1: Tier mode (Category C Loyalty - Phase 2, skip for now)
     // if (extracted.program_classification === 'C' && extracted.loyalty_mechanism?.exchange_table) {
     //   return { mode: 'tier', auto_detected: true, reason: 'Category C dengan exchange table' };
@@ -3585,8 +3606,37 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // If mode is event/fixed/tier, DO NOT apply formula defaults
   // This prevents "ghost" formula fields in event promos
   // ============================================
-  const initialMode = (lockedFields?.mode || modeDetection.mode) as string;
+  let initialMode = (lockedFields?.mode || modeDetection.mode) as string;
+  
+  // ============================================
+  // BACKSTOP B: FINAL OVERRIDE FOR WITHDRAW-TRIGGERED PROMOS
+  // If trigger_event is Withdraw AND percentage detected, FORCE formula mode
+  // This catches cases where lockedFields.mode was incorrectly set
+  // ============================================
+  const promoNameForBackstop = (extracted.promo_name || '').toLowerCase();
+  const termsForBackstop = (extracted.terms_conditions || []).join(' ').toLowerCase();
+  const isWithdrawTriggeredBackstop = 
+    lockedFields?.trigger_event === 'Withdraw' ||
+    /withdraw|wd|bonus\s*wd|extra\s*wd/i.test(promoNameForBackstop);
+  const hasPercentageBackstop = /\d+\s*%/.test(extracted.promo_name || '') || /\d+\s*%/.test(termsForBackstop);
+  
+  if (isWithdrawTriggeredBackstop && hasPercentageBackstop && initialMode !== 'formula') {
+    console.log('[mapExtractedToPromoFormData] BACKSTOP B: Withdraw + % detected, OVERRIDING mode from', initialMode, '→ formula');
+    initialMode = 'formula';
+  }
+  
   const skipFormulaDefaults = NON_FORMULA_MODES.includes(initialMode as typeof NON_FORMULA_MODES[number]);
+  
+  // ============================================
+  // LOGGING C: DIAGNOSTIC OUTPUT
+  // ============================================
+  console.log('[mapExtractedToPromoFormData] DIAGNOSIS:', {
+    initialMode,
+    skipFormulaDefaults,
+    lockedTrigger: lockedFields?.trigger_event,
+    lockedMode: lockedFields?.mode,
+    modeDetectionResult: modeDetection.mode
+  });
   
   if (skipFormulaDefaults) {
     console.log('[mapExtractedToPromoFormData] Mode is', initialMode, '— skipping formula defaults');
