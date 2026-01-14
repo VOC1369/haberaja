@@ -4115,9 +4115,11 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     max_claim: null,
     // ✅ FIX: turnover_rule default "" (inert), not "0x"
     // ✅ ENHANCED: Extract turnover multiplier from terms for formula mode
+    // ✅ V1.1: Use initialMode (post-Backstop B) instead of lockedFields.mode
     turnover_rule: (() => {
       // PRIORITY 0: Check if this is a formula mode with turnover in terms
-      if (lockedFields?.mode === 'formula') {
+      // ✅ Use initialMode (which includes Backstop B corrections) for gating
+      if (initialMode === 'formula') {
         const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
         // Pattern: "TO x 1", "syarat main 3x", "kelipatan 5x"
         // ✅ ROBUST TO REGEX: Handles many variations
@@ -4137,18 +4139,24 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
           if (match) {
             const n = Number(match[1]);
             if (n > 0 && n <= 100) {
-              console.log('[Extractor] Extracted turnover multiplier for formula mode:', `${n}x`);
+              console.log('[Extractor] Extracted turnover multiplier for formula mode (initialMode check):', `${n}x`);
               return `${n}x`;
             }
           }
         }
       }
-      // PRIORITY 1: Subcategory extraction
-      return subcategories[0]?.turnover_rule || '';
+      // PRIORITY 1: Subcategory extraction with normalization
+      const subRule = subcategories[0]?.turnover_rule || '';
+      // Normalize: "1" → "1x", "TO x 1" → "1x"
+      if (subRule && /^\d+$/.test(subRule)) {
+        return `${subRule}x`;
+      }
+      return subRule;
     })(),
     turnover_rule_enabled: (() => {
       // PRIORITY 0: Check if this is a formula mode with turnover in terms
-      if (lockedFields?.mode === 'formula') {
+      // ✅ Use initialMode (which includes Backstop B corrections) for gating
+      if (initialMode === 'formula') {
         const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
         // ✅ ROBUST TO REGEX: Same patterns as turnover_rule
         const multiplierPatterns = [
@@ -4166,7 +4174,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
           if (match) {
             const n = Number(match[1]);
             if (n > 0 && n <= 100) {
-              console.log('[Extractor] Enabling turnover_rule for formula mode');
+              console.log('[Extractor] Enabling turnover_rule for formula mode (initialMode check)');
               return true;
             }
           }
