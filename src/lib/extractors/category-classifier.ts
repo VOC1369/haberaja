@@ -1,17 +1,22 @@
 /**
  * VOC LLM-Based Category Classifier
- * Version: v1.0.0+2025-12-21
+ * Version: v2.0.0+2025-01-14 (PROMO SUPER CONTRACT)
  * 
  * ARCHITECTURE:
- * - LLM answers Q1-Q4 with evidence
+ * - LLM identifies 3 GATES: Trigger → Benefit → Constraints
  * - Category calculated in CODE, not by LLM
  * - Quality gates determine confidence
  * - Human can override, all logged
  * 
- * CONTRACT OF TRUTH:
- * - AI = First-pass reasoning (menebak)
- * - UI = Authority (menentukan)
- * - Human = Gatekeeper (mengunci kebenaran)
+ * PROMO SUPER CONTRACT:
+ * Promo = program yang menghasilkan PERUBAHAN STATE yang menguntungkan user,
+ * ketika KONDISI tertentu terpenuhi (aksi / momen / state),
+ * dan hubungan tersebut DIKUNCI oleh syarat & ketentuan.
+ * 
+ * ❌ BUKAN ditentukan oleh kata
+ * ❌ BUKAN ditentukan oleh gaya bahasa
+ * ❌ BUKAN ditentukan oleh format
+ * ✅ Ditentukan oleh sebab–akibat sistem
  */
 
 import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
@@ -20,7 +25,7 @@ import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
 // KEYWORD OVERRIDE VERSION (for session invalidation)
 // Update this whenever keyword rules change in keyword-rules.ts
 // ============================================
-export const KEYWORD_OVERRIDE_VERSION = '2025-12-30-v2';
+export const KEYWORD_OVERRIDE_VERSION = '2025-01-14-v3';
 
 // ============================================
 // TYPES
@@ -29,35 +34,70 @@ export const KEYWORD_OVERRIDE_VERSION = '2025-12-30-v2';
 export type ProgramCategory = 'A' | 'B' | 'C';
 export type ClassificationConfidence = 'high' | 'medium' | 'low';
 
-export type QualityFlag = 
-  | 'no_evidence'           // YA tapi evidence null
-  | 'short_reasoning'       // reasoning < 40 chars
-  | 'missing_specifics'     // tidak menyebut objek+fungsi
-  | 'paraphrased_evidence'  // evidence bukan substring
-  | 'single_weak_evidence'  // hanya 1 evidence tanpa angka
-  | 'valid';                // lolos semua gate
+export type TriggerType = 'action' | 'moment' | 'state' | null;
+export type BenefitCategory = 'money' | 'credit' | 'percentage' | 'item' | 'chance' | 'access' | 'cost_reduction' | null;
 
+export type QualityFlag = 
+  | 'no_trigger_evidence'      // trigger found but no evidence
+  | 'no_benefit_evidence'      // benefit found but no evidence
+  | 'no_constraints_evidence'  // constraints found but no evidence
+  | 'paraphrased_evidence'     // evidence bukan substring
+  | 'weak_reasoning'           // reasoning < 40 chars
+  | 'valid';                   // lolos semua gate
+
+// Legacy Q-Answer interface (for backward compatibility)
 export interface QAnswer {
   answer: 'ya' | 'tidak';
   reasoning: string;
   evidence: string | null;
 }
 
+// NEW: Three Gate Result Interface
+export interface ThreeGateResult {
+  // PINTU 1: TRIGGER
+  trigger: {
+    found: boolean;
+    type: TriggerType;
+    evidence: string | null;
+  };
+  
+  // PINTU 2: BENEFIT
+  benefit: {
+    found: boolean;
+    category: BenefitCategory;
+    evidence: string | null;
+  };
+  
+  // PINTU 3: CONSTRAINTS
+  constraints: {
+    found: boolean;
+    evidence: string | null;
+  };
+  
+  // Decision
+  is_promo: boolean;
+  reasoning: string;
+}
+
 export interface ClassificationResult {
-  // Q1-Q4 Answers
-  q1: QAnswer;
-  q2: QAnswer;
-  q3: QAnswer;
-  q4: QAnswer;
+  // Three Gate Results (PRIMARY)
+  trigger: ThreeGateResult['trigger'];
+  benefit: ThreeGateResult['benefit'];
+  constraints: ThreeGateResult['constraints'];
+  
+  // Decision
+  is_promo: boolean;
   
   // Calculated by CODE (not LLM)
   category: ProgramCategory;
   category_name: string;
+  promo_category: 'REWARD' | 'EVENT' | 'SYSTEM_RULE';
   
   // Quality Assessment
   confidence: ClassificationConfidence;
   quality_flags: QualityFlag[];
   evidence_count: number;
+  reasoning: string;
   
   // Metadata
   classifier_prompt_version: string;
@@ -66,6 +106,12 @@ export interface ClassificationResult {
   content_length: number;
   latency_ms: number;
   tokens_used?: number;
+  
+  // Legacy Q1-Q4 (for backward compatibility with override UI)
+  q1?: QAnswer;
+  q2?: QAnswer;
+  q3?: QAnswer;
+  q4?: QAnswer;
 }
 
 export interface ClassificationOverride {
@@ -80,76 +126,108 @@ export interface ClassificationOverride {
 // CONSTANTS
 // ============================================
 
-export const CLASSIFIER_PROMPT_VERSION = 'v1.0.0+2025-12-21';
+export const CLASSIFIER_PROMPT_VERSION = 'v2.0.0+2025-01-14-SUPER';
 export const CLASSIFICATION_MODEL = 'gpt-4o-mini';
 
 // ============================================
-// CLASSIFIER PROMPT (LLM hanya menjawab Q1-Q4)
+// PROMO SUPER CONTRACT PROMPT (3 PINTU)
 // ============================================
 
 const CLASSIFICATION_PROMPT = `
 Kamu adalah REASONING ASSISTANT untuk klasifikasi konten iGaming.
 
-🔒 ATURAN MUTLAK:
-1. Kamu HANYA menjawab Q1-Q4 dengan reasoning dan evidence
-2. Kamu TIDAK BOLEH menentukan kategori final
-3. Kamu TIDAK BOLEH output "final_category", "program_nature", atau "classification"
-4. Evidence HARUS kutipan PERSIS dari content (substring match)
-5. Jika tidak ada bukti eksplisit, evidence = null
+🔒 DEFINISI CANONICAL (TIDAK BOLEH DIBANTAH):
+Promo = program yang menghasilkan PERUBAHAN STATE yang menguntungkan user,
+ketika KONDISI tertentu terpenuhi (aksi / momen / state),
+dan hubungan tersebut DIKUNCI oleh syarat & ketentuan.
 
-📋 PERTANYAAN (jawab SEMUA, jangan skip):
+❌ BUKAN ditentukan oleh kata (tidak ada kata "bonus" bukan berarti bukan promo)
+❌ BUKAN ditentukan oleh gaya bahasa (teks SOP bisa berisi promo)
+❌ BUKAN ditentukan oleh format
+✅ Ditentukan oleh SEBAB–AKIBAT SISTEM
 
-Q1: Apakah content ini UTAMANYA membahas PENALTI, LARANGAN, atau PEMBATASAN?
-    Ciri-ciri: potongan %, suspend, hangus, tidak boleh, larangan, batasan
-    Evidence harus mengandung kata-kata terkait penalty/restriction
-    
-    ⚠️ PENGECUALIAN PENTING - Ini BUKAN penalty indicator:
-    - "berhak membatalkan bonus" (standard fraud clause di semua promo)
-    - "jika terjadi kecurangan" (standard anti-abuse boilerplate)
-    - "keputusan mutlak" (standard legal disclaimer)
-    - "indikasi kecurangan dalam bentuk apapun" (standard T&C)
-    
-    Q1 = YA HANYA jika konten UTAMANYA menjelaskan mekanisme potongan/suspend,
-    BUKAN jika hanya ada klausul fraud standard di bagian Syarat & Ketentuan.
+📋 LOGIKA KEPUTUSAN – 3 PINTU (WAJIB URUT):
 
-Q2: Apakah ini SISTEM ONGOING tanpa end date yang membutuhkan AKUMULASI?
-    Ciri-ciri: Loyalty Point, LP, EXP, Tier, Level, tukar/exchange, kumpulkan dulu
-    PENTING: "Hadiah" di exchange table = Q2 YA, bukan event!
-    Evidence harus menunjukkan mekanisme akumulasi/penukaran
+═══════════════════════════════════════════════════════════════
+PINTU 1 - TRIGGER (Kondisi Pemicu)
+═══════════════════════════════════════════════════════════════
+Identifikasi SATU atau lebih pemicu:
 
-Q3: Apakah user LANGSUNG DAPAT VALUE dari SATU AKSI tanpa akumulasi?
-    Ciri-ciri: Welcome Bonus, Cashback otomatis, deposit langsung dapat %
-    PENTING: Jika perlu kumpulkan/tukar dulu = BUKAN Q3
-    Evidence harus menunjukkan instant reward
+ACTION → user melakukan sesuatu
+  - deposit, withdraw, main/bet, download APK, klaim, spin, redeem
+  - hubungi CS, verifikasi, registrasi
+  
+MOMENT → waktu / event alami
+  - ulang tahun, tanggal tertentu, periode bulanan, hari spesial
+  
+STATE → status / akumulasi
+  - total TO, level VIP, histori aktivitas, referral count
+  - member baru, member lama, status tertentu
 
-Q4: Apakah ada KOMPETISI dengan PERIODE TERBATAS dan PEMENANG/UNDIAN?
-    Ciri-ciri: tanggal mulai-selesai, winner, ranking, undian, tournament
-    PENTING: Exchange table dengan "Hadiah" = BUKAN Q4
-    Evidence harus menunjukkan periode + winner mechanism
+❗ Jika TIDAK ADA trigger yang jelas → BUKAN PROMO
 
-⚠️ EDGE CASES (WAJIB DIPAHAMI):
-- "tidak mendapatkan bonus mingguan" = Q1 YA (pembatasan)
-- "Hadiah Utama 2.5 Juta" di tabel tukar = Q2 YA (exchange, bukan event)
-- "LP = Loyalty Point" = Q2 YA (sistem akumulasi)
-- "Download APK dapat EXP" = Q2 YA (akumulasi, bukan instant reward)
+═══════════════════════════════════════════════════════════════
+PINTU 2 - BENEFIT (Perubahan State yang Menguntungkan)
+═══════════════════════════════════════════════════════════════
+Perubahan yang menguntungkan user:
+
+MONEY → saldo, chip, uang tunai, transfer
+CREDIT → bonus %, cashback %, rebate %, freechip
+PERCENTAGE → potongan harga, diskon %
+ITEM → mobil, HP, merchandise, hadiah fisik
+CHANCE → tiket undian, lucky spin, raffle, kesempatan
+ACCESS → hak klaim, akses event, privilege, fitur khusus
+COST_REDUCTION → bebas potongan, bebas fee, nilai lebih, tanpa potong
+
+❗ Jika TIDAK ADA benefit/keuntungan → BUKAN PROMO
+❗ Hanya bisa melakukan sesuatu yang seharusnya (WD, main) = BUKAN benefit
+
+═══════════════════════════════════════════════════════════════
+PINTU 3 - CONSTRAINTS (Pengunci / Syarat & Ketentuan)
+═══════════════════════════════════════════════════════════════
+Harus ada aturan yang mengikat hubungan Trigger → Benefit:
+
+- min value / limit (minimal deposit, maksimal bonus)
+- periode waktu (berlaku sampai, per hari, per minggu)
+- frekuensi (sekali, harian, mingguan)
+- channel klaim (otomatis, via CS, redemption store)
+- turnover / wagering (TO 5x, syarat taruhan)
+- diskualifikasi / antifraud (jika curang, hangus)
+- scope (game tertentu, provider tertentu, payment tertentu)
+
+❗ Jika TIDAK ADA constraints/aturan → kemungkinan besar BUKAN PROMO
+
+═══════════════════════════════════════════════════════════════
+⚠️ PERINGATAN ANTI-HALU
+═══════════════════════════════════════════════════════════════
+- JANGAN TERTIPU oleh gaya bahasa. Teks prosedur/SOP bisa berisi Promo.
+- JANGAN TERTIPU oleh keyword. Tidak ada kata "bonus" bukan berarti bukan promo.
+- PROMO = LOGIKA SEBAB-AKIBAT: User X → Dapat Y → dengan aturan Z
+- BUKAN PROMO jika hanya menjelaskan cara kerja sistem tanpa benefit tambahan.
+
+🧪 CONTOH KEPUTUSAN:
+- "Birthday dapat freechip 50k, TO 3x" → PROMO (action+moment, credit, constraints)
+- "Download APK dapat 25k, claim via CS" → PROMO (action, credit, constraints)
+- "Deposit pulsa tanpa potongan, TO 5x" → PROMO (action, cost_reduction, constraints)
+- "WD diproses 1x24 jam" → BUKAN PROMO (ada action, tapi TIDAK ADA benefit tambahan)
+- "Untuk withdraw, verifikasi KTP dulu" → BUKAN PROMO (action, tapi TIDAK ADA benefit)
 
 📤 OUTPUT FORMAT (JSON ONLY, tanpa markdown):
 {
-  "q1_answer": "ya" atau "tidak",
-  "q1_reasoning": "penjelasan 40+ karakter yang menyebut objek+fungsi spesifik",
-  "q1_evidence": "kutipan PERSIS dari content" atau null,
+  "trigger_found": true/false,
+  "trigger_type": "action" | "moment" | "state" | null,
+  "trigger_evidence": "kutipan PERSIS dari content" atau null,
   
-  "q2_answer": "ya" atau "tidak",
-  "q2_reasoning": "penjelasan 40+ karakter yang menyebut objek+fungsi spesifik",
-  "q2_evidence": "kutipan PERSIS dari content" atau null,
+  "benefit_found": true/false,
+  "benefit_category": "money" | "credit" | "percentage" | "item" | "chance" | "access" | "cost_reduction" | null,
+  "benefit_evidence": "kutipan PERSIS dari content" atau null,
   
-  "q3_answer": "ya" atau "tidak",
-  "q3_reasoning": "penjelasan 40+ karakter yang menyebut objek+fungsi spesifik",
-  "q3_evidence": "kutipan PERSIS dari content" atau null,
+  "constraints_found": true/false,
+  "constraints_evidence": "kutipan PERSIS dari content" atau null,
   
-  "q4_answer": "ya" atau "tidak",
-  "q4_reasoning": "penjelasan 40+ karakter yang menyebut objek+fungsi spesifik",
-  "q4_evidence": "kutipan PERSIS dari content" atau null
+  "is_promo": true/false,
+  "promo_category": "REWARD" | "EVENT" | "SYSTEM_RULE",
+  "reasoning": "penjelasan singkat 40+ karakter kenapa promo/bukan promo"
 }
 `;
 
@@ -157,31 +235,22 @@ Q4: Apakah ada KOMPETISI dengan PERIODE TERBATAS dan PEMENANG/UNDIAN?
 // CATEGORY CALCULATION (IN CODE, NOT LLM)
 // ============================================
 
-export function calculateCategory(q1: string, q2: string, q3: string, q4: string): ProgramCategory {
-  // ✅ GUARD: Q1 + Q3 conflict resolution (2025-01-14)
-  // Jika Q1=YA tapi Q3 juga YA, berarti ada instant reward → BUKAN murni penalty
-  // Ini menangani kasus "promo valid dengan standard fraud clause di S&K"
-  if (q1 === 'ya' && q3 === 'ya') {
-    console.log('[Classifier] Q1+Q3 conflict: Instant Reward (A) takes priority over standard penalty clause');
-    return 'A'; // Instant Reward wins over boilerplate fraud clause
+export function calculateCategory(
+  triggerFound: boolean,
+  benefitFound: boolean,
+  constraintsFound: boolean,
+  promoCategory?: string
+): ProgramCategory {
+  // 3 PINTU CHECK: Semua harus TRUE untuk jadi PROMO
+  const isPromo = triggerFound && benefitFound && constraintsFound;
+  
+  if (isPromo) {
+    // Tentukan A atau B berdasarkan promo_category dari LLM
+    if (promoCategory === 'EVENT') return 'B';
+    return 'A'; // Default: Reward Program
   }
   
-  // FIXED PRIORITY ORDER (2025-12-24):
-  // 1. Q1 (Penalty/Restriction) → C (Policy) - only if no instant reward
-  if (q1 === 'ya') return 'C';
-  
-  // 2. Q4 (Event dengan periode + pemenang) → B (Event)
-  //    Lucky Spin, Tournament, Undian = Event, BUKAN Policy!
-  //    Q4 harus dicek SEBELUM Q2 agar Event tidak kalah dari Ongoing System
-  if (q4 === 'ya') return 'B';
-  
-  // 3. Q3 (Instant Reward tanpa akumulasi) → A (Reward)
-  if (q3 === 'ya') return 'A';
-  
-  // 4. Q2 (Ongoing System - loyalty, tier, LP) → C (Policy)
-  if (q2 === 'ya') return 'C';
-  
-  // 5. Default to Policy (most restrictive)
+  // Tidak memenuhi 3 pintu = System Rule (bukan promo)
   return 'C';
 }
 
@@ -189,7 +258,15 @@ export function getCategoryName(category: ProgramCategory): string {
   switch (category) {
     case 'A': return 'Reward Program';
     case 'B': return 'Event Program';
-    case 'C': return 'System Rule'; // NOT a promo - informational only, cannot be claimed
+    case 'C': return 'System Rule'; // NOT a promo - informational only
+  }
+}
+
+export function getPromoCategory(category: ProgramCategory): 'REWARD' | 'EVENT' | 'SYSTEM_RULE' {
+  switch (category) {
+    case 'A': return 'REWARD';
+    case 'B': return 'EVENT';
+    case 'C': return 'SYSTEM_RULE';
   }
 }
 
@@ -236,68 +313,50 @@ interface QualityAssessment {
 }
 
 function assessQuality(
-  answers: { q1: QAnswer; q2: QAnswer; q3: QAnswer; q4: QAnswer },
+  result: ThreeGateResult,
   content: string
 ): QualityAssessment {
   const flags: QualityFlag[] = [];
   let evidenceCount = 0;
-  let hasConstraintEvidence = false;
   
-  // Find the deciding question (first "ya")
-  const decidingQ = 
-    answers.q1.answer === 'ya' ? answers.q1 :
-    answers.q2.answer === 'ya' ? answers.q2 :
-    answers.q3.answer === 'ya' ? answers.q3 :
-    answers.q4.answer === 'ya' ? answers.q4 : null;
+  // Count evidence and check quality
+  const contentLower = content.toLowerCase();
   
-  // Count all evidence
-  [answers.q1, answers.q2, answers.q3, answers.q4].forEach(q => {
-    if (q.evidence && q.evidence.trim().length > 0) {
-      evidenceCount++;
-      // Check if evidence contains constraint (angka, %, tanggal, limit)
-      if (/\d+%|\d{1,2}[-\/]\d{1,2}|tidak|minimal|maksimal|wajib|dilarang/i.test(q.evidence)) {
-        hasConstraintEvidence = true;
-      }
-    }
-  });
-  
-  // ============================================
-  // GATE A: Evidence wajib untuk deciding "YA"
-  // ============================================
-  if (decidingQ && decidingQ.answer === 'ya') {
-    if (!decidingQ.evidence || decidingQ.evidence.trim().length === 0) {
-      flags.push('no_evidence');
+  // GATE A: Trigger evidence
+  if (result.trigger.found) {
+    if (!result.trigger.evidence || result.trigger.evidence.trim().length === 0) {
+      flags.push('no_trigger_evidence');
     } else {
-      // Check if evidence is substring of content
-      const evidenceLower = decidingQ.evidence.toLowerCase().trim();
-      const contentLower = content.toLowerCase();
+      evidenceCount++;
+      // Check substring match
+      const evidenceLower = result.trigger.evidence.toLowerCase().trim();
       if (!contentLower.includes(evidenceLower)) {
         flags.push('paraphrased_evidence');
       }
     }
   }
   
-  // ============================================
-  // GATE B: Specificity minimal (reasoning >= 40 chars)
-  // ============================================
-  if (decidingQ && decidingQ.reasoning.length < 40) {
-    flags.push('short_reasoning');
-  }
-  
-  // Check if reasoning mentions specific objects
-  if (decidingQ && decidingQ.reasoning.length >= 40) {
-    // Simple heuristic: reasoning should contain specific terms
-    const hasSpecifics = /\d+|%|bonus|point|LP|EXP|tier|deposit|withdraw|potongan|hangus|suspend|hadiah|turnover|TO/i.test(decidingQ.reasoning);
-    if (!hasSpecifics) {
-      flags.push('missing_specifics');
+  // GATE B: Benefit evidence
+  if (result.benefit.found) {
+    if (!result.benefit.evidence || result.benefit.evidence.trim().length === 0) {
+      flags.push('no_benefit_evidence');
+    } else {
+      evidenceCount++;
     }
   }
   
-  // ============================================
-  // GATE C: Multi-evidence for high confidence
-  // ============================================
-  if (evidenceCount === 1 && !hasConstraintEvidence) {
-    flags.push('single_weak_evidence');
+  // GATE C: Constraints evidence
+  if (result.constraints.found) {
+    if (!result.constraints.evidence || result.constraints.evidence.trim().length === 0) {
+      flags.push('no_constraints_evidence');
+    } else {
+      evidenceCount++;
+    }
+  }
+  
+  // GATE D: Reasoning quality
+  if (result.reasoning.length < 40) {
+    flags.push('weak_reasoning');
   }
   
   // ============================================
@@ -305,14 +364,17 @@ function assessQuality(
   // ============================================
   let confidence: ClassificationConfidence;
   
-  if (flags.includes('no_evidence') || flags.includes('paraphrased_evidence')) {
+  const criticalFlags = ['no_trigger_evidence', 'no_benefit_evidence', 'paraphrased_evidence'];
+  const hasCriticalFlag = flags.some(f => criticalFlags.includes(f));
+  
+  if (hasCriticalFlag) {
     confidence = 'low';
-  } else if (flags.includes('short_reasoning') || flags.includes('missing_specifics')) {
+  } else if (flags.includes('weak_reasoning') || flags.includes('no_constraints_evidence')) {
     confidence = 'medium';
-  } else if (flags.includes('single_weak_evidence')) {
-    confidence = 'medium';
-  } else if (evidenceCount >= 2 || hasConstraintEvidence) {
+  } else if (evidenceCount >= 3) {
     confidence = 'high';
+  } else if (evidenceCount >= 2) {
+    confidence = 'medium';
   } else {
     confidence = 'medium';
   }
@@ -333,7 +395,7 @@ export async function classifyContent(content: string): Promise<ClassificationRe
   // Use centralized DEV MODE API key
   const apiKey = getOpenAIKey();
 
-  console.log('[Classifier] Starting LLM-based classification...');
+  console.log('[Classifier] Starting 3-GATE classification (PROMO SUPER CONTRACT)...');
   console.log('[Classifier] Prompt version:', CLASSIFIER_PROMPT_VERSION);
   console.log('[Classifier] Content length:', content.length);
 
@@ -373,74 +435,121 @@ export async function classifyContent(content: string): Promise<ClassificationRe
     resultText = resultText.replace(/```json\n?/g, '').replace(/\n?```/g, '');
 
     const parsed = JSON.parse(resultText);
-    
-    // ============================================
-    // VALIDATE: LLM should NOT have returned category
-    // ============================================
-    if (parsed.final_category || parsed.program_nature || parsed.program_classification) {
-      console.warn('[Classifier] WARNING: LLM returned category (ignored). This violates contract.');
-    }
 
-    // Build Q answers
-    const q1: QAnswer = {
-      answer: parsed.q1_answer?.toLowerCase() === 'ya' ? 'ya' : 'tidak',
-      reasoning: parsed.q1_reasoning || '',
-      evidence: parsed.q1_evidence || null,
-    };
-    const q2: QAnswer = {
-      answer: parsed.q2_answer?.toLowerCase() === 'ya' ? 'ya' : 'tidak',
-      reasoning: parsed.q2_reasoning || '',
-      evidence: parsed.q2_evidence || null,
-    };
-    const q3: QAnswer = {
-      answer: parsed.q3_answer?.toLowerCase() === 'ya' ? 'ya' : 'tidak',
-      reasoning: parsed.q3_reasoning || '',
-      evidence: parsed.q3_evidence || null,
-    };
-    const q4: QAnswer = {
-      answer: parsed.q4_answer?.toLowerCase() === 'ya' ? 'ya' : 'tidak',
-      reasoning: parsed.q4_reasoning || '',
-      evidence: parsed.q4_evidence || null,
+    // ============================================
+    // BUILD THREE GATE RESULT
+    // ============================================
+    const threeGateResult: ThreeGateResult = {
+      trigger: {
+        found: parsed.trigger_found === true,
+        type: parsed.trigger_type || null,
+        evidence: parsed.trigger_evidence || null,
+      },
+      benefit: {
+        found: parsed.benefit_found === true,
+        category: parsed.benefit_category || null,
+        evidence: parsed.benefit_evidence || null,
+      },
+      constraints: {
+        found: parsed.constraints_found === true,
+        evidence: parsed.constraints_evidence || null,
+      },
+      is_promo: parsed.is_promo === true,
+      reasoning: parsed.reasoning || '',
     };
 
     // ============================================
     // CALCULATE CATEGORY IN CODE (NOT FROM LLM)
     // ============================================
-    const category = calculateCategory(q1.answer, q2.answer, q3.answer, q4.answer);
+    const category = calculateCategory(
+      threeGateResult.trigger.found,
+      threeGateResult.benefit.found,
+      threeGateResult.constraints.found,
+      parsed.promo_category
+    );
     const categoryName = getCategoryName(category);
+    const promoCategory = getPromoCategory(category);
 
     // ============================================
     // ASSESS QUALITY & CONFIDENCE
     // ============================================
-    const quality = assessQuality({ q1, q2, q3, q4 }, content);
+    const quality = assessQuality(threeGateResult, content);
 
     // ============================================
     // LOG RESULTS
     // ============================================
-    console.log('[Classifier] === CLASSIFICATION RESULT ===');
-    console.log('[Classifier] Q1 (Penalty):', q1.answer, '-', q1.reasoning.substring(0, 50) + '...');
-    console.log('[Classifier] Q2 (Ongoing):', q2.answer, '-', q2.reasoning.substring(0, 50) + '...');
-    console.log('[Classifier] Q3 (Instant):', q3.answer, '-', q3.reasoning.substring(0, 50) + '...');
-    console.log('[Classifier] Q4 (Event):', q4.answer, '-', q4.reasoning.substring(0, 50) + '...');
+    console.log('[Classifier] === 3-GATE CLASSIFICATION RESULT ===');
+    console.log('[Classifier] TRIGGER:', threeGateResult.trigger.found ? '✅' : '❌', 
+      `(${threeGateResult.trigger.type})`, 
+      threeGateResult.trigger.evidence?.substring(0, 50) || 'null');
+    console.log('[Classifier] BENEFIT:', threeGateResult.benefit.found ? '✅' : '❌', 
+      `(${threeGateResult.benefit.category})`, 
+      threeGateResult.benefit.evidence?.substring(0, 50) || 'null');
+    console.log('[Classifier] CONSTRAINTS:', threeGateResult.constraints.found ? '✅' : '❌',
+      threeGateResult.constraints.evidence?.substring(0, 50) || 'null');
+    console.log('[Classifier] IS_PROMO:', threeGateResult.is_promo ? '✅ PROMO' : '❌ BUKAN PROMO');
     console.log('[Classifier] CATEGORY (calculated in code):', category, '-', categoryName);
     console.log('[Classifier] CONFIDENCE:', quality.confidence);
     console.log('[Classifier] QUALITY FLAGS:', quality.flags);
     console.log('[Classifier] EVIDENCE COUNT:', quality.evidence_count);
+    console.log('[Classifier] REASONING:', threeGateResult.reasoning);
     console.log('[Classifier] LATENCY:', latency, 'ms');
 
+    // ============================================
+    // BUILD LEGACY Q1-Q4 FOR BACKWARD COMPATIBILITY
+    // ============================================
+    const legacyQ1: QAnswer = {
+      answer: 'tidak', // 3-gate doesn't have penalty detection
+      reasoning: 'Migrated to 3-Gate system',
+      evidence: null,
+    };
+    const legacyQ2: QAnswer = {
+      answer: 'tidak', // 3-gate doesn't have ongoing detection
+      reasoning: 'Migrated to 3-Gate system',
+      evidence: null,
+    };
+    const legacyQ3: QAnswer = {
+      answer: threeGateResult.is_promo ? 'ya' : 'tidak',
+      reasoning: threeGateResult.reasoning,
+      evidence: threeGateResult.benefit.evidence,
+    };
+    const legacyQ4: QAnswer = {
+      answer: promoCategory === 'EVENT' ? 'ya' : 'tidak',
+      reasoning: threeGateResult.reasoning,
+      evidence: threeGateResult.trigger.evidence,
+    };
+
     return {
-      q1, q2, q3, q4,
+      // 3 Gate Results (PRIMARY)
+      trigger: threeGateResult.trigger,
+      benefit: threeGateResult.benefit,
+      constraints: threeGateResult.constraints,
+      is_promo: threeGateResult.is_promo,
+      
+      // Category
       category,
       category_name: categoryName,
+      promo_category: promoCategory,
+      
+      // Quality
       confidence: quality.confidence,
       quality_flags: quality.flags,
       evidence_count: quality.evidence_count,
+      reasoning: threeGateResult.reasoning,
+      
+      // Metadata
       classifier_prompt_version: CLASSIFIER_PROMPT_VERSION,
       classification_model: CLASSIFICATION_MODEL,
       classifier_runtime: 'client',
       content_length: content.length,
       latency_ms: latency,
       tokens_used: data.usage?.total_tokens,
+      
+      // Legacy (for backward compatibility)
+      q1: legacyQ1,
+      q2: legacyQ2,
+      q3: legacyQ3,
+      q4: legacyQ4,
     };
 
   } catch (error) {
@@ -471,12 +580,46 @@ export function getConfidenceBadgeVariant(confidence: ClassificationConfidence):
 
 export function formatQualityFlag(flag: QualityFlag): string {
   switch (flag) {
-    case 'no_evidence': return 'Tidak ada evidence untuk jawaban kunci';
+    case 'no_trigger_evidence': return 'Tidak ada evidence untuk trigger';
+    case 'no_benefit_evidence': return 'Tidak ada evidence untuk benefit';
+    case 'no_constraints_evidence': return 'Tidak ada evidence untuk constraints';
     case 'paraphrased_evidence': return 'Evidence bukan kutipan persis dari content';
-    case 'short_reasoning': return 'Reasoning terlalu pendek (< 40 karakter)';
-    case 'missing_specifics': return 'Reasoning tidak menyebut objek/fungsi spesifik';
-    case 'single_weak_evidence': return 'Hanya 1 evidence lemah tanpa constraint jelas';
-    case 'valid': return 'Semua quality gate lolos';
+    case 'weak_reasoning': return 'Reasoning terlalu pendek (< 40 karakter)';
+    case 'valid': return 'Semua gate valid';
     default: return flag;
+  }
+}
+
+// ============================================
+// HELPER: Get Gate Label for UI
+// ============================================
+
+export function getGateLabel(gate: 'trigger' | 'benefit' | 'constraints'): string {
+  switch (gate) {
+    case 'trigger': return 'PINTU 1 - Trigger (Kondisi Pemicu)';
+    case 'benefit': return 'PINTU 2 - Benefit (Perubahan State)';
+    case 'constraints': return 'PINTU 3 - Constraints (Pengunci)';
+  }
+}
+
+export function getTriggerTypeLabel(type: TriggerType): string {
+  switch (type) {
+    case 'action': return 'Action (User melakukan sesuatu)';
+    case 'moment': return 'Moment (Waktu/event alami)';
+    case 'state': return 'State (Status/akumulasi)';
+    default: return 'Tidak terdeteksi';
+  }
+}
+
+export function getBenefitCategoryLabel(category: BenefitCategory): string {
+  switch (category) {
+    case 'money': return 'Money (Saldo/uang tunai)';
+    case 'credit': return 'Credit (Bonus/freechip)';
+    case 'percentage': return 'Percentage (Diskon %)';
+    case 'item': return 'Item (Hadiah fisik)';
+    case 'chance': return 'Chance (Undian/spin)';
+    case 'access': return 'Access (Akses/privilege)';
+    case 'cost_reduction': return 'Cost Reduction (Bebas fee)';
+    default: return 'Tidak terdeteksi';
   }
 }

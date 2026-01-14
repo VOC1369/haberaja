@@ -1,9 +1,14 @@
 /**
- * Classification Override Component
- * Shows classification result and allows human override
+ * Classification Override Component (v2.0 - 3-Gate System)
+ * Shows 3-Gate classification result and allows human override
+ * 
+ * PROMO SUPER CONTRACT:
+ * - PINTU 1: TRIGGER (action/moment/state)
+ * - PINTU 2: BENEFIT (money/credit/item/chance/access/cost_reduction)
+ * - PINTU 3: CONSTRAINTS (aturan yang mengikat)
  * 
  * CONTRACT OF TRUTH:
- * - AI = First-pass reasoning
+ * - AI = First-pass reasoning (3 pintu)
  * - UI = Authority (this component)
  * - Human = Gatekeeper (override button)
  */
@@ -30,14 +35,21 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { AlertTriangle, Edit2, CheckCircle, ChevronDown, Info } from 'lucide-react';
+import { AlertTriangle, Edit2, CheckCircle, ChevronDown, Info, XCircle, Zap, Gift, Lock } from 'lucide-react';
 import type { 
   ProgramCategory, 
   ClassificationConfidence, 
   QualityFlag,
-  QAnswer 
+  TriggerType,
+  BenefitCategory,
+  ThreeGateResult,
 } from '@/lib/extractors/category-classifier';
-import { formatQualityFlag } from '@/lib/extractors/category-classifier';
+import { 
+  formatQualityFlag, 
+  getGateLabel, 
+  getTriggerTypeLabel, 
+  getBenefitCategoryLabel 
+} from '@/lib/extractors/category-classifier';
 
 interface ClassificationOverrideProps {
   currentCategory: ProgramCategory;
@@ -45,12 +57,18 @@ interface ClassificationOverrideProps {
   confidence: ClassificationConfidence;
   qualityFlags: QualityFlag[];
   rewardMode?: 'fixed' | 'formula' | 'tier' | 'multi';
-  promoSubType?: string;  // e.g., "Lucky Spin", "Cashback", etc.
-  reasoning?: {
-    q1: QAnswer;
-    q2: QAnswer;
-    q3: QAnswer;
-    q4: QAnswer;
+  promoSubType?: string;
+  // New 3-Gate props
+  trigger?: ThreeGateResult['trigger'];
+  benefit?: ThreeGateResult['benefit'];
+  constraints?: ThreeGateResult['constraints'];
+  reasoning?: string;
+  // Legacy Q1-Q4 (backward compatibility)
+  legacyReasoning?: {
+    q1: { answer: 'ya' | 'tidak'; reasoning: string; evidence: string | null };
+    q2: { answer: 'ya' | 'tidak'; reasoning: string; evidence: string | null };
+    q3: { answer: 'ya' | 'tidak'; reasoning: string; evidence: string | null };
+    q4: { answer: 'ya' | 'tidak'; reasoning: string; evidence: string | null };
   };
   onOverride: (newCategory: ProgramCategory, reason: string) => void;
 }
@@ -62,7 +80,11 @@ export function ClassificationOverride({
   qualityFlags,
   rewardMode,
   promoSubType,
+  trigger,
+  benefit,
+  constraints,
   reasoning,
+  legacyReasoning,
   onOverride,
 }: ClassificationOverrideProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -102,15 +124,8 @@ export function ClassificationOverride({
     }
   };
 
-  const getQLabel = (qNum: number) => {
-    switch (qNum) {
-      case 1: return 'Q1 (Penalty/Restriction)';
-      case 2: return 'Q2 (Ongoing/Accumulation)';
-      case 3: return 'Q3 (Instant Reward)';
-      case 4: return 'Q4 (Event/Competition)';
-      default: return `Q${qNum}`;
-    }
-  };
+  // Check if we have 3-gate data
+  const has3GateData = trigger && benefit && constraints;
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 space-y-3">
@@ -150,21 +165,102 @@ export function ClassificationOverride({
               </DialogDescription>
             </DialogHeader>
 
-            {/* Show reasoning */}
-            {reasoning && (
+            {/* Show 3-Gate reasoning (NEW) */}
+            {has3GateData && (
               <Collapsible open={showReasoning} onOpenChange={setShowReasoning}>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="w-full justify-between mb-2">
-                    <span className="text-sm">Lihat Reasoning AI</span>
+                    <span className="text-sm">Lihat 3-Gate Reasoning</span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${showReasoning ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="space-y-3 p-3 bg-muted rounded-lg text-xs max-h-64 overflow-y-auto">
+                    {/* PINTU 1: TRIGGER */}
+                    <div className="pb-2 border-b border-border">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Zap className="h-3 w-3 text-blue-400" />
+                        <span className="font-medium">PINTU 1 - Trigger</span>
+                        <Badge variant={trigger.found ? 'default' : 'outline'} className="text-xs">
+                          {trigger.found ? '✅ ADA' : '❌ TIDAK'}
+                        </Badge>
+                      </div>
+                      {trigger.type && (
+                        <p className="text-muted-foreground">
+                          Tipe: {getTriggerTypeLabel(trigger.type)}
+                        </p>
+                      )}
+                      {trigger.evidence && (
+                        <p className="text-foreground mt-1 italic">
+                          Evidence: "{trigger.evidence}"
+                        </p>
+                      )}
+                    </div>
+
+                    {/* PINTU 2: BENEFIT */}
+                    <div className="pb-2 border-b border-border">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Gift className="h-3 w-3 text-green-400" />
+                        <span className="font-medium">PINTU 2 - Benefit</span>
+                        <Badge variant={benefit.found ? 'default' : 'outline'} className="text-xs">
+                          {benefit.found ? '✅ ADA' : '❌ TIDAK'}
+                        </Badge>
+                      </div>
+                      {benefit.category && (
+                        <p className="text-muted-foreground">
+                          Kategori: {getBenefitCategoryLabel(benefit.category)}
+                        </p>
+                      )}
+                      {benefit.evidence && (
+                        <p className="text-foreground mt-1 italic">
+                          Evidence: "{benefit.evidence}"
+                        </p>
+                      )}
+                    </div>
+
+                    {/* PINTU 3: CONSTRAINTS */}
+                    <div className="pb-2 border-b border-border last:border-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Lock className="h-3 w-3 text-amber-400" />
+                        <span className="font-medium">PINTU 3 - Constraints</span>
+                        <Badge variant={constraints.found ? 'default' : 'outline'} className="text-xs">
+                          {constraints.found ? '✅ ADA' : '❌ TIDAK'}
+                        </Badge>
+                      </div>
+                      {constraints.evidence && (
+                        <p className="text-foreground mt-1 italic">
+                          Evidence: "{constraints.evidence}"
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Reasoning Summary */}
+                    {reasoning && (
+                      <div className="pt-2">
+                        <p className="font-medium text-foreground">Kesimpulan:</p>
+                        <p className="text-muted-foreground">{reasoning}</p>
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* Legacy Q1-Q4 reasoning (backward compatibility) */}
+            {!has3GateData && legacyReasoning && (
+              <Collapsible open={showReasoning} onOpenChange={setShowReasoning}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-between mb-2">
+                    <span className="text-sm">Lihat Reasoning AI (Legacy)</span>
                     <ChevronDown className={`h-4 w-4 transition-transform ${showReasoning ? 'rotate-180' : ''}`} />
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <div className="space-y-2 p-3 bg-muted rounded-lg text-xs max-h-48 overflow-y-auto">
-                    {[reasoning.q1, reasoning.q2, reasoning.q3, reasoning.q4].map((q, idx) => (
+                    {[legacyReasoning.q1, legacyReasoning.q2, legacyReasoning.q3, legacyReasoning.q4].map((q, idx) => (
                       <div key={idx} className="pb-2 border-b border-border last:border-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium">{getQLabel(idx + 1)}:</span>
+                          <span className="font-medium">Q{idx + 1}:</span>
                           <Badge variant={q.answer === 'ya' ? 'default' : 'outline'} className="text-xs">
                             {q.answer.toUpperCase()}
                           </Badge>
@@ -231,6 +327,30 @@ export function ClassificationOverride({
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* 3-Gate Summary (NEW) */}
+      {has3GateData && (
+        <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-1">
+            <Zap className="h-3 w-3 text-blue-400" />
+            <span className={trigger.found ? 'text-emerald-400' : 'text-muted-foreground'}>
+              Trigger {trigger.found ? '✓' : '✗'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Gift className="h-3 w-3 text-green-400" />
+            <span className={benefit.found ? 'text-emerald-400' : 'text-muted-foreground'}>
+              Benefit {benefit.found ? '✓' : '✗'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Lock className="h-3 w-3 text-amber-400" />
+            <span className={constraints.found ? 'text-emerald-400' : 'text-muted-foreground'}>
+              Constraints {constraints.found ? '✓' : '✗'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Quality Flags Warning */}
       {qualityFlags.length > 0 && !qualityFlags.includes('valid') && (

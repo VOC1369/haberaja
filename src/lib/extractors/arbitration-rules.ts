@@ -115,7 +115,10 @@ function isStrongNonPromo(classification: ClassificationResult): boolean {
   // If quality flags indicate issues (no valid flag means potential problem)
   const hasNoValidFlag = classification.quality_flags?.length > 0 && 
     !classification.quality_flags.includes('valid');
-  if (hasNoValidFlag && classification.quality_flags.includes('no_evidence')) {
+  if (hasNoValidFlag && (
+    classification.quality_flags.includes('no_trigger_evidence') ||
+    classification.quality_flags.includes('no_benefit_evidence')
+  )) {
     return true;
   }
   
