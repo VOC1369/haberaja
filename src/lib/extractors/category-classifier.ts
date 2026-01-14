@@ -102,6 +102,15 @@ Kamu adalah REASONING ASSISTANT untuk klasifikasi konten iGaming.
 Q1: Apakah content ini UTAMANYA membahas PENALTI, LARANGAN, atau PEMBATASAN?
     Ciri-ciri: potongan %, suspend, hangus, tidak boleh, larangan, batasan
     Evidence harus mengandung kata-kata terkait penalty/restriction
+    
+    ⚠️ PENGECUALIAN PENTING - Ini BUKAN penalty indicator:
+    - "berhak membatalkan bonus" (standard fraud clause di semua promo)
+    - "jika terjadi kecurangan" (standard anti-abuse boilerplate)
+    - "keputusan mutlak" (standard legal disclaimer)
+    - "indikasi kecurangan dalam bentuk apapun" (standard T&C)
+    
+    Q1 = YA HANYA jika konten UTAMANYA menjelaskan mekanisme potongan/suspend,
+    BUKAN jika hanya ada klausul fraud standard di bagian Syarat & Ketentuan.
 
 Q2: Apakah ini SISTEM ONGOING tanpa end date yang membutuhkan AKUMULASI?
     Ciri-ciri: Loyalty Point, LP, EXP, Tier, Level, tukar/exchange, kumpulkan dulu
@@ -149,8 +158,16 @@ Q4: Apakah ada KOMPETISI dengan PERIODE TERBATAS dan PEMENANG/UNDIAN?
 // ============================================
 
 export function calculateCategory(q1: string, q2: string, q3: string, q4: string): ProgramCategory {
+  // ✅ GUARD: Q1 + Q3 conflict resolution (2025-01-14)
+  // Jika Q1=YA tapi Q3 juga YA, berarti ada instant reward → BUKAN murni penalty
+  // Ini menangani kasus "promo valid dengan standard fraud clause di S&K"
+  if (q1 === 'ya' && q3 === 'ya') {
+    console.log('[Classifier] Q1+Q3 conflict: Instant Reward (A) takes priority over standard penalty clause');
+    return 'A'; // Instant Reward wins over boilerplate fraud clause
+  }
+  
   // FIXED PRIORITY ORDER (2025-12-24):
-  // 1. Q1 (Penalty/Restriction) → C (Policy) - MUTLAK
+  // 1. Q1 (Penalty/Restriction) → C (Policy) - only if no instant reward
   if (q1 === 'ya') return 'C';
   
   // 2. Q4 (Event dengan periode + pemenang) → B (Event)
