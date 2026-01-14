@@ -257,6 +257,18 @@ export interface PromoFormData {
   promo_type: string;
   intent_category: string;
   target_segment: string;
+  
+  /**
+   * TASK: Aksi pemicu paling awal yang mengubah state user menjadi ELIGIBLE.
+   * 
+   * SEMANTIC CONTRACT:
+   * - Hanya berisi 1 aksi pemicu (BUKAN flow lengkap)
+   * - Contoh: 'APK Download', 'Deposit', 'Loss', 'Referral'
+   * - BUKAN: 'Download lalu login dan klaim'
+   * 
+   * Lihat `distribution_note` untuk detail flow klaim setelah eligible.
+   * Ref: memory/features/extraction/task-vs-flow-semantic-contract-v1.md
+   */
   trigger_event: string;
   currency_scope?: 'rupiah' | 'credit' | 'lp' | 'exp';
   

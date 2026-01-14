@@ -280,6 +280,21 @@ FIELD TAMBAHAN untuk Lucky Spin Prize:
 5. Untuk voucher/ticket/lucky_spin, reward_quantity WAJIB diisi jika ada di teks
 6. Untuk Lucky Spin dengan hadiah fisik, WAJIB isi lucky_spin_rewards
 
+## ⚠️ KONTRAK SEMANTIC: TASK vs FLOW (TRIGGER EVENT)
+
+RULE WAJIB:
+- trigger_event = TASK = aksi pemicu PERTAMA yang membuat user ELIGIBLE
+- BUKAN seluruh flow klaim atau langkah redemption
+- HANYA 1 aksi, BUKAN gabungan
+
+Contoh BENAR:
+- Download APK → trigger_event: "APK Download" ✅
+- Deposit 50rb → trigger_event: "Deposit" ✅
+- Kekalahan → trigger_event: "Loss" ✅
+
+Contoh SALAH:
+- Download APK lalu login dan klaim → trigger_event: "Download lalu klaim" ❌
+
 📤 OUTPUT: JSON VALID saja, tanpa markdown.
 `;
 
