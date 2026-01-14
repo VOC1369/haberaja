@@ -1,6 +1,6 @@
 /**
  * Mechanic Router
- * Version: v1.0.0+2025-01-09
+ * Version: v1.1.0+2025-01-14
  * 
  * REASONING-FIRST ARCHITECTURE:
  * This module routes PromoIntent to specific mechanics.
@@ -11,10 +11,18 @@
  * - Invariants = PROHIBITIONS (mode ≠ formula)
  * - Router = DETERMINATIONS (mode = event)
  * 
+ * PROMO PRIMITIVE GATE v1.1 INTEGRATION:
+ * - Mode is now determined by Primitive Gate (task_domain × reward_nature)
+ * - APK is treated as CONSTRAINT, not mode determinant
+ * - Regex-based detection serves as EVIDENCE, not DECISION
+ * 
  * This separation prevents "confident but wrong" extractions.
  */
 
 import type { PromoIntent, PrimaryAction, ValueShape, DistributionPath } from './promo-intent-reasoner';
+import { resolveModFromPrimitive, type CanonicalMode, type TaskDomain, type RewardNature } from './promo-primitive-gate';
+import { collectPrimitiveEvidence, inferTaskDomain, inferRewardNature, hasApkConstraint } from './primitive-evidence-collector';
+import { checkModeInvariants } from './primitive-invariant-checker';
 
 // ============================================
 // CURATED MECHANIC ENUM (20-40 types)
@@ -374,7 +382,7 @@ function determineCalculationBasis(intent: PromoIntent, mode: PromoMode): string
 // MAIN ROUTER FUNCTION
 // ============================================
 
-const ROUTER_VERSION = 'v1.0.0+2025-01-09';
+const ROUTER_VERSION = 'v1.1.0+2025-01-14';
 
 /**
  * Route PromoIntent to MechanicType and determine locked fields.
@@ -408,19 +416,29 @@ export function routeMechanic(intent: PromoIntent): MechanicRouterResult {
   // These are PHYSICS LAWS - cannot be overridden
   // ============================================
   
-  // APK Download Reward: Event mode, no formula, must require APK
+  // ============================================
+  // APK Download Reward: APK is CONSTRAINT, not mode determinant
+  // Mode is determined by Primitive Gate (task_domain × reward_nature)
+  // ============================================
   if (mechanic_type === 'apk_download_reward') {
+    // APK is a CONSTRAINT - set require_apk but DON'T force mode
     locked_fields.trigger_event = 'APK Download';
     locked_fields.require_apk = true;
-    locked_fields.reward_amount = null;      // APK promos use range, not fixed amount
-    locked_fields.max_bonus = null;          // Not applicable for event
-    locked_fields.max_claim = 1;             // Typically once per user
-    locked_fields.max_claim_unlimited = false;
-    locked_fields.turnover_enabled = false;
-    locked_fields.turnover_multiplier = null;
-    locked_fields.min_deposit = null;        // No deposit required for APK
     
-    console.log('[routeMechanic] APK_DOWNLOAD_REWARD: Complete field locking applied');
+    // Only lock these fields if mode is 'fixed' or 'event'
+    // APK promos CAN be formula mode (e.g., "Cashback 5% khusus APK")
+    if (mode === 'fixed' || mode === 'event') {
+      locked_fields.reward_amount = null;      // APK promos use range, not fixed amount
+      locked_fields.max_bonus = null;          // Not applicable for event
+      locked_fields.max_claim = 1;             // Typically once per user
+      locked_fields.max_claim_unlimited = false;
+      locked_fields.turnover_enabled = false;
+      locked_fields.turnover_multiplier = null;
+      locked_fields.min_deposit = null;        // No deposit required for APK
+    }
+    // If mode is 'formula' (APK Cashback), don't lock formula-related fields
+    
+    console.log(`[routeMechanic] APK_DOWNLOAD_REWARD: mode=${mode}, require_apk=true`);
   }
   
   // Birthday Reward: Fixed/Event mode, login trigger, once per year

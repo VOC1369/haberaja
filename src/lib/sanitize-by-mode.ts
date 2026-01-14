@@ -1,5 +1,5 @@
 /**
- * sanitizeByMode() — Final Safety Net v1.0
+ * sanitizeByMode() — Final Safety Net v1.1
  * 
  * TUJUAN: Menghapus impossible state tanpa menebak promo.
  * 
@@ -7,7 +7,13 @@
  * 1. Mode menentukan dunia (event/fixed/tier ≠ formula fields)
  * 2. 0 ≠ unknown (0 adalah DATA CORRUPTION)
  * 3. Event ≠ calculation
- * 4. APK in terms/name → require_apk = true (paksa)
+ * 4. APK in terms/name → require_apk = true (CONSTRAINT only, not mode override)
+ * 
+ * PROMO PRIMITIVE GATE v1.1 INTEGRATION:
+ * - APK is a CONSTRAINT, not mode determinant
+ * - Mode is determined upstream by Primitive Gate
+ * - This function only enforces mode-field consistency
+ * - Invariant violations are LOGGED, not silently fixed
  * 
  * IDEMPOTENT: Panggil 1x atau 10x → hasil sama
  * UNIVERSAL: Berlaku untuk semua promo, sekarang dan masa depan
@@ -144,25 +150,35 @@ export function sanitizeByMode(promo: Record<string, unknown>): Record<string, u
   }
 
   // ============================================
-  // 5. APK GATE NORMALIZATION (Safety Net)
-  // Note: Step-0 Reasoner is the source of truth
-  // This is the last line of defense
+  // 5. APK CONSTRAINT NORMALIZATION (Safety Net)
+  // 
+  // PROMO PRIMITIVE GATE v1.1 PRINCIPLE:
+  // - APK is a CONSTRAINT, not mode determinant
+  // - Mode is determined by Primitive Gate (task_domain × reward_nature)
+  // - This function only sets require_apk = true as a constraint
+  // - We do NOT override mode here (APK promos CAN be formula mode)
   // ============================================
   const isApkContext = 
     terms.includes('apk') || 
     terms.includes('aplikasi') ||
+    terms.includes('pengguna apk') ||
+    terms.includes('khusus apk') ||
     promoName.includes('apk') || 
     promoName.includes('download') ||
     promoName.includes('aplikasi');
   
   if (isApkContext || out.require_apk === true) {
+    // APK is CONSTRAINT only - set the flag
     out.require_apk = true;
     
-    // For event mode APK promos: trigger MUST be 'APK Download' (matches enum)
-    // "Login", "Deposit", etc. are not valid triggers for APK-gated promos
-    if (mode === 'event') {
+    // For event/fixed mode APK promos: trigger MUST be 'APK Download'
+    // For formula mode APK promos (e.g., "Cashback 5% khusus APK"), 
+    // trigger might be different (Deposit, Loss, etc.)
+    if (mode === 'event' || mode === 'fixed') {
       out.trigger_event = 'APK Download';
     }
+    // NOTE: We do NOT force mode to 'event' for APK promos anymore
+    // Mode is determined by Primitive Gate based on reward_nature
   }
 
   // ============================================
