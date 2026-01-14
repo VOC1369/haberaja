@@ -1,5 +1,9 @@
 /**
- * sanitizeByMode() — Final Safety Net v1.1
+ * sanitizeByMode() — Final Safety Net v1.2
+ * 
+ * ⚠️ FORBIDDEN: This file may NOT decide mode. ⚠️
+ * Decision logic lives in promo-primitive-gate.ts ONLY.
+ * This file only ENFORCES mode-field consistency.
  * 
  * TUJUAN: Menghapus impossible state tanpa menebak promo.
  * 
@@ -9,11 +13,15 @@
  * 3. Event ≠ calculation
  * 4. APK in terms/name → require_apk = true (CONSTRAINT only, not mode override)
  * 
- * PROMO PRIMITIVE GATE v1.1 INTEGRATION:
+ * PROMO PRIMITIVE GATE v1.2 INTEGRATION:
  * - APK is a CONSTRAINT, not mode determinant
  * - Mode is determined upstream by Primitive Gate
  * - This function only enforces mode-field consistency
  * - Invariant violations are LOGGED, not silently fixed
+ * 
+ * v1.2 CHANGES:
+ * - RELAXED: turnover fields NOT stripped for fixed mode
+ *   (turnover can be withdrawal requirement, not calculation)
  * 
  * IDEMPOTENT: Panggil 1x atau 10x → hasil sama
  * UNIVERSAL: Berlaku untuk semua promo, sekarang dan masa depan
@@ -76,26 +84,42 @@ export function sanitizeByMode(promo: Record<string, unknown>): Record<string, u
     out.min_calculation_enabled = false;
     out.conversion_formula = '';
     
-    // Turnover fields → disabled
-    out.turnover_enabled = false;
-    out.turnover_rule_enabled = false;
-    out.turnover_multiplier = null;
-    out.turnover_rule = '';
+    // ================================================================
+    // v1.2: RELAXED — turnover fields NOT stripped for fixed mode
+    // 
+    // DESIGN NOTE: Fixed mode CAN have turnover requirement.
+    // This is for WITHDRAWAL CONDITION, not CALCULATION BASIS.
+    // 
+    // Example: "Freechip APK, syarat TO 1x sebelum WD"
+    // - mode = fixed (reward is given, not calculated)
+    // - turnover_enabled = true (TO is withdrawal constraint)
+    // 
+    // Only strip turnover for EVENT mode (truly no turnover concept)
+    // ================================================================
+    if (mode === 'event') {
+      out.turnover_enabled = false;
+      out.turnover_rule_enabled = false;
+      out.turnover_multiplier = null;
+      out.turnover_rule = '';
+      
+      // Deposit constraint → null (not applicable for event mode)
+      out.min_deposit = null;
+    }
+    // For 'fixed' and 'tier', preserve turnover fields (withdrawal requirement)
     
-    // Deposit constraint → null (not applicable for event mode)
-    out.min_deposit = null;
-    
-    // Fixed mode prefixed fields → null/empty
+    // Fixed mode prefixed fields → null/empty (calculation-related only)
     out.fixed_calculation_base = '';
     out.fixed_calculation_value = null;
     out.fixed_min_calculation = null;
     out.fixed_min_calculation_enabled = false;
     
-    // ✅ V1.2: Payout direction → null/disabled for event mode
-    // Event promos (APK Download, Freechip, etc.) don't have payout sequence
-    out.payout_direction = null;
-    out.global_payout_direction_enabled = false;
-    out.global_payout_direction = '';
+    // ✅ V1.2: Payout direction → null/disabled for event mode only
+    // Fixed mode CAN have payout direction (for manual claim flow)
+    if (mode === 'event') {
+      out.payout_direction = null;
+      out.global_payout_direction_enabled = false;
+      out.global_payout_direction = '';
+    }
   }
 
   // ============================================

@@ -1,13 +1,21 @@
 /**
- * INVARIANT CHECKER v1.0
+ * INVARIANT CHECKER v1.2 — CLEAN-ROOM READY
  * System-level assertion untuk mode-field consistency
+ * 
+ * ⚠️ FORBIDDEN: This file may NOT decide mode. ⚠️
+ * Decision logic lives in promo-primitive-gate.ts ONLY.
  * 
  * PRINSIP: Jika gagal → THROW + LOG, bukan silent fix.
  * Ini bukan validasi UI, ini SYSTEM INVARIANT.
  * 
- * PENGUATAN #3 dari arsitektur PROMO PRIMITIVE GATE v1.1
+ * v1.2 CHANGES:
+ * - RELAXED: Fixed mode CAN have turnover_enabled=true
+ *   (for withdrawal requirement, NOT calculation basis)
+ * - ADDED: Comment explaining TO for withdrawal vs calculation
  * 
- * VERSION: v1.0.0+2025-01-14
+ * PENGUATAN #3 dari arsitektur PROMO PRIMITIVE GATE v1.2
+ * 
+ * VERSION: v1.2.0+2025-01-14
  */
 
 // ============================================
@@ -78,6 +86,7 @@ export function checkModeInvariants(
   // ====================================
   if (normalizedMode === 'fixed') {
     // calculation_basis MUST be null or empty
+    // Fixed mode = no formula calculation
     if (fields.calculation_basis !== null && 
         fields.calculation_basis !== '' && 
         fields.calculation_basis !== undefined) {
@@ -87,12 +96,25 @@ export function checkModeInvariants(
       );
     }
     
-    // turnover_enabled MUST be false
-    if (fields.turnover_enabled === true) {
-      violations.push(
-        `INVARIANT_VIOLATION: mode=${mode} MUST have turnover_enabled=false, got true`
-      );
-    }
+    // ================================================================
+    // v1.2: RELAXED — turnover_enabled is ALLOWED for fixed mode
+    // 
+    // DESIGN NOTE: Fixed mode CAN have turnover requirement.
+    // This is for WITHDRAWAL CONDITION, not CALCULATION BASIS.
+    // 
+    // Example: "Freechip APK, syarat TO 1x sebelum WD"
+    // - mode = fixed (reward is given, not calculated)
+    // - turnover_enabled = true (TO is withdrawal constraint)
+    // - calculation_basis = null (no formula)
+    // 
+    // Semantic distinction:
+    // - turnover for CALCULATION: mode MUST be formula
+    // - turnover for WITHDRAWAL: mode can be fixed/event
+    // 
+    // Future consideration: Add withdrawal_turnover_required field
+    // to semantically separate calculation vs withdrawal turnover.
+    // ================================================================
+    // REMOVED: turnover_enabled check for fixed mode
     
     // tier_count MUST be 0
     if (typeof fields.tier_count === 'number' && fields.tier_count > 0) {
@@ -253,4 +275,4 @@ export function fixInvariantViolations(
 // VERSION
 // ============================================
 
-export const INVARIANT_CHECKER_VERSION = 'v1.0.0+2025-01-14';
+export const INVARIANT_CHECKER_VERSION = 'v1.2.0+2025-01-14';

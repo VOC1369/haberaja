@@ -1,6 +1,9 @@
 /**
- * Promo Intent Reasoner (Step-0)
- * Version: v1.0.0+2025-01-09
+ * Promo Intent Reasoner (Step-0) v1.2
+ * 
+ * ⚠️ FORBIDDEN: This file may NOT decide mode directly. ⚠️
+ * This file COLLECTS evidence and INFERS intent.
+ * Mode decision MUST delegate to promo-primitive-gate.ts.
  * 
  * REASONING-FIRST ARCHITECTURE:
  * This module performs LLM reasoning BEFORE extraction.
@@ -14,6 +17,8 @@
  * Q0F: What shape is the reward value? (value_shape)
  * 
  * OUTPUT: PromoIntent with evidence spans for audit trail
+ * 
+ * Version: v1.2.0+2025-01-14
  */
 
 import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
