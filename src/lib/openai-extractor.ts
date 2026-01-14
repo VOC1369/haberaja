@@ -3783,15 +3783,15 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     extracted.subcategories?.length > 1;
   
   // ============================================
-  // EVENT LEVEL UP DETECTION
-  // Detect promos like "BONUS NALEN", "Kejar Level", "Level Up Event"
+  // EVENT LEVEL UP / TURNOVER DETECTION
+  // Detect promos like "BONUS NALEN", "Kejar Level", "Level Up Event", "Event Turnover"
   // ============================================
   const isEventLevelUp = 
-    /level\s*up|nalen|kejar\s*level|naik\s*level|event\s*level/i.test(extracted.promo_type || '') ||
-    /level\s*up|nalen|kejar\s*level|naik\s*level/i.test(extracted.promo_name || '');
+    /level\s*up|nalen|kejar\s*level|naik\s*level|event\s*level|event\s*turnover|turnover\s*slot/i.test(extracted.promo_type || '') ||
+    /level\s*up|nalen|kejar\s*level|naik\s*level|event\s*turnover|turnover\s*slot/i.test(extracted.promo_name || '');
   
   if (isEventLevelUp) {
-    console.log('[Event Level Up] Detected Level Up promo, will map to level_up_rewards[]');
+    console.log('[Event Level Up / Turnover] Detected milestone-based promo, will map to tiers[]');
   }
 
   // ============================================
@@ -4054,6 +4054,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     reward: number;
     reward_type: 'fixed' | 'percentage';
     jenis_hadiah: string;
+    physical_reward_name?: string;
+    physical_reward_quantity?: number;
+    cash_reward_amount?: number;
   }> = [];
   
   if (isEventLevelUp && extracted.subcategories?.length > 0) {
@@ -4063,18 +4066,38 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       const unlockValue = extractUnlockCondition(sub, extracted.terms_conditions, idx);
       const rewardValue = sub.max_bonus || sub.calculation_value || (sub as any).reward || 0;
       
+      // Detect reward type: hadiah_fisik, uang_tunai, or credit_game
+      const rawRewardType = ((sub as any).reward_type || (sub as any).jenis_hadiah || '').toLowerCase();
+      let jenisHadiah = rawRewardType || 'credit_game';
+      
+      // ✅ NEW: Auto-detect physical rewards from sub_name patterns
+      const subName = (sub.sub_name || '').toLowerCase();
+      const physicalPatterns = /pajero|veloz|xmax|pcx|honda|yamaha|suzuki|toyota|mitsubishi|emas|iphone|samsung|motor|mobil|laptop/i;
+      const cashPatterns = /^rp[\s.,]*\d+|uang\s*tunai|cash/i;
+      
+      if (physicalPatterns.test(subName)) {
+        jenisHadiah = 'hadiah_fisik';
+      } else if (cashPatterns.test(subName) || (rewardValue > 0 && !sub.physical_reward_name)) {
+        jenisHadiah = 'uang_tunai';
+      }
+      
       return {
         id: generateUUID(),
         type: sub.sub_name || `Level ${idx + 1}`,
         minimal_point: unlockValue,  // Progress gate (unlock condition)
         reward: typeof rewardValue === 'number' ? rewardValue : 0,
         reward_type: 'fixed' as const,
-        jenis_hadiah: ((sub as any).reward_type || (sub as any).jenis_hadiah || 'credit_game').toLowerCase(),
+        jenis_hadiah: jenisHadiah,
+        // ✅ NEW: Include physical reward fields for hadiah_fisik
+        physical_reward_name: sub.physical_reward_name || (jenisHadiah === 'hadiah_fisik' ? sub.sub_name : undefined),
+        physical_reward_quantity: sub.physical_reward_quantity || (jenisHadiah === 'hadiah_fisik' ? 1 : undefined),
+        // ✅ NEW: Include cash reward fields for uang_tunai
+        cash_reward_amount: sub.cash_reward_amount || (jenisHadiah === 'uang_tunai' ? rewardValue : undefined),
       };
     });
     
     console.log(`[Event Level Up] Mapped ${eventLevelUpTiers.length} tiers:`, 
-      eventLevelUpTiers.map(t => `${t.type}: unlock=${t.minimal_point}, reward=${t.reward}`));
+      eventLevelUpTiers.map(t => `${t.type}: unlock=${t.minimal_point}, reward=${t.reward}, jenis=${t.jenis_hadiah}`));
   }
 
   // Build referral_tiers if this is a referral multi-tier promo

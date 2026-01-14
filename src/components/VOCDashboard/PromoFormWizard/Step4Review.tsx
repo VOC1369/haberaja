@@ -1405,7 +1405,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         <th className="text-left py-2 px-3 font-medium text-foreground">Level</th>
                         <th className="text-right py-2 px-3 font-medium text-foreground">Syarat Unlock</th>
                         <th className="text-left py-2 px-3 font-medium text-foreground">Jenis</th>
-                        <th className="text-right py-2 px-3 font-medium text-foreground">Reward</th>
+                        <th className="text-left py-2 px-3 font-medium text-foreground">Detail Reward</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1415,11 +1415,21 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           <td className="py-2 px-3 text-right text-foreground">
                             {tier?.minimal_point ? `Rp ${tier.minimal_point.toLocaleString('id-ID')}` : '-'}
                           </td>
-                          <td className="py-2 px-3 text-foreground">{tier?.jenis_hadiah || 'credit_game'}</td>
-                          <td className="py-2 px-3 text-right text-button-hover font-medium">
-                            {tier?.reward_type === 'percentage' 
-                              ? `${tier?.reward ?? 0}%` 
-                              : `Rp ${Number(tier?.reward ?? 0).toLocaleString('id-ID')}`}
+                          <td className="py-2 px-3 text-foreground">
+                            {tier?.jenis_hadiah === 'hadiah_fisik' 
+                              ? '🎁 Hadiah Fisik' 
+                              : tier?.jenis_hadiah === 'uang_tunai' 
+                                ? '💵 Uang Tunai' 
+                                : tier?.jenis_hadiah || 'credit_game'}
+                          </td>
+                          <td className="py-2 px-3 text-button-hover font-medium">
+                            {tier?.jenis_hadiah === 'hadiah_fisik' 
+                              ? (tier?.physical_reward_name || '-')
+                              : tier?.jenis_hadiah === 'uang_tunai'
+                                ? `Rp ${Number(tier?.cash_reward_amount ?? tier?.reward ?? 0).toLocaleString('id-ID')}`
+                                : tier?.reward_type === 'percentage' 
+                                  ? `${tier?.reward ?? 0}%` 
+                                  : `Rp ${Number(tier?.reward ?? 0).toLocaleString('id-ID')}`}
                           </td>
                         </tr>
                       ))}

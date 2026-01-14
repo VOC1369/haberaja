@@ -4709,7 +4709,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         <TableHead>Level Name</TableHead>
                         <TableHead>Syarat Unlock</TableHead>
                         <TableHead>Jenis Hadiah</TableHead>
-                        <TableHead>Nilai Hadiah</TableHead>
+                        <TableHead>Detail Hadiah</TableHead>
                         <TableHead className="w-[80px]">Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -4729,13 +4729,19 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                               value={tier.minimal_point || 0}
                               onChange={(val) => updateTier(tier.id, { minimal_point: val })}
                               className="bg-muted"
-                              placeholder="History Deposit"
+                              placeholder="Turnover / History"
                             />
                           </TableCell>
                           <TableCell>
                             <SelectWithAddNew
                               value={tier.jenis_hadiah || 'credit_game'}
-                              onValueChange={(val) => updateTier(tier.id, { jenis_hadiah: val })}
+                              onValueChange={(val) => updateTier(tier.id, { 
+                                jenis_hadiah: val,
+                                // Reset other reward fields when changing type
+                                physical_reward_name: val !== 'hadiah_fisik' ? '' : tier.physical_reward_name,
+                                cash_reward_amount: val !== 'uang_tunai' ? undefined : tier.cash_reward_amount,
+                                reward: val === 'hadiah_fisik' ? 0 : tier.reward,
+                              })}
                               options={hadiahTypeOptions}
                               placeholder="Credit Game"
                               onAddOption={(opt) => setHadiahTypeOptions([...hadiahTypeOptions, opt])}
@@ -4743,11 +4749,29 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                             />
                           </TableCell>
                           <TableCell>
-                            <FormattedNumberInput
-                              value={typeof tier.reward === 'number' ? tier.reward : 0}
-                              onChange={(val) => updateTier(tier.id, { reward: val })}
-                              className="bg-muted"
-                            />
+                            {/* Conditional rendering based on jenis_hadiah */}
+                            {tier.jenis_hadiah === 'hadiah_fisik' ? (
+                              <Input
+                                value={tier.physical_reward_name || ''}
+                                onChange={(e) => updateTier(tier.id, { physical_reward_name: e.target.value })}
+                                placeholder="Mitsubishi Pajero..."
+                                className="bg-muted"
+                              />
+                            ) : tier.jenis_hadiah === 'uang_tunai' ? (
+                              <FormattedNumberInput
+                                value={tier.cash_reward_amount || tier.reward || 0}
+                                onChange={(val) => updateTier(tier.id, { cash_reward_amount: val, reward: val })}
+                                className="bg-muted"
+                                placeholder="Nominal Tunai"
+                              />
+                            ) : (
+                              <FormattedNumberInput
+                                value={typeof tier.reward === 'number' ? tier.reward : 0}
+                                onChange={(val) => updateTier(tier.id, { reward: val })}
+                                className="bg-muted"
+                                placeholder="Nilai Reward"
+                              />
+                            )}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -4771,7 +4795,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 )}
                 
                 <p className="text-xs text-muted-foreground">
-                  💡 Reward diberikan saat user mencapai level terkait. Tidak ada rumus tambahan.
+                  💡 Reward diberikan saat user mencapai level/turnover terkait. Hadiah fisik gunakan nama barang, uang tunai gunakan nominal.
                 </p>
               </div>
             </>
