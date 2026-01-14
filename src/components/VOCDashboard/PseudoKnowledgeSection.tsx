@@ -645,21 +645,31 @@ export function PseudoKnowledgeSection() {
             // Skip rendering for unit-based rewards - "Jumlah Reward" shown in detail section instead
             if (isUnitBased) return null;
             
+            // ✅ V1.2.1: Detect APK Fixed promos for special display
+            const isApkFixedPromo = isFixedMode && 
+              (mappedPreview?.require_apk || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
+            
             // ✅ FIX: Use displaySub (normalized) for calculation display
             const calcMethod = displaySub.calculation_method;
-            const calcValue = displaySub.calculation_value;
+            // For APK Fixed, use calculation_value or max_bonus as reward amount
+            const calcValue = isApkFixedPromo 
+              ? (displaySub.calculation_value || displaySub.max_bonus || 0)
+              : displaySub.calculation_value;
+            
+            // Determine if this is a fixed amount display
+            const isFixedAmount = calcMethod === 'fixed' || isApkFixedPromo;
             
             return (
               <div className="bg-muted rounded-lg p-3">
                 <span className="text-muted-foreground text-xs block mb-1">
-                  {calcMethod === 'threshold' ? 'Target' : 'Perhitungan Bonus'}
+                  {isApkFixedPromo ? 'Nilai Hadiah' : (calcMethod === 'threshold' ? 'Target' : 'Perhitungan Bonus')}
                 </span>
-                {getFieldStatus('calculation_value', archetype) === 'not_applicable' ? (
+                {getFieldStatus('calculation_value', archetype) === 'not_applicable' && !isApkFixedPromo ? (
                   <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
                 ) : (
                   <span className="text-button-hover font-semibold">
-                    {calcValue != null 
-                      ? (calcMethod === 'threshold'
+                    {calcValue != null && calcValue > 0
+                      ? (isFixedAmount
                           ? `Rp ${Number(calcValue).toLocaleString('id-ID')}`
                           : calcMethod === 'percentage'
                             ? `${calcValue}%`
@@ -745,6 +755,23 @@ export function PseudoKnowledgeSection() {
                     <span className="text-muted-foreground text-xs block mb-1">Max Claim Reward</span>
                     <span className="text-foreground font-medium">
                       {maxPerDay ? `${maxPerDay} / hari` : 'Unlimited'}
+                    </span>
+                  </>
+                );
+              }
+              
+              // ✅ V1.2.1: APK Fixed promos - show "Nilai Hadiah" with parsed amount
+              const isApkFixedPromo = !isUnitBased && isFixedMode && 
+                (mappedPreview?.require_apk || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
+              
+              if (isApkFixedPromo) {
+                // For APK Fixed, max_bonus = reward_amount, never "Unlimited"
+                const rewardAmount = sub.max_bonus || displaySub.calculation_value || 0;
+                return (
+                  <>
+                    <span className="text-muted-foreground text-xs block mb-1">Nilai Hadiah</span>
+                    <span className="text-foreground font-medium">
+                      {rewardAmount > 0 ? `Rp ${rewardAmount.toLocaleString('id-ID')}` : '-'}
                     </span>
                   </>
                 );
