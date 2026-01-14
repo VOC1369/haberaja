@@ -3503,9 +3503,25 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       
       // Dasar Perhitungan
       calculation_base: sub.calculation_base || 'deposit',
-      calculation_method: sub.calculation_method || 'percentage',
+      // ✅ V1.2.1: APK Fixed promos use "fixed" method, not percentage
+      calculation_method: (() => {
+        if (isApkLikePromo && lockedFields?.mode === 'fixed') return 'fixed';
+        return sub.calculation_method || 'percentage';
+      })(),
       calculation_method_enabled: true,
-      calculation_value: sub.calculation_value || 0,
+      // ✅ V1.2.1: For APK Fixed promos, populate calculation_value from parsed name
+      calculation_value: (() => {
+        // Priority 1: Explicit from LLM
+        if (sub.calculation_value && sub.calculation_value > 0) return sub.calculation_value;
+        
+        // Priority 2: For APK Fixed promos, use parsed reward amount
+        if (isApkLikePromo && lockedFields?.mode === 'fixed') {
+          const parsed = parseIDRFromText(sub.sub_name);
+          if (parsed && parsed > 0) return parsed;
+        }
+        
+        return 0;
+      })(),
       minimum_base: sub.minimum_base || 0,
       minimum_base_enabled: sub.minimum_base > 0,
       turnover_rule: sub.turnover_rule ? `${sub.turnover_rule}x` : '0x',
