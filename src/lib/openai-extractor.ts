@@ -376,7 +376,7 @@ export function detectRewardDimensions(data: { promo_name?: string; promo_type?:
     reward_nature = 'cashback';
   } else if (/referral|ajak\s*teman|referal/i.test(combined)) {
     reward_nature = 'referral';
-  } else if (/event|level|naik|milestone|leaderboard|tournament|lucky\s*spin|gacha/i.test(combined)) {
+  } else if (/event|level|naik|milestone|leaderboard|tournament|lucky\s*spin|gacha|download|apk|freechip|freebet|aplikasi/i.test(combined)) {
     reward_nature = 'event';
   } else if (/loyalty|point|redeem|merchandise/i.test(combined)) {
     reward_nature = 'reward';
@@ -443,10 +443,12 @@ export function resolveFieldApplicability(dims: RewardDimensions): Record<string
     result.turnover_rule = 'not_applicable';
   }
   
-  // RULE 4: Event/Milestone = NO calculation_value
+  // RULE 4: Event/Milestone/APK Download = NO calculation fields
   if (dims.reward_nature === 'event') {
     result.calculation_value = 'not_applicable';
     result.turnover_rule = 'not_applicable';
+    result.payout_direction = 'not_applicable';
+    result.minimum_base = 'not_applicable';
   }
   
   // RULE 5: Reward/Loyalty = NO turnover
