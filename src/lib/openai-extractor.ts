@@ -3832,10 +3832,31 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // Jika promo "lucky spin" tapi punya subcategories dengan hadiah fisik/credit:
   // Ini adalah EVENT LUCKY SPIN (undian hadiah), bukan LUCKY SPIN TIKET
   const isLuckySpinPromo = /lucky\s*spin|spin\s*gratis|free\s*spin|spin\s*harian/i.test(extracted.promo_name || '');
-  const isEventLuckySpinPrize = hasMultipleSubcategories && hasNonSpinRewards;
+  
+  // ============================================
+  // ❌ FIX v1.2.1: APK promos are NEVER Lucky Spin Prize
+  // OLD (ILLEGAL): isEventLuckySpinPrize = hasMultipleSubcategories && hasNonSpinRewards
+  // This incorrectly treated APK Freechip (2 varian) as Lucky Spin Prize
+  // ============================================
+  const isApkPromo = 
+    gateDecision.constraints.require_apk === true ||
+    /apk|download|aplikasi|freechip|freebet/i.test(extracted.promo_name || '');
+  
+  // ✅ FIX: Only Lucky Spin promos can be Event Lucky Spin Prize
+  // REQUIRED: isLuckySpinPromo + Gate-approved + NOT APK
+  const isEventLuckySpinPrize = 
+    !isApkPromo &&                              // GUARD: APK promos excluded
+    isLuckySpinPromo &&                         // MUST be Lucky Spin promo
+    gateDecision.mode === 'formula' &&          // Gate-approved only
+    hasMultipleSubcategories && 
+    hasNonSpinRewards;
+  
+  if (isApkPromo && hasMultipleSubcategories) {
+    console.log('[Event Lucky Spin Prize] BLOCKED: APK promo with multiple variants is NOT Lucky Spin Prize');
+  }
   
   if (isEventLuckySpinPrize) {
-    console.log('[Event Lucky Spin Prize] Detected prize table event, switching to Dinamis + Voucher mode');
+    console.log('[Event Lucky Spin Prize] Detected prize table event (Lucky Spin + Gate-approved formula)');
   }
   
   // ============================================
@@ -5509,10 +5530,13 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       claim_frequency: 'sekali',  // 1x per level naik
     }),
     
-    // Override for Event Lucky Spin Prize: switch to Dinamis + Voucher
-    // Lucky Spin dengan hadiah fisik/credit = undian hadiah, BUKAN tiket spin
+    // ============================================
+    // FIXED v1.2.1: Event Lucky Spin Prize - NO MODE OVERRIDE
+    // reward_mode MUST come from Gate, this only sets ancillary fields
+    // ============================================
     ...(isEventLuckySpinPrize && {
-      reward_mode: 'formula' as const,
+      // ❌ REMOVED: reward_mode: 'formula' - ILLEGAL OVERRIDE
+      // Mode comes from Gate, not from this condition
       dinamis_reward_type: 'voucher',  // Undian = Voucher/Ticket
       // Clear Lucky Spin tiket flags (inert values)
       fixed_reward_type: '',
@@ -5638,6 +5662,27 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     require_apk: sanitizedData.require_apk,
     trigger_event: sanitizedData.trigger_event,
   });
+
+  // ============================================
+  // HARD GUARD: ARCHITECTURE VIOLATION CHECK (v1.2.1)
+  // Fail-loud if reward_mode was overridden after Gate decision
+  // ============================================
+  if (process.env.NODE_ENV === 'development' || import.meta.env?.DEV) {
+    const finalMode = sanitizedData.reward_mode || sanitizedData.mode;
+    if (finalMode && finalMode !== gateDecision.mode) {
+      console.error('[ARCHITECTURE VIOLATION] reward_mode overridden after Primitive Gate!', {
+        gateDecision: gateDecision.mode,
+        finalMode: finalMode,
+        isApkPromo: gateDecision.constraints.require_apk,
+        promo_name: extracted.promo_name,
+      });
+      // In development, throw to catch this immediately
+      throw new Error(
+        `[ARCHITECTURE VIOLATION] reward_mode was "${finalMode}" but Gate decided "${gateDecision.mode}". ` +
+        `Promo: "${extracted.promo_name}". No override is allowed after Primitive Gate v1.2.1.`
+      );
+    }
+  }
 
   // ============================================
   // POST-EXTRACTION NORMALIZER (v1.0)
