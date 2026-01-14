@@ -4064,10 +4064,10 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       // Priority 2: Default based on promo_type
       return getTriggerEventDefault(extracted.promo_type || '');
     })(),
+    // Step 2 - Reward Mode (AUTO-DETECTED + BACKSTOP OVERRIDES)
+    // IMPORTANT: use `initialMode` (post-Backstop B) so Withdraw+% cannot be forced into "fixed" by a wrong lockedFields.mode.
+    reward_mode: initialMode as DetectedRewardMode,
 
-    // Step 2 - Reward Mode (NOW WITH AUTO-DETECTION + LOCKED FIELDS OVERRIDE)
-    reward_mode: lockedFields?.mode || modeDetection.mode,
-    
     // Metadata for UI to show auto-detection badge
     _mode_auto_detected: modeDetection.auto_detected,
     _mode_detection_reason: modeDetection.reason,
