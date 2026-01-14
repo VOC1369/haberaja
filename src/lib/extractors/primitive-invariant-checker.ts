@@ -272,7 +272,56 @@ export function fixInvariantViolations(
 }
 
 // ============================================
+// GATE ASSERTION (v1.2.1 — FAIL-LOUD)
+// ============================================
+
+/**
+ * assertModeFromGate
+ * 
+ * Ensures mode-calculation_basis consistency after Gate decision.
+ * FAIL-LOUD: Throws in development if impossible state detected.
+ * 
+ * IMPOSSIBLE STATES:
+ * - mode=formula + calculation_basis empty → THROW
+ * - mode=fixed/event + calculation_basis present → THROW
+ */
+export function assertModeFromGate(
+  mode: string,
+  calculation_basis: string | null | undefined,
+  source: string
+): void {
+  // Normalize mode
+  const normalizedMode = mode === 'event' ? 'fixed' : mode;
+  
+  // IMPOSSIBLE STATE: formula without basis
+  if (normalizedMode === 'formula' && (!calculation_basis || calculation_basis === '')) {
+    const error = `[INVARIANT VIOLATION] ${source}: mode=formula but calculation_basis is empty. IMPOSSIBLE STATE.`;
+    console.error(error);
+    
+    const isDevelopment = typeof process !== 'undefined' && 
+      process.env?.NODE_ENV === 'development';
+    
+    if (isDevelopment) {
+      throw new Error(error);
+    }
+  }
+  
+  // IMPOSSIBLE STATE: fixed/event with basis
+  if (normalizedMode === 'fixed' && calculation_basis && calculation_basis !== '') {
+    const error = `[INVARIANT VIOLATION] ${source}: mode=${mode} but calculation_basis=${calculation_basis}. IMPOSSIBLE STATE.`;
+    console.error(error);
+    
+    const isDevelopment = typeof process !== 'undefined' && 
+      process.env?.NODE_ENV === 'development';
+    
+    if (isDevelopment) {
+      throw new Error(error);
+    }
+  }
+}
+
+// ============================================
 // VERSION
 // ============================================
 
-export const INVARIANT_CHECKER_VERSION = 'v1.2.0+2025-01-14';
+export const INVARIANT_CHECKER_VERSION = 'v1.2.1+2025-01-14';
