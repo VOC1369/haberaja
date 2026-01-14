@@ -6,7 +6,8 @@
  * 2. mechanic-router.ts → routePromoIntent()
  * 3. sanitize-by-mode.ts → sanitizeByMode()
  * 
- * Expected: mode=event, calculation_basis=null, require_apk=true, trigger_event=Download_APK
+ * Expected: mode=event, calculation_basis=null, require_apk=true, trigger_event=APK Download
+ * V1.2: payout_direction=null for APK promos
  */
 
 import { describe, it, expect } from 'vitest';
@@ -87,7 +88,7 @@ describe('APK Download Extraction E2E', () => {
   // TEST: sanitizeByMode() Safety Net
   // ============================================
   describe('Step-2: sanitizeByMode() Safety Net', () => {
-    it('should strip formula fields for event mode APK promo', () => {
+    it('should strip formula fields and payout_direction for event mode APK promo', () => {
       const promoData = {
         promo_name: 'Download APK Dapat Freechip 5K-20K',
         reward_mode: 'event',
@@ -96,6 +97,7 @@ describe('APK Download Extraction E2E', () => {
         calculation_value: 10,
         min_calculation: 50000,
         turnover_multiplier: 3,
+        payout_direction: 'belakang', // Should be stripped for APK
         require_apk: false, // Should be corrected
         trigger_event: 'Login',
         custom_terms: 'Download APK dan klaim hadiah',
@@ -109,6 +111,9 @@ describe('APK Download Extraction E2E', () => {
       expect(sanitized.calculation_value).toBeNull();
       expect(sanitized.min_calculation).toBeNull();
       expect(sanitized.turnover_multiplier).toBeNull();
+      
+      // ✅ V1.2: Payout direction stripped for APK/event promos
+      expect(sanitized.payout_direction).toBeNull();
       
       // APK gate enforced
       expect(sanitized.require_apk).toBe(true);

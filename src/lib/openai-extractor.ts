@@ -3356,6 +3356,102 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     return providers || [];
   };
 
+  // ============================================
+  // APK MIN/MAX BONUS RANGE PARSER (v1.2)
+  // Extracts min/max bonus from subcategory names like "Credit Game 5rb", "20K"
+  // ============================================
+  const parseIDRFromText = (text: string | undefined): number | null => {
+    if (!text) return null;
+    
+    // Patterns: 5K, 5rb, 5ribu, Rp 5.000, Rp5000, 20rb, 20K, 5 ribu, 20 rb
+    const patterns = [
+      /(?:rp\.?\s*)?([0-9.,]+)\s*(?:rb|ribu|k)/i,           // 5rb, 5K, Rp 5rb
+      /(?:rp\.?\s*)([0-9]{1,3}(?:[.,][0-9]{3})+)/i,         // Rp 5.000, Rp20.000
+      /(?:rp\.?\s*)([0-9]{4,})/i,                            // Rp5000, Rp20000
+      /([0-9]+)\s*(?:ribu|rb|k)/i,                           // 5 ribu, 20 rb
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        let numStr = match[1].replace(/\./g, '').replace(/,/g, '');
+        let amount = parseInt(numStr, 10);
+        
+        // Handle shorthand: if pattern includes rb/ribu/k suffix, multiply by 1000
+        if (/rb|ribu|k/i.test(match[0]) && amount < 1000) {
+          amount *= 1000;
+        }
+        // Handle missing thousands (small numbers like 5 or 20 assume *1000)
+        else if (amount <= 100 && /rb|ribu|k/i.test(text)) {
+          amount *= 1000;
+        }
+        
+        if (amount > 0 && amount < 100_000_000) {  // Sanity check: max 100jt
+          return amount;
+        }
+      }
+    }
+    
+    return null;
+  };
+
+  // ============================================
+  // APK PROMO DETECTION (for range extraction)
+  // ============================================
+  const promoNameLower = (extracted.promo_name || '').toLowerCase();
+  const termsLower = (extracted.terms_conditions || []).join(' ').toLowerCase();
+  const isApkLikePromo = 
+    lockedFields?.trigger_event === 'APK Download' ||
+    lockedFields?.require_apk === true ||
+    /apk|download|aplikasi|freechip|freebet/i.test(promoNameLower) ||
+    /apk|download|aplikasi/i.test(termsLower);
+
+  // ============================================
+  // EXTRACT APK BONUS RANGE (if applicable)
+  // Parses amounts from subcategory names to compute min/max
+  // ============================================
+  let apkBonusRange: { min: number | null; max: number | null } = { min: null, max: null };
+  
+  if (isApkLikePromo && extracted.subcategories?.length > 0) {
+    const parsedAmounts: number[] = [];
+    
+    extracted.subcategories.forEach(sub => {
+      // Try to parse from sub_name
+      const fromName = parseIDRFromText(sub.sub_name);
+      if (fromName) parsedAmounts.push(fromName);
+      
+      // Also try from max_bonus if it exists
+      if (sub.max_bonus && sub.max_bonus > 0) {
+        parsedAmounts.push(sub.max_bonus);
+      }
+      
+      // Try from cash_reward_amount
+      if (sub.cash_reward_amount && sub.cash_reward_amount > 0) {
+        parsedAmounts.push(sub.cash_reward_amount);
+      }
+    });
+    
+    // Also scan terms for range patterns: "5K-20K", "5rb sampai 20rb"
+    const rangePattern = /([0-9]+)\s*(?:k|rb|ribu)?\s*[-–~sampai]\s*([0-9]+)\s*(?:k|rb|ribu)?/i;
+    const rangeMatch = (promoNameLower + ' ' + termsLower).match(rangePattern);
+    if (rangeMatch) {
+      let minVal = parseInt(rangeMatch[1], 10);
+      let maxVal = parseInt(rangeMatch[2], 10);
+      // Assume thousands if small
+      if (minVal <= 100) minVal *= 1000;
+      if (maxVal <= 100) maxVal *= 1000;
+      parsedAmounts.push(minVal, maxVal);
+    }
+    
+    if (parsedAmounts.length > 0) {
+      apkBonusRange = {
+        min: Math.min(...parsedAmounts),
+        max: Math.max(...parsedAmounts),
+      };
+      console.log('[APK Range Parser] Extracted bonus range:', apkBonusRange);
+    }
+  }
+
   // Map subcategories with reward type detection
   const subcategories: PromoSubCategory[] = extracted.subcategories.map((sub, idx) => {
     // Detect reward type with fallback pattern matching
@@ -3398,12 +3494,30 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       physical_reward_quantity: sub.physical_reward_quantity || 1,
       cash_reward_amount: sub.cash_reward_amount || undefined,
       max_bonus_same_as_global: false, // Each sub has its own max
-      // Handle null max_bonus = unlimited
-      max_bonus: sub.max_bonus ?? 0,
-      max_bonus_unlimited: sub.max_bonus === null,
-      // Only use global if payout_direction is not specified
-      payout_direction_same_as_global: !sub.payout_direction,
-      payout_direction: sub.payout_direction === 'depan' ? 'before' : 'after',
+      // ✅ V1.2: APK promo - parse max_bonus from sub_name if not explicit
+      max_bonus: (() => {
+        // Priority 1: Explicit max_bonus from LLM
+        if (sub.max_bonus && sub.max_bonus > 0) return sub.max_bonus;
+        
+        // Priority 2: For APK promos, parse from sub_name
+        if (isApkLikePromo) {
+          const parsed = parseIDRFromText(sub.sub_name);
+          if (parsed && parsed > 0) return parsed;
+        }
+        
+        return 0;
+      })(),
+      // ✅ V1.2: APK promos should NOT be unlimited if we parsed a range
+      max_bonus_unlimited: (() => {
+        // For APK promos with parsed range, NOT unlimited
+        if (isApkLikePromo && apkBonusRange.max !== null) {
+          return false;
+        }
+        return sub.max_bonus === null;
+      })(),
+      // ✅ V1.2: APK promos have NO payout direction
+      payout_direction_same_as_global: isApkLikePromo ? true : !sub.payout_direction,
+      payout_direction: isApkLikePromo ? 'after' : (sub.payout_direction === 'depan' ? 'before' : 'after'),
       
       // Admin Fee (default ikut global)
       admin_fee_same_as_global: true,
@@ -3430,9 +3544,22 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       // Legacy fields - NOW WITH DETECTION
       dinamis_reward_type: mapRewardTypeToUI(detectedRewardType),
       dinamis_reward_amount: 0,
-      dinamis_max_claim: sub.max_bonus ?? 0,
-      // null max_bonus = unlimited
-      dinamis_max_claim_unlimited: sub.max_bonus === null,
+      // ✅ V1.2: APK promo - parse max from sub_name if not explicit
+      dinamis_max_claim: (() => {
+        if (sub.max_bonus && sub.max_bonus > 0) return sub.max_bonus;
+        if (isApkLikePromo) {
+          const parsed = parseIDRFromText(sub.sub_name);
+          if (parsed && parsed > 0) return parsed;
+        }
+        return 0;
+      })(),
+      // ✅ V1.2: APK promos should NOT be unlimited if we parsed a range
+      dinamis_max_claim_unlimited: (() => {
+        if (isApkLikePromo && apkBonusRange.max !== null) {
+          return false;
+        }
+        return sub.max_bonus === null;
+      })(),
       // 🔒 ONTOLOGY FIX: Map min_claim (payout threshold) ke min_reward_claim
       // min_reward_claim = minimal bonus untuk DICAIRKAN (bukan syarat kualifikasi)
       // minimum_base = syarat minimal untuk IKUT promo (eligibility)
@@ -3443,7 +3570,10 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   });
 
   // Check if any subcategory has unlimited max_bonus
-  const hasUnlimitedMaxBonus = extracted.subcategories.some(sub => sub.max_bonus === null);
+  // ✅ V1.2: APK promos with parsed range are NOT unlimited
+  const hasUnlimitedMaxBonus = isApkLikePromo && apkBonusRange.max !== null 
+    ? false 
+    : extracted.subcategories.some(sub => sub.max_bonus === null);
 
   // ============================================
   // TRIGGER EVENT DEFAULT HELPER
@@ -4079,7 +4209,10 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     
     // Fixed mode defaults - using INERT VALUES (null, not 0)
     reward_type: 'freechip',  // lowercase to match enum
-    reward_amount: null,      // ✅ FIX: null = inert (not 0)
+    // ✅ V1.2: APK promo - use min from range as reward_amount (Min Bonus)
+    reward_amount: isApkLikePromo && apkBonusRange.min ? apkBonusRange.min : null,
+    // ✅ V1.2: APK promo - use max from range as max_bonus
+    max_bonus: isApkLikePromo && apkBonusRange.max ? apkBonusRange.max : null,
     // ✅ FIX: Guard min_deposit - JANGAN map historical eligibility sebagai min_deposit!
     // "Total Turnover X bulan terakhir" = eligibility, BUKAN min_deposit
     min_deposit: (() => {
@@ -5098,7 +5231,24 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     dinamis_reward_amount: 0,
     
     // ✅ FIX: payout_direction default for deposit bonus with turnover
+    // ✅ V1.2: APK/Freechip promos have NO payout direction
     payout_direction: (() => {
+      // ========================================
+      // GUARD: APK/Freechip promos → null (no payout direction)
+      // ========================================
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+      const isApkPromo = 
+        lockedFields?.trigger_event === 'APK Download' ||
+        lockedFields?.require_apk === true ||
+        /apk|download|aplikasi|freechip|freebet/i.test(promoName) ||
+        /apk|download|aplikasi/i.test(termsText);
+      
+      if (isApkPromo) {
+        console.log('[Extractor Dinamis] APK promo detected - payout_direction = null');
+        return null;
+      }
+      
       const llmDirection = subcategories[0]?.payout_direction as string | undefined;
       if (llmDirection === 'depan' || llmDirection === 'before') return 'depan';
       if (llmDirection === 'belakang' || llmDirection === 'after') return 'belakang';
@@ -5239,8 +5389,32 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     global_jenis_hadiah: 'Freechip',
     global_max_bonus_enabled: false,
     global_max_bonus: 0,
-    global_payout_direction_enabled: true,
-    global_payout_direction: subcategories[0]?.payout_direction === 'before' ? 'before' : 'after',
+    // ✅ V1.2: APK/Freechip promos have NO payout direction
+    global_payout_direction_enabled: (() => {
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isApkPromo = 
+        lockedFields?.trigger_event === 'APK Download' ||
+        lockedFields?.require_apk === true ||
+        /apk|download|aplikasi|freechip|freebet/i.test(promoName);
+      
+      if (isApkPromo) {
+        return false;
+      }
+      return true;
+    })(),
+    global_payout_direction: (() => {
+      const promoName = (extracted.promo_name || '').toLowerCase();
+      const isApkPromo = 
+        lockedFields?.trigger_event === 'APK Download' ||
+        lockedFields?.require_apk === true ||
+        /apk|download|aplikasi|freechip|freebet/i.test(promoName);
+      
+      // APK promos: return 'after' as inert default (won't be displayed due to enabled=false)
+      if (isApkPromo) {
+        return 'after' as const;
+      }
+      return subcategories[0]?.payout_direction === 'before' ? 'before' : 'after';
+    })() as 'before' | 'after',
 
     // Subcategories
     has_subcategories: extracted.has_subcategories && subcategories.length > 1,

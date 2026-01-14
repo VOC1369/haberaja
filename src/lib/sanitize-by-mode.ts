@@ -84,6 +84,12 @@ export function sanitizeByMode(promo: Record<string, unknown>): Record<string, u
     out.fixed_calculation_value = null;
     out.fixed_min_calculation = null;
     out.fixed_min_calculation_enabled = false;
+    
+    // ✅ V1.2: Payout direction → null/disabled for event mode
+    // Event promos (APK Download, Freechip, etc.) don't have payout sequence
+    out.payout_direction = null;
+    out.global_payout_direction_enabled = false;
+    out.global_payout_direction = '';
   }
 
   // ============================================
