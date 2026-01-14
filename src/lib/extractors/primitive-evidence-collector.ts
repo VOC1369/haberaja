@@ -1,22 +1,28 @@
 /**
- * EVIDENCE COLLECTOR v1.2 — CLEAN-ROOM READY
+ * EVIDENCE COLLECTOR v1.2.1 — HARD FREEZE
  * Regex sebagai HINT, bukan DECISION.
  * Returns evidence untuk primitive inference.
  * 
- * ⚠️ FORBIDDEN: This file may NOT decide mode. ⚠️
- * Decision logic lives in promo-primitive-gate.ts ONLY.
+ * ⛔ MODE DECISION FORBIDDEN HERE
+ * This file may NOT assign: mode, reward_mode, category
+ * Mode decisions live ONLY in: promo-primitive-gate.ts
+ * Violation = Architecture breach
  * 
- * PRINSIP KRITIS:
- * - Regex mengumpulkan EVIDENCE (bukti)
- * - Evidence dikirim ke Primitive Gate untuk DECISION
- * - Regex TIDAK PERNAH langsung menentukan mode
+ * ⚠️ REGEX INFLATION FORBIDDEN
  * 
- * v1.2 CHANGES:
- * - Split "level" pattern: access vs tiered (no dual-match)
- * - Expanded SPECIAL CASE for APK + financial (more inclusive)
- * - Added confidence scoring + ambiguity flags
+ * DO NOT ADD REGEX TO FIX A SINGLE PROMO.
+ * Regexes generate SIGNALS, not DECISIONS.
  * 
- * VERSION: v1.2.0+2025-01-14
+ * If a promo fails:
+ * 1. Check the gate logic first
+ * 2. Update the Signal Contract if needed
+ * 3. Only then consider adding evidence patterns
+ * 
+ * Every new regex must be documented in the Signal Contract.
+ * 
+ * SIGNAL CONTRACT: docs/architecture/promo-primitive-gate.signal-contract.md
+ * 
+ * VERSION: v1.2.1+2025-01-14 (FROZEN)
  */
 
 import type { TaskDomain, RewardNature } from './promo-primitive-gate';
@@ -369,6 +375,18 @@ export function inferPrimitivesWithConfidence(
     confidence = 'medium';
   }
   
+  // v1.2.1: Access + Fixed without explicit tier table (might be tier in disguise)
+  // "VIP Level 5 bonus 50k" - single level might be part of a larger tier structure
+  if (domain === 'access' && nature === 'fixed' && evidence.tiered_hints.length === 0) {
+    const hasExplicitTierTable = evidence.tiered_hints.some(h => 
+      /level\s*\d+\s*[→=:]\s*\d/.test(h) || /tier\s*\d/.test(h)
+    );
+    if (!hasExplicitTierTable && evidence.access_hints.length > 0) {
+      ambiguity_flags.push('access_single_level_reward');
+      // Don't downgrade confidence - just flag for review
+    }
+  }
+  
   // Calculated + Chance conflict (shouldn't happen)
   if (evidence.calculated_hints.length > 0 && evidence.chance_hints.length > 0) {
     ambiguity_flags.push('calculated_chance_conflict');
@@ -409,4 +427,4 @@ export function inferPrimitivesWithConfidence(
 // VERSION
 // ============================================
 
-export const EVIDENCE_COLLECTOR_VERSION = 'v1.2.0+2025-01-14';
+export const EVIDENCE_COLLECTOR_VERSION = 'v1.2.1+2025-01-14 (FROZEN)';

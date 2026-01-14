@@ -1,9 +1,11 @@
 /**
- * PROMO PRIMITIVE GATE v1.2 — CLEAN-ROOM READY
+ * PROMO PRIMITIVE GATE v1.2.1 — HARD FREEZE
  * Single Source of Truth untuk Mode Decision
  * 
  * ⚠️ THIS IS THE ONLY FILE THAT DECIDES MODE ⚠️
  * All other files must import and use resolveModFromPrimitive()
+ * 
+ * SIGNAL CONTRACT: docs/architecture/promo-primitive-gate.signal-contract.md
  * 
  * PRINSIP: Mode ditentukan oleh LOGIKA (task_domain + reward_nature),
  * BUKAN keyword. Regex hanya sebagai EVIDENCE.
@@ -17,7 +19,7 @@
  * - 17 explicit rules
  * - 3 via early returns (chance, tiered, default)
  * 
- * VERSION: v1.2.0+2025-01-14
+ * VERSION: v1.2.1+2025-01-14 (FROZEN)
  */
 
 // ============================================
@@ -306,4 +308,24 @@ export const MODE_DISPLAY: Record<CanonicalMode, string> = {
 // VERSION
 // ============================================
 
-export const PRIMITIVE_GATE_VERSION = 'v1.2.0+2025-01-14';
+export const PRIMITIVE_GATE_VERSION = 'v1.2.1+2025-01-14 (FROZEN)';
+
+// ============================================
+// DECISION TRACE LOGGING (Dev Only)
+// ============================================
+
+export function logGateDecision(
+  primitive: PromoPrimitive,
+  result: PrimitiveGateResult,
+  constraints: Record<string, boolean> = {}
+): void {
+  if (import.meta.env?.DEV || import.meta.env?.MODE === 'development') {
+    console.log('[PRIMITIVE GATE]', {
+      domain: primitive.task_domain,
+      nature: primitive.reward_nature,
+      mode: result.mode,
+      constraints,
+      reasoning: result.reasoning,
+    });
+  }
+}

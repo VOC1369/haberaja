@@ -1,7 +1,11 @@
 /**
- * PROMO PRIMITIVE GATE v1.2 — GOLDEN TEST SET
+ * PROMO PRIMITIVE GATE v1.2.1 — GOLDEN TEST SET
  * 
- * These 10 tests are the MINIMUM requirement for v1.2 compliance.
+ * 🚫 CI GATE — ALL TESTS MUST PASS
+ * If any test fails, PR should be BLOCKED.
+ * Do NOT add auto-fix or silent sanitize to make tests pass.
+ * 
+ * These 10 tests are the MINIMUM requirement for v1.2.1 compliance.
  * All tests MUST pass before any release.
  * 
  * TEST PHILOSOPHY:
@@ -9,7 +13,9 @@
  * - No "lucky" passes - all paths are explicitly tested
  * - Ambiguous cases have confidence < high
  * 
- * VERSION: v1.2.0+2025-01-14
+ * SIGNAL CONTRACT: docs/architecture/promo-primitive-gate.signal-contract.md
+ * 
+ * VERSION: v1.2.1+2025-01-14 (FROZEN)
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

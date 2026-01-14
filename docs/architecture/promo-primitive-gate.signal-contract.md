@@ -1,9 +1,15 @@
-# PROMO PRIMITIVE GATE v1.2 — SIGNAL CONTRACT
+# PROMO PRIMITIVE GATE v1.2.1 — SIGNAL CONTRACT
 
-## Status: LOCKED (v1.2.0+2025-01-14)
+## ⚠️ THIS IS A SYSTEM CONTRACT — VERSION LOCKED
 
-This document defines the **Signal Contract** for the PROMO PRIMITIVE GATE system.
-It establishes the ONLY valid path from raw content to mode decision.
+**Any logic change requires a versioned update to this document.**
+**Do NOT add regex or mode logic without updating this contract first.**
+
+| Property | Value |
+|----------|-------|
+| Last Updated | 2025-01-14 |
+| Version | v1.2.1 (FROZEN) |
+| Status | LOCKED |
 
 ---
 
@@ -39,11 +45,16 @@ It establishes the ONLY valid path from raw content to mode decision.
 **File**: `src/lib/extractors/promo-primitive-gate.ts`
 
 This is the ONLY file that decides mode. All other files:
-- `primitive-evidence-collector.ts` → Evidence only
-- `primitive-invariant-checker.ts` → Validation only
-- `mechanic-router.ts` → Routing (delegates to gate)
-- `promo-intent-reasoner.ts` → Intent inference (delegates to gate)
-- `sanitize-by-mode.ts` → Enforcement (does not decide)
+
+| File | Role | Can Assign Mode? |
+|------|------|------------------|
+| `primitive-evidence-collector.ts` | Evidence collection | ❌ NO |
+| `primitive-invariant-checker.ts` | Validation | ❌ NO |
+| `mechanic-router.ts` | Routing (delegates) | ❌ NO |
+| `promo-intent-reasoner.ts` | Intent inference | ❌ NO |
+| `sanitize-by-mode.ts` | Enforcement | ❌ NO |
+| `openai-extractor.ts` | Extraction | ❌ NO |
+| **`promo-primitive-gate.ts`** | **Mode Decision** | ✅ YES |
 
 ---
 
@@ -114,13 +125,14 @@ interface PrimitiveInference {
 **Ambiguity Flags:**
 - `platform_financial_conflict` — APK + Deposit/Cashback
 - `access_tiered_overlap` — VIP level vs tier table
+- `access_single_level_reward` — Single VIP level (might be tier in disguise)
 - `calculated_chance_conflict` — Shouldn't happen
 - `no_evidence` — Empty or meaningless content
 - `minimal_hints` — Only 1-2 hints found
 
 ---
 
-## 🔒 INVARIANT RULES (v1.2)
+## 🔒 INVARIANT RULES (v1.2.1)
 
 ### FIXED MODE
 - `calculation_basis` MUST be null ✓
@@ -201,7 +213,11 @@ if (mode === 'event') {
 
 ## 🧪 GOLDEN TEST SET (Required)
 
-10 tests MUST pass for v1.2 compliance:
+**🚫 CI GATE — ALL TESTS MUST PASS**
+If any test fails, PR should be BLOCKED.
+Do NOT add auto-fix or silent sanitize to make tests pass.
+
+10 tests MUST pass for v1.2.1 compliance:
 
 1. **T1**: Cashback 5% khusus APK → formula, require_apk=true
 2. **T2**: Bonus Deposit 50rb → fixed (EXPLICIT rule)
@@ -216,7 +232,36 @@ if (mode === 'event') {
 
 ---
 
+## 🛡️ STOP CONDITION
+
+After v1.2.1, the following is FORBIDDEN:
+
+| Action | Allowed? |
+|--------|----------|
+| Add regex to fix single promo | ❌ NO |
+| Fallback without reasoning | ❌ NO |
+| UI/helper decides mode | ❌ NO |
+| Mode assignment outside gate | ❌ NO |
+
+The following is ALLOWED (via contract update):
+
+| Action | Allowed? |
+|--------|----------|
+| Add new domain/reward_nature | ✅ YES |
+| Add evidence pattern (signal only) | ✅ YES |
+| Update decision table in gate | ✅ YES |
+
+---
+
 ## 📝 CHANGE LOG
+
+### v1.2.1 (2025-01-14) — HARD FREEZE
+- Moved to `docs/architecture/` (permanent location)
+- Added SYSTEM CONTRACT header
+- Added `access_single_level_reward` ambiguity flag
+- Added decision trace logging (dev only)
+- Added regex inflation warning
+- Marked as FROZEN
 
 ### v1.2.0 (2025-01-14)
 - Added EXPLICIT rule for `financial + fixed`
