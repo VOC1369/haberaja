@@ -4927,7 +4927,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
         return lockedFields.calculation_basis;
       }
       
-      // ✅ PRIORITY 0.5: Evidence-based detection for Withdraw Bonus
+    // ✅ PRIORITY 0.5: Evidence-based detection for Withdraw Bonus
       // If trigger = Withdraw, look for calculation evidence in terms
       const isWithdrawTrigger = lockedFields?.trigger_event === 'Withdraw' || 
                                  extracted.promo_name?.toLowerCase().includes('wd') ||
@@ -4938,21 +4938,36 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
         const promoName = (extracted.promo_name || '').toLowerCase();
         const combinedText = termsText + ' ' + promoName;
         
-        // Evidence: "5% dari turnover", "minimal to", "syarat to"
-        const hasTurnoverEvidence = 
-          /dari\s*(to|turnover)/i.test(combinedText) ||
-          /minimal\s*to/i.test(combinedText) ||
-          /syarat\s*to/i.test(combinedText) ||
-          /(?:to|turnover)\s*x\s*\d/i.test(combinedText) ||  // "TO x 1"
-          /\d+\s*%.*(?:to|turnover)/i.test(combinedText) ||  // "5% turnover"
-          /(?:to|turnover).*\d+\s*%/i.test(combinedText);    // "turnover 5%"
+        // ✅ SEMANTIC SEPARATION v2.0:
+        // - "TO x 1", "minimal TO", "syarat TO" = TURNOVER MULTIPLIER (bukan calculation basis!)
+        // - "WD 500.000 × 5%", "dari WD" = CALCULATION BASIS = withdraw
+        // - "dari turnover", "TO × 5%" = CALCULATION BASIS = turnover
         
-        if (hasTurnoverEvidence) {
-          console.log('[Extractor Dinamis] Withdraw Bonus with TURNOVER evidence → calculation_base: turnover');
+        // PRIORITY 1: Look for "CONTOH PERHITUNGAN" pattern - the calculation example
+        // Pattern: "wd 500.000 × 5%" or "penarikan × 5%" indicates basis = withdraw
+        const hasWithdrawCalculationExample = 
+          /(?:wd|withdraw|penarikan)\s*[\d.,]+\s*[×x]\s*\d+\s*%/i.test(combinedText) ||  // "wd 500.000 × 5%"
+          /\d+\s*%\s*[×x]\s*(?:wd|withdraw|penarikan)/i.test(combinedText);  // "5% × wd"
+        
+        if (hasWithdrawCalculationExample) {
+          console.log('[Extractor Dinamis] Withdraw Bonus with CALCULATION EXAMPLE (WD) → calculation_base: withdraw');
+          return 'withdraw';
+        }
+        
+        // PRIORITY 2: Look for turnover calculation example
+        // Pattern: "TO × 5%" or "dari turnover" (explicit basis statement, NOT multiplier)
+        const hasTurnoverCalculationExample = 
+          /(?:to|turnover)\s*[\d.,]+\s*[×x]\s*\d+\s*%/i.test(combinedText) ||  // "TO 1.000.000 × 5%"
+          /\d+\s*%\s*[×x]\s*(?:to|turnover)[\d.,]+/i.test(combinedText) ||  // "5% × TO 1jt"
+          /\d+\s*%\s*dari\s*(?:to|turnover)/i.test(combinedText) ||  // "5% dari turnover"
+          /dari\s*(?:to|turnover)/i.test(combinedText);  // "bonus dari turnover"
+        
+        if (hasTurnoverCalculationExample) {
+          console.log('[Extractor Dinamis] Withdraw Bonus with CALCULATION EXAMPLE (TO) → calculation_base: turnover');
           return 'turnover';
         }
         
-        // Evidence: "dari WD", "dari penarikan"
+        // PRIORITY 3: Evidence "dari WD", "dari penarikan" (explicit basis statement)
         const hasWithdrawBasisEvidence = 
           /dari\s*(wd|withdraw|penarikan)/i.test(combinedText) ||
           /\d+\s*%\s*dari\s*(wd|withdraw)/i.test(combinedText);
@@ -4962,9 +4977,11 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
           return 'withdraw';
         }
         
-        // Default for Withdraw Bonus without clear evidence: turnover (most common)
-        console.log('[Extractor Dinamis] Withdraw Bonus default → calculation_base: turnover');
-        return 'turnover';
+        // ✅ DEFAULT for Withdraw Bonus: 'withdraw' (NOT turnover!)
+        // Reasoning: "BONUS EXTRA WD 5%" = 5% dari WD amount (most common)
+        // NOTE: "minimal to x 1", "syarat TO" are MULTIPLIERS, NOT calculation basis!
+        console.log('[Extractor Dinamis] Withdraw Bonus default → calculation_base: withdraw');
+        return 'withdraw';
       }
       
       // PRIORITY 1: Subcategory extraction
