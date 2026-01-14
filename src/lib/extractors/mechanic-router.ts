@@ -287,7 +287,12 @@ function determineMechanicType(intent: PromoIntent): MechanicType {
 
 /**
  * Determine mode from intent and mechanic.
- * Router DETERMINES mode (different from invariant PROHIBITIONS).
+ * 
+ * ⛔ DEPRECATED: Mode decisions MUST come from promo-primitive-gate.ts
+ * This function now ONLY returns enforced_locks.mode or delegates to Gate.
+ * 
+ * SYSTEM LAW: Mode is determined by task_domain × reward_nature in Gate.
+ * Mechanic-to-mode mappings are FORBIDDEN.
  */
 function determineMode(intent: PromoIntent, mechanic: MechanicType): PromoMode {
   // Check invariant locks first
@@ -296,62 +301,32 @@ function determineMode(intent: PromoIntent, mechanic: MechanicType): PromoMode {
     return enforced_locks.mode;
   }
   
-  // === Mechanics that are ALWAYS formula ===
-  const formulaMechanics: MechanicType[] = [
-    'deposit_bonus_percent',
-    'cashback_loss',
-    'rebate_loss',
-    'rollingan_turnover',
-    'komisi_turnover',
-    'referral_commission',
-    'withdraw_bonus_percent',
-  ];
-  if (formulaMechanics.includes(mechanic)) {
-    return 'formula';
-  }
+  // ============================================
+  // DELEGATE TO PRIMITIVE GATE — SINGLE SOURCE OF TRUTH
+  // ============================================
+  const content = `${intent.primary_action} ${intent.reward_nature} ${intent.value_shape}`;
+  const evidence = collectPrimitiveEvidence(content);
+  const task_domain = inferTaskDomain(evidence, content);
+  const reward_nature_gate = inferRewardNature(evidence) as RewardNature;
   
-  // === Mechanics that are ALWAYS fixed ===
-  const fixedMechanics: MechanicType[] = [
-    'deposit_bonus_fixed',
-    'birthday_reward',
-    'verification_reward',
-    'daily_checkin',
-  ];
-  if (fixedMechanics.includes(mechanic)) {
-    return 'fixed';
-  }
+  const primitive = { 
+    task_type: 'action' as const,
+    task_domain, 
+    state_change: '',
+    reward_nature: reward_nature_gate 
+  };
   
-  // === Mechanics that are ALWAYS tier ===
-  const tierMechanics: MechanicType[] = [
-    'redemption_store',
-    'level_up_reward',
-    'referral_bonus',
-    'point_redeem',
-  ];
-  if (tierMechanics.includes(mechanic)) {
-    return 'tier';
-  }
+  const gateResult = resolveModFromPrimitive(primitive);
   
-  // === Mechanics that are ALWAYS event ===
-  const eventMechanics: MechanicType[] = [
-    'apk_download_reward',
-    'mission_completion',
-    'lucky_spin',
-    'tournament',
-    'provider_event',
-    'scatter_bonus',
-    'voucher_exchange',
-  ];
-  if (eventMechanics.includes(mechanic)) {
-    return 'event';
-  }
+  console.log('[mechanic-router] Mode from Gate:', {
+    mechanic,
+    task_domain,
+    reward_nature: reward_nature_gate,
+    mode: gateResult.mode
+  });
   
-  // === Fallback based on reward_nature ===
-  if (intent.reward_nature === 'calculated') {
-    return 'formula';
-  }
-  
-  return 'fixed'; // Safe default
+  // Return Gate decision (never 'event' - Gate uses 'fixed' for event-like promos)
+  return gateResult.mode as PromoMode;
 }
 
 /**

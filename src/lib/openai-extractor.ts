@@ -53,6 +53,25 @@ import {
   type ArbitrationInput
 } from './extractors/arbitration-rules';
 
+// ============================================
+// PROMO PRIMITIVE GATE v1.2.1 — SINGLE SOURCE OF TRUTH
+// Mode decisions ONLY come from this gate.
+// ============================================
+import { 
+  resolveModFromPrimitive, 
+  type PromoPrimitive,
+  type CanonicalMode,
+  PRIMITIVE_GATE_VERSION
+} from './extractors/promo-primitive-gate';
+import { 
+  collectPrimitiveEvidence, 
+  inferTaskDomain, 
+  inferRewardNature,
+  hasApkConstraint,
+  inferPrimitivesWithConfidence
+} from './extractors/primitive-evidence-collector';
+import { assertModeFromGate } from './extractors/primitive-invariant-checker';
+
 // ============= CONFIDENCE LEVELS (EXPANDED + NOT_APPLICABLE) =============
 export type ConfidenceLevel = 
   | 'explicit'           // tertulis jelas di halaman
@@ -2922,11 +2941,10 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
         (parsed as any).calculation_base = null;
         (parsed as any).calculation_basis = null;
         
-        // mode MUST NOT be formula
-        if ((parsed as any).promo_mode === 'formula') {
-          (parsed as any).promo_mode = 'event';
-          (parsed as any).reward_mode = 'event';
-        }
+        // ✅ GATE-BASED: Mode comes from primitive gate
+        // APK is CONSTRAINT, NOT mode determinant
+        // Mode is NOT changed here - Gate already decided correctly
+        // (Removed hardcoded override to 'event')
         
         console.log('[Extractor] APK overrides applied:', {
           require_apk: true,
@@ -3664,105 +3682,100 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   };
 
   // ============================================
-  // PHASE 1A: SMART MODE DETECTION
-  // Logika: Single-variant + stateless = Fixed
-  // Stateless = tidak ada time-window berbeda, tidak ada kondisi kompleks
+  // PROMO PRIMITIVE GATE v1.2.1 — SINGLE SOURCE OF TRUTH
+  // Mode ONLY comes from this gate. No exceptions.
   // ============================================
   
-  type DetectedRewardMode = 'formula' | 'fixed' | 'tier';
-  
-  const detectRewardMode = (): { mode: DetectedRewardMode; auto_detected: boolean; reason: string } => {
-    // ============================================
-    // GUARD A: WITHDRAW BONUS + PERCENTAGE = MUST BE FORMULA
-    // This OVERRIDES all other detection logic to prevent false "fixed" classification
-    // ============================================
-    const promoNameLower = (extracted.promo_name || '').toLowerCase();
-    const promoTypeLower = (extracted.promo_type || '').toLowerCase();
-    const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
-    const allText = `${promoNameLower} ${promoTypeLower} ${termsText}`;
+  const getGateDecision = (): { 
+    mode: CanonicalMode; 
+    constraints: { require_apk?: boolean }; 
+    confidence: 'high' | 'medium' | 'low';
+    reasoning: string;
+  } => {
+    // Build raw promo content for evidence collection
+    const promoContent = [
+      extracted.promo_name || '',
+      extracted.promo_type || '',
+      ...(extracted.terms_conditions || []),
+      ...(extracted.subcategories?.map(s => s.sub_name || '') || [])
+    ].join(' ');
     
-    const isWithdrawContext = /withdraw|wd|bonus\s*wd|extra\s*wd|penarikan/i.test(allText);
-    const hasPercentage = /\d+\s*%/.test(extracted.promo_name || '') || /\d+\s*%/.test(termsText);
+    // Step 1: Collect evidence (regex as hints)
+    const evidence = collectPrimitiveEvidence(promoContent);
     
-    if (isWithdrawContext && hasPercentage) {
-      console.log('[detectRewardMode] GUARD A: Withdraw bonus + percentage → FORCING formula mode');
-      return { 
-        mode: 'formula', 
-        auto_detected: true, 
-        reason: 'Withdraw bonus percentage-based MUST be formula (Guard A)'
-      };
-    }
+    // Step 2: Infer primitives with confidence
+    const inference = inferPrimitivesWithConfidence(evidence, promoContent);
     
-    // Case 1: Tier mode (Category C Loyalty - Phase 2, skip for now)
-    // if (extracted.program_classification === 'C' && extracted.loyalty_mechanism?.exchange_table) {
-    //   return { mode: 'tier', auto_detected: true, reason: 'Category C dengan exchange table' };
-    // }
+    // Step 3: Build primitive for gate
+    const primitive: PromoPrimitive = {
+      task_type: 'action',
+      task_domain: inference.task_domain,
+      state_change: '',
+      reward_nature: inference.reward_nature
+    };
     
-    // Case 2: Fixed mode detection
-    // Kriteria: Single subcategory + stateless (scalar, no complex conditions)
-    if (subcategories.length === 1) {
-      const sub = extracted.subcategories[0];
-      
-      // Check for statelessness:
-      // - calculation_method must be scalar (percentage/fixed, not threshold)
-      // - turnover_rule exists (scalar multiplier)
-      // - no time-window variations (single variant implies this)
-      // - high confidence on key fields
-      const isStateless = 
-        sub.calculation_method !== 'threshold' && // threshold = conditional, not scalar
-        (sub.calculation_value != null) &&        // has a value
-        (sub.turnover_rule != null) &&            // has TO rule (can be 0)
-        !extracted.unlock_conditions?.length;     // no complex unlock gates
-      
-      // Confidence check: only auto-detect if key fields have good confidence
-      const hasHighConfidence = 
-        sub.confidence?.calculation_value && 
-        ['explicit', 'derived'].includes(sub.confidence.calculation_value);
-      
-      if (isStateless && hasHighConfidence) {
-        return { 
-          mode: 'fixed', 
-          auto_detected: true, 
-          reason: 'Single-variant promo dengan nilai stateless dan confidence tinggi'
-        };
-      }
-    }
+    // Step 4: Get gate decision (THE ONLY MODE DECISION)
+    const gateResult = resolveModFromPrimitive(primitive);
     
-    // Default: Formula (dinamis) mode
-    return { 
-      mode: 'formula', 
-      auto_detected: subcategories.length > 1, 
-      reason: subcategories.length > 1 
-        ? 'Multi-variant promo dengan subcategories' 
-        : 'Default mode atau kondisi tidak memenuhi Fixed'
+    // Step 5: Get APK constraint
+    const require_apk = hasApkConstraint(evidence);
+    
+    // Log for debugging
+    console.log(`[PRIMITIVE GATE ${PRIMITIVE_GATE_VERSION}]`, {
+      task_domain: inference.task_domain,
+      reward_nature: inference.reward_nature,
+      mode: gateResult.mode,
+      require_apk,
+      confidence: inference.confidence,
+      reasoning: gateResult.reasoning
+    });
+    
+    return {
+      mode: gateResult.mode,
+      constraints: { 
+        ...gateResult.constraints,
+        require_apk 
+      },
+      confidence: inference.confidence,
+      reasoning: gateResult.reasoning
     };
   };
   
-  const modeDetection = detectRewardMode();
+  const gateDecision = getGateDecision();
+  
+  // ============================================
+  // BACKWARDS COMPATIBILITY: Create modeDetection from Gate
+  // Legacy code uses modeDetection.mode, modeDetection.auto_detected, modeDetection.reason
+  // ============================================
+  type DetectedRewardMode = 'formula' | 'fixed' | 'tier';
+  
+  const modeDetection: { mode: DetectedRewardMode; auto_detected: boolean; reason: string } = {
+    mode: gateDecision.mode as DetectedRewardMode,
+    auto_detected: true, // Gate always auto-detects
+    reason: gateDecision.reasoning
+  };
 
   // ============================================
-  // SKIP FORMULA DEFAULTS FOR NON-FORMULA MODES
-  // If mode is event/fixed/tier, DO NOT apply formula defaults
-  // This prevents "ghost" formula fields in event promos
+  // PROMO PRIMITIVE GATE v1.2.1 — MODE FROM GATE ONLY
+  // Mode comes ONLY from Gate, not from detectRewardMode or lockedFields
   // ============================================
-  let initialMode = (lockedFields?.mode || modeDetection.mode) as string;
+  let initialMode = gateDecision.mode as string;
   
-  // ============================================
-  // BACKSTOP B: FINAL OVERRIDE FOR WITHDRAW-TRIGGERED PROMOS
-  // If trigger_event is Withdraw AND percentage detected, FORCE formula mode
-  // This catches cases where lockedFields.mode was incorrectly set
-  // ============================================
-  const promoNameForBackstop = (extracted.promo_name || '').toLowerCase();
-  const termsForBackstop = (extracted.terms_conditions || []).join(' ').toLowerCase();
-  const isWithdrawTriggeredBackstop = 
-    lockedFields?.trigger_event === 'Withdraw' ||
-    /withdraw|wd|bonus\s*wd|extra\s*wd/i.test(promoNameForBackstop);
-  const hasPercentageBackstop = /\d+\s*%/.test(extracted.promo_name || '') || /\d+\s*%/.test(termsForBackstop);
-  
-  if (isWithdrawTriggeredBackstop && hasPercentageBackstop && initialMode !== 'formula') {
-    console.log('[mapExtractedToPromoFormData] BACKSTOP B: Withdraw + % detected, OVERRIDING mode from', initialMode, '→ formula');
-    initialMode = 'formula';
+  // Update lockedFields with Gate decision (Gate overrides any previous mode)
+  if (lockedFields) {
+    lockedFields.mode = gateDecision.mode as any;
+    if (gateDecision.constraints.require_apk) {
+      (lockedFields as any).require_apk = true;
+    }
   }
+  
+  // ============================================
+  // INVARIANT ASSERTION: Fail-Loud if impossible state
+  // This catches bugs early in development
+  // ============================================
+  const calculationBasisForAssertion = lockedFields?.calculation_basis || 
+    extracted.subcategories?.[0]?.calculation_base || null;
+  assertModeFromGate(initialMode, calculationBasisForAssertion, 'mapExtractedToPromoFormData');
   
   const skipFormulaDefaults = NON_FORMULA_MODES.includes(initialMode as typeof NON_FORMULA_MODES[number]);
   
@@ -3774,7 +3787,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     skipFormulaDefaults,
     lockedTrigger: lockedFields?.trigger_event,
     lockedMode: lockedFields?.mode,
-    modeDetectionResult: modeDetection.mode
+    gateDecisionMode: gateDecision.mode,
+    gateConfidence: gateDecision.confidence
   });
   
   if (skipFormulaDefaults) {
