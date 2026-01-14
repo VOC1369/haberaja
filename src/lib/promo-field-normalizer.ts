@@ -192,6 +192,43 @@ function applyCanonicalMigrations(data: Record<string, unknown>): Record<string,
     }
   }
   
+  // ============================================
+  // 3.2B: TURNOVER CONSISTENCY BRIDGE (v1.1)
+  // Ensures UI dropdown always has a value when toggle is ON
+  // This bridges the gap between canonical (number) and UI (string) representations
+  // ============================================
+  const turnoverEnabled = migrated.turnover_enabled || migrated.turnover_rule_enabled;
+  const turnoverRule = migrated.turnover_rule as string | undefined;
+  const turnoverMultiplier = migrated.turnover_multiplier as number | undefined;
+  
+  if (turnoverEnabled) {
+    // Case A: Toggle ON but rule empty, multiplier has value → populate rule
+    if (isInert(turnoverRule) && turnoverMultiplier && turnoverMultiplier > 0) {
+      migrated.turnover_rule = `${turnoverMultiplier}x`;
+      console.debug('[Normalizer] Turnover Bridge: multiplier → rule', { 
+        turnoverMultiplier, 
+        newRule: migrated.turnover_rule 
+      });
+    }
+    
+    // Case B: Rule has raw number (e.g., "1") → normalize to "1x"
+    if (typeof turnoverRule === 'string' && /^\d+$/.test(turnoverRule)) {
+      migrated.turnover_rule = `${turnoverRule}x`;
+      console.debug('[Normalizer] Turnover Bridge: normalized rule format', { 
+        from: turnoverRule, 
+        to: migrated.turnover_rule 
+      });
+    }
+    
+    // Case C: Rule has value but multiplier missing → parse and set multiplier
+    if (typeof migrated.turnover_rule === 'string' && migrated.turnover_rule && isInert(migrated.turnover_multiplier)) {
+      const parsed = parseTurnoverMultiplier(migrated.turnover_rule);
+      if (parsed !== null) {
+        migrated.turnover_multiplier = parsed;
+      }
+    }
+  }
+  
   // 3.3: Migrate turnover_rule_enabled → turnover_enabled
   if (migrated.turnover_rule_enabled !== undefined && migrated.turnover_enabled === undefined) {
     migrated.turnover_enabled = Boolean(migrated.turnover_rule_enabled);

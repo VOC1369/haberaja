@@ -284,4 +284,73 @@ describe('Contract of Thinking v1.0', () => {
       expect(intent?.distribution_path).toBe('redemption_store');
     });
   });
+  
+  // ============================================
+  // TURNOVER CONSISTENCY BRIDGE TESTS (v1.1)
+  // ============================================
+  
+  describe('Turnover Consistency Bridge', () => {
+    it('should detect Withdraw Bonus promo with percentage', () => {
+      const intent = detectObviousIntent('BONUS EXTRA WD 5% SETIAP HARI');
+      
+      expect(intent).not.toBeNull();
+      expect(intent?.primary_action).toBe('withdraw');
+      expect(intent?.reward_nature).toBe('calculated');
+      expect(intent?.value_shape).toBe('percent');
+    });
+    
+    it('should have turnover_rule populated when turnover_multiplier exists (Bridge Test)', async () => {
+      // Import the normalizer
+      const { normalizeExtractedPromo } = await import('../extractors/post-extraction-normalizer');
+      
+      // Simulate the bug condition: enabled=true, multiplier=1, rule=""
+      const buggyData = {
+        promo_name: 'BONUS EXTRA WD 5%',
+        turnover_enabled: true,
+        turnover_rule_enabled: true,
+        turnover_multiplier: 1,
+        turnover_rule: '', // BUG: Empty despite having multiplier
+        subcategories: [
+          {
+            sub_name: 'Sub 1',
+            turnover_rule_enabled: true,
+            turnover_multiplier: 1,
+            turnover_rule: '', // BUG: Empty
+          }
+        ]
+      };
+      
+      const normalized = normalizeExtractedPromo(buggyData, 'text');
+      
+      // After normalization, turnover_rule should be "1x"
+      expect(normalized.turnover_rule).toBe('1x');
+      expect(normalized.subcategories?.[0]?.turnover_rule).toBe('1x');
+    });
+    
+    it('should normalize raw number turnover_rule to "Nx" format', async () => {
+      const { normalizeExtractedPromo } = await import('../extractors/post-extraction-normalizer');
+      
+      const data = {
+        promo_name: 'Test',
+        turnover_rule_enabled: true,
+        turnover_rule: 3, // Raw number (should become "3x")
+      };
+      
+      const normalized = normalizeExtractedPromo(data, 'text');
+      expect(normalized.turnover_rule).toBe('3x');
+    });
+    
+    it('should normalize string number turnover_rule to "Nx" format', async () => {
+      const { normalizeExtractedPromo } = await import('../extractors/post-extraction-normalizer');
+      
+      const data = {
+        promo_name: 'Test',
+        turnover_rule_enabled: true,
+        turnover_rule: '5', // String number (should become "5x")
+      };
+      
+      const normalized = normalizeExtractedPromo(data, 'text');
+      expect(normalized.turnover_rule).toBe('5x');
+    });
+  });
 });

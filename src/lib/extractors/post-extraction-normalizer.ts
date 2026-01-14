@@ -38,6 +38,9 @@ export interface NormalizablePromo {
   calculation_method?: string;
   calculation_value?: number | string | null;
   turnover_rule?: number | string | null;
+  turnover_rule_enabled?: boolean;
+  turnover_enabled?: boolean;
+  turnover_multiplier?: number | null;
   min_calculation?: number | string | null;
   [key: string]: unknown;
 }
@@ -47,6 +50,8 @@ export interface NormalizableSubCategory {
   calculation_method?: string;
   calculation_value?: number | string | null;
   turnover_rule?: number | string | null;
+  turnover_rule_enabled?: boolean;
+  turnover_multiplier?: number | null;
   payout_direction?: 'depan' | 'belakang' | null;
   [key: string]: unknown;
 }
@@ -85,6 +90,10 @@ export function normalizeExtractedPromo<T extends NormalizablePromo>(
   if (source !== 'hybrid' && source !== 'text') {
     result = inferTurnoverFromTerms(result);
   }
+
+  // Step 7: Apply Turnover Consistency Bridge to subcategories
+  // Ensures UI dropdown has value when toggle is ON
+  result = applyTurnoverConsistencyBridge(result);
 
   console.log(`[PostNormalizer] Source: ${source}, applied normalization rules. Hybrid: ${source === 'hybrid'}`);
   return result;
@@ -322,6 +331,68 @@ function inferTurnoverFromTerms<T extends NormalizablePromo>(data: T): T {
         break;
       }
     }
+  }
+  
+  return result;
+}
+
+/**
+ * Rule 7: Turnover Consistency Bridge (v1.1)
+ * 
+ * PROBLEM: Toggle ON tapi dropdown kosong karena:
+ * - turnover_enabled/turnover_rule_enabled = true
+ * - turnover_multiplier = 1 (number canonical)
+ * - turnover_rule = "" (UI string kosong)
+ * 
+ * SOLUTION: Bridge antara canonical (number) dan UI (string)
+ * Berlaku untuk root promo DAN setiap subcategory
+ */
+function applyTurnoverConsistencyBridge<T extends NormalizablePromo>(data: T): T {
+  const result = { ...data };
+  
+  // Helper: ensure turnover_rule is populated when enabled
+  const bridgeTurnover = (obj: Record<string, unknown>): void => {
+    const enabled = obj.turnover_enabled || obj.turnover_rule_enabled;
+    const rule = obj.turnover_rule as string | number | null | undefined;
+    const multiplier = obj.turnover_multiplier as number | null | undefined;
+    
+    if (!enabled) return;
+    
+    // Case A: Toggle ON but rule empty, multiplier has value → populate rule
+    if ((!rule || rule === '' || rule === '0' || rule === '0x') && multiplier && multiplier > 0) {
+      obj.turnover_rule = `${multiplier}x`;
+      console.debug('[TurnoverBridge] Populated turnover_rule from multiplier:', obj.turnover_rule);
+    }
+    
+    // Case B: Rule is raw number (e.g., "1" or 1) → normalize to "1x"
+    if (typeof rule === 'number' && rule > 0) {
+      obj.turnover_rule = `${rule}x`;
+      console.debug('[TurnoverBridge] Normalized number to string:', obj.turnover_rule);
+    } else if (typeof rule === 'string' && /^\d+$/.test(rule)) {
+      obj.turnover_rule = `${rule}x`;
+      console.debug('[TurnoverBridge] Normalized string format:', obj.turnover_rule);
+    }
+    
+    // Case C: Rule has value but multiplier missing → parse and set
+    const finalRule = obj.turnover_rule as string | undefined;
+    if (finalRule && (!obj.turnover_multiplier || obj.turnover_multiplier === 0)) {
+      const match = String(finalRule).match(/^(\d+)x?$/i);
+      if (match) {
+        obj.turnover_multiplier = parseInt(match[1], 10);
+      }
+    }
+  };
+  
+  // Apply to root level
+  bridgeTurnover(result as Record<string, unknown>);
+  
+  // Apply to each subcategory
+  if (result.subcategories && Array.isArray(result.subcategories)) {
+    result.subcategories = result.subcategories.map(sub => {
+      const subCopy = { ...sub } as Record<string, unknown>;
+      bridgeTurnover(subCopy);
+      return subCopy as NormalizableSubCategory;
+    });
   }
   
   return result;
