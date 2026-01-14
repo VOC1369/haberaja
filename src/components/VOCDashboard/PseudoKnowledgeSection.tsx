@@ -895,7 +895,16 @@ export function PseudoKnowledgeSection() {
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Payout</span>
             {(() => {
-              // ✅ FIX: Use mappedPreview as source of truth (post-normalized)
+              // ✅ V1.2: APK/Freechip promos have NO payout direction
+              const isApkPromo = mappedPreview?.trigger_event === 'APK Download' || 
+                mappedPreview?.require_apk === true ||
+                /apk|download|aplikasi|freechip|freebet/i.test(extractedPromo?.promo_name || '');
+              
+              if (isApkPromo) {
+                return <span className="text-muted-foreground/60 italic">-</span>;
+              }
+              
+              // Normal display for non-APK promos
               const payoutValue = mappedPreview?.payout_direction || sub.payout_direction;
               const isDepan = payoutValue === 'depan';
               const isBelakang = payoutValue === 'belakang';
@@ -908,9 +917,22 @@ export function PseudoKnowledgeSection() {
           </div>
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Jenis Game</span>
-            <span className="text-foreground font-medium">
-              {sub.game_types?.length ? sub.game_types.map(formatGameTypeLabel).join(", ") : "Semua"}
-            </span>
+            {(() => {
+              // ✅ V1.2: APK/Freechip promos don't have game type constraints
+              const isApkPromo = mappedPreview?.trigger_event === 'APK Download' || 
+                mappedPreview?.require_apk === true ||
+                /apk|download|aplikasi|freechip|freebet/i.test(extractedPromo?.promo_name || '');
+              
+              if (isApkPromo) {
+                return <span className="text-muted-foreground/60 italic">-</span>;
+              }
+              
+              return (
+                <span className="text-foreground font-medium">
+                  {sub.game_types?.length ? sub.game_types.map(formatGameTypeLabel).join(", ") : "Semua"}
+                </span>
+              );
+            })()}
           </div>
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Blacklist</span>
