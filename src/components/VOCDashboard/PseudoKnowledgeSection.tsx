@@ -1656,7 +1656,7 @@ export function PseudoKnowledgeSection() {
                     extractedPromo.promo_name,
                     extractedPromo.promo_type
                   )}
-                  reasoning={
+                  legacyReasoning={
                     extractedPromo.classification_q1 ? {
                       q1: extractedPromo.classification_q1,
                       q2: extractedPromo.classification_q2!,
