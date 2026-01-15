@@ -102,6 +102,10 @@ export interface PrimitiveGateResult {
     trigger_event?: string;
   };
   reasoning: string;
+  
+  // ✅ v1.3: Confidence signaling for Evidence-First Architecture
+  confidence: 'high' | 'medium' | 'low';
+  ambiguity_flags?: string[];
 }
 
 // ============================================
@@ -141,7 +145,8 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
     return {
       mode: 'fixed',
       constraints: {},
-      reasoning: 'reward_nature=chance → mode=fixed (non-deterministic reward)'
+      reasoning: 'reward_nature=chance → mode=fixed (non-deterministic reward)',
+      confidence: 'high',
     };
   }
   
@@ -153,7 +158,8 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
     return {
       mode: 'tier',
       constraints: {},
-      reasoning: 'reward_nature=tiered → mode=tier'
+      reasoning: 'reward_nature=tiered → mode=tier',
+      confidence: 'high',
     };
   }
   
@@ -166,7 +172,8 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
     return {
       mode: 'formula',
       constraints: {},
-      reasoning: 'task_domain=financial + reward_nature=calculated → mode=formula'
+      reasoning: 'task_domain=financial + reward_nature=calculated → mode=formula',
+      confidence: 'high',
     };
   }
   
@@ -180,7 +187,8 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
     return {
       mode: 'fixed',
       constraints: {},
-      reasoning: 'task_domain=financial + reward_nature=fixed → mode=fixed (EXPLICIT: not fallback)'
+      reasoning: 'task_domain=financial + reward_nature=fixed → mode=fixed (EXPLICIT: not fallback)',
+      confidence: 'high',
     };
   }
   
@@ -193,7 +201,8 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
     return {
       mode: 'fixed',
       constraints: {},
-      reasoning: 'task_domain=platform + reward_nature=fixed → mode=fixed'
+      reasoning: 'task_domain=platform + reward_nature=fixed → mode=fixed',
+      confidence: 'high',
     };
   }
   
@@ -206,7 +215,8 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
     return {
       mode: 'formula',
       constraints: {},
-      reasoning: 'task_domain=platform + reward_nature=calculated → mode=formula'
+      reasoning: 'task_domain=platform + reward_nature=calculated → mode=formula',
+      confidence: 'high',
     };
   }
   
@@ -219,7 +229,8 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
     return {
       mode: 'fixed',
       constraints: {},
-      reasoning: 'task_domain=temporal + reward_nature=fixed → mode=fixed'
+      reasoning: 'task_domain=temporal + reward_nature=fixed → mode=fixed',
+      confidence: 'high',
     };
   }
   
@@ -231,7 +242,8 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
     return {
       mode: 'formula',
       constraints: {},
-      reasoning: 'task_domain=temporal + reward_nature=calculated → mode=formula'
+      reasoning: 'task_domain=temporal + reward_nature=calculated → mode=formula',
+      confidence: 'high',
     };
   }
   
@@ -244,13 +256,15 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
       return {
         mode: 'formula',
         constraints: {},
-        reasoning: 'task_domain=access + reward_nature=calculated → mode=formula'
+        reasoning: 'task_domain=access + reward_nature=calculated → mode=formula',
+        confidence: 'high',
       };
     }
     return {
       mode: 'fixed',
       constraints: {},
-      reasoning: 'task_domain=access + reward_nature=fixed → mode=fixed'
+      reasoning: 'task_domain=access + reward_nature=fixed → mode=fixed',
+      confidence: 'high',
     };
   }
   
@@ -263,13 +277,15 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
       return {
         mode: 'formula',
         constraints: {},
-        reasoning: 'task_domain=gameplay + reward_nature=calculated → mode=formula'
+        reasoning: 'task_domain=gameplay + reward_nature=calculated → mode=formula',
+        confidence: 'high',
       };
     }
     return {
       mode: 'fixed',
       constraints: {},
-      reasoning: 'task_domain=gameplay + reward_nature=fixed → mode=fixed'
+      reasoning: 'task_domain=gameplay + reward_nature=fixed → mode=fixed',
+      confidence: 'high',
     };
   }
   
@@ -280,7 +296,9 @@ export function resolveModFromPrimitive(primitive: PromoPrimitive): PrimitiveGat
   return {
     mode: 'fixed',
     constraints: {},
-    reasoning: 'Default fallback to fixed mode'
+    reasoning: 'Default fallback to fixed mode',
+    confidence: 'low',
+    ambiguity_flags: ['no_matching_rule'],
   };
 }
 
