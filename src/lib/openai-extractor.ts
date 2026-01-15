@@ -5193,11 +5193,10 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
           return 'withdraw';
         }
         
-        // ✅ DEFAULT for Withdraw Bonus: 'withdraw' (NOT turnover!)
-        // Reasoning: "BONUS EXTRA WD 5%" = 5% dari WD amount (most common)
-        // NOTE: "minimal to x 1", "syarat TO" are MULTIPLIERS, NOT calculation basis!
-        console.log('[Extractor Dinamis] Withdraw Bonus default → calculation_base: withdraw');
-        return 'withdraw';
+        // ✅ v1.3: NO DEFAULT — calculation_basis MUST be from evidence
+        // If no evidence found, return null and flag for human review
+        console.log('[Extractor Dinamis] Withdraw Bonus - NO EVIDENCE for calculation_basis → null (LOW CONFIDENCE)');
+        return null;  // Let the UI/reviewer decide
       }
       
       // PRIORITY 1: Subcategory extraction
@@ -5495,18 +5494,32 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
         return 'after' as const;
       }
       
-      // ✅ FIX v1.2.2: Withdraw Bonus payout_direction = ALWAYS 'after' (BELAKANG)
-      // Reason: Bonus is calculated FROM WD amount, so WD must happen first
-      // "sebelum isi form wd" = CLAIM timing, NOT payout timing
+      // ✅ FIX v1.3: CONDITIONAL Payout Direction for Withdraw Bonus
+      // Rule: payout_direction depends on PROVEN calculation_basis
       const isWithdrawBonus = 
         lockedFields?.trigger_event === 'Withdraw' ||
-        lockedFields?.calculation_basis === 'withdraw' ||
         /bonus\s*(extra\s*)?(wd|withdraw|penarikan)/i.test(promoName) ||
         /extra\s*wd/i.test(promoName);
       
       if (isWithdrawBonus) {
-        console.log('[Extractor] Withdraw Bonus detected → payout_direction forced to "after" (BELAKANG)');
-        return 'after' as const;
+        const calculationBasis = lockedFields?.calculation_basis;
+        const termsText = (extracted.terms_conditions || []).join(' ').toLowerCase();
+        
+        if (calculationBasis === 'withdraw') {
+          // Bonus = f(WD) → WD harus terjadi dulu → AFTER (WAJIB)
+          console.log('[Extractor] calculation_basis=withdraw → payout=after (MANDATORY)');
+          return 'after' as const;
+        } else if (calculationBasis === 'turnover') {
+          // Bonus = f(TO), WD hanya gate → bisa before atau after dari S&K
+          const hasBeforeEvidence = /sebelum\s*(wd|withdraw|deposit)/i.test(termsText);
+          const payoutFromTerms = hasBeforeEvidence ? 'before' : 'after';
+          console.log(`[Extractor] calculation_basis=turnover → payout=${payoutFromTerms} (from S&K)`);
+          return payoutFromTerms as 'before' | 'after';
+        } else {
+          // No evidence → default after (conservative), flagged low confidence
+          console.log('[Extractor] calculation_basis unknown → payout=after (default, LOW CONFIDENCE)');
+          return 'after' as const;
+        }
       }
       
       return subcategories[0]?.payout_direction === 'before' ? 'before' : 'after';
