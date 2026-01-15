@@ -142,12 +142,14 @@ export function collectPrimitiveEvidence(content: string): PrimitiveEvidence {
     ]),
     
     // v1.2: Split "level" pattern — tiered = threshold table context
+    // v1.2.2: REMOVED /minimal.*dapat/ - caused false positives with eligibility thresholds
+    // e.g., "Minimal WD sebesar 200.000 bar dapat melakukan claim" is NOT a tier indicator
     tiered_hints: extractMatches(lower, [
       /level\s*\d+\s*[→=:]\s*\d/,    // Level 1 → 100rb (tier indicator)
       /tier\s*\d/,
       /threshold/,
       /\d+[jmt]\s*[→=]\s*(rp)?\s*\d+/,
-      /minimal.*dapat/,
+      // ❌ REMOVED: /minimal.*dapat/ - false positive for "Minimal WD 200rb bar dapat claim"
       /\d+\s*-\s*\d+\s*[jmt]/,
       /hadiah\s*(mobil|motor|hp|iphone)/,
       /to\s+\d+[jmt]/,

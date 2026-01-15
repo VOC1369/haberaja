@@ -5494,6 +5494,21 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       if (isApkPromo) {
         return 'after' as const;
       }
+      
+      // ✅ FIX v1.2.2: Withdraw Bonus payout_direction = ALWAYS 'after' (BELAKANG)
+      // Reason: Bonus is calculated FROM WD amount, so WD must happen first
+      // "sebelum isi form wd" = CLAIM timing, NOT payout timing
+      const isWithdrawBonus = 
+        lockedFields?.trigger_event === 'Withdraw' ||
+        lockedFields?.calculation_basis === 'withdraw' ||
+        /bonus\s*(extra\s*)?(wd|withdraw|penarikan)/i.test(promoName) ||
+        /extra\s*wd/i.test(promoName);
+      
+      if (isWithdrawBonus) {
+        console.log('[Extractor] Withdraw Bonus detected → payout_direction forced to "after" (BELAKANG)');
+        return 'after' as const;
+      }
+      
       return subcategories[0]?.payout_direction === 'before' ? 'before' : 'after';
     })() as 'before' | 'after',
 

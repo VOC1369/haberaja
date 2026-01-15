@@ -1,5 +1,5 @@
 # Memory: features/extraction/withdraw-bonus-semantic-logic-v1-2
-Updated: 2025-01-14
+Updated: 2025-01-15
 
 Implemented a 'Calculation vs. Multiplier' semantic separation for Withdraw Bonus promos.
 
@@ -29,15 +29,29 @@ Implemented a 'Calculation vs. Multiplier' semantic separation for Withdraw Bonu
 - Pattern: `/(?:to|turnover)\s*x\s*(\d+)/i` or `/minimal\s*to\s*x\s*(\d+)/i`
 - These patterns **NEVER** influence `calculation_basis`
 
-## Bug Fixed
-**Before**: Patterns like `"minimal to x 1"` incorrectly set `calculation_basis: "turnover"` because regex `/(?:to|turnover)\s*x\s*\d/i` was used as "turnover evidence" for calculation basis.
+## Bug Fixed (v1.2.2)
 
-**After**: These patterns are now correctly isolated to `turnover_multiplier` detection only. The `calculation_basis` detection uses explicit calculation examples (e.g., `"WD 500.000 × 5%"`) as the source of truth.
+### Bug #1: False Positive Tier Detection
+**Before**: Pattern `/minimal.*dapat/` incorrectly matched "Minimal WD sebesar 200.000 bar dapat melakukan claim" as a tier indicator.
+
+**After**: Pattern removed from `tiered_hints` in `primitive-evidence-collector.ts`. Eligibility thresholds are not tier indicators.
+
+### Bug #2: Claim Timing vs Payout Direction Confusion
+**Before**: Pattern "sebelum isi form wd" incorrectly set `payout_direction: "before"` (DEPAN).
+
+**After**: This pattern refers to **CLAIM timing** (when to request bonus), not **PAYOUT timing** (when bonus is given). For Withdraw Bonus where `calculation_basis = 'withdraw'`, `payout_direction` is **always 'after' (BELAKANG)** because the bonus is calculated FROM the WD amount.
+
+### Semantic Distinction:
+| Concept | Meaning | Example |
+|---------|---------|---------|
+| **Claim Timing** | When user requests bonus | "claim ke livechat sebelum isi form WD" |
+| **Payout Direction** | When bonus is given | After WD succeeds (BELAKANG) |
 
 ## Expected Output for "BONUS EXTRA WD 5%"
 ```json
 {
   "calculation_basis": "withdraw",     // From "Player wd 500.000 × 5% = 25.000"
+  "payout_direction": "after",         // BELAKANG - bonus given AFTER WD
   "turnover_multiplier": 1,            // From "minimal to x 1"
   "turnover_enabled": true,            // Toggle ON
   "min_calculation": 200000            // Min WD threshold
@@ -50,3 +64,4 @@ Unit tests in `contract-of-thinking.test.ts` verify:
 2. `"WD 500.000 × 5%"` → `calculation_basis: "withdraw"`
 3. Withdraw Bonus without clear evidence defaults to `"withdraw"`
 4. `turnover_multiplier` and `calculation_basis` remain independent
+5. `payout_direction` is ALWAYS 'after' for withdraw-based calculations
