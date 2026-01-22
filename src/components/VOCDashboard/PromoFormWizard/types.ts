@@ -622,6 +622,19 @@ export interface PromoFormData {
     reward: string;
     value?: number;
   }>;
+  
+  // =============================================
+  // TAXONOMY PIPELINE v1.0 — SSoT Audit Trail
+  // Attached by extractor for debugging/auditability
+  // =============================================
+  _taxonomy_decision?: {
+    archetype: string;
+    confidence: 'high' | 'medium' | 'low';
+    version: string;
+    timestamp?: string;
+    evidence?: string[];
+    ambiguity_flags?: string[];
+  };
 }
 
 export interface TierReward {
