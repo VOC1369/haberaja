@@ -1,9 +1,13 @@
 /**
- * sanitizeByMode() — Final Safety Net v1.2
+ * sanitizeByMode() — Final Safety Net v1.3
  * 
  * ⚠️ FORBIDDEN: This file may NOT decide mode. ⚠️
  * Decision logic lives in promo-primitive-gate.ts ONLY.
  * This file only ENFORCES mode-field consistency.
+ * 
+ * ⚠️ TAXONOMY INTEGRATION v1.3 ⚠️
+ * If _taxonomy_decision exists, this file is READ-ONLY for 5 inti fields.
+ * Taxonomy is the Single Source of Truth (SSoT).
  * 
  * TUJUAN: Menghapus impossible state tanpa menebak promo.
  * 
@@ -19,6 +23,12 @@
  * - This function only enforces mode-field consistency
  * - Invariant violations are LOGGED, not silently fixed
  * 
+ * v1.3 CHANGES (TAXONOMY INTEGRATION):
+ * - Added _taxonomy_decision check
+ * - READ-ONLY mode for 5 inti fields when taxonomy has decided
+ * - Still performs zero normalization (safe)
+ * - Still performs category guarantee (safe)
+ * 
  * v1.2 CHANGES:
  * - RELAXED: turnover fields NOT stripped for fixed mode
  *   (turnover can be withdrawal requirement, not calculation)
@@ -33,6 +43,18 @@
 // ============================================
 export const NON_FORMULA_MODES = ['event', 'fixed', 'tier'] as const;
 export type NonFormulaMode = typeof NON_FORMULA_MODES[number];
+
+// ============================================
+// TAXONOMY PROTECTED FIELDS
+// These fields are READ-ONLY when taxonomy has decided
+// ============================================
+export const TAXONOMY_PROTECTED_FIELDS = [
+  'mode',
+  'reward_mode',
+  'calculation_basis',
+  'payout_direction',
+  'trigger_event',
+] as const;
 
 // Production-safe logging: throttle to prevent log flood
 let invariantViolationCount = 0;
@@ -60,11 +82,51 @@ export function resetInvariantLogCounter(): void {
  * Mematikan impossible state berdasarkan mode.
  * Tidak menebak promo. Tidak keyword-driven.
  * 
+ * TAXONOMY INTEGRATION (v1.3):
+ * If _taxonomy_decision exists, this function is READ-ONLY for 5 inti fields.
+ * Only performs safe normalization (zero → null, category guarantee).
+ * 
  * @param promo - Promo data object (any shape)
  * @returns Sanitized promo data with impossible states removed
  */
 export function sanitizeByMode(promo: Record<string, unknown>): Record<string, unknown> {
   const out = { ...promo };
+  
+  // ============================================
+  // TAXONOMY GUARD: Check if taxonomy has decided
+  // If yes, we are READ-ONLY for 5 inti fields
+  // ============================================
+  const hasTaxonomyDecision = out._taxonomy_decision !== undefined;
+  
+  if (hasTaxonomyDecision) {
+    // ============================================
+    // TAXONOMY PATH: READ-ONLY for protected fields
+    // Only perform safe normalizations
+    // ============================================
+    
+    // SAFE: Zero normalization (0 → null)
+    if (out.reward_amount === 0) out.reward_amount = null;
+    if (out.max_bonus === 0) out.max_bonus = null;
+    if (out.fixed_cash_reward_amount === 0) out.fixed_cash_reward_amount = null;
+    if (out.min_calculation === 0) out.min_calculation = null;
+    
+    // SAFE: Category guarantee for event mode
+    const mode = (out.reward_mode || out.mode) as string;
+    if (!out.category && mode === 'event') {
+      out.category = 'REWARD';
+    }
+    
+    // DO NOT: Strip formula fields based on mode
+    // DO NOT: Override trigger_event based on APK keywords
+    // DO NOT: Modify any of the 5 inti fields
+    
+    return out;
+  }
+  
+  // ============================================
+  // LEGACY PATH: No taxonomy decision (fallback)
+  // Full sanitization logic applies
+  // ============================================
   // Support both reward_mode (form) and mode (canonical export)
   const mode = (out.reward_mode || out.mode) as string;
   const promoName = String(out.promo_name || '').toLowerCase();
