@@ -72,6 +72,21 @@ import {
 } from './extractors/primitive-evidence-collector';
 import { assertModeFromGate } from './extractors/primitive-invariant-checker';
 
+// ============================================
+// TAXONOMY PIPELINE v1.0 — SSoT INTEGRATION
+// Taxonomy is the JUDGE, Extractor is the WITNESS
+// ============================================
+import { 
+  cleanEvidence, 
+  type CleanedEvidence 
+} from './extractors/evidence-cleaner';
+import { 
+  runTaxonomyPipeline, 
+  shouldUseTaxonomy,
+  TAXONOMY_LOCKED_FIELDS,
+  type TaxonomyDecision 
+} from './extractors/taxonomy-pipeline';
+
 // ============= CONFIDENCE LEVELS (EXPANDED + NOT_APPLICABLE) =============
 export type ConfidenceLevel = 
   | 'explicit'           // tertulis jelas di halaman
@@ -3278,6 +3293,72 @@ function ensureCalculationBaseConsistency(data: PromoFormData): PromoFormData {
 }
 
 /**
+ * Build CleanedEvidence from ExtractedPromo for Taxonomy Pipeline
+ * This feeds the taxonomy SSoT
+ */
+function buildCleanedEvidence(extracted: ExtractedPromo): CleanedEvidence {
+  const promoName = extracted.promo_name || '';
+  const terms = [
+    ...(extracted.terms_conditions || []),
+    extracted.promo_type || '',
+    ...(extracted.subcategories?.map(s => s.sub_name || '') || [])
+  ].join(' ');
+  
+  return cleanEvidence(promoName, terms);
+}
+
+/**
+ * Merge taxonomy decision with existing data
+ * Taxonomy fields are LOCKED — cannot be overridden
+ */
+function mergeWithTaxonomyLock(
+  taxonomyDecision: TaxonomyDecision,
+  existingData: Record<string, unknown>
+): Record<string, unknown> {
+  const result = { ...existingData };
+  
+  // === LOCKED FIELDS FROM TAXONOMY (SSoT) ===
+  result.reward_mode = taxonomyDecision.mode;
+  result.mode = taxonomyDecision.mode; // Alias
+  
+  if (taxonomyDecision.calculation_basis) {
+    result.calculation_base = taxonomyDecision.calculation_basis;
+    result.calculation_basis = taxonomyDecision.calculation_basis;
+  }
+  
+  if (taxonomyDecision.payout_direction) {
+    result.payout_direction = taxonomyDecision.payout_direction === 'before' 
+      ? 'depan' 
+      : 'belakang';
+    result.global_payout_direction = taxonomyDecision.payout_direction;
+  }
+  
+  if (taxonomyDecision.trigger_event) {
+    result.trigger_event = taxonomyDecision.trigger_event;
+  }
+  
+  // === AUDIT TRAIL ===
+  result._taxonomy_decision = {
+    archetype: taxonomyDecision.archetype,
+    confidence: taxonomyDecision.confidence,
+    version: taxonomyDecision.taxonomy_version,
+    timestamp: taxonomyDecision.decision_timestamp,
+    evidence: taxonomyDecision.evidence_summary,
+    ambiguity_flags: taxonomyDecision.ambiguity_flags,
+  };
+  
+  // === APPLY ADDITIONAL DERIVED FIELDS ===
+  for (const [key, value] of Object.entries(taxonomyDecision.derivedFields)) {
+    // Skip locked fields (already applied)
+    if (!TAXONOMY_LOCKED_FIELDS.includes(key as typeof TAXONOMY_LOCKED_FIELDS[number])) {
+      result[key] = value;
+    }
+  }
+  
+  return result;
+}
+
+/**
  * Maps ExtractedPromo to PromoFormData for form/storage use.
  * 
  * IMPORTANT: This mapper MUST be pure.
@@ -3288,6 +3369,22 @@ function ensureCalculationBaseConsistency(data: PromoFormData): PromoFormData {
  * This function is used inside useMemo and relies on referential stability.
  */
 export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: ExtractionSource): PromoFormData {
+  // ============================================
+  // TAXONOMY PIPELINE v1.0 — SINGLE SOURCE OF TRUTH
+  // Runs BEFORE any other mode/field logic
+  // ============================================
+  const taxonomyEvidence = buildCleanedEvidence(extracted);
+  const taxonomyDecision = runTaxonomyPipeline(taxonomyEvidence);
+  const useTaxonomy = shouldUseTaxonomy(taxonomyDecision);
+  
+  console.log('[TAXONOMY PIPELINE]', {
+    archetype: taxonomyDecision.archetype,
+    confidence: taxonomyDecision.confidence,
+    mode: taxonomyDecision.mode,
+    useTaxonomy,
+    calculation_basis: taxonomyDecision.calculation_basis,
+  });
+
   // ============================================
   // PRIORITY 0: Extract locked fields from Reasoning-First Architecture
   // These OVERRIDE all other sources (keyword defaults, LLM extraction)
@@ -3303,6 +3400,18 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   const extractionSource: ExtractionSource = source || 
     ((extracted as any)._source_type as ExtractionSource) || 
     'html';  // Default to 'html' as it's most common
+  
+  // Log if locked fields exist
+  if (lockedFields) {
+    console.log('[mapExtractedToPromoFormData] Using locked fields from Reasoning-First:', {
+      mode: lockedFields.mode,
+      calculation_basis: lockedFields.calculation_basis,
+      trigger_event: lockedFields.trigger_event,
+      require_apk: lockedFields.require_apk,
+      mechanic_type: mechanicType,
+      source: extractionSource,
+    });
+  }
   
   // Log if locked fields exist
   if (lockedFields) {
@@ -3699,7 +3808,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
 
   // ============================================
   // PROMO PRIMITIVE GATE v1.2.1 — SINGLE SOURCE OF TRUTH
-  // Mode ONLY comes from this gate. No exceptions.
+  // Mode ONLY comes from this gate (or Taxonomy if high/medium confidence)
   // ============================================
   
   const getGateDecision = (): { 
@@ -3708,6 +3817,30 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     confidence: 'high' | 'medium' | 'low';
     reasoning: string;
   } => {
+    // ============================================
+    // TAXONOMY WINS (if not UNKNOWN + low)
+    // ============================================
+    if (useTaxonomy) {
+      console.log('[GATE] Using TAXONOMY decision (SSoT)', {
+        archetype: taxonomyDecision.archetype,
+        mode: taxonomyDecision.mode,
+        confidence: taxonomyDecision.confidence,
+      });
+      return {
+        mode: taxonomyDecision.mode,
+        constraints: { 
+          require_apk: taxonomyEvidence.flags.has_apk_keywords 
+        },
+        confidence: taxonomyDecision.confidence,
+        reasoning: `Taxonomy: ${taxonomyDecision.archetype} (${taxonomyDecision.confidence})`
+      };
+    }
+    
+    // ============================================
+    // FALLBACK: Legacy Primitive Gate (UNKNOWN + low only)
+    // ============================================
+    console.log('[GATE] FALLBACK to legacy (taxonomy returned UNKNOWN + low)');
+    
     // Build raw promo content for evidence collection
     const promoContent = [
       extracted.promo_name || '',
@@ -5743,5 +5876,44 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   
   console.log('[mapExtractedToPromoFormData] Applied Post-Extraction Normalizer');
 
-  return normalizedData as unknown as PromoFormData;
+  // ============================================
+  // FINAL: Apply Taxonomy Lock (SSoT enforcement)
+  // This is the LAST CHANCE to ensure taxonomy fields are correct
+  // ============================================
+  let finalData = normalizedData as Record<string, unknown>;
+  
+  if (useTaxonomy) {
+    console.log('[mapExtractedToPromoFormData] Applying FINAL taxonomy lock:', {
+      mode: taxonomyDecision.mode,
+      archetype: taxonomyDecision.archetype,
+      calculation_basis: taxonomyDecision.calculation_basis,
+    });
+    
+    // Lock taxonomy fields — CANNOT be overridden
+    finalData.reward_mode = taxonomyDecision.mode;
+    
+    if (taxonomyDecision.calculation_basis) {
+      finalData.calculation_base = taxonomyDecision.calculation_basis;
+    }
+    
+    if (taxonomyDecision.payout_direction) {
+      finalData.payout_direction = taxonomyDecision.payout_direction === 'before' 
+        ? 'depan' 
+        : 'belakang';
+    }
+    
+    if (taxonomyDecision.trigger_event) {
+      finalData.trigger_event = taxonomyDecision.trigger_event;
+    }
+    
+    // Attach audit trail
+    finalData._taxonomy_decision = {
+      archetype: taxonomyDecision.archetype,
+      confidence: taxonomyDecision.confidence,
+      version: taxonomyDecision.taxonomy_version,
+      timestamp: taxonomyDecision.decision_timestamp,
+    };
+  }
+
+  return finalData as unknown as PromoFormData;
 }
