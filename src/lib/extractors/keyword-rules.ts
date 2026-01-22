@@ -31,6 +31,11 @@
  * The Reasoning-First Architecture (promo-intent-reasoner.ts + mechanic-router.ts)
  * is the sole source of truth for mode, calculation_basis, and trigger_event.
  * 
+ * TAXONOMY INTEGRATION v1.0:
+ * - This module is now FALLBACK ONLY
+ * - Called only when taxonomy returns UNKNOWN + low confidence
+ * - See taxonomy-pipeline.ts for SSoT implementation
+ * 
  * If this returns true, it means we're violating the contract.
  */
 export function shouldUseKeywordFallback(): boolean {
@@ -39,6 +44,13 @@ export function shouldUseKeywordFallback(): boolean {
   // Keywords are only used for UI defaults and category classification
   return false;
 }
+
+/**
+ * KEYWORD RULES MODE (v1.0)
+ * Indicates the current operational mode of keyword rules.
+ * 'fallback_only' = Only called when taxonomy returns UNKNOWN + low
+ */
+export const KEYWORD_RULES_MODE = 'fallback_only' as const;
 
 import type { PromoFormData } from '@/components/VOCDashboard/PromoFormWizard/types';
 
@@ -946,3 +958,28 @@ export const ARCHETYPE_KEYWORD_ARRAYS = {
     .filter(r => r.archetype === 'referral')
     .flatMap(r => r.patterns.map(p => p.source.replace(/\\s\*/g, ' ').replace(/\\b/g, '').replace(/\\/g, '').toLowerCase())),
 } as const;
+
+// ============================================
+// TAXONOMY FALLBACK ENTRY POINT
+// Called only when taxonomy returns UNKNOWN + low confidence
+// ============================================
+
+/**
+ * getKeywordFallbackDefaults
+ * 
+ * FALLBACK ONLY entry point for taxonomy integration.
+ * Called when taxonomy returns UNKNOWN + low confidence.
+ * 
+ * @param promoName - Promo name from extraction
+ * @param promoType - Promo type (optional)
+ * @returns Keyword-based defaults as last resort, or null if no match
+ */
+export function getKeywordFallbackDefaults(
+  promoName: string,
+  promoType?: string
+): Partial<PromoFormData> | null {
+  // Only called when taxonomy returns UNKNOWN + low
+  // Returns keyword-based defaults as last resort
+  const rule = matchKeywordRule(promoName, promoType);
+  return rule?.defaults || null;
+}

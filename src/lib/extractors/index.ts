@@ -176,3 +176,66 @@ export {
   type ArbitrationResult,
   type ConflictRecord,
 } from './arbitration-rules';
+
+// ============================================
+// TAXONOMY PIPELINE v1.0 (SSoT)
+// ============================================
+
+// Evidence Cleaner
+export {
+  cleanEvidence,
+  EVIDENCE_CLEANER_VERSION,
+  type CleanedEvidence,
+} from './evidence-cleaner';
+
+// Taxonomy Pipeline (SSoT Orchestrator)
+export {
+  runTaxonomyPipeline,
+  shouldUseTaxonomy,
+  TAXONOMY_PIPELINE_VERSION,
+  TAXONOMY_LOCKED_FIELDS,
+  type TaxonomyDecision,
+  type TaxonomyLockedField,
+} from './taxonomy-pipeline';
+
+// Archetype Detector
+export {
+  detectArchetype,
+  isArchetype,
+  getTopArchetypeCandidates,
+  type ArchetypeDetectionResult,
+} from './archetype-detector';
+
+// Archetype Invariant Validator
+export {
+  validateFullPipeline,
+  validateImpossibleStates,
+  validateGlobalInvariants,
+  validateArchetypeInvariants,
+  type ValidationResult,
+  type ValidationViolation,
+} from './archetype-invariant-validator';
+
+// Field Derivation Engine
+export {
+  deriveFieldsForArchetype,
+  applyLockedFields,
+  getFieldApplicability,
+  type DerivedFieldsResult,
+  type DerivationLogEntry,
+} from './field-derivation-engine';
+
+// Promo Taxonomy (Archetype Rules)
+export {
+  ARCHETYPE_RULES,
+  TAXONOMY_VERSION,
+  getArchetypeRule,
+  getAllArchetypes,
+  getArchetypeDisplayName,
+  type PromoArchetype,
+  type ArchetypeSemanticRule,
+  type ArchetypeDetectionCues,
+  type ArchetypeInvariant,
+  type LockedFieldConstraint,
+  type DerivedFieldConstraint,
+} from './promo-taxonomy';
