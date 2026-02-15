@@ -131,7 +131,7 @@ export function LivechatTestConsole() {
 
   return (
     <div className="mx-auto max-w-[900px] w-full">
-      <Card className="p-0 overflow-hidden h-[849px] flex flex-col">
+      <Card className="p-0 overflow-hidden h-[calc(100vh-120px)] flex flex-col">
         {/* Header */}
         <div className="shrink-0 p-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
