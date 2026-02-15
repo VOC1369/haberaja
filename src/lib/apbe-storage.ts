@@ -25,30 +25,9 @@ const LS_KEYS = {
   VERSIONS: (clientId: string) => `apbe_versions_${clientId}`,
 };
 
-// Track if Supabase schema is compatible (cached per session)
-let _supabaseSchemaOk: boolean | null = null;
-
+// LOCAL-ONLY MODE: Always use localStorage, skip Supabase entirely
 async function isSupabaseSchemaOk(): Promise<boolean> {
-  if (_supabaseSchemaOk !== null) return _supabaseSchemaOk;
-  
-  try {
-    // Test with a lightweight query that touches config_A
-    const { error } = await supabase
-      .from('voc_agent_persona')
-      .select('id, config_A')
-      .limit(1);
-    
-    if (error?.code === 'PGRST204' || error?.message?.includes('column')) {
-      console.warn('[APBE Storage] Supabase schema mismatch — using localStorage fallback');
-      _supabaseSchemaOk = false;
-    } else {
-      _supabaseSchemaOk = true;
-    }
-  } catch {
-    _supabaseSchemaOk = false;
-  }
-  
-  return _supabaseSchemaOk;
+  return false;
 }
 
 function lsSaveDraft(config: APBEConfig, clientId: string): void {
