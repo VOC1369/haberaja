@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, Trash2, Loader2, Bug } from "lucide-react";
+import { Send, Trash2, Loader2, Bug, BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { DebugPanel } from "./DebugPanel";
 import {
@@ -29,6 +29,7 @@ export function LivechatTestConsole() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [generalKBEnabled, setGeneralKBEnabled] = useState(false);
   const [promos, setPromos] = useState<PromoItem[]>([]);
   const [selectedPromoId, setSelectedPromoId] = useState<string>("none");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -50,7 +51,7 @@ export function LivechatTestConsole() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, debounceCountdown]);
 
-  const selectedPromo = promos.find(p => p.id === selectedPromoId) || null;
+  const selectedPromo = selectedPromoId === 'all' ? null : (promos.find(p => p.id === selectedPromoId) || null);
 
   const formatTime = (iso: string) => {
     const d = new Date(iso);
@@ -66,7 +67,10 @@ export function LivechatTestConsole() {
 
     setIsLoading(true);
 
-    const systemPrompt = await buildSystemPrompt(selectedPromo, debugMode);
+    const systemPrompt = await buildSystemPrompt(selectedPromo, debugMode, {
+      generalKBEnabled,
+      allPromos: selectedPromoId === 'all' ? promos : undefined,
+    });
 
     // Build message history: all existing messages + merged user message
     const mergedUserMsg: ChatMessage = {
@@ -140,7 +144,7 @@ export function LivechatTestConsole() {
       },
       selectedPromo,
     );
-  }, [messages, selectedPromo, debugMode]);
+  }, [messages, selectedPromo, selectedPromoId, promos, debugMode, generalKBEnabled]);
 
   // Debounced send — adds message to buffer and resets timer
   const handleSend = useCallback(() => {
@@ -229,6 +233,7 @@ export function LivechatTestConsole() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">— Tanpa Promo —</SelectItem>
+                <SelectItem value="all">— Semua Promo —</SelectItem>
                 {promos.map(p => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.promo_name || p.id}
@@ -236,6 +241,13 @@ export function LivechatTestConsole() {
                 ))}
               </SelectContent>
             </Select>
+
+            {/* General KB Toggle */}
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">General KB</span>
+              <Switch checked={generalKBEnabled} onCheckedChange={setGeneralKBEnabled} />
+            </div>
 
             {/* Debug Toggle */}
             <div className="flex items-center gap-2">
@@ -256,7 +268,7 @@ export function LivechatTestConsole() {
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground text-sm py-20">
                 <p className="font-medium">Dev-only Livechat Test Console</p>
-                <p className="mt-1 text-xs">Pilih promo dari KB, toggle Debug Mode, lalu mulai chat.</p>
+                <p className="mt-1 text-xs">Toggle General KB, pilih promo, aktifkan Debug Mode, lalu mulai chat.</p>
                 <p className="mt-1 text-xs">Debounce: <strong>{getDebounceSeconds()}s</strong> — atur di API & Settings</p>
               </div>
             )}
