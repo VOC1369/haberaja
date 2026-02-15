@@ -1,68 +1,65 @@
 
 
-# Fix: Debug Panel Not Showing in Livechat Test Console
+# Fix: Debug Trace Selalu Muncul (Client-Side Fallback)
 
-## Root Cause
+## Masalah
 
-There is a feedback loop in the chat engine:
+Pesan "Debug data tidak tersedia untuk response ini" muncul karena LLM tidak selalu menyertakan section `---DEBUG---` di response-nya, meskipun sudah diminta. Ini terjadi karena:
+- LLM kadang "lupa" di response pertama
+- Response yang panjang membuat LLM memotong bagian debug
+- Tidak ada jaminan 100% LLM patuh pada instruksi format
 
-1. LLM responds with answer + `---DEBUG---` section
-2. The `updateAssistant` callback strips `---DEBUG---` from the displayed content and saves to `messages` state
-3. On the next user message, `apiMessages` is built from `messages` state -- which contains the **stripped** content
-4. LLM sees its previous responses had no debug sections, so it stops including them
-5. After a few turns, the LLM completely stops producing `---DEBUG---`
+## Solusi: Dual-Layer Debug
 
-## Solution
+Tambahkan **client-side fallback** yang otomatis membuat debug trace dari data yang sudah tersedia di frontend, sehingga trace SELALU muncul saat debug mode aktif.
 
-Store the **full raw response** (including debug section) on each message, and use that when building the API message history. The display remains stripped, but the LLM always sees its own debug sections in history.
+**Layer 1** (tetap): Parse `---DEBUG---` dari LLM response (kalau ada)
+**Layer 2** (baru): Jika LLM tidak menyertakan debug, buat trace lokal dari:
+- KB JSON fields yang ada di promo yang dipilih
+- User message terakhir
+- Response assistant
 
-## Changes
+## Perubahan
 
-### 1. Update `ChatMessage` type (livechat-engine.ts)
+### 1. Tambah fungsi `buildClientDebug` di `livechat-engine.ts`
 
-Add a `rawContent` field to store the unstripped full response:
+Fungsi baru yang membuat DebugBreakdown secara lokal:
+- Scan user message untuk angka/keyword yang match atau mismatch dengan KB fields
+- Cek field-field utama seperti `max_bonus`, `min_deposit`, `reward_amount`, `turnover_multiplier`
+- Bandingkan angka yang disebut user vs nilai di KB
+- Generate trace sederhana: fields referenced, match/mismatch status, confidence
 
-```ts
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;       // display content (stripped)
-  rawContent?: string;   // full content including debug (for API history)
-  debug?: DebugBreakdown | null;
-  timestamp: string;
-}
-```
+### 2. Update `streamChat` callback flow
 
-### 2. Update `LivechatTestConsole.tsx` - Store raw content
+Di bagian `onDone`:
+- Jika `---DEBUG---` ada di response → parse seperti biasa (Layer 1)
+- Jika tidak ada → panggil `buildClientDebug(userMessage, assistantResponse, promoData)` sebagai fallback (Layer 2)
+- Debug panel selalu mendapat data, tidak pernah kosong
 
-- After streaming completes and debug is parsed, save `rawContent` on the assistant message
-- When building `apiMessages`, use `rawContent` (if available) instead of `content`
+### 3. Update `LivechatTestConsole.tsx`
 
-```ts
-// Building API messages - use rawContent for assistant messages
-const apiMessages = [...messages, userMsg].map(m => ({
-  role: m.role,
-  content: m.rawContent || m.content,
-}));
-```
+- Pass `selectedPromo` ke streaming flow supaya client-side debug bisa akses KB data
+- Update `streamChat` signature untuk menerima parameter promo data
 
-- In the streaming flow, after `onDone`, attach the full `assistantContent` (before stripping) as `rawContent` on the message
+### 4. Update `DebugPanel.tsx`
 
-### 3. Update streaming callback flow
+- Tambah indikator kecil: "[LLM trace]" vs "[Client trace]" supaya bisa dibedakan sumbernya
+- Warna badge berbeda untuk membedakan
 
-In `handleSend`, track the full unstripped content and save it to the message:
+## Detail Teknis
 
-- Keep a `fullRawContent` variable that accumulates all chunks (same as current `assistantContent`)
-- After stream ends, update the final assistant message to include `rawContent: fullRawContent`
+### Files yang diubah:
+- `src/lib/livechat-engine.ts` — tambah `buildClientDebug()`, update `streamChat` signature
+- `src/components/VOCDashboard/LivechatTestConsole.tsx` — pass promo data ke stream
+- `src/components/VOCDashboard/DebugPanel.tsx` — tambah source indicator
 
-## Technical Details
+### Client-side debug logic:
+- Extract angka dari user message menggunakan regex
+- Bandingkan dengan nilai KB fields (`max_bonus`, `min_deposit`, `reward_amount`, dll)
+- Cek apakah response assistant menyebut nilai yang konsisten dengan KB
+- Generate confidence: "sangat tinggi" jika semua match, "rendah" jika ada mismatch
 
-### Files Modified
-- `src/lib/livechat-engine.ts` -- add `rawContent` to `ChatMessage` interface
-- `src/components/VOCDashboard/LivechatTestConsole.tsx` -- store raw content, use it for API history
-
-### No Breaking Changes
-- `rawContent` is optional, so existing messages without it gracefully fall back to `content`
-- Display behavior unchanged -- users still see clean responses
-- Debug panel behavior unchanged -- parsed from `---DEBUG---` section as before
-
+### Tidak ada breaking changes:
+- Fallback hanya aktif saat debug mode ON dan LLM tidak menyediakan trace
+- Kalau LLM menyediakan trace, tetap pakai yang dari LLM (lebih detail)
+- Debug panel UI tetap sama, hanya ada label sumber tambahan
