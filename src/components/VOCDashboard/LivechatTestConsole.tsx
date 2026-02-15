@@ -196,8 +196,14 @@ export function LivechatTestConsole() {
                   </span>
 
                   {/* Debug Panel */}
-                  {debugMode && msg.role === 'assistant' && msg.debug && (
-                    <DebugPanel debug={msg.debug} />
+                  {debugMode && msg.role === 'assistant' && (
+                    msg.debug ? (
+                      <DebugPanel debug={msg.debug} />
+                    ) : !isLoading ? (
+                      <div className="mt-2 text-xs text-muted-foreground italic">
+                        ⚠️ Debug data tidak tersedia untuk response ini
+                      </div>
+                    ) : null
                   )}
                 </div>
               </div>
