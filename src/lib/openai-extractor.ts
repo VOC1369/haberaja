@@ -3402,6 +3402,12 @@ function detectTurnoverBasis(
     return { basis: 'deposit_only', has_turnover: true, ambiguity: false };
   }
 
+  // Pattern: "Bonus RpX → TO = RpX × N" (basis = bonus amount, not deposit)
+  if (/bonus\s*(?:dari\s*)?(?:lucky\s*spin\s*)?rp[\d.,]+\s*[→\->]+\s*(?:turn\s*over|to)\s*(?:yang\s*)?/i.test(termsText) ||
+      /(?:turn\s*over|to)\s*=\s*(?:bonus|rp[\d.,]+)\s*[×x]\s*\d/i.test(termsText)) {
+    return { basis: 'bonus_only', has_turnover: true, ambiguity: false };
+  }
+
   // TO exists but basis not determinable → flag ambiguity
   return { basis: null, has_turnover: true, ambiguity: true };
 }
@@ -3502,9 +3508,11 @@ function buildArchetypePayloadFromExtracted(
 
     // --- Extract daily_reset_time from terms ---
     const resetMatch = termsText.match(
-      /(?:di)?reset\s*(?:pada\s*)?(?:pukul|jam)\s*(\d{1,2}[:.]\d{2})/i
+      /(?:di\s*)?reset\s*(?:pada\s*)?(?:pukul|jam)\s*(\d{1,2}[:.]\d{2})/i
     ) || termsText.match(
       /(?:dimulai|mulai)\s*(?:pukul|jam)?\s*(\d{1,2}[:.]\d{2})/i
+    ) || termsText.match(
+      /(?:pukul|jam)\s*(\d{1,2}[:.]\d{2})\s*(?:wib|wit|wita)/i
     );
     const dailyResetTime = resetMatch 
       ? resetMatch[1].replace('.', ':') + (/wib/i.test(termsText) ? ' WIB' : '')
@@ -3535,11 +3543,28 @@ function buildArchetypePayloadFromExtracted(
       const periodMatch = termsText.match(
         /(?:batas\s*waktu|dalam|within)\s*[:.]?\s*(\d+)\s*(bulan|hari|minggu|month|day|week)/i
       );
+      
+      // Extract eligible reward items (e.g., "Handphone, Laptop, & Emas")
+      const rewardItemsMatch = termsText.match(
+        /(?:gambar\s*(?:dari\s*)?(?:lucky\s*spin\s*)?seperti)\s*([^.;]+)/i
+      );
+      const eligibleRewards = rewardItemsMatch 
+        ? rewardItemsMatch[1]
+            .split(/[,&]/)
+            .map(s => s.trim().toLowerCase())
+            .filter(Boolean)
+        : [];
+      
+      // Detect "yang sama" = require same image
+      const requireSame = /gambar\s*(?:yang\s*)?sama/i.test(termsText);
+      
       collectionRequirement = {
         same_image_count: count,
         collection_period: periodMatch 
           ? `${periodMatch[1]}_${periodMatch[2].replace('bulan','month').replace('hari','day').replace('minggu','week')}` 
           : null,
+        require_same_image: requireSame,
+        eligible_rewards: eligibleRewards.length > 0 ? eligibleRewards : undefined,
         reward_condition: `${count}_identical_images`,
       };
     }
