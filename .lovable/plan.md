@@ -1,170 +1,118 @@
 
 
-# Implementasi Archetype Payload Layer v1.0 (FINAL + 6 Koreksi)
+# Fix Extractor + Sanitizer: Adaptable untuk Semua Archetype
 
-Zero breaking change. Zero UI wizard change. Schema tetap v2.1.
+Semua perbaikan dirancang **universal** -- bukan patch untuk 1 promo, tapi rule engine yang berlaku untuk ribuan tipe promo sekarang dan masa depan.
 
-## 3 Field Universal (Root-Level Only)
+## Prinsip Desain: Universal, Bukan Per-Promo
 
-```text
-turnover_basis       : 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null   (default: null)
-archetype_payload    : Record<string, unknown>                                         (default: {})
-archetype_invariants : Record<string, unknown>                                         (default: {})
+Setiap fix menggunakan **pattern detection** (regex/field check), bukan hardcoded promo name. Jadi promo Lucky Spin SPONTAN77, Lucky Draw SITUS-X, atau Competition BRAND-Y semuanya mendapat perlakuan yang sama secara otomatis.
+
+## 6 Perbaikan di 3 File
+
+### Fix 1: `max_claim: 0` + `max_claim_unlimited: true` (SEMUA mode)
+
+**File**: `src/lib/sanitize-by-mode.ts`
+
+Saat ini sanitizer hanya handle konflik ini untuk `mode: event` (line 231-235). Untuk mode lain (`fixed`, `formula`, `tier`), `max_claim: 0` lolos padahal `unlimited = true`.
+
+**Solusi**: Tambah rule universal di KEDUA path (taxonomy dan legacy), setelah section value normalization:
 ```
-
-SSoT Rule: `turnover_basis` HANYA di root. Dilarang di `archetype_payload` dalam bentuk apapun.
-
-## 6 Koreksi yang Diterapkan
-
-1. **Archetype resolve order** (bukan hardcode 1 path): `extra_config._taxonomy_decision?.archetype` -> fallback `extra_config._taxonomy?.archetype` -> else `null` (status UNKNOWN)
-2. **SSoT enforcement cek 4 pola**: `archetype_payload.turnover_basis`, `.withdraw_rule.turnover_basis`, `.turnover.basis`, `.post_reward_rules.turnover_basis`
-3. **WARNING "turnover ambiguous"** tetap warning, tidak escalate di runtime -- hanya label "Ambiguous TO basis" di debug
-4. **Stable lookup map**: export `getPayloadContract(archetype)` helper dari `promo-taxonomy.ts` (bukan scan array tiap message)
-5. **KB_HEALTH format rigid** (bukan free-text append):
-```text
-# KB_HEALTH
-status: READY|NOT_READY|UNKNOWN
-missing_required_payload_keys: [...]
-priority_rule: archetype_payload > custom_terms for lifecycle logic
-```
-6. **DebugPanel hanya render** data dari engine (`kbHealth` di DebugBreakdown), tidak hitung ulang
-
-## KB_HEALTH Visibility Decision
-
-- **Selalu dihitung** di `buildKBContext()` (AI selalu tahu ada gap, even tanpa debug mode)
-- **Hanya ditampilkan di UI** saat Debug ON (via DebugPanel)
-- Alasan: AI perlu awareness untuk jawab akurat; user tidak perlu noise di non-debug
-
-## File Changes (5 file)
-
-### 1. `src/components/VOCDashboard/PromoFormWizard/types.ts`
-
-**PKB_FIELD_WHITELIST** (line 185-188, setelah `extra_config`):
-- Tambah 3 entry: `'turnover_basis'`, `'archetype_payload'`, `'archetype_invariants'`
-
-**PromoFormData interface** (sekitar line 530, setelah escape hatch fields):
-- Tambah 3 optional field:
-  - `turnover_basis?: 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null`
-  - `archetype_payload?: Record<string, unknown>`
-  - `archetype_invariants?: Record<string, unknown>`
-
-### 2. `src/lib/canonical-promo-schema.ts`
-
-**CanonicalPromoKB interface** (line 172-175, sebelum `extra_config`):
-- Tambah 3 field:
-  - `turnover_basis: string | null`
-  - `archetype_payload: Record<string, unknown>`
-  - `archetype_invariants: Record<string, unknown>`
-
-**CANONICAL_INERT** (line 347-350, sebelum `extra_config: {}`):
-- Tambah defaults:
-  - `turnover_basis: null`
-  - `archetype_payload: {}`
-  - `archetype_invariants: {}`
-
-**validateCanonicalPromo()** (line 377-429) -- tambah 3 rule baru:
-
-Rule 1 -- ERROR (SSoT violation): Deep-check `archetype_payload` untuk 4 pola:
-- `archetype_payload.turnover_basis`
-- `archetype_payload.withdraw_rule?.turnover_basis`
-- `archetype_payload.turnover?.basis`
-- `archetype_payload.post_reward_rules?.turnover_basis`
-
-Rule 2 -- WARNING: `turnover_enabled === true` dan `turnover_basis === null` -> "Ambiguous TO basis"
-
-Rule 3 -- WARNING: Archetype lifecycle-heavy dan `archetype_payload` kosong `{}`. Resolve archetype via:
-- `extra_config._taxonomy_decision?.archetype` (primary)
-- `extra_config._taxonomy?.archetype` (fallback legacy)
-- Lifecycle-heavy archetypes: `LUCKY_DRAW`, `COMPETITION`
-
-### 3. `src/lib/extractors/promo-taxonomy.ts`
-
-**ArchetypeSemanticRule interface** (line 89-139) -- tambah optional field:
-```
-payload_contract?: {
-  required_keys: string[];
-  optional_keys: string[];
+if (out.max_claim_unlimited === true && (out.max_claim === 0 || out.max_claim !== null)) {
+  out.max_claim = null;
 }
 ```
 
-**Export helper function** (baru, setelah ARCHETYPE_RULES):
+Berlaku untuk: deposit bonus, cashback, lucky draw, referral, competition -- semua.
+
+---
+
+### Fix 2-5: Enrichment `archetype_payload` dari Terms (SEMUA archetype)
+
+**File**: `src/lib/openai-extractor.ts`
+
+Saat ini `buildArchetypePayloadFromExtracted()` hanya handle `LUCKY_DRAW` dan `COMPETITION`. Enrichment (turnover detection, channel scan, proof scan, accumulative detection) di-hardcode per archetype.
+
+**Solusi**: Refactor menjadi **shared enrichment functions** yang dipanggil oleh SEMUA archetype:
+
+**a) `detectTurnoverBasis(extracted, termsText)`** -- universal helper
+- Cek `extracted.turnover_multiplier` ada atau terms menyebut TO
+- Scan terms untuk pattern: "deposit + bonus", "bonus saja", "deposit only"
+- Jika ada TO tapi basis tidak terdeteksi: return `null` + set `turnover_ambiguity: true`
+- Berlaku untuk: Lucky Draw, Competition, Deposit Bonus, Cashback -- semua yang punya turnover
+
+**b) `extractClaimChannels(termsText, extracted)`** -- universal helper
+- Scan terms untuk: telegram, livechat, whatsapp, line, cs, customer service
+- Merge dengan `extracted.claim_method` jika ada
+- Return array unik
+- Berlaku untuk: semua archetype (claim channels bukan eksklusif Lucky Draw)
+
+**c) `extractProofRequirements(termsText)`** -- universal helper
+- Scan terms untuk: screenshot, bukti, ss, foto, proof
+- Return array seperti `['screenshot_prize']`, `['screenshot_deposit']`
+- Berlaku untuk: semua archetype
+
+**d) `extractDepositRequirement(extracted, termsText)`** -- universal helper
+- Ambil `min_deposit` dari extracted
+- Scan terms untuk "akumulatif/kumulatif/accumulated"
+- Return structured object `{ amount, note, is_accumulative }`
+- Berlaku untuk: semua archetype yang punya deposit requirement
+
+Lalu di setiap archetype block (`LUCKY_DRAW`, `COMPETITION`, dan future archetypes), panggil helper-helper ini:
 ```
-export function getPayloadContract(archetype: string): { required_keys: string[]; optional_keys: string[] } | null
-```
-Lookup dari `ARCHETYPE_RULES[archetype]?.payload_contract` -- stable, O(1), tidak scan array.
+// Di LUCKY_DRAW block:
+const turnoverBasis = detectTurnoverBasis(extracted, termsText);
+payload.claim_channels = extractClaimChannels(termsText, extracted);
+payload.proof_required = extractProofRequirements(termsText);
+payload.deposit_requirement = extractDepositRequirement(extracted, termsText);
 
-**COMPETITION rule** (line 696, applicable_fields line 763-766):
-- Tambah ke `applicable_fields`: `'archetype_payload'`, `'archetype_invariants'`, `'turnover_basis'`
-- Tambah `payload_contract`:
-  - `required_keys`: `['event_period', 'prize_structure']`
-  - `optional_keys`: `['leaderboard_rules', 'reset_rules', 'claim_channels', 'notes']`
-
-**LUCKY_DRAW rule** (line 776, applicable_fields line 838-841):
-- Tambah ke `applicable_fields`: `'archetype_payload'`, `'archetype_invariants'`, `'turnover_basis'`
-- Tambah `payload_contract`:
-  - `required_keys`: `['daily_reset_time', 'claim_window', 'deposit_requirement', 'spin_limit', 'collection_mechanic']`
-  - `optional_keys`: `['claim_channels', 'notes']`
-
-### 4. `src/lib/livechat-engine.ts`
-
-**DebugBreakdown interface** (line 26-36) -- tambah optional field:
-```
-kbHealth?: {
-  status: 'READY' | 'NOT_READY' | 'UNKNOWN';
-  missingKeys: string[];
-}
+// Di COMPETITION block (sama):
+const turnoverBasis = detectTurnoverBasis(extracted, termsText);
+payload.claim_channels = extractClaimChannels(termsText, extracted);
+// ... dst
 ```
 
-**KB_FIELDS array** (line 42-50):
-- Tambah: `'turnover_basis'`, `'archetype_payload'`, `'archetype_invariants'`
+Ketika archetype baru ditambah (misal REFERRAL payload_contract), tinggal panggil helper yang sama -- zero duplication.
 
-**buildKBContext()** (line 52-67) -- setelah JSON block, tambah:
-1. Resolve archetype: `extra_config._taxonomy_decision?.archetype` -> fallback `extra_config._taxonomy?.archetype` -> else `null`
-2. Import dan call `getPayloadContract(archetype)` dari taxonomy
-3. Compute missing required keys
-4. Append rigid meta block:
-```text
-# KB_HEALTH
-status: READY|NOT_READY|UNKNOWN
-missing_required_payload_keys: [key1, key2]
-priority_rule: archetype_payload > custom_terms for lifecycle logic
+---
+
+### Fix 6: `buildCanonicalPayload` Pass-Through 3 Field Baru
+
+**File**: `src/components/VOCDashboard/PromoFormWizard/types.ts`
+
+Saat ini `buildCanonicalPayload()` tidak meng-assign `turnover_basis`, `archetype_payload`, dan `archetype_invariants` ke output canonical. Field ini hilang saat export.
+
+**Solusi**: Tambah 3 baris sebelum section SUBCATEGORIES (setelah `extra_config` assignment, sekitar line 1471):
 ```
-5. Return `kbHealth` object bersama context string (untuk DebugPanel)
+canonical.turnover_basis = data.turnover_basis ?? null;
+canonical.archetype_payload = data.archetype_payload ?? {};
+canonical.archetype_invariants = data.archetype_invariants ?? {};
+```
 
-**buildSystemPrompt()** (line 114-135):
-- Tambah comment/instruction ke system prompt: "PRIORITAS: Jika data tersedia di archetype_payload, gunakan archetype_payload. custom_terms hanya untuk narasi S&K yang tidak terstruktur."
-- KB_HEALTH selalu di-inject ke context (bukan hanya saat debug ON) -- supaya AI selalu aware
+---
 
-**parseDebugSection()** (line 141-158):
-- Pass through `kbHealth` data yang sudah dihitung di `buildKBContext()`
+## Kenapa Ini Adaptable
 
-### 5. `src/components/VOCDashboard/DebugPanel.tsx`
-
-**Props update**: `DebugBreakdown` sudah include `kbHealth` dari perubahan di livechat-engine
-
-**Render KB Health** (bagian atas debug panel, sebelum User Intent):
-- Jika `debug.kbHealth` tersedia:
-  - `READY`: badge hijau "KB Status: READY"
-  - `NOT_READY`: badge amber "KB Status: NOT_READY" + list missing keys
-  - `UNKNOWN`: badge abu "KB Status: UNKNOWN (archetype tidak terdeteksi)"
-- Panel ini hanya muncul di Debug ON (karena DebugPanel sendiri hanya render saat debugMode)
-
-## Yang TIDAK Diubah (Konfirmasi Eksplisit)
-
-- Primitive Gate (`promo-primitive-gate.ts`) -- TIDAK DISENTUH
-- `sanitizeByMode` (`sanitize-by-mode.ts`) -- TIDAK DISENTUH
-- Taxonomy Pipeline detection flow -- TIDAK DISENTUH
-- UI Wizard Steps (Step1-Step4) -- TIDAK DISENTUH
-- `promoKB.add()` / `promoKB.update()` -- TIDAK DISENTUH
-- 88 canonical fields existing -- TIDAK DIMODIFIKASI
-- `schema_version` tetap `'2.1'`
-- `PromoKnowledgeSection.tsx` handleJsonImport -- tidak perlu ubah (sudah pass-through semua fields)
+| Aspek | Sebelum | Sesudah |
+|-------|---------|---------|
+| Turnover detection | Hardcode null untuk Lucky Draw | Universal `detectTurnoverBasis()` -- works for ALL 11 archetypes |
+| Channel extraction | Hanya dari `claim_method` (1 string) | Scan terms + merge -- works for any promo with channels in T&C |
+| Proof requirement | Tidak ada | Universal scan -- works for any promo requiring screenshot/bukti |
+| Deposit context | Flat `min_deposit` number | Structured object with `is_accumulative` flag -- works for any deposit-triggered promo |
+| max_claim consistency | Hanya fix untuk event mode | Universal rule -- works for ALL modes |
+| Payload pass-through | Lost at export | Always preserved in canonical JSON |
 
 ## Urutan Implementasi
 
-1. Types: `PromoFormData` + `PKB_FIELD_WHITELIST` (types.ts)
-2. Schema: `CanonicalPromoKB` + `CANONICAL_INERT` + validation rules (canonical-promo-schema.ts)
-3. Taxonomy: interface + payload_contract + `getPayloadContract()` helper (promo-taxonomy.ts)
-4. Livechat: `KB_FIELDS` + `DebugBreakdown.kbHealth` + `buildKBContext()` health check + system prompt priority rule (livechat-engine.ts)
-5. Debug UI: KB health status badge display (DebugPanel.tsx)
+1. `sanitize-by-mode.ts` -- Fix 1 (max_claim universal rule)
+2. `openai-extractor.ts` -- Fix 2-5 (4 shared helpers + refactor both archetype blocks)
+3. `types.ts` -- Fix 6 (3-line pass-through)
+
+## Yang TIDAK Diubah
+
+- Primitive Gate, Taxonomy Pipeline, Archetype Rules -- tidak disentuh
+- `mode: 'fixed'` untuk Lucky Spin -- tetap benar
+- UI Wizard Steps -- tidak disentuh
+- Existing 88 canonical fields -- tidak dimodifikasi
+- Schema version tetap `'2.1'`
 
