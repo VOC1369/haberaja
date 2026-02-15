@@ -62,7 +62,7 @@ export function LivechatTestConsole() {
     // Build message history for API
     const apiMessages = [...messages, userMsg].map(m => ({
       role: m.role,
-      content: m.content,
+      content: m.rawContent || m.content,
     }));
 
     let assistantContent = "";
@@ -105,7 +105,13 @@ export function LivechatTestConsole() {
           prev.map(m => m.id === assistantId ? { ...m, debug: debugData } : m)
         );
       },
-      () => setIsLoading(false),
+      () => {
+        // Save full raw content (including debug section) for API history
+        setMessages(prev =>
+          prev.map(m => m.id === assistantId ? { ...m, rawContent: assistantContent } : m)
+        );
+        setIsLoading(false);
+      },
       (error) => {
         setIsLoading(false);
         setMessages(prev => [...prev, {
