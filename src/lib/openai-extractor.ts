@@ -86,6 +86,7 @@ import {
   TAXONOMY_LOCKED_FIELDS,
   type TaxonomyDecision 
 } from './extractors/taxonomy-pipeline';
+import { getPayloadContract, type PromoArchetype } from './extractors/promo-taxonomy';
 
 // ============= CONFIDENCE LEVELS (EXPANDED + NOT_APPLICABLE) =============
 export type ConfidenceLevel = 
@@ -3358,6 +3359,147 @@ function mergeWithTaxonomyLock(
   return result;
 }
 
+// ============================================
+// ARCHETYPE PAYLOAD BUILDER v1.0
+// Populates archetype_payload & turnover_basis for lifecycle-heavy archetypes
+// ============================================
+
+/**
+ * Build archetype_payload from ExtractedPromo for LUCKY_DRAW and COMPETITION.
+ * Returns { archetype_payload, turnover_basis, archetype_invariants } or null if not applicable.
+ */
+function buildArchetypePayloadFromExtracted(
+  extracted: ExtractedPromo,
+  archetype: string,
+): { 
+  archetype_payload: Record<string, unknown>; 
+  turnover_basis: 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null;
+  archetype_invariants: Record<string, unknown>;
+} | null {
+  const contract = getPayloadContract(archetype);
+  if (!contract) return null;
+
+  const termsText = (extracted.terms_conditions || []).join(' ');
+  const sub0 = extracted.subcategories?.[0];
+
+  if (archetype === 'LUCKY_DRAW') {
+    // --- Extract spin_limit ---
+    const spinLimit = sub0?.lucky_spin_max_per_day ?? (() => {
+      const m = termsText.match(/(?:maksimal|max)\s*(?:claim|klaim|spin)?\s*(\d+)/i);
+      return m ? parseInt(m[1], 10) : null;
+    })();
+
+    // --- Extract deposit_requirement ---
+    const depositReq = extracted.min_deposit ?? sub0?.minimum_base ?? null;
+    const depositNote = extracted.min_deposit_note || null;
+
+    // --- Extract daily_reset_time from terms ---
+    const resetMatch = termsText.match(/(?:reset|dimulai|mulai)\s*(?:pukul|jam)?\s*(\d{1,2}[:.]\d{2})/i);
+    const dailyResetTime = resetMatch ? resetMatch[1].replace('.', ':') : null;
+
+    // --- Extract claim_window ---
+    const windowMatch = termsText.match(/(?:berlaku|valid|klaim)\s*(?:hingga|sampai|s\.?d\.?)\s*(\d{1,2}[:.]\d{2})/i);
+    const claimWindow = windowMatch 
+      ? { end: windowMatch[1].replace('.', ':') } 
+      : null;
+
+    // --- Collection mechanic ---
+    const collectionMechanic = sub0?.reward_type === 'lucky_spin' ? 'spin' 
+      : sub0?.reward_type === 'ticket' ? 'ticket_collect'
+      : 'spin';
+
+    const payload: Record<string, unknown> = {
+      spin_limit: spinLimit,
+      deposit_requirement: depositReq != null ? { amount: depositReq, note: depositNote } : null,
+      daily_reset_time: dailyResetTime,
+      claim_window: claimWindow,
+      collection_mechanic: collectionMechanic,
+    };
+
+    // Optional: claim_channels, notes
+    if (extracted.claim_method) {
+      payload.claim_channels = [extracted.claim_method];
+    }
+
+    return {
+      archetype_payload: payload,
+      turnover_basis: null, // Lucky Draw has no turnover
+      archetype_invariants: {
+        mode_must_be: 'fixed',
+        no_calculation_basis: true,
+      },
+    };
+  }
+
+  if (archetype === 'COMPETITION') {
+    // --- Event period ---
+    const eventPeriod: Record<string, unknown> = {
+      valid_from: extracted.valid_from || null,
+      valid_until: extracted.valid_until || null,
+    };
+
+    // --- Prize structure from extracted prizes ---
+    const prizeStructure: unknown[] = [];
+    if (extracted.prizes?.length) {
+      for (const p of extracted.prizes) {
+        prizeStructure.push({
+          rank: p.rank,
+          prize: p.prize,
+          value: p.value,
+          reward_type: p.reward_type || detectRewardType(p.prize, p.physical_reward_name, p.cash_reward_amount),
+        });
+      }
+    } else if (extracted.subcategories?.length > 1) {
+      // Fallback: treat subcategories as prize tiers
+      for (const sub of extracted.subcategories) {
+        prizeStructure.push({
+          rank: sub.sub_name,
+          prize: sub.physical_reward_name || `${sub.max_bonus || sub.calculation_value}`,
+          value: sub.cash_reward_amount || sub.max_bonus || sub.calculation_value,
+          reward_type: sub.reward_type || 'credit_game',
+        });
+      }
+    }
+
+    const payload: Record<string, unknown> = {
+      event_period: eventPeriod,
+      prize_structure: prizeStructure,
+    };
+
+    // Optional keys
+    const resetMatch = termsText.match(/(?:reset|dimulai)\s*(?:setiap)?\s*(senin|selasa|rabu|kamis|jumat|sabtu|minggu|harian|mingguan)/i);
+    if (resetMatch) {
+      payload.reset_rules = { frequency: resetMatch[1].toLowerCase() };
+    }
+
+    if (extracted.claim_method) {
+      payload.claim_channels = [extracted.claim_method];
+    }
+
+    // Detect turnover_basis from terms
+    let turnoverBasis: 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null = null;
+    if (/turnover/i.test(termsText)) {
+      if (/deposit\s*\+?\s*bonus/i.test(termsText)) {
+        turnoverBasis = 'deposit_plus_bonus';
+      } else if (/bonus\s*saja|hanya\s*bonus/i.test(termsText)) {
+        turnoverBasis = 'bonus_only';
+      }
+      // else remains null → will trigger "Ambiguous TO basis" warning
+    }
+
+    return {
+      archetype_payload: payload,
+      turnover_basis: turnoverBasis,
+      archetype_invariants: {
+        mode_must_be: 'tier',
+        tier_count_min: 1,
+      },
+    };
+  }
+
+  return null;
+}
+
 /**
  * Maps ExtractedPromo to PromoFormData for form/storage use.
  * 
@@ -5913,6 +6055,27 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       version: taxonomyDecision.taxonomy_version,
       timestamp: taxonomyDecision.decision_timestamp,
     };
+    
+    // ============================================
+    // ARCHETYPE PAYLOAD POPULATION (v1.0)
+    // Populate archetype_payload & turnover_basis for lifecycle-heavy archetypes
+    // ============================================
+    const archetypePayloadResult = buildArchetypePayloadFromExtracted(
+      extracted, 
+      taxonomyDecision.archetype
+    );
+    
+    if (archetypePayloadResult) {
+      finalData.archetype_payload = archetypePayloadResult.archetype_payload;
+      finalData.turnover_basis = archetypePayloadResult.turnover_basis;
+      finalData.archetype_invariants = archetypePayloadResult.archetype_invariants;
+      
+      console.log('[mapExtractedToPromoFormData] Populated archetype_payload:', {
+        archetype: taxonomyDecision.archetype,
+        payloadKeys: Object.keys(archetypePayloadResult.archetype_payload),
+        turnover_basis: archetypePayloadResult.turnover_basis,
+      });
+    }
   }
 
   return finalData as unknown as PromoFormData;
