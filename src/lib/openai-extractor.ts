@@ -3420,7 +3420,14 @@ function extractClaimChannels(
   if (/whatsapp|wa\b/i.test(termsText)) channels.push('whatsapp');
   if (/\bline\b/i.test(termsText)) channels.push('line');
   if (/\bcs\b|customer\s*service/i.test(termsText)) channels.push('customer_service');
-  if (extracted.claim_method) channels.push(extracted.claim_method);
+  if (extracted.claim_method) {
+    const cm = extracted.claim_method;
+    if (/telegram/i.test(cm)) channels.push('telegram');
+    if (/livechat|live\s*chat/i.test(cm)) channels.push('livechat');
+    if (/whatsapp|wa\b/i.test(cm)) channels.push('whatsapp');
+    if (/\bline\b/i.test(cm)) channels.push('line');
+    if (/\bcs\b|customer\s*service/i.test(cm)) channels.push('customer_service');
+  }
   return [...new Set(channels)];
 }
 
@@ -3494,19 +3501,48 @@ function buildArchetypePayloadFromExtracted(
     })();
 
     // --- Extract daily_reset_time from terms ---
-    const resetMatch = termsText.match(/(?:reset|dimulai|mulai)\s*(?:pukul|jam)?\s*(\d{1,2}[:.]\d{2})/i);
-    const dailyResetTime = resetMatch ? resetMatch[1].replace('.', ':') : null;
+    const resetMatch = termsText.match(
+      /(?:di)?reset\s*(?:pada\s*)?(?:pukul|jam)\s*(\d{1,2}[:.]\d{2})/i
+    ) || termsText.match(
+      /(?:dimulai|mulai)\s*(?:pukul|jam)?\s*(\d{1,2}[:.]\d{2})/i
+    );
+    const dailyResetTime = resetMatch 
+      ? resetMatch[1].replace('.', ':') + (/wib/i.test(termsText) ? ' WIB' : '')
+      : null;
 
     // --- Extract claim_window ---
-    const windowMatch = termsText.match(/(?:berlaku|valid|klaim)\s*(?:hingga|sampai|s\.?d\.?)\s*(\d{1,2}[:.]\d{2})/i);
-    const claimWindow = windowMatch 
-      ? { end: windowMatch[1].replace('.', ':') } 
-      : null;
+    const windowTimeMatch = termsText.match(/(?:berlaku|valid|klaim)\s*(?:hingga|sampai|s\.?d\.?)\s*(\d{1,2}[:.]\d{2})/i);
+    const claimWindow = windowTimeMatch 
+      ? { end: windowTimeMatch[1].replace('.', ':') } 
+      : /(?:diklaim|klaim)\s*(?:di\s*)?(?:akhir|penghujung)\s*hari/i.test(termsText)
+        ? { end: 'end_of_day' }
+        : /(?:hari\s*yang\s*sama|same\s*day)/i.test(termsText)
+          ? { end: 'same_day' }
+          : null;
 
     // --- Collection mechanic ---
     const collectionMechanic = sub0?.reward_type === 'lucky_spin' ? 'spin' 
       : sub0?.reward_type === 'ticket' ? 'ticket_collect'
       : 'spin';
+
+    // --- Collection requirement (hybrid spin + collect) ---
+    let collectionRequirement: Record<string, unknown> | null = null;
+    const collectMatch = termsText.match(
+      /(?:kumpulkan|mengumpulkan|collect)\s*(\d+)\s*(?:gambar|image|item)/i
+    );
+    if (collectMatch) {
+      const count = parseInt(collectMatch[1], 10);
+      const periodMatch = termsText.match(
+        /(?:batas\s*waktu|dalam|within)\s*[:.]?\s*(\d+)\s*(bulan|hari|minggu|month|day|week)/i
+      );
+      collectionRequirement = {
+        same_image_count: count,
+        collection_period: periodMatch 
+          ? `${periodMatch[1]}_${periodMatch[2].replace('bulan','month').replace('hari','day').replace('minggu','week')}` 
+          : null,
+        reward_condition: `${count}_identical_images`,
+      };
+    }
 
     const payload: Record<string, unknown> = {
       spin_limit: spinLimit,
@@ -3514,6 +3550,7 @@ function buildArchetypePayloadFromExtracted(
       daily_reset_time: dailyResetTime,
       claim_window: claimWindow,
       collection_mechanic: collectionMechanic,
+      collection_requirement: collectionRequirement,
     };
 
     // Shared enrichment fields
