@@ -23,6 +23,7 @@ export function LivechatTestConsole() {
   const [promos, setPromos] = useState<PromoItem[]>([]);
   const [selectedPromoId, setSelectedPromoId] = useState<string>("none");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   // Load promo list
   useEffect(() => {
@@ -31,9 +32,7 @@ export function LivechatTestConsole() {
 
   // Auto-scroll on new messages
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const selectedPromo = promos.find(p => p.id === selectedPromoId) || null;
@@ -127,7 +126,7 @@ export function LivechatTestConsole() {
   };
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-60px)]">
+    <div className="flex flex-col h-full max-h-[calc(100vh-60px)] max-w-[900px] mx-auto w-full">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
         <div className="flex items-center gap-2">
@@ -164,8 +163,8 @@ export function LivechatTestConsole() {
       </div>
 
       {/* Chat Area */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div ref={scrollRef} className="p-6 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto" ref={scrollRef}>
+        <div className="p-6 space-y-4">
           {messages.length === 0 && (
             <div className="text-center text-muted-foreground text-sm py-20">
               <p className="font-mono">Dev-only Livechat Test Console</p>
@@ -175,7 +174,7 @@ export function LivechatTestConsole() {
 
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-              <div className={`max-w-[75%] ${msg.role === 'user' ? '' : ''}`}>
+              <div className="max-w-[85%]">
                 <div
                   className={`rounded-xl px-4 py-3 text-sm whitespace-pre-wrap ${
                     msg.role === 'user'
@@ -201,8 +200,9 @@ export function LivechatTestConsole() {
               </div>
             </div>
           )}
+          <div ref={bottomRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Input Area */}
       <div className="shrink-0 border-t border-border px-6 py-4">
