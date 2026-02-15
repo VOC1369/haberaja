@@ -18,6 +18,7 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  rawContent?: string;
   debug?: DebugBreakdown | null;
   timestamp: string;
 }
