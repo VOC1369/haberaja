@@ -1470,6 +1470,14 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     : baseExtraConfig;
   
   // ===============================
+  // ARCHETYPE PAYLOAD (ADDITIVE LAYER)
+  // Universal pass-through for ALL archetypes
+  // ===============================
+  canonical.turnover_basis = data.turnover_basis ?? null;
+  canonical.archetype_payload = data.archetype_payload ?? {};
+  canonical.archetype_invariants = data.archetype_invariants ?? {};
+  
+  // ===============================
   // SUBCATEGORIES
   // ===============================
   canonical.has_subcategories = data.has_subcategories || false;

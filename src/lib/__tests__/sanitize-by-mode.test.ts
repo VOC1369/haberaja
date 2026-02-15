@@ -37,7 +37,7 @@ describe('sanitizeByMode — Final Safety Net v1.0', () => {
       expect(result.min_deposit).toBeNull();
     });
 
-    it('T2: Fixed menghapus kalkulasi', () => {
+    it('T2: Fixed menghapus kalkulasi tapi preserves turnover (v1.2 RELAXED)', () => {
       const input = {
         reward_mode: 'fixed',
         turnover_multiplier: 5,
@@ -48,8 +48,10 @@ describe('sanitizeByMode — Final Safety Net v1.0', () => {
       
       const result = sanitizeByMode(input);
       
-      expect(result.turnover_multiplier).toBeNull();
-      expect(result.min_deposit).toBeNull();
+      // v1.2: Fixed mode preserves turnover (withdrawal requirement)
+      expect(result.turnover_multiplier).toBe(5);
+      // v1.2: Fixed mode preserves min_deposit
+      expect(result.min_deposit).toBe(50000);
       expect(result.calculation_basis).toBeNull();
       expect(result.calculation_base).toBe('');
     });
@@ -162,18 +164,22 @@ describe('sanitizeByMode — Final Safety Net v1.0', () => {
   // D. EVENT SAFETY GUARD
   // ========================================
   describe('D. Event Safety Guard', () => {
-    it('T7: Event unlimited+0 jadi finite', () => {
-      const input = {
-        reward_mode: 'event',
-        max_claim_unlimited: true,
-        max_claim: 0,
-      };
-      const result = sanitizeByMode(input);
-      expect(result.max_claim_unlimited).toBe(false);
-      expect(result.max_claim).toBe(1);
+    it('T7: Universal unlimited=true → max_claim=null (ALL modes)', () => {
+      // New universal rule: if unlimited=true, max_claim MUST be null
+      for (const mode of ['event', 'fixed', 'tier', 'formula']) {
+        const input = {
+          reward_mode: mode,
+          max_claim_unlimited: true,
+          max_claim: 0,
+        };
+        const result = sanitizeByMode(input);
+        expect(result.max_claim_unlimited).toBe(true);
+        expect(result.max_claim).toBeNull();
+      }
     });
 
-    it('T7b: Event unlimited+valid claim tetap utuh', () => {
+    it('T7b: unlimited=true + valid claim → max_claim forced null', () => {
+      // If unlimited=true, any max_claim value is overridden to null
       const input = {
         reward_mode: 'event',
         max_claim_unlimited: true,
@@ -181,7 +187,7 @@ describe('sanitizeByMode — Final Safety Net v1.0', () => {
       };
       const result = sanitizeByMode(input);
       expect(result.max_claim_unlimited).toBe(true);
-      expect(result.max_claim).toBe(5);
+      expect(result.max_claim).toBeNull();
     });
   });
 
@@ -199,7 +205,7 @@ describe('sanitizeByMode — Final Safety Net v1.0', () => {
       };
       const result = sanitizeByMode(input);
       expect(result.require_apk).toBe(true);
-      expect(result.trigger_event).toBe('Download_APK');
+      expect(result.trigger_event).toBe('APK Download');
     });
 
     it('T8b: APK in custom_terms memaksa require_apk', () => {
@@ -312,7 +318,7 @@ describe('sanitizeByMode — Final Safety Net v1.0', () => {
       expect(NON_FORMULA_MODES).not.toContain('formula');
     });
 
-    it('H2: All non-formula modes strip calculation fields', () => {
+    it('H2: All non-formula modes strip calculation fields (v1.2: turnover preserved for fixed/tier)', () => {
       NON_FORMULA_MODES.forEach((mode) => {
         const input = {
           reward_mode: mode,
@@ -321,7 +327,12 @@ describe('sanitizeByMode — Final Safety Net v1.0', () => {
         };
         const result = sanitizeByMode(input);
         expect(result.calculation_basis).toBeNull();
-        expect(result.turnover_multiplier).toBeNull();
+        // v1.2: Only event strips turnover; fixed/tier preserve it (withdrawal requirement)
+        if (mode === 'event') {
+          expect(result.turnover_multiplier).toBeNull();
+        } else {
+          expect(result.turnover_multiplier).toBe(5);
+        }
       });
     });
   });
@@ -346,7 +357,7 @@ describe('sanitizeByMode — Final Safety Net v1.0', () => {
         trigger_event: 'First Deposit',
       };
       const result = sanitizeByMode(input);
-      expect(result.trigger_event).toBe('Download_APK');
+      expect(result.trigger_event).toBe('APK Download');
     });
 
     it('T13: event mode with empty category defaults to REWARD', () => {
