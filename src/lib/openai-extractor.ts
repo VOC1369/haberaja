@@ -3360,12 +3360,110 @@ function mergeWithTaxonomyLock(
 }
 
 // ============================================
-// ARCHETYPE PAYLOAD BUILDER v1.0
-// Populates archetype_payload & turnover_basis for lifecycle-heavy archetypes
+// UNIVERSAL ENRICHMENT HELPERS v1.0
+// Shared functions for ALL archetypes — pattern-based, not hardcoded per promo
+// ============================================
+
+type TurnoverBasisResult = {
+  basis: 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null;
+  has_turnover: boolean;
+  ambiguity: boolean;
+};
+
+/**
+ * Universal turnover basis detection from extracted fields + terms text.
+ * Works for ALL archetypes: Lucky Draw, Competition, Deposit Bonus, Cashback, Referral, etc.
+ */
+function detectTurnoverBasis(
+  extracted: ExtractedPromo,
+  termsText: string,
+): TurnoverBasisResult {
+  // turnover_rule lives on subcategories, not parent
+  const subTurnover = extracted.subcategories?.some(
+    (s) => s.turnover_rule != null && s.turnover_rule > 0
+  );
+  const hasTurnover = !!(
+    subTurnover ||
+    /turn\s*over|turnover|to\s*x?\s*\d|syarat\s*to\b/i.test(termsText)
+  );
+
+  if (!hasTurnover) {
+    return { basis: null, has_turnover: false, ambiguity: false };
+  }
+
+  // Try to resolve basis from terms evidence
+  if (/deposit\s*\+?\s*bonus/i.test(termsText)) {
+    return { basis: 'deposit_plus_bonus', has_turnover: true, ambiguity: false };
+  }
+  if (/bonus\s*saja|hanya\s*bonus|from\s*bonus\s*only/i.test(termsText)) {
+    return { basis: 'bonus_only', has_turnover: true, ambiguity: false };
+  }
+  if (/deposit\s*saja|hanya\s*deposit|deposit\s*only/i.test(termsText)) {
+    return { basis: 'deposit_only', has_turnover: true, ambiguity: false };
+  }
+
+  // TO exists but basis not determinable → flag ambiguity
+  return { basis: null, has_turnover: true, ambiguity: true };
+}
+
+/**
+ * Universal claim channel extraction from terms text + extracted claim_method.
+ * Works for ALL archetypes — channels are not exclusive to any single promo type.
+ */
+function extractClaimChannels(
+  termsText: string,
+  extracted: ExtractedPromo,
+): string[] {
+  const channels: string[] = [];
+  if (/telegram/i.test(termsText)) channels.push('telegram');
+  if (/livechat|live\s*chat/i.test(termsText)) channels.push('livechat');
+  if (/whatsapp|wa\b/i.test(termsText)) channels.push('whatsapp');
+  if (/\bline\b/i.test(termsText)) channels.push('line');
+  if (/\bcs\b|customer\s*service/i.test(termsText)) channels.push('customer_service');
+  if (extracted.claim_method) channels.push(extracted.claim_method);
+  return [...new Set(channels)];
+}
+
+/**
+ * Universal proof requirement extraction from terms text.
+ * Works for ALL archetypes — proof requirements are cross-promo.
+ */
+function extractProofRequirements(termsText: string): string[] {
+  const proofs: string[] = [];
+  if (/screenshot\s*(?:hadiah|prize|kemenangan|winning)/i.test(termsText)) {
+    proofs.push('screenshot_prize');
+  } else if (/screenshot\s*(?:deposit|setor)/i.test(termsText)) {
+    proofs.push('screenshot_deposit');
+  } else if (/screenshot|bukti|ss\b|foto\s*bukti|proof/i.test(termsText)) {
+    proofs.push('screenshot_general');
+  }
+  return proofs;
+}
+
+/**
+ * Universal deposit requirement extraction with accumulative detection.
+ * Works for ALL archetypes that have deposit requirements.
+ */
+function extractDepositRequirement(
+  extracted: ExtractedPromo,
+  termsText: string,
+): { amount: number; note: string | null; is_accumulative: boolean } | null {
+  const amount = extracted.min_deposit ?? extracted.subcategories?.[0]?.minimum_base ?? null;
+  if (amount == null) return null;
+
+  const isAccumulative = /akumulatif|kumulatif|accumulated|akumulasi/i.test(termsText);
+  const note = extracted.min_deposit_note || null;
+
+  return { amount, note, is_accumulative: isAccumulative };
+}
+
+// ============================================
+// ARCHETYPE PAYLOAD BUILDER v2.0
+// Uses shared enrichment helpers — universal for ALL archetypes
 // ============================================
 
 /**
- * Build archetype_payload from ExtractedPromo for LUCKY_DRAW and COMPETITION.
+ * Build archetype_payload from ExtractedPromo for any archetype with a payload_contract.
  * Returns { archetype_payload, turnover_basis, archetype_invariants } or null if not applicable.
  */
 function buildArchetypePayloadFromExtracted(
@@ -3382,16 +3480,18 @@ function buildArchetypePayloadFromExtracted(
   const termsText = (extracted.terms_conditions || []).join(' ');
   const sub0 = extracted.subcategories?.[0];
 
+  // === SHARED ENRICHMENT (applied to ALL archetypes) ===
+  const turnoverResult = detectTurnoverBasis(extracted, termsText);
+  const claimChannels = extractClaimChannels(termsText, extracted);
+  const proofRequired = extractProofRequirements(termsText);
+  const depositRequirement = extractDepositRequirement(extracted, termsText);
+
   if (archetype === 'LUCKY_DRAW') {
     // --- Extract spin_limit ---
     const spinLimit = sub0?.lucky_spin_max_per_day ?? (() => {
       const m = termsText.match(/(?:maksimal|max)\s*(?:claim|klaim|spin)?\s*(\d+)/i);
       return m ? parseInt(m[1], 10) : null;
     })();
-
-    // --- Extract deposit_requirement ---
-    const depositReq = extracted.min_deposit ?? sub0?.minimum_base ?? null;
-    const depositNote = extracted.min_deposit_note || null;
 
     // --- Extract daily_reset_time from terms ---
     const resetMatch = termsText.match(/(?:reset|dimulai|mulai)\s*(?:pukul|jam)?\s*(\d{1,2}[:.]\d{2})/i);
@@ -3410,20 +3510,20 @@ function buildArchetypePayloadFromExtracted(
 
     const payload: Record<string, unknown> = {
       spin_limit: spinLimit,
-      deposit_requirement: depositReq != null ? { amount: depositReq, note: depositNote } : null,
+      deposit_requirement: depositRequirement,
       daily_reset_time: dailyResetTime,
       claim_window: claimWindow,
       collection_mechanic: collectionMechanic,
     };
 
-    // Optional: claim_channels, notes
-    if (extracted.claim_method) {
-      payload.claim_channels = [extracted.claim_method];
-    }
+    // Shared enrichment fields
+    if (claimChannels.length > 0) payload.claim_channels = claimChannels;
+    if (proofRequired.length > 0) payload.proof_required = proofRequired;
+    if (turnoverResult.ambiguity) payload.turnover_ambiguity = true;
 
     return {
       archetype_payload: payload,
-      turnover_basis: null, // Lucky Draw has no turnover
+      turnover_basis: turnoverResult.basis,
       archetype_invariants: {
         mode_must_be: 'fixed',
         no_calculation_basis: true,
@@ -3450,7 +3550,6 @@ function buildArchetypePayloadFromExtracted(
         });
       }
     } else if (extracted.subcategories?.length > 1) {
-      // Fallback: treat subcategories as prize tiers
       for (const sub of extracted.subcategories) {
         prizeStructure.push({
           rank: sub.sub_name,
@@ -3464,6 +3563,7 @@ function buildArchetypePayloadFromExtracted(
     const payload: Record<string, unknown> = {
       event_period: eventPeriod,
       prize_structure: prizeStructure,
+      deposit_requirement: depositRequirement,
     };
 
     // Optional keys
@@ -3472,24 +3572,14 @@ function buildArchetypePayloadFromExtracted(
       payload.reset_rules = { frequency: resetMatch[1].toLowerCase() };
     }
 
-    if (extracted.claim_method) {
-      payload.claim_channels = [extracted.claim_method];
-    }
-
-    // Detect turnover_basis from terms
-    let turnoverBasis: 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null = null;
-    if (/turnover/i.test(termsText)) {
-      if (/deposit\s*\+?\s*bonus/i.test(termsText)) {
-        turnoverBasis = 'deposit_plus_bonus';
-      } else if (/bonus\s*saja|hanya\s*bonus/i.test(termsText)) {
-        turnoverBasis = 'bonus_only';
-      }
-      // else remains null → will trigger "Ambiguous TO basis" warning
-    }
+    // Shared enrichment fields
+    if (claimChannels.length > 0) payload.claim_channels = claimChannels;
+    if (proofRequired.length > 0) payload.proof_required = proofRequired;
+    if (turnoverResult.ambiguity) payload.turnover_ambiguity = true;
 
     return {
       archetype_payload: payload,
-      turnover_basis: turnoverBasis,
+      turnover_basis: turnoverResult.basis,
       archetype_invariants: {
         mode_must_be: 'tier',
         tier_count_min: 1,
@@ -3497,7 +3587,21 @@ function buildArchetypePayloadFromExtracted(
     };
   }
 
-  return null;
+  // === GENERIC ARCHETYPE FALLBACK ===
+  // For any archetype with a payload_contract but no specific handler above,
+  // still populate shared enrichment fields
+  const payload: Record<string, unknown> = {
+    deposit_requirement: depositRequirement,
+  };
+  if (claimChannels.length > 0) payload.claim_channels = claimChannels;
+  if (proofRequired.length > 0) payload.proof_required = proofRequired;
+  if (turnoverResult.ambiguity) payload.turnover_ambiguity = true;
+
+  return {
+    archetype_payload: payload,
+    turnover_basis: turnoverResult.basis,
+    archetype_invariants: {},
+  };
 }
 
 /**

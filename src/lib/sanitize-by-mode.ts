@@ -110,6 +110,12 @@ export function sanitizeByMode(promo: Record<string, unknown>): Record<string, u
     if (out.fixed_cash_reward_amount === 0) out.fixed_cash_reward_amount = null;
     if (out.min_calculation === 0) out.min_calculation = null;
     
+    // SAFE: max_claim + unlimited consistency (ALL modes, ALL archetypes)
+    // If unlimited=true, max_claim MUST be null (not 0 or any number)
+    if (out.max_claim_unlimited === true) {
+      out.max_claim = null;
+    }
+    
     // SAFE: Category guarantee for event mode
     const mode = (out.reward_mode || out.mode) as string;
     if (!out.category && mode === 'event') {
@@ -225,14 +231,12 @@ export function sanitizeByMode(promo: Record<string, unknown>): Record<string, u
   }
 
   // ============================================
-  // 4. EVENT SAFETY GUARD
-  // Event unlimited+0 is ambiguous → make finite
+  // 4. MAX_CLAIM + UNLIMITED CONSISTENCY (ALL modes, ALL archetypes)
+  // Universal rule: if unlimited=true, max_claim MUST be null
+  // This applies to Lucky Draw, Deposit Bonus, Cashback, Referral, etc.
   // ============================================
-  if (mode === 'event') {
-    if (out.max_claim_unlimited === true && out.max_claim === 0) {
-      out.max_claim_unlimited = false;
-      out.max_claim = 1;
-    }
+  if (out.max_claim_unlimited === true) {
+    out.max_claim = null;
   }
 
   // ============================================
