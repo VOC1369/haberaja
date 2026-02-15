@@ -2,9 +2,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send, Trash2, Loader2, Bug } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { DebugPanel } from "./DebugPanel";
 import {
   type ChatMessage,
@@ -36,6 +36,11 @@ export function LivechatTestConsole() {
   }, [messages]);
 
   const selectedPromo = promos.find(p => p.id === selectedPromoId) || null;
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  };
 
   const handleSend = useCallback(async () => {
     const text = input.trim();
@@ -96,7 +101,6 @@ export function LivechatTestConsole() {
       updateAssistant,
       (debug) => {
         debugData = debug;
-        // Attach debug to the assistant message
         setMessages(prev =>
           prev.map(m => m.id === assistantId ? { ...m, debug: debugData } : m)
         );
@@ -126,105 +130,112 @@ export function LivechatTestConsole() {
   };
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-60px)] max-w-[900px] mx-auto w-full">
-      {/* Header */}
-      <div className="shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-b border-border">
-        <div className="flex items-center gap-2">
-          <Bug className="h-5 w-5 text-button-hover" />
-          <h2 className="text-lg font-semibold text-foreground font-serif">Livechat Test Console</h2>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Promo Selector */}
-          <Select value={selectedPromoId} onValueChange={setSelectedPromoId}>
-            <SelectTrigger className="w-[220px] h-9 text-xs">
-              <SelectValue placeholder="Pilih Promo KB..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">— Tanpa Promo —</SelectItem>
-              {promos.map(p => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.promo_name || p.id}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Debug Toggle */}
+    <div className="mx-auto max-w-[900px] w-full">
+      <Card className="p-0 overflow-hidden h-[849px] flex flex-col">
+        {/* Header */}
+        <div className="shrink-0 p-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Debug</span>
-            <Switch checked={debugMode} onCheckedChange={setDebugMode} />
+            <Bug className="h-5 w-5 text-button-hover" />
+            <h3 className="font-semibold text-button-hover font-serif">Livechat Test Console</h3>
           </div>
+          <div className="flex items-center gap-4">
+            {/* Promo Selector */}
+            <Select value={selectedPromoId} onValueChange={setSelectedPromoId}>
+              <SelectTrigger className="w-[220px] h-9 text-xs">
+                <SelectValue placeholder="Pilih Promo KB..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— Tanpa Promo —</SelectItem>
+                {promos.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.promo_name || p.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-          {/* Clear */}
-          <Button variant="ghost" size="icon-sm" onClick={handleClear} title="Clear chat">
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Chat Area */}
-      <div className="flex-1 min-h-0 overflow-y-auto" ref={scrollRef}>
-        <div className="p-6 space-y-4">
-          {messages.length === 0 && (
-            <div className="text-center text-muted-foreground text-sm py-20">
-              <p className="font-mono">Dev-only Livechat Test Console</p>
-              <p className="mt-1 text-xs">Pilih promo dari KB, toggle Debug Mode, lalu mulai chat.</p>
+            {/* Debug Toggle */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Debug</span>
+              <Switch checked={debugMode} onCheckedChange={setDebugMode} />
             </div>
-          )}
 
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-              <div className="max-w-[85%]">
-                <div
-                  className={`rounded-xl px-4 py-3 text-sm whitespace-pre-wrap ${
-                    msg.role === 'user'
-                      ? 'bg-muted/50 text-foreground'
-                      : 'bg-button-hover/10 border border-button-hover/20 text-foreground'
-                  }`}
-                >
-                  {msg.content}
+            {/* Clear */}
+            <Button variant="ghost" size="icon-sm" onClick={handleClear} title="Clear chat">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Chat Area */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-4" ref={scrollRef}>
+          <div className="space-y-4">
+            {messages.length === 0 && (
+              <div className="text-center text-muted-foreground text-sm py-20">
+                <p className="font-mono">Dev-only Livechat Test Console</p>
+                <p className="mt-1 text-xs">Pilih promo dari KB, toggle Debug Mode, lalu mulai chat.</p>
+              </div>
+            )}
+
+            {messages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                <div className="max-w-[70%]">
+                  <div
+                    className={`rounded-lg px-4 py-2 text-sm whitespace-pre-wrap ${
+                      msg.role === 'user'
+                        ? 'bg-muted'
+                        : 'bg-button-hover text-button-hover-foreground'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                  <span className={`text-xs mt-1 block ${
+                    msg.role === 'user' ? 'text-muted-foreground' : 'text-muted-foreground text-right'
+                  }`}>
+                    {formatTime(msg.timestamp)}
+                  </span>
+
+                  {/* Debug Panel */}
+                  {debugMode && msg.role === 'assistant' && msg.debug && (
+                    <DebugPanel debug={msg.debug} />
+                  )}
                 </div>
-
-                {/* Debug Panel */}
-                {debugMode && msg.role === 'assistant' && msg.debug && (
-                  <DebugPanel debug={msg.debug} />
-                )}
               </div>
-            </div>
-          ))}
+            ))}
 
-          {isLoading && messages[messages.length - 1]?.role === 'user' && (
-            <div className="flex justify-end">
-              <div className="bg-button-hover/10 border border-button-hover/20 rounded-xl px-4 py-3">
-                <Loader2 className="h-4 w-4 animate-spin text-button-hover" />
+            {isLoading && messages[messages.length - 1]?.role === 'user' && (
+              <div className="flex justify-end">
+                <div className="bg-button-hover text-button-hover-foreground rounded-lg px-4 py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
               </div>
-            </div>
-          )}
-          <div ref={bottomRef} />
+            )}
+            <div ref={bottomRef} />
+          </div>
         </div>
-      </div>
 
-      {/* Input Area */}
-      <div className="shrink-0 border-t border-border px-6 py-4">
-        <div className="flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ketik pesan..."
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            variant="golden"
-            size="icon"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
+        {/* Input Area */}
+        <div className="shrink-0 p-4 border-t border-border">
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ketik pesan..."
+              disabled={isLoading}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleSend}
+              disabled={!input.trim() || isLoading}
+              variant="outline"
+              className="border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
