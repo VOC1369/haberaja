@@ -405,7 +405,7 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                 <SidebarMenuButton
                   isActive={activeSection === "apiData"}
                   onClick={() => onSectionChange("apiData")}
-                  tooltip="API Data"
+                  tooltip="API & Settings"
                 >
                   <Settings className={cn(
                     "h-5 w-5 shrink-0 transition-colors",
@@ -414,7 +414,7 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                   <span className={cn(
                     "text-sm transition-colors",
                     activeSection === "apiData" ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
-                  )}>API Data</span>
+                  )}>API & Settings</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

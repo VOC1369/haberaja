@@ -65,4 +65,5 @@ export interface Account {
 export interface APIData {
   supabaseApi: string;
   chatGptApi: string;
+  debounceSeconds: number;
 }
