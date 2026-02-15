@@ -247,6 +247,17 @@ function applyCanonicalMigrations(data: Record<string, unknown>): Record<string,
     migrated.distribution_mode = migrated.reward_distribution;
   }
   
+  // 3.5b: Chance-based override — force setelah_syarat regardless
+  // Lucky Spin, Gacha, dll → player claims after requirements, never "hari_tertentu"
+  const promoName = String(migrated.promo_name || '').toLowerCase();
+  const promoType = String(migrated.promo_type || '').toLowerCase();
+  const chanceKeywords = ['lucky spin', 'lucky draw', 'gacha', 'spin', 'undian', 'wheel'];
+  const isChanceBased = chanceKeywords.some(k => promoName.includes(k) || promoType.includes(k));
+  if (isChanceBased && migrated.distribution_mode === 'hari_tertentu') {
+    migrated.distribution_mode = 'setelah_syarat';
+    console.debug('[Normalizer] Chance-based override: hari_tertentu → setelah_syarat', { promoName, promoType });
+  }
+  
   // 3.6: Derive category from program_classification
   if (migrated.program_classification && isInert(migrated.category)) {
     const classification = String(migrated.program_classification).toUpperCase();
