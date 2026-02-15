@@ -1,58 +1,122 @@
 
-# Fix: distribution_mode Bypass untuk Chance-Based Promos
 
-## Problem
+# Fix 4 Remaining Gaps — Faithful to Original Terms
 
-Priority 0 di `normalizeRewardDistribution()` sudah benar return `setelah_syarat`, tapi hasilnya disimpan ke field `reward_distribution` (legacy). Di `promo-field-normalizer.ts` line 246, migrasi `reward_distribution` ke `distribution_mode` hanya terjadi jika `distribution_mode` masih inert (kosong). Jika LLM atau layer lain sudah mengisi `distribution_mode` langsung dengan `hari_tertentu`, Priority 0 kita di-bypass.
+4 patch di `src/lib/openai-extractor.ts`. Semua berdasarkan evidence eksplisit dari terms asli.
 
-## Fix
+---
 
-**File 1**: `src/lib/promo-field-normalizer.ts`
+## Fix 1: `turnover_basis` — Tambah Pattern "Bonus -> TO"
 
-Di sekitar line 245-248 (migrasi `reward_distribution` ke `distribution_mode`), tambahkan override untuk chance-based promos:
+**Evidence dari terms:**
+> "Contoh: Bonus dari Lucky Spin Rp50.000 -> Turn Over yang dibutuhkan untuk withdraw = Rp50.000 x 2 = Rp100.000"
 
-```
-// 3.5: Migrate reward_distribution -> distribution_mode
-if (hasMeaningfulValue(migrated.reward_distribution) && isInert(migrated.distribution_mode)) {
-  migrated.distribution_mode = migrated.reward_distribution;
-}
+Ini jelas: TO dihitung dari BONUS, bukan deposit.
 
-// 3.5b: Chance-based override — force setelah_syarat regardless
-const promoName = String(migrated.promo_name || '').toLowerCase();
-const promoType = String(migrated.promo_type || '').toLowerCase();
-const chanceKeywords = ['lucky spin', 'lucky draw', 'gacha', 'spin', 'undian', 'wheel'];
-const isChanceBased = chanceKeywords.some(k => promoName.includes(k) || promoType.includes(k));
-if (isChanceBased && migrated.distribution_mode === 'hari_tertentu') {
-  migrated.distribution_mode = 'setelah_syarat';
+**Lokasi**: `detectTurnoverBasis()` (~line 3394)
+
+Tambah pattern baru sebelum fallback ambiguity:
+
+```typescript
+// Pattern: "Bonus RpX → TO = RpX × N" (basis = bonus amount, not deposit)
+if (/bonus\s*(?:dari\s*)?(?:lucky\s*spin\s*)?rp[\d.,]+\s*[→\->]+\s*(?:turn\s*over|to)\s*(?:yang\s*)?/i.test(termsText) ||
+    /(?:turn\s*over|to)\s*=\s*(?:bonus|rp[\d.,]+)\s*[×x]\s*\d/i.test(termsText)) {
+  return { basis: 'bonus', has_turnover: true, ambiguity: false };
 }
 ```
 
-Ini adalah safety net: bahkan jika extraction atau LLM mengisi `distribution_mode` langsung, normalizer akan meng-override ke `setelah_syarat` untuk chance-based promos.
+Ini akan menghasilkan:
+- `turnover_basis: "bonus"` (bukan null)
+- `turnover_ambiguity: false` (bukan true)
 
-## Why Two Layers
+---
 
-| Layer | Fungsi | Sudah Ada |
-|-------|--------|-----------|
-| `normalizeRewardDistribution()` | Extraction-time normalization | Ya (Priority 0) |
-| `promo-field-normalizer.ts` | Post-extraction canonical normalization | Belum |
+## Fix 2: `collection_requirement` — Tambah `eligible_rewards` dan `require_same_image`
 
-Dua layer karena data bisa masuk dari extraction (LLM) atau dari manual edit / import. Normalizer adalah last line of defense.
+**Evidence dari terms:**
+> "gambar dari Lucky Spin seperti Handphone, Laptop, & Emas"
+> "mengumpulkan 3 gambar yang sama"
 
-## Impact
+**Lokasi**: Collection requirement block (~line 3528-3545)
 
-- 1 file diubah
-- ~6 lines ditambahkan
-- Zero breaking change
-- Tidak mengubah logic lain
+Perluas extraction untuk menangkap eligible rewards dan "yang sama" flag:
 
-## Expected Result
-
-Sebelum:
-```json
-"distribution_mode": "hari_tertentu"
+```typescript
+if (collectMatch) {
+  const count = parseInt(collectMatch[1], 10);
+  const periodMatch = termsText.match(
+    /(?:batas\s*waktu|dalam|within)\s*[:.]?\s*(\d+)\s*(bulan|hari|minggu|month|day|week)/i
+  );
+  
+  // Extract eligible reward items (e.g., "Handphone, Laptop, & Emas")
+  const rewardItemsMatch = termsText.match(
+    /(?:gambar\s*(?:dari\s*)?(?:lucky\s*spin\s*)?seperti)\s*([^.;]+)/i
+  );
+  const eligibleRewards = rewardItemsMatch 
+    ? rewardItemsMatch[1]
+        .split(/[,&]/)
+        .map(s => s.trim().toLowerCase())
+        .filter(Boolean)
+    : [];
+  
+  // Detect "yang sama" = require same image
+  const requireSame = /gambar\s*(?:yang\s*)?sama/i.test(termsText);
+  
+  collectionRequirement = {
+    same_image_count: count,
+    collection_period: periodMatch 
+      ? `${periodMatch[1]}_${periodMatch[2]...}` 
+      : null,
+    require_same_image: requireSame,
+    eligible_rewards: eligibleRewards.length > 0 ? eligibleRewards : undefined,
+    reward_condition: `${count}_identical_images`,
+  };
+}
 ```
 
-Sesudah:
+Result:
 ```json
-"distribution_mode": "setelah_syarat"
+"collection_requirement": {
+  "same_image_count": 3,
+  "collection_period": "1_month",
+  "require_same_image": true,
+  "eligible_rewards": ["handphone", "laptop", "emas"],
+  "reward_condition": "3_identical_images"
+}
 ```
+
+---
+
+## Fix 3: `daily_reset_time` — Tambah Fallback Pattern
+
+Regex saat ini sudah menangkap "direset pada pukul 23:59", tapi mungkin gagal jika format terms sedikit beda (misalnya "direset pukul 23:59" tanpa "pada", atau "di reset" dengan spasi).
+
+**Lokasi**: ~line 3504-3511
+
+Tambah fallback pattern yang lebih permisif:
+
+```typescript
+const resetMatch = termsText.match(
+  /(?:di)?reset\s*(?:pada\s*)?(?:pukul|jam)\s*(\d{1,2}[:.]\d{2})/i
+) || termsText.match(
+  /(?:dimulai|mulai)\s*(?:pukul|jam)?\s*(\d{1,2}[:.]\d{2})/i
+) || termsText.match(
+  /(?:pukul|jam)\s*(\d{1,2}[:.]\d{2})\s*(?:wib|wit|wita)/i
+);
+```
+
+Fallback ketiga menangkap pattern "pukul 23:59 WIB" di mana pun posisinya dalam kalimat.
+
+---
+
+## Summary
+
+| # | Fix | Field | Dari | Ke |
+|---|-----|-------|------|----|
+| 1 | Turnover basis detection | `turnover_basis` | `null` | `"bonus"` |
+| 1b | Auto-resolve | `turnover_ambiguity` | `true` | `false` |
+| 2 | Collection enrichment | `collection_requirement` | `null` | `{...full object}` |
+| 3 | Reset time fallback | `daily_reset_time` | `null` | `"23:59 WIB"` |
+
+Satu file. Tiga block edit. Zero refactor.
+
