@@ -1,49 +1,68 @@
 
-# Restyle Livechat Test Console agar Mirip Live Chat
 
-## Referensi
+# Fix: Debug Panel Not Showing in Livechat Test Console
 
-Live Chat (ChatSection) menggunakan:
-- `Card` wrapper dengan border
-- Fixed dimensions (`w-[1069px] h-[849px]`)
-- Chat bubbles: `rounded-lg px-4 py-2` dengan timestamp di bawah pesan (bukan inline)
-- Agent bubble: `bg-button-hover text-button-hover-foreground` (golden solid)
-- User bubble: `bg-muted`
-- Header: border-b, avatar style, controls di kanan
-- Input area: border-t, flex gap-2
+## Root Cause
 
-## Perubahan di `LivechatTestConsole.tsx`
+There is a feedback loop in the chat engine:
 
-### 1. Wrap dalam Card
-Ganti outer div dengan `Card` wrapper seperti ChatSection, dengan fixed height dan overflow hidden.
+1. LLM responds with answer + `---DEBUG---` section
+2. The `updateAssistant` callback strips `---DEBUG---` from the displayed content and saves to `messages` state
+3. On the next user message, `apiMessages` is built from `messages` state -- which contains the **stripped** content
+4. LLM sees its previous responses had no debug sections, so it stops including them
+5. After a few turns, the LLM completely stops producing `---DEBUG---`
 
-### 2. Header styling
-- Tetap pertahankan: Bug icon, title, Promo selector, Debug toggle, Clear button
-- Sesuaikan padding dan border style agar konsisten (`p-4 border-b border-border`)
+## Solution
 
-### 3. Chat bubbles
-Sesuaikan styling bubble agar match dengan ChatSection:
-- **User bubble**: `bg-muted rounded-lg px-4 py-2` (kiri)
-- **Assistant bubble**: `bg-button-hover text-button-hover-foreground rounded-lg px-4 py-2` (kanan, golden solid)
-- Tambah **timestamp** di bawah setiap bubble (format jam:menit)
-- Hapus border pada assistant bubble, ganti dengan solid golden background
+Store the **full raw response** (including debug section) on each message, and use that when building the API message history. The display remains stripped, but the LLM always sees its own debug sections in history.
 
-### 4. Input area
-- Sesuaikan styling: `p-4 border-t border-border`
-- Button send: style `border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground` seperti ChatSection
+## Changes
 
-### 5. Empty state
-- Tetap pertahankan empty state text, hanya adjust padding agar proporsional
+### 1. Update `ChatMessage` type (livechat-engine.ts)
 
-### 6. Loading indicator
-- Tetap pertahankan, sesuaikan warna ke golden solid
+Add a `rawContent` field to store the unstripped full response:
 
-## Yang TIDAK berubah
-- Semua logic (handleSend, handleKeyDown, handleClear, streaming, debug)
-- Promo selector functionality
-- Debug toggle dan DebugPanel
-- Auto-scroll behavior
-- max-w-900px constraint
+```ts
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;       // display content (stripped)
+  rawContent?: string;   // full content including debug (for API history)
+  debug?: DebugBreakdown | null;
+  timestamp: string;
+}
+```
 
-## File yang diubah
-1. **`src/components/VOCDashboard/LivechatTestConsole.tsx`** -- styling only, import Card
+### 2. Update `LivechatTestConsole.tsx` - Store raw content
+
+- After streaming completes and debug is parsed, save `rawContent` on the assistant message
+- When building `apiMessages`, use `rawContent` (if available) instead of `content`
+
+```ts
+// Building API messages - use rawContent for assistant messages
+const apiMessages = [...messages, userMsg].map(m => ({
+  role: m.role,
+  content: m.rawContent || m.content,
+}));
+```
+
+- In the streaming flow, after `onDone`, attach the full `assistantContent` (before stripping) as `rawContent` on the message
+
+### 3. Update streaming callback flow
+
+In `handleSend`, track the full unstripped content and save it to the message:
+
+- Keep a `fullRawContent` variable that accumulates all chunks (same as current `assistantContent`)
+- After stream ends, update the final assistant message to include `rawContent: fullRawContent`
+
+## Technical Details
+
+### Files Modified
+- `src/lib/livechat-engine.ts` -- add `rawContent` to `ChatMessage` interface
+- `src/components/VOCDashboard/LivechatTestConsole.tsx` -- store raw content, use it for API history
+
+### No Breaking Changes
+- `rawContent` is optional, so existing messages without it gracefully fall back to `content`
+- Display behavior unchanged -- users still see clean responses
+- Debug panel behavior unchanged -- parsed from `---DEBUG---` section as before
+
