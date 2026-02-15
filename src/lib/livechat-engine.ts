@@ -157,9 +157,15 @@ If JSON incomplete, explicitly state it.`;
 // SYSTEM PROMPT BUILDER
 // ============================================
 
+export interface BuildSystemPromptOptions {
+  generalKBEnabled?: boolean;
+  allPromos?: PromoItem[];
+}
+
 export async function buildSystemPrompt(
   selectedPromo: PromoItem | null,
-  debugMode: boolean
+  debugMode: boolean,
+  options: BuildSystemPromptOptions = {},
 ): Promise<string> {
   // Load APBE config and compile persona prompt
   const config = await loadInitialConfig();
@@ -181,9 +187,28 @@ Kamu DILARANG KERAS menyebutkan istilah teknis internal kepada player. Berikut d
 - field_name apapun yang menggunakan underscore (_) TIDAK BOLEH muncul di jawaban
 
 Selalu gunakan bahasa yang ramah dan mudah dipahami player. Data JSON adalah referensi internal kamu, BUKAN untuk ditampilkan ke player.`;
-  
-  // Inject KB context if promo selected (KB_HEALTH always injected for AI awareness)
-  if (selectedPromo) {
+
+  // Inject General KB if enabled
+  if (options.generalKBEnabled) {
+    const { getGeneralKnowledge } = await import('@/types/knowledge');
+    const kbItems = getGeneralKnowledge();
+    if (kbItems.length > 0) {
+      const kbData = kbItems.map(i => ({ question: i.question, answer: i.answer, category: i.category }));
+      systemPrompt += `\n\n# GENERAL KNOWLEDGE BASE
+Berikut referensi FAQ umum yang bisa kamu gunakan untuk menjawab pertanyaan player:
+
+\`\`\`json
+${JSON.stringify(kbData, null, 2)}
+\`\`\`
+
+Gunakan data di atas untuk menjawab pertanyaan umum. Jika pertanyaan player cocok dengan salah satu FAQ, prioritaskan jawaban dari sini.`;
+    }
+  }
+
+  // Inject KB context — "all promos" mode or single promo
+  if (options.allPromos && options.allPromos.length > 0) {
+    systemPrompt += '\n\n' + buildAllPromosContext(options.allPromos);
+  } else if (selectedPromo) {
     const { context } = buildKBContext(selectedPromo);
     systemPrompt += '\n\n' + context;
     systemPrompt += '\n\nPRIORITAS: Jika data tersedia di archetype_payload, gunakan archetype_payload. custom_terms hanya untuk narasi S&K yang tidak terstruktur.';
@@ -195,6 +220,28 @@ Selalu gunakan bahasa yang ramah dan mudah dipahami player. Data JSON adalah ref
   }
   
   return systemPrompt;
+}
+
+// ============================================
+// ALL PROMOS CONTEXT BUILDER
+// ============================================
+
+function buildAllPromosContext(promos: PromoItem[]): string {
+  let context = `# KNOWLEDGE BASE — Semua Promo (${promos.length} promo)\n`;
+  
+  promos.forEach((promo, idx) => {
+    const data: Record<string, unknown> = {};
+    for (const field of KB_FIELDS) {
+      const value = (promo as unknown as Record<string, unknown>)[field];
+      if (value !== undefined && value !== null && value !== '') {
+        data[field] = value;
+      }
+    }
+    context += `\n## ${idx + 1}. ${promo.promo_name || promo.id}\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n`;
+  });
+
+  context += '\nPRIORITAS: Jika player bertanya tentang promo tertentu, cari dari daftar di atas berdasarkan nama atau tipe. Jika data tersedia di archetype_payload, gunakan archetype_payload.';
+  return context;
 }
 
 // ============================================
