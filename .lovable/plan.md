@@ -1,64 +1,62 @@
 
-
-# Rename "API Data" to "API & Settings" + Tambah Debounce Setting
+# Tambah Upload JSON di General Knowledge Base (Dual Mode: Manual + JSON)
 
 ## Apa yang berubah
 
-Halaman **API Data** akan di-rename menjadi **API & Settings**, dan ditambahkan setting **Debounce Timer** yang bisa diatur (misalnya 3 detik atau 10 detik). Nilai ini akan digunakan oleh Livechat Test Console untuk menggabungkan pesan berturut-turut sebelum dikirim ke AI.
+Form manual ("Add New General Entry") tetap ada seperti sekarang. Ditambahkan tombol **Upload JSON** di sebelah tombol "Add New General Entry" yang membuka dialog paste JSON untuk bulk import — mengikuti pattern yang sama persis dengan Promo Knowledge Base.
+
+Tombol "Upload CSV" yang saat ini belum fungsional akan diganti menjadi **Upload JSON** yang benar-benar berfungsi.
 
 ## Perubahan
 
-### 1. Update type VOCConfig
-**File:** `src/types/voc-config.ts`
-- Tambah field `debounceSeconds: number` di interface `APIData` (default: 3)
+### 1. Ganti tombol "Upload CSV" menjadi "Upload JSON"
+**File:** `src/components/VOCDashboard/GeneralKnowledgeSection.tsx`
+- Tombol "Upload CSV" diganti jadi **Upload JSON** dengan icon `FileJson`
+- Klik membuka dialog paste JSON (bukan upload file)
 
-### 2. Rename + Tambah Debounce Setting di form
-**File:** `src/components/VOCDashboard/APIDataSection.tsx`
-- Rename judul dari "API Data" menjadi "API & Settings"
-- Tambah Card kedua berisi:
-  - **Debounce Timer** slider (1-15 detik) dengan angka yang terlihat
-  - Deskripsi penjelasan: "Waktu tunggu sebelum pesan berturut-turut digabung dan dikirim ke AI"
-  - Preview: "Jika user kirim 3 pesan dalam X detik, akan digabung jadi 1 request"
+### 2. Tambah Upload JSON Dialog
+**File:** `src/components/VOCDashboard/GeneralKnowledgeSection.tsx`
+- Dialog baru dengan Textarea monospace untuk paste JSON
+- Placeholder contoh format JSON:
+  ```json
+  [
+    {
+      "question": "Bagaimana cara deposit?",
+      "answer": "Deposit bisa via bank transfer...",
+      "category": "FAQ",
+      "knowledgeType": "Static"
+    }
+  ]
+  ```
+- Mendukung single object dan array
+- Validasi: `question` dan `answer` wajib ada
+- `category` default ke "Other" jika kosong
+- `knowledgeType` default ke "Static" jika kosong
+- Auto-generate `id`, `createdAt`, `updatedAt`
 
-### 3. Update navigasi sidebar
-**File:** `src/components/VOCDashboard/CategoryNav.tsx`
-- Ubah label "API Data" menjadi "API & Settings"
+### 3. Tambah Export JSON
+**File:** `src/components/VOCDashboard/GeneralKnowledgeSection.tsx`
+- Tombol **Export JSON** di deretan action buttons
+- Download semua data General KB sebagai file `.json`
 
-### 4. Update Dashboard references
-**File:** `src/pages/Dashboard.tsx`
-- Update label mapping dari `"API Data"` menjadi `"API & Settings"`
-- Update default value untuk `apiData.debounceSeconds: 3`
+### 4. Hapus Upload CSV Dialog
+- Dialog CSV yang belum fungsional dihapus karena sudah digantikan Upload JSON
 
-### 5. Implementasi debounce di Livechat Test Console
-**File:** `src/components/VOCDashboard/LivechatTestConsole.tsx`
-- Baca `debounceSeconds` dari localStorage (sama seperti VOC config lainnya)
-- Saat user tekan Enter:
-  - Pesan langsung muncul di chat sebagai bubble user
-  - Timer dimulai (sesuai setting)
-  - Jika user kirim pesan lagi sebelum timer habis, timer di-reset dan pesan baru ditambahkan
-  - Saat timer habis, semua pesan pending digabung jadi 1 string lalu kirim 1x API call
-- Tampilkan "typing indicator" kecil selama debounce window aktif (misal: "Menunggu pesan lanjutan... (3s)")
+## Flow User
 
-## Contoh Flow
+**Manual (1 entry):**
+Klik "Add New General Entry" -> isi form -> Simpan (tidak berubah)
 
-```text
-Setting: debounceSeconds = 3
-
-User: "kak,"              -> tampil di chat, timer mulai (3s)
-User: "ada promo gak?"    -> tampil di chat, timer reset (3s)
-User: "yang gede"         -> tampil di chat, timer reset (3s)
-... 3 detik berlalu ...
--> Gabung: "kak,\nada promo gak?\nyang gede"
--> 1x API call
-```
+**Bulk JSON (banyak entry sekaligus):**
+Klik "Upload JSON" -> paste JSON array -> klik Import -> otomatis masuk semua
 
 ## Technical Details
 
 | Item | Detail |
 |------|--------|
-| Files diubah | 4 files |
+| Files diubah | 1 file (`GeneralKnowledgeSection.tsx`) |
 | New dependency | Tidak ada |
-| Storage | localStorage (existing pattern) |
-| Default debounce | 3 detik |
-| Range slider | 1-15 detik |
-
+| Pattern | Sama dengan Promo KB JSON upload |
+| Validasi wajib | `question`, `answer` |
+| Default category | "Other" |
+| Default knowledgeType | "Static" |
