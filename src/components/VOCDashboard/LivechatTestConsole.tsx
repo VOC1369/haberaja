@@ -215,7 +215,7 @@ export function LivechatTestConsole() {
         </div>
 
         {/* Input Area */}
-        <div className="shrink-0 p-4 border-t border-border">
+        <div className="shrink-0 px-4 py-3 border-t border-border">
           <div className="flex gap-2">
             <Input
               value={input}
