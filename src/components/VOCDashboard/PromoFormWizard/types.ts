@@ -188,6 +188,13 @@ export const PKB_FIELD_WHITELIST = [
   'extra_config',           // NEW: CRITICAL escape hatch
   
   // ===============================
+  // ARCHETYPE PAYLOAD (v2.1 ADDITIVE)
+  // ===============================
+  'turnover_basis',
+  'archetype_payload',
+  'archetype_invariants',
+  
+  // ===============================
   // SUBCATEGORIES
   // ===============================
   'subcategories',
@@ -581,6 +588,11 @@ export interface PromoFormData {
   
   // Escape Hatch Canonical
   extra_config?: Record<string, unknown>;  // NEW: CRITICAL escape hatch
+  
+  // Archetype Payload (v2.1 ADDITIVE — SSoT: turnover_basis ROOT ONLY)
+  turnover_basis?: 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null;
+  archetype_payload?: Record<string, unknown>;
+  archetype_invariants?: Record<string, unknown>;
   
   // Audit Canonical
   created_by?: string;                     // NEW: canonical

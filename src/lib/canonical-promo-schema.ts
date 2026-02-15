@@ -175,6 +175,13 @@ export interface CanonicalPromoKB {
   extra_config: Record<string, unknown>;
 
   // ===============================
+  // ARCHETYPE PAYLOAD (ADDITIVE — SSoT SAFE)
+  // ===============================
+  turnover_basis: 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null;
+  archetype_payload: Record<string, unknown>;
+  archetype_invariants: Record<string, unknown>;
+
+  // ===============================
   // SUBCATEGORIES (COMBO PROMO)
   // ===============================
   has_subcategories: boolean;
@@ -349,6 +356,11 @@ export const CANONICAL_INERT: CanonicalPromoKB = {
   custom_terms: '',
   extra_config: {},
   
+  // Archetype Payload
+  turnover_basis: null,
+  archetype_payload: {},
+  archetype_invariants: {},
+  
   // Subcategories
   has_subcategories: false,
   subcategories: [],
@@ -422,6 +434,50 @@ export function validateCanonicalPromo(promo: CanonicalPromoKB): ValidationResul
     }
   }
   
+  // ============================================
+  // ARCHETYPE PAYLOAD VALIDATION (SSoT + Completeness)
+  // ============================================
+  
+  // Rule 1 — ERROR: SSoT violation — turnover_basis in payload (4 patterns)
+  const payload = promo.archetype_payload || {};
+  const payloadStr = JSON.stringify(payload);
+  
+  if ('turnover_basis' in payload) {
+    errors.push('SSoT violation: turnover_basis ditemukan di archetype_payload (harus di root)');
+  }
+  if ((payload as Record<string, unknown>).withdraw_rule && 
+      typeof (payload as Record<string, unknown>).withdraw_rule === 'object' &&
+      'turnover_basis' in ((payload as Record<string, unknown>).withdraw_rule as Record<string, unknown>)) {
+    errors.push('SSoT violation: turnover_basis ditemukan di archetype_payload.withdraw_rule');
+  }
+  if ((payload as Record<string, unknown>).turnover && 
+      typeof (payload as Record<string, unknown>).turnover === 'object' &&
+      'basis' in ((payload as Record<string, unknown>).turnover as Record<string, unknown>)) {
+    errors.push('SSoT violation: turnover basis ditemukan di archetype_payload.turnover.basis');
+  }
+  if ((payload as Record<string, unknown>).post_reward_rules && 
+      typeof (payload as Record<string, unknown>).post_reward_rules === 'object' &&
+      'turnover_basis' in ((payload as Record<string, unknown>).post_reward_rules as Record<string, unknown>)) {
+    errors.push('SSoT violation: turnover_basis ditemukan di archetype_payload.post_reward_rules');
+  }
+  
+  // Rule 2 — WARNING: Ambiguous TO basis
+  if (promo.turnover_enabled === true && promo.turnover_basis === null) {
+    warnings.push('Ambiguous TO basis: turnover_enabled=true tapi turnover_basis=null');
+  }
+  
+  // Rule 3 — WARNING: Lifecycle-heavy archetype with empty payload
+  const LIFECYCLE_HEAVY: string[] = ['LUCKY_DRAW', 'COMPETITION'];
+  const resolvedArchetype = (
+    (promo.extra_config as Record<string, unknown>)?._taxonomy_decision as Record<string, unknown> | undefined
+  )?.archetype as string | undefined
+    ?? ((promo.extra_config as Record<string, unknown>)?._taxonomy as Record<string, unknown> | undefined)?.archetype as string | undefined
+    ?? null;
+  
+  if (resolvedArchetype && LIFECYCLE_HEAVY.includes(resolvedArchetype) && Object.keys(payload).length === 0) {
+    warnings.push(`Archetype ${resolvedArchetype} lifecycle-heavy tapi archetype_payload kosong`);
+  }
+
   return {
     valid: errors.length === 0,
     errors,

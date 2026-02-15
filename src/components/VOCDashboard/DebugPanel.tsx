@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
 import type { DebugBreakdown } from "@/lib/livechat-engine";
 
 interface DebugPanelProps {
@@ -24,6 +25,29 @@ export function DebugPanel({ debug }: DebugPanelProps) {
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="mt-2 p-3 bg-muted/30 border border-border rounded-lg font-mono text-xs space-y-3">
+          {/* 0. KB Health Status (from engine, not UI-computed) */}
+          {debug.kbHealth && (
+            <div className="flex items-start gap-2">
+              <span className="text-button-hover font-semibold">KB Status</span>
+              {debug.kbHealth.status === 'READY' && (
+                <Badge variant="success" size="xs">READY</Badge>
+              )}
+              {debug.kbHealth.status === 'NOT_READY' && (
+                <div className="flex flex-col gap-0.5">
+                  <Badge variant="warning" size="xs">NOT_READY</Badge>
+                  {debug.kbHealth.missingKeys.length > 0 && (
+                    <span className="text-foreground/70 pl-1">
+                      Missing: {debug.kbHealth.missingKeys.join(', ')}
+                    </span>
+                  )}
+                </div>
+              )}
+              {debug.kbHealth.status === 'UNKNOWN' && (
+                <Badge variant="secondary" size="xs">UNKNOWN (archetype tidak terdeteksi)</Badge>
+              )}
+            </div>
+          )}
+
           {/* 1. User Intent */}
           {debug.userIntent && (
             <div>

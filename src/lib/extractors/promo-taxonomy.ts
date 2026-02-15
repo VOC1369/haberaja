@@ -136,6 +136,14 @@ export interface ArchetypeSemanticRule {
   // ============================================
   applicable_fields: string[];
   not_applicable_fields: string[];
+  
+  // ============================================
+  // PAYLOAD CONTRACT (for lifecycle-heavy archetypes)
+  // ============================================
+  payload_contract?: {
+    required_keys: string[];
+    optional_keys: string[];
+  };
 }
 
 // ============================================
@@ -763,11 +771,16 @@ export const ARCHETYPE_RULES: Record<PromoArchetype, ArchetypeSemanticRule> = {
     applicable_fields: [
       'tiers', 'tier_count', 'physical_reward_name',
       'cash_reward_amount', 'event_period', 'trigger_event',
+      'archetype_payload', 'archetype_invariants', 'turnover_basis',
     ],
     not_applicable_fields: [
       'calculation_value', 'min_deposit', 'turnover_multiplier',
       'referral_tiers', 'require_apk',
     ],
+    payload_contract: {
+      required_keys: ['event_period', 'prize_structure'],
+      optional_keys: ['leaderboard_rules', 'reset_rules', 'claim_channels', 'notes'],
+    },
   },
 
   // ============================================
@@ -838,11 +851,16 @@ export const ARCHETYPE_RULES: Record<PromoArchetype, ArchetypeSemanticRule> = {
     applicable_fields: [
       'lucky_spin_rewards', 'lucky_spin_max_per_day',
       'reward_quantity', 'claim_method', 'min_deposit',
+      'archetype_payload', 'archetype_invariants', 'turnover_basis',
     ],
     not_applicable_fields: [
       'calculation_basis', 'calculation_value', 'turnover_multiplier',
       'referral_tiers', 'payout_direction',
     ],
+    payload_contract: {
+      required_keys: ['daily_reset_time', 'claim_window', 'deposit_requirement', 'spin_limit', 'collection_mechanic'],
+      optional_keys: ['claim_channels', 'notes'],
+    },
   },
 
   // ============================================
@@ -969,4 +987,13 @@ export function getAllArchetypes(): PromoArchetype[] {
  */
 export function getArchetypeDisplayName(archetype: PromoArchetype): string {
   return ARCHETYPE_RULES[archetype]?.display_name || archetype;
+}
+
+/**
+ * Stable O(1) lookup for payload contract by archetype string.
+ * Returns null if archetype not found or has no contract.
+ */
+export function getPayloadContract(archetype: string): { required_keys: string[]; optional_keys: string[] } | null {
+  const rule = ARCHETYPE_RULES[archetype as PromoArchetype];
+  return rule?.payload_contract ?? null;
 }

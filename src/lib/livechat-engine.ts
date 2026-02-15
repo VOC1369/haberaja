@@ -7,6 +7,7 @@ import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
 import { compileRuntimePrompt } from './apbe-prompt-template';
 import { loadInitialConfig } from './apbe-storage';
 import { promoKB } from './promo-storage';
+import { getPayloadContract } from './extractors/promo-taxonomy';
 import type { PromoItem } from '@/components/VOCDashboard/PromoFormWizard/types';
 import type { APBEConfig } from '@/types/apbe-config';
 
@@ -33,6 +34,10 @@ export interface DebugBreakdown {
   finalValidation: string;
   raw: string;
   source?: 'llm' | 'client';
+  kbHealth?: {
+    status: 'READY' | 'NOT_READY' | 'UNKNOWN';
+    missingKeys: string[];
+  };
 }
 
 // ============================================
@@ -47,9 +52,18 @@ const KB_FIELDS = [
   'custom_terms', 'blacklisted_games', 'valid_from', 'valid_until',
   'game_types', 'game_providers', 'claim_frequency', 'claim_method',
   'mode', 'category', 'tier_archetype', 'tiers',
+  'turnover_basis', 'archetype_payload', 'archetype_invariants',
 ] as const;
 
-function buildKBContext(promo: PromoItem): string {
+interface KBContextResult {
+  context: string;
+  kbHealth: {
+    status: 'READY' | 'NOT_READY' | 'UNKNOWN';
+    missingKeys: string[];
+  };
+}
+
+function buildKBContext(promo: PromoItem): KBContextResult {
   const data: Record<string, unknown> = {};
   for (const field of KB_FIELDS) {
     const value = (promo as unknown as Record<string, unknown>)[field];
@@ -58,12 +72,44 @@ function buildKBContext(promo: PromoItem): string {
     }
   }
   
-  return `# KNOWLEDGE BASE — Active Promo
+  // Resolve archetype (2-level fallback)
+  const extraConfig = (promo as unknown as Record<string, unknown>).extra_config as Record<string, unknown> | undefined;
+  const taxonomyDecision = extraConfig?._taxonomy_decision as Record<string, unknown> | undefined;
+  const taxonomyLegacy = extraConfig?._taxonomy as Record<string, unknown> | undefined;
+  const archetype = (taxonomyDecision?.archetype as string) ?? (taxonomyLegacy?.archetype as string) ?? null;
+  
+  // Compute KB health via payload contract
+  let kbHealth: KBContextResult['kbHealth'];
+  if (!archetype) {
+    kbHealth = { status: 'UNKNOWN', missingKeys: [] };
+  } else {
+    const contract = getPayloadContract(archetype);
+    if (!contract) {
+      kbHealth = { status: 'READY', missingKeys: [] };
+    } else {
+      const payload = (promo as unknown as Record<string, unknown>).archetype_payload as Record<string, unknown> | undefined || {};
+      const missing = contract.required_keys.filter(k => !(k in payload));
+      kbHealth = {
+        status: missing.length > 0 ? 'NOT_READY' : 'READY',
+        missingKeys: missing,
+      };
+    }
+  }
+  
+  // Build context string with rigid KB_HEALTH block
+  let context = `# KNOWLEDGE BASE — Active Promo
 Promo: ${promo.promo_name || 'Unknown'}
 
 \`\`\`json
 ${JSON.stringify(data, null, 2)}
-\`\`\``;
+\`\`\`
+
+# KB_HEALTH
+status: ${kbHealth.status}
+missing_required_payload_keys: [${kbHealth.missingKeys.join(', ')}]
+priority_rule: archetype_payload > custom_terms for lifecycle logic`;
+
+  return { context, kbHealth };
 }
 
 // ============================================
@@ -121,9 +167,11 @@ export async function buildSystemPrompt(
   
   let systemPrompt = personaPrompt;
   
-  // Inject KB context if promo selected
+  // Inject KB context if promo selected (KB_HEALTH always injected for AI awareness)
   if (selectedPromo) {
-    systemPrompt += '\n\n' + buildKBContext(selectedPromo);
+    const { context } = buildKBContext(selectedPromo);
+    systemPrompt += '\n\n' + context;
+    systemPrompt += '\n\nPRIORITAS: Jika data tersedia di archetype_payload, gunakan archetype_payload. custom_terms hanya untuk narasi S&K yang tidak terstruktur.';
   }
   
   // Inject debug instructions if debug mode ON
@@ -246,15 +294,25 @@ export async function streamChat(
       if (fullResponse.includes('---DEBUG---')) {
         const parts = fullResponse.split('---DEBUG---');
         if (parts.length >= 2) {
-          const debugRaw = parts.slice(1).join('---DEBUG---').trim();
+        const debugRaw = parts.slice(1).join('---DEBUG---').trim();
           const debug = parseDebugSection(debugRaw);
           debug.source = 'llm';
+          // Attach kbHealth from engine (not UI-computed)
+          if (selectedPromo) {
+            const { kbHealth } = buildKBContext(selectedPromo);
+            debug.kbHealth = kbHealth;
+          }
           onDebug(debug);
         }
       } else {
         // Client-side fallback
         const lastUserMsg = messages[messages.length - 1]?.content || '';
         const clientDebug = buildClientDebug(lastUserMsg, fullResponse, selectedPromo || null);
+        // Attach kbHealth from engine
+        if (selectedPromo) {
+          const { kbHealth } = buildKBContext(selectedPromo);
+          clientDebug.kbHealth = kbHealth;
+        }
         onDebug(clientDebug);
       }
     }
