@@ -32,6 +32,7 @@ export interface DebugBreakdown {
   confidence: string;
   finalValidation: string;
   raw: string;
+  source?: 'llm' | 'client';
 }
 
 // ============================================
@@ -168,6 +169,7 @@ export async function streamChat(
   onDebug: (debug: DebugBreakdown) => void,
   onDone: () => void,
   onError: (error: string) => void,
+  selectedPromo?: PromoItem | null,
 ): Promise<void> {
   if (!IS_DEV_MODE) {
     onError('Livechat Test Console hanya tersedia di dev mode');
@@ -240,12 +242,20 @@ export async function streamChat(
     }
 
     // Parse debug section if debug mode
-    if (debugMode && fullResponse.includes('---DEBUG---')) {
-      const parts = fullResponse.split('---DEBUG---');
-      if (parts.length >= 2) {
-        const debugRaw = parts.slice(1).join('---DEBUG---').trim();
-        const debug = parseDebugSection(debugRaw);
-        onDebug(debug);
+    if (debugMode) {
+      if (fullResponse.includes('---DEBUG---')) {
+        const parts = fullResponse.split('---DEBUG---');
+        if (parts.length >= 2) {
+          const debugRaw = parts.slice(1).join('---DEBUG---').trim();
+          const debug = parseDebugSection(debugRaw);
+          debug.source = 'llm';
+          onDebug(debug);
+        }
+      } else {
+        // Client-side fallback
+        const lastUserMsg = messages[messages.length - 1]?.content || '';
+        const clientDebug = buildClientDebug(lastUserMsg, fullResponse, selectedPromo || null);
+        onDebug(clientDebug);
       }
     }
 
@@ -253,6 +263,85 @@ export async function streamChat(
   } catch (error) {
     onError(error instanceof Error ? error.message : 'Unknown error');
   }
+}
+
+// ============================================
+// CLIENT-SIDE DEBUG FALLBACK
+// ============================================
+
+const CLIENT_DEBUG_FIELDS = [
+  'max_bonus', 'min_deposit', 'reward_amount', 'turnover_multiplier',
+  'reward_mode', 'payout_direction', 'calculation_base', 'calculation_basis',
+  'claim_frequency', 'claim_method', 'promo_type', 'trigger_event',
+] as const;
+
+export function buildClientDebug(
+  userMessage: string,
+  assistantResponse: string,
+  promo: PromoItem | null,
+): DebugBreakdown {
+  const promoData = promo as unknown as Record<string, unknown> | null;
+  const userNumbers = userMessage.match(/[\d][.\d,]*/g)?.map(n => parseFloat(n.replace(/,/g, ''))) || [];
+
+  const fieldsReferenced: string[] = [];
+  let matchCount = 0;
+  let mismatchCount = 0;
+
+  if (promoData) {
+    for (const field of CLIENT_DEBUG_FIELDS) {
+      const val = promoData[field];
+      if (val === undefined || val === null || val === '') continue;
+
+      const valStr = String(val);
+      const valNum = parseFloat(valStr);
+
+      // Check if user message or assistant response references this field
+      const mentioned = userMessage.toLowerCase().includes(field.replace(/_/g, ' '))
+        || assistantResponse.toLowerCase().includes(valStr.toLowerCase())
+        || (!isNaN(valNum) && userNumbers.includes(valNum));
+
+      if (mentioned) {
+        fieldsReferenced.push(`${field} = ${valStr}`);
+        // Check consistency: does assistant response contain the KB value?
+        if (assistantResponse.includes(valStr)) {
+          matchCount++;
+        } else {
+          mismatchCount++;
+        }
+      }
+    }
+  }
+
+  const hasPromo = promo !== null;
+  const confidence = !hasPromo ? 'rendah'
+    : mismatchCount > 0 ? 'rendah'
+    : matchCount >= 2 ? 'sangat tinggi'
+    : matchCount === 1 ? 'tinggi'
+    : 'sedang';
+
+  const analysis = mismatchCount > 0
+    ? `Mismatch terdeteksi — ${mismatchCount} field tidak konsisten`
+    : matchCount > 0
+    ? `Match ditemukan — ${matchCount} field konsisten`
+    : hasPromo
+    ? 'Tidak ada field numerik yang dirujuk langsung'
+    : 'Tidak ada promo KB yang dipilih';
+
+  return {
+    userIntent: userMessage.length > 120 ? userMessage.slice(0, 120) + '…' : userMessage,
+    jsonFieldsReferenced: fieldsReferenced.length > 0 ? fieldsReferenced : ['Tidak ada field yang dirujuk'],
+    analysis,
+    retrievalStatus: hasPromo ? (matchCount > 0 ? 'valid' : 'partial') : 'none',
+    conflictCheck: mismatchCount > 0 ? `ada (${mismatchCount} field)` : 'tidak ada',
+    confidence,
+    finalValidation: mismatchCount > 0
+      ? 'JSON conflict terdeteksi'
+      : matchCount > 0
+      ? 'Jawaban konsisten dengan KB'
+      : 'KB kurang lengkap',
+    raw: '[Client-generated trace]',
+    source: 'client',
+  };
 }
 
 // ============================================

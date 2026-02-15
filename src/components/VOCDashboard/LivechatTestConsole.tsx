@@ -121,6 +121,7 @@ export function LivechatTestConsole() {
           timestamp: new Date().toISOString(),
         }]);
       },
+      selectedPromo,
     );
   }, [input, isLoading, messages, selectedPromo, debugMode]);
 

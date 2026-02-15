@@ -7,11 +7,20 @@ interface DebugPanelProps {
 }
 
 export function DebugPanel({ debug }: DebugPanelProps) {
+  const isClient = debug.source === 'client';
+
   return (
     <Collapsible className="mt-2">
       <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
         <Search className="h-3 w-3" />
         <span className="font-medium">🔎 Debug</span>
+        <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-mono ${
+          isClient
+            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+            : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+        }`}>
+          {isClient ? 'Client trace' : 'LLM trace'}
+        </span>
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="mt-2 p-3 bg-muted/30 border border-border rounded-lg font-mono text-xs space-y-3">
