@@ -172,7 +172,7 @@ export function LivechatTestConsole() {
           <div className="space-y-4">
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground text-sm py-20">
-                <p className="font-mono">Dev-only Livechat Test Console</p>
+                <p className="font-medium">Dev-only Livechat Test Console</p>
                 <p className="mt-1 text-xs">Pilih promo dari KB, toggle Debug Mode, lalu mulai chat.</p>
               </div>
             )}
