@@ -1,65 +1,53 @@
 
+# Upload JSON Promo
 
-# Fix: Debug Trace Selalu Muncul (Client-Side Fallback)
+Menambahkan tombol "Upload JSON" di halaman Promo Knowledge Base, di sebelah tombol "Upload CSV" dan "Add New Promo".
 
-## Masalah
+## Cara Kerja
 
-Pesan "Debug data tidak tersedia untuk response ini" muncul karena LLM tidak selalu menyertakan section `---DEBUG---` di response-nya, meskipun sudah diminta. Ini terjadi karena:
-- LLM kadang "lupa" di response pertama
-- Response yang panjang membuat LLM memotong bagian debug
-- Tidak ada jaminan 100% LLM patuh pada instruksi format
+1. User klik tombol **Upload JSON**
+2. Muncul dialog/modal dengan textarea besar
+3. User paste JSON promo (format `PromoFormData` atau `CanonicalPromoKB`)
+4. Klik "Import" -- sistem memvalidasi JSON, lalu langsung simpan ke KB
+5. Toast success, list promo di-refresh
 
-## Solusi: Dual-Layer Debug
+## Validasi JSON
 
-Tambahkan **client-side fallback** yang otomatis membuat debug trace dari data yang sudah tersedia di frontend, sehingga trace SELALU muncul saat debug mode aktif.
+- Parse JSON -- jika gagal, tampilkan error "JSON tidak valid"
+- Cek minimal field `promo_name` ada -- jika kosong, error "promo_name wajib diisi"
+- Auto-generate `id`, `created_at`, `updated_at` jika belum ada
+- Auto-set `status: 'draft'` jika belum ada
+- Support paste single object `{...}` atau array `[{...}, {...}]` (bulk import)
 
-**Layer 1** (tetap): Parse `---DEBUG---` dari LLM response (kalau ada)
-**Layer 2** (baru): Jika LLM tidak menyertakan debug, buat trace lokal dari:
-- KB JSON fields yang ada di promo yang dipilih
-- User message terakhir
-- Response assistant
+## Perubahan UI
 
-## Perubahan
+Tombol baru ditambahkan di baris action buttons (antara "Upload CSV" dan "Add New Promo"):
 
-### 1. Tambah fungsi `buildClientDebug` di `livechat-engine.ts`
-
-Fungsi baru yang membuat DebugBreakdown secara lokal:
-- Scan user message untuk angka/keyword yang match atau mismatch dengan KB fields
-- Cek field-field utama seperti `max_bonus`, `min_deposit`, `reward_amount`, `turnover_multiplier`
-- Bandingkan angka yang disebut user vs nilai di KB
-- Generate trace sederhana: fields referenced, match/mismatch status, confidence
-
-### 2. Update `streamChat` callback flow
-
-Di bagian `onDone`:
-- Jika `---DEBUG---` ada di response → parse seperti biasa (Layer 1)
-- Jika tidak ada → panggil `buildClientDebug(userMessage, assistantResponse, promoData)` sebagai fallback (Layer 2)
-- Debug panel selalu mendapat data, tidak pernah kosong
-
-### 3. Update `LivechatTestConsole.tsx`
-
-- Pass `selectedPromo` ke streaming flow supaya client-side debug bisa akses KB data
-- Update `streamChat` signature untuk menerima parameter promo data
-
-### 4. Update `DebugPanel.tsx`
-
-- Tambah indikator kecil: "[LLM trace]" vs "[Client trace]" supaya bisa dibedakan sumbernya
-- Warna badge berbeda untuk membedakan
+```
+[Regenerate All S&K] [Upload CSV] [Upload JSON] [+ Add New Promo]
+```
 
 ## Detail Teknis
 
-### Files yang diubah:
-- `src/lib/livechat-engine.ts` — tambah `buildClientDebug()`, update `streamChat` signature
-- `src/components/VOCDashboard/LivechatTestConsole.tsx` — pass promo data ke stream
-- `src/components/VOCDashboard/DebugPanel.tsx` — tambah source indicator
+### File yang diubah:
 
-### Client-side debug logic:
-- Extract angka dari user message menggunakan regex
-- Bandingkan dengan nilai KB fields (`max_bonus`, `min_deposit`, `reward_amount`, dll)
-- Cek apakah response assistant menyebut nilai yang konsisten dengan KB
-- Generate confidence: "sangat tinggi" jika semua match, "rendah" jika ada mismatch
+**`src/components/VOCDashboard/PromoKnowledgeSection.tsx`**
+- Tambah state: `showJsonDialog`, `jsonInput`, `isImportingJson`
+- Tambah tombol "Upload JSON" dengan icon `FileJson` (dari lucide-react) di baris action buttons
+- Tambah Dialog component untuk input JSON:
+  - Textarea besar (min-h-[300px]) untuk paste JSON
+  - Tombol "Import" dan "Batal"
+- Tambah fungsi `handleJsonImport()`:
+  1. `JSON.parse(jsonInput)` -- catch error
+  2. Normalize ke array (jika single object, wrap dalam array)
+  3. Loop: untuk setiap promo object:
+     - Validasi `promo_name` exists
+     - Call `promoKB.add(promo)` untuk simpan
+  4. Toast success dengan jumlah promo yang berhasil diimport
+  5. Refresh list via `loadPromos()`
+  6. Close dialog dan reset textarea
 
-### Tidak ada breaking changes:
-- Fallback hanya aktif saat debug mode ON dan LLM tidak menyediakan trace
-- Kalau LLM menyediakan trace, tetap pakai yang dari LLM (lebih detail)
-- Debug panel UI tetap sama, hanya ada label sumber tambahan
+### Tidak ada file baru yang perlu dibuat
+- Menggunakan komponen UI yang sudah ada (Dialog, Textarea, Button)
+- Menggunakan `promoKB.add()` yang sudah ada untuk menyimpan
+- Menggunakan `normalizePromoData()` untuk normalisasi field sebelum simpan
