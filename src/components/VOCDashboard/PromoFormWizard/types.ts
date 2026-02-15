@@ -1788,6 +1788,66 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
   }
   
   // ============================================
+  // 4.5. Hydrate from JSON import fields
+  // Maps alternative/canonical field names to form fields
+  // ============================================
+
+  // calculation_percentage → calculation_value + calculation_method
+  if (!normalized.calculation_value && (normalized as any).calculation_percentage) {
+    normalized.calculation_value = (normalized as any).calculation_percentage;
+    if (!normalized.calculation_method) {
+      normalized.calculation_method = 'percentage';
+    }
+  }
+
+  // calculation_basis (canonical v2.1) → calculation_base (form field)
+  if (!normalized.calculation_base && (normalized as any).calculation_basis) {
+    const basisRaw = String((normalized as any).calculation_basis).toLowerCase();
+    if (basisRaw.includes('turnover') || basisRaw.includes('slot_turnover')) {
+      normalized.calculation_base = 'turnover';
+    } else if (basisRaw.includes('loss')) {
+      normalized.calculation_base = 'loss';
+    } else if (basisRaw.includes('deposit')) {
+      normalized.calculation_base = 'deposit';
+    } else if (basisRaw.includes('withdraw')) {
+      normalized.calculation_base = 'withdraw';
+    } else {
+      normalized.calculation_base = basisRaw;
+    }
+  }
+
+  // archetype_invariants.mode_must_be → reward_mode
+  const invariants = (normalized as any).archetype_invariants;
+  if (invariants && typeof invariants === 'object') {
+    if (invariants.mode_must_be && !normalized.reward_mode) {
+      normalized.reward_mode = invariants.mode_must_be;
+    }
+    if (invariants.percentage_required && !normalized.calculation_method) {
+      normalized.calculation_method = 'percentage';
+    }
+  }
+
+  // archetype_payload → unpack to form fields
+  const payload = (normalized as any).archetype_payload;
+  if (payload && typeof payload === 'object') {
+    if (payload.min_turnover_required && !normalized.min_calculation) {
+      normalized.min_calculation = payload.min_turnover_required;
+    }
+    if (payload.calculation_percentage && !normalized.calculation_value) {
+      normalized.calculation_value = payload.calculation_percentage;
+    }
+    if (payload.calculation_basis && !normalized.calculation_base) {
+      normalized.calculation_base = String(payload.calculation_basis)
+        .replace('slot_', '').toLowerCase();
+    }
+    if (payload.automatic_distribution !== undefined) {
+      if (payload.automatic_distribution === true && !normalized.distribution_mode) {
+        normalized.distribution_mode = 'setelah_syarat';
+      }
+    }
+  }
+
+  // ============================================
   // 5. Normalize reward_mode based on actual data context
   // ============================================
   
