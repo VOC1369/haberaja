@@ -34,11 +34,21 @@ export function useValidationPenalty(): UseValidationPenaltyReturn {
   const lastScoreRef = useRef<number>(100);
   const lastResultRef = useRef<PersonaValidationResult | null>(null);
   const lastErrorsRef = useRef<Set<string>>(new Set());
+  const isFirstRunRef = useRef<boolean>(true);
   
   const checkPenalty = useCallback((config: APBEConfig): PenaltyEvent | null => {
     const result = validatePersonaJSON(config);
     const currentScore = result.score;
     const previousScore = lastScoreRef.current;
+    
+    // Skip toast on first run — just baseline the score silently
+    if (isFirstRunRef.current) {
+      isFirstRunRef.current = false;
+      lastScoreRef.current = currentScore;
+      lastResultRef.current = result;
+      lastErrorsRef.current = new Set([...result.criticalErrors, ...result.warnings]);
+      return null;
+    }
     
     // Detect new errors (not previously seen)
     const currentErrors = new Set([...result.criticalErrors, ...result.warnings]);
