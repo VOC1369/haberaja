@@ -1,122 +1,131 @@
 
 
-# Fix 4 Remaining Gaps — Faithful to Original Terms
+# Fix: JSON Import Autofill untuk Konfigurasi Reward
 
-4 patch di `src/lib/openai-extractor.ts`. Semua berdasarkan evidence eksplisit dari terms asli.
+## Problem
 
----
+Saat user import JSON promo via "Upload JSON", data masuk ke list tapi **Konfigurasi Reward (Step 4) kosong 0%**. Ini terjadi karena field-field di JSON yang diimport menggunakan nama yang berbeda dari yang diharapkan form wizard.
 
-## Fix 1: `turnover_basis` — Tambah Pattern "Bonus -> TO"
-
-**Evidence dari terms:**
-> "Contoh: Bonus dari Lucky Spin Rp50.000 -> Turn Over yang dibutuhkan untuk withdraw = Rp50.000 x 2 = Rp100.000"
-
-Ini jelas: TO dihitung dari BONUS, bukan deposit.
-
-**Lokasi**: `detectTurnoverBasis()` (~line 3394)
-
-Tambah pattern baru sebelum fallback ambiguity:
-
-```typescript
-// Pattern: "Bonus RpX → TO = RpX × N" (basis = bonus amount, not deposit)
-if (/bonus\s*(?:dari\s*)?(?:lucky\s*spin\s*)?rp[\d.,]+\s*[→\->]+\s*(?:turn\s*over|to)\s*(?:yang\s*)?/i.test(termsText) ||
-    /(?:turn\s*over|to)\s*=\s*(?:bonus|rp[\d.,]+)\s*[×x]\s*\d/i.test(termsText)) {
-  return { basis: 'bonus', has_turnover: true, ambiguity: false };
-}
-```
-
-Ini akan menghasilkan:
-- `turnover_basis: "bonus"` (bukan null)
-- `turnover_ambiguity: false` (bukan true)
-
----
-
-## Fix 2: `collection_requirement` — Tambah `eligible_rewards` dan `require_same_image`
-
-**Evidence dari terms:**
-> "gambar dari Lucky Spin seperti Handphone, Laptop, & Emas"
-> "mengumpulkan 3 gambar yang sama"
-
-**Lokasi**: Collection requirement block (~line 3528-3545)
-
-Perluas extraction untuk menangkap eligible rewards dan "yang sama" flag:
-
-```typescript
-if (collectMatch) {
-  const count = parseInt(collectMatch[1], 10);
-  const periodMatch = termsText.match(
-    /(?:batas\s*waktu|dalam|within)\s*[:.]?\s*(\d+)\s*(bulan|hari|minggu|month|day|week)/i
-  );
-  
-  // Extract eligible reward items (e.g., "Handphone, Laptop, & Emas")
-  const rewardItemsMatch = termsText.match(
-    /(?:gambar\s*(?:dari\s*)?(?:lucky\s*spin\s*)?seperti)\s*([^.;]+)/i
-  );
-  const eligibleRewards = rewardItemsMatch 
-    ? rewardItemsMatch[1]
-        .split(/[,&]/)
-        .map(s => s.trim().toLowerCase())
-        .filter(Boolean)
-    : [];
-  
-  // Detect "yang sama" = require same image
-  const requireSame = /gambar\s*(?:yang\s*)?sama/i.test(termsText);
-  
-  collectionRequirement = {
-    same_image_count: count,
-    collection_period: periodMatch 
-      ? `${periodMatch[1]}_${periodMatch[2]...}` 
-      : null,
-    require_same_image: requireSame,
-    eligible_rewards: eligibleRewards.length > 0 ? eligibleRewards : undefined,
-    reward_condition: `${count}_identical_images`,
-  };
-}
-```
-
-Result:
+Contoh dari JSON user:
 ```json
-"collection_requirement": {
-  "same_image_count": 3,
-  "collection_period": "1_month",
-  "require_same_image": true,
-  "eligible_rewards": ["handphone", "laptop", "emas"],
-  "reward_condition": "3_identical_images"
+{
+  "calculation_percentage": 0.5,
+  "calculation_basis": "slot_turnover",
+  "archetype_invariants": { "mode_must_be": "formula", "percentage_required": true },
+  "archetype_payload": { "min_turnover_required": 1000000 }
 }
 ```
 
----
-
-## Fix 3: `daily_reset_time` — Tambah Fallback Pattern
-
-Regex saat ini sudah menangkap "direset pada pukul 23:59", tapi mungkin gagal jika format terms sedikit beda (misalnya "direset pukul 23:59" tanpa "pada", atau "di reset" dengan spasi).
-
-**Lokasi**: ~line 3504-3511
-
-Tambah fallback pattern yang lebih permisif:
-
-```typescript
-const resetMatch = termsText.match(
-  /(?:di)?reset\s*(?:pada\s*)?(?:pukul|jam)\s*(\d{1,2}[:.]\d{2})/i
-) || termsText.match(
-  /(?:dimulai|mulai)\s*(?:pukul|jam)?\s*(\d{1,2}[:.]\d{2})/i
-) || termsText.match(
-  /(?:pukul|jam)\s*(\d{1,2}[:.]\d{2})\s*(?:wib|wit|wita)/i
-);
+Form wizard mengharapkan:
+```
+calculation_value = 0.5
+calculation_method = "percentage"
+calculation_base = "turnover"
+reward_mode = "formula"
 ```
 
-Fallback ketiga menangkap pattern "pukul 23:59 WIB" di mana pun posisinya dalam kalimat.
+`normalizePromoData()` tidak menangani mapping ini, sehingga reward config tetap kosong.
 
----
+## Root Cause
 
-## Summary
+Ada 3 gap di `normalizePromoData()` (file `src/components/VOCDashboard/PromoFormWizard/types.ts`):
 
-| # | Fix | Field | Dari | Ke |
-|---|-----|-------|------|----|
-| 1 | Turnover basis detection | `turnover_basis` | `null` | `"bonus"` |
-| 1b | Auto-resolve | `turnover_ambiguity` | `true` | `false` |
-| 2 | Collection enrichment | `collection_requirement` | `null` | `{...full object}` |
-| 3 | Reset time fallback | `daily_reset_time` | `null` | `"23:59 WIB"` |
+1. **`calculation_percentage`** tidak dimapping ke `calculation_value` + `calculation_method: 'percentage'`
+2. **`calculation_basis`** (canonical v2.1) tidak dimapping ke `calculation_base` (form field)
+3. **`archetype_invariants.mode_must_be`** tidak digunakan untuk set `reward_mode`
+4. **`archetype_payload`** fields (min_turnover_required, dll) tidak di-unpack ke form fields
 
-Satu file. Tiga block edit. Zero refactor.
+## Fix
+
+**File**: `src/components/VOCDashboard/PromoFormWizard/types.ts`
+
+**Lokasi**: Di `normalizePromoData()`, tambah section baru **sebelum** section 5 (reward_mode normalization), karena reward_mode logic bergantung pada field yang perlu di-resolve dulu.
+
+### Section 4.5: JSON Import Field Hydration
+
+```typescript
+// ============================================
+// 4.5. Hydrate from JSON import fields
+// Maps alternative/canonical field names to form fields
+// ============================================
+
+// calculation_percentage → calculation_value + calculation_method
+if (!normalized.calculation_value && (normalized as any).calculation_percentage) {
+  normalized.calculation_value = (normalized as any).calculation_percentage;
+  if (!normalized.calculation_method) {
+    normalized.calculation_method = 'percentage';
+  }
+}
+
+// calculation_basis (canonical v2.1) → calculation_base (form field)
+if (!normalized.calculation_base && (normalized as any).calculation_basis) {
+  const basisRaw = String((normalized as any).calculation_basis).toLowerCase();
+  // Map common variants
+  if (basisRaw.includes('turnover') || basisRaw.includes('slot_turnover')) {
+    normalized.calculation_base = 'turnover';
+  } else if (basisRaw.includes('loss')) {
+    normalized.calculation_base = 'loss';
+  } else if (basisRaw.includes('deposit')) {
+    normalized.calculation_base = 'deposit';
+  } else if (basisRaw.includes('withdraw')) {
+    normalized.calculation_base = 'withdraw';
+  } else {
+    normalized.calculation_base = basisRaw;
+  }
+}
+
+// archetype_invariants.mode_must_be → reward_mode
+const invariants = (normalized as any).archetype_invariants;
+if (invariants && typeof invariants === 'object') {
+  if (invariants.mode_must_be && !normalized.reward_mode) {
+    normalized.reward_mode = invariants.mode_must_be;
+  }
+  if (invariants.percentage_required && !normalized.calculation_method) {
+    normalized.calculation_method = 'percentage';
+  }
+}
+
+// archetype_payload → unpack to form fields
+const payload = (normalized as any).archetype_payload;
+if (payload && typeof payload === 'object') {
+  if (payload.min_turnover_required && !normalized.min_calculation) {
+    normalized.min_calculation = payload.min_turnover_required;
+  }
+  if (payload.calculation_percentage && !normalized.calculation_value) {
+    normalized.calculation_value = payload.calculation_percentage;
+  }
+  if (payload.calculation_basis && !normalized.calculation_base) {
+    normalized.calculation_base = String(payload.calculation_basis)
+      .replace('slot_', '').toLowerCase();
+  }
+  if (payload.automatic_distribution !== undefined) {
+    // Map to distribution_mode
+    if (payload.automatic_distribution === true && !normalized.distribution_mode) {
+      normalized.distribution_mode = 'setelah_syarat';
+    }
+  }
+}
+```
+
+## Expected Result
+
+Sebelum fix:
+- Konfigurasi Reward: **0%** (semua field kosong)
+- Mode Reward: tidak terpilih
+
+Sesudah fix:
+- Mode Reward: **Dinamis** (formula) -- auto-selected
+- Calculation Value: **0.5** (0.5%)
+- Calculation Base: **turnover**
+- Min Calculation: **1,000,000**
+- Readiness score naik dari 58 ke ~80+
+
+## Impact
+
+| Item | Detail |
+|------|--------|
+| File | `types.ts` (normalizePromoData) |
+| Lines | ~25 lines ditambahkan |
+| Breaking change | Zero -- hanya menambah fallback mapping |
+| Existing flow | Tidak terpengaruh (guard `if (!field)` di setiap mapping) |
 
