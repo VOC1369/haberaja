@@ -1,15 +1,97 @@
 /**
- * APBE v1.3 Supabase Storage
+ * APBE v1.4 Supabase Storage with localStorage Fallback
  * 
  * Full Supabase integration for 3-table architecture:
  * - voc_agent_persona (core identity)
  * - voc_agent_library (templates)
  * - voc_agent_rules (business logic)
+ * 
+ * v1.4: Added localStorage fallback when Supabase schema doesn't match.
+ * All operations silently fall back to localStorage if Supabase returns
+ * schema errors (PGRST204), preventing repeated error toasts.
  */
 
 import { APBEConfig, initialAPBEConfig, DEFAULT_VERIFICATION_FIELDS } from "@/types/apbe-config";
 import { supabase, DEFAULT_CLIENT_ID, CURRENT_SCHEMA_VERSION, generateUUID, logSupabaseError } from "./supabase-client";
 import { splitConfigForSupabase, mergeConfigFromSupabase, SplitAPBEData } from "./apbe-supabase-schema";
+
+// ============================================================
+// LOCAL STORAGE FALLBACK LAYER
+// ============================================================
+
+const LS_KEYS = {
+  DRAFT: (clientId: string) => `apbe_draft_${clientId}`,
+  PUBLISHED: (clientId: string) => `apbe_published_${clientId}`,
+  VERSIONS: (clientId: string) => `apbe_versions_${clientId}`,
+};
+
+// Track if Supabase schema is compatible (cached per session)
+let _supabaseSchemaOk: boolean | null = null;
+
+async function isSupabaseSchemaOk(): Promise<boolean> {
+  if (_supabaseSchemaOk !== null) return _supabaseSchemaOk;
+  
+  try {
+    // Test with a lightweight query that touches config_A
+    const { error } = await supabase
+      .from('voc_agent_persona')
+      .select('id, config_A')
+      .limit(1);
+    
+    if (error?.code === 'PGRST204' || error?.message?.includes('column')) {
+      console.warn('[APBE Storage] Supabase schema mismatch — using localStorage fallback');
+      _supabaseSchemaOk = false;
+    } else {
+      _supabaseSchemaOk = true;
+    }
+  } catch {
+    _supabaseSchemaOk = false;
+  }
+  
+  return _supabaseSchemaOk;
+}
+
+function lsSaveDraft(config: APBEConfig, clientId: string): void {
+  try {
+    localStorage.setItem(LS_KEYS.DRAFT(clientId), JSON.stringify(config));
+  } catch (e) {
+    console.warn('[APBE Storage] localStorage save failed', e);
+  }
+}
+
+function lsLoadDraft(clientId: string): APBEConfig | null {
+  try {
+    const raw = localStorage.getItem(LS_KEYS.DRAFT(clientId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function lsClearDraft(clientId: string): void {
+  localStorage.removeItem(LS_KEYS.DRAFT(clientId));
+}
+
+function lsGetVersions(clientId: string): APBEVersion[] {
+  try {
+    const raw = localStorage.getItem(LS_KEYS.VERSIONS(clientId));
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function lsSaveVersion(version: APBEVersion, clientId: string): void {
+  try {
+    const versions = lsGetVersions(clientId);
+    // Deactivate all
+    versions.forEach(v => v.is_active = false);
+    versions.unshift(version);
+    localStorage.setItem(LS_KEYS.VERSIONS(clientId), JSON.stringify(versions));
+  } catch (e) {
+    console.warn('[APBE Storage] localStorage save version failed', e);
+  }
+}
 
 // ============================================================
 // INTERFACES
@@ -77,6 +159,13 @@ function autoFixEmojiConflicts(config: APBEConfig): APBEConfig {
 
 export async function saveAPBEDraft(config: APBEConfig, clientId: string = DEFAULT_CLIENT_ID): Promise<void> {
   const cleanedConfig = autoFixEmojiConflicts(config);
+  
+  // Check if Supabase schema is compatible
+  if (!(await isSupabaseSchemaOk())) {
+    lsSaveDraft(cleanedConfig, clientId);
+    return;
+  }
+  
   const draftName = getDraftPersonaName(clientId);
   const splitData = splitConfigForSupabase(cleanedConfig);
   
@@ -126,6 +215,10 @@ export async function saveAPBEDraft(config: APBEConfig, clientId: string = DEFAU
 }
 
 export async function loadAPBEDraft(clientId: string = DEFAULT_CLIENT_ID): Promise<APBEConfig | null> {
+  if (!(await isSupabaseSchemaOk())) {
+    return lsLoadDraft(clientId);
+  }
+  
   const draftName = getDraftPersonaName(clientId);
   
   const { data: draft, error } = await supabase
@@ -158,6 +251,11 @@ export async function loadAPBEDraft(clientId: string = DEFAULT_CLIENT_ID): Promi
 }
 
 export async function clearAPBEDraft(clientId: string = DEFAULT_CLIENT_ID): Promise<void> {
+  if (!(await isSupabaseSchemaOk())) {
+    lsClearDraft(clientId);
+    return;
+  }
+  
   const draftName = getDraftPersonaName(clientId);
   
   const { error } = await supabase
@@ -180,6 +278,31 @@ export async function publishAPBEConfig(
   clientId: string = DEFAULT_CLIENT_ID
 ): Promise<APBEVersion | null> {
   const cleanedConfig = autoFixEmojiConflicts(config);
+  
+  // Fallback to localStorage if Supabase schema doesn't match
+  if (!(await isSupabaseSchemaOk())) {
+    const versions = lsGetVersions(clientId);
+    const nextVersion = versions.length + 1;
+    const personaName = config.agent?.name || config.A?.group_name || "Unnamed Persona";
+    const now = new Date().toISOString();
+    const version: APBEVersion = {
+      id: generateUUID(),
+      client_id: clientId,
+      version: nextVersion,
+      schema_version: CURRENT_SCHEMA_VERSION,
+      persona_name: personaName,
+      persona_json: cleanedConfig,
+      runtime_prompt: runtimePrompt,
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+      created_by: createdBy,
+    };
+    lsSaveVersion(version, clientId);
+    lsClearDraft(clientId);
+    return version;
+  }
+  
   const splitData = splitConfigForSupabase(cleanedConfig);
   
   // Get current version count for this client
@@ -418,6 +541,11 @@ export async function updateExistingPersona(
 // ============================================================
 
 export async function getActiveConfig(clientId: string = DEFAULT_CLIENT_ID): Promise<APBEVersion | null> {
+  if (!(await isSupabaseSchemaOk())) {
+    const versions = lsGetVersions(clientId);
+    return versions.find(v => v.is_active) || null;
+  }
+  
   const { data: persona, error } = await supabase
     .from('voc_agent_persona')
     .select('*')
@@ -474,6 +602,10 @@ export async function getActiveConfig(clientId: string = DEFAULT_CLIENT_ID): Pro
 
 export async function getConfigVersions(clientId?: string): Promise<APBEVersion[]> {
   const targetClientId = clientId || DEFAULT_CLIENT_ID;
+  
+  if (!(await isSupabaseSchemaOk())) {
+    return lsGetVersions(targetClientId);
+  }
   
   const { data: personas, error } = await supabase
     .from('voc_agent_persona')
