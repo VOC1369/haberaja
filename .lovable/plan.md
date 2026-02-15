@@ -1,62 +1,65 @@
 
-# Tambah Upload JSON di General Knowledge Base (Dual Mode: Manual + JSON)
+# Tambah General KB Toggle + Semua Promo di Livechat Test Console
 
 ## Apa yang berubah
 
-Form manual ("Add New General Entry") tetap ada seperti sekarang. Ditambahkan tombol **Upload JSON** di sebelah tombol "Add New General Entry" yang membuka dialog paste JSON untuk bulk import — mengikuti pattern yang sama persis dengan Promo Knowledge Base.
+Di header Livechat Test Console, ditambahkan 2 kontrol baru:
 
-Tombol "Upload CSV" yang saat ini belum fungsional akan diganti menjadi **Upload JSON** yang benar-benar berfungsi.
+1. **General KB toggle (ON/OFF)** — Switch untuk menyertakan data General Knowledge Base ke system prompt. Default OFF.
+2. **Opsi "Semua Promo" di dropdown Promo** — Selain pilih satu promo, user bisa pilih "Semua Promo" untuk inject semua promo KB sekaligus ke system prompt.
 
-## Perubahan
+## Perubahan UI (LivechatTestConsole.tsx)
 
-### 1. Ganti tombol "Upload CSV" menjadi "Upload JSON"
-**File:** `src/components/VOCDashboard/GeneralKnowledgeSection.tsx`
-- Tombol "Upload CSV" diganti jadi **Upload JSON** dengan icon `FileJson`
-- Klik membuka dialog paste JSON (bukan upload file)
+### Header Controls (baris baru)
+- Tambah state `generalKBEnabled` (boolean, default false)
+- Tambah Switch "General KB" di sebelah Switch "Debug"
+- Di dropdown Promo, tambah opsi `all` = "-- Semua Promo --" di antara "Tanpa Promo" dan daftar individual
+- Update logic `selectedPromo`:
+  - `none` = null (tidak ada promo)
+  - `all` = semua promo array
+  - ID tertentu = single promo
 
-### 2. Tambah Upload JSON Dialog
-**File:** `src/components/VOCDashboard/GeneralKnowledgeSection.tsx`
-- Dialog baru dengan Textarea monospace untuk paste JSON
-- Placeholder contoh format JSON:
-  ```json
-  [
-    {
-      "question": "Bagaimana cara deposit?",
-      "answer": "Deposit bisa via bank transfer...",
-      "category": "FAQ",
-      "knowledgeType": "Static"
-    }
-  ]
+### Empty state text
+- Update placeholder text untuk mencerminkan opsi baru ("Toggle General KB, pilih promo...")
+
+## Perubahan Engine (livechat-engine.ts)
+
+### buildSystemPrompt signature
+- Tambah parameter `options: { generalKBEnabled?: boolean; allPromos?: PromoItem[] }`
+- Jika `generalKBEnabled = true`, load General KB dari storage dan inject sebagai section baru di system prompt:
   ```
-- Mendukung single object dan array
-- Validasi: `question` dan `answer` wajib ada
-- `category` default ke "Other" jika kosong
-- `knowledgeType` default ke "Static" jika kosong
-- Auto-generate `id`, `createdAt`, `updatedAt`
+  # GENERAL KNOWLEDGE BASE
+  Berikut referensi FAQ umum yang bisa kamu gunakan untuk menjawab:
+  [JSON array of {question, answer, category}]
+  ```
+- Jika `allPromos` diberikan (mode "Semua Promo"), loop semua promo dan build KB context gabungan (ringkasan per promo, bukan full dump per promo agar tidak terlalu panjang)
 
-### 3. Tambah Export JSON
-**File:** `src/components/VOCDashboard/GeneralKnowledgeSection.tsx`
-- Tombol **Export JSON** di deretan action buttons
-- Download semua data General KB sebagai file `.json`
+### buildAllPromosContext (fungsi baru)
+- Mengambil array PromoItem[], build ringkasan tiap promo:
+  ```
+  # KNOWLEDGE BASE — Semua Promo (X promo)
+  ## 1. [promo_name]
+  ```json
+  { ...fields }
+  ```
+  ## 2. [promo_name]
+  ...
+  ```
+- KB Health di-skip untuk mode semua promo (terlalu banyak)
 
-### 4. Hapus Upload CSV Dialog
-- Dialog CSV yang belum fungsional dihapus karena sudah digantikan Upload JSON
+## Perubahan di executeSend (LivechatTestConsole.tsx)
 
-## Flow User
-
-**Manual (1 entry):**
-Klik "Add New General Entry" -> isi form -> Simpan (tidak berubah)
-
-**Bulk JSON (banyak entry sekaligus):**
-Klik "Upload JSON" -> paste JSON array -> klik Import -> otomatis masuk semua
+- Saat memanggil `buildSystemPrompt`, pass parameter baru:
+  - `generalKBEnabled`
+  - Jika `selectedPromoId === "all"`, pass `allPromos: promos`
+  - Jika single promo, behavior sama seperti sekarang
 
 ## Technical Details
 
 | Item | Detail |
 |------|--------|
-| Files diubah | 1 file (`GeneralKnowledgeSection.tsx`) |
+| Files diubah | 2 (`LivechatTestConsole.tsx`, `livechat-engine.ts`) |
 | New dependency | Tidak ada |
-| Pattern | Sama dengan Promo KB JSON upload |
-| Validasi wajib | `question`, `answer` |
-| Default category | "Other" |
-| Default knowledgeType | "Static" |
+| General KB loader | `getGeneralKnowledge()` dari `src/types/knowledge.ts` |
+| Promo "all" mode | Concat semua promo context ke system prompt |
+| General KB format di prompt | JSON array `[{question, answer, category}]` |
