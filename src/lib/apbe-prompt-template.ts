@@ -333,6 +333,18 @@ Use "{{A.call_to_player}}" for all player references.
 Follow boundary rules strictly - do not answer questions outside Knowledge Base.`;
 
 // ============================================================
+// ALIAS MAP for underscore notation in templates
+// ============================================================
+
+const ALIAS_MAP: Record<string, string> = {
+  'agent_name': 'agent.name',
+  'website_name': 'A.website_name',
+  'group_name': 'A.group_name',
+  'call_to_player': 'A.call_to_player',
+  'slogan': 'A.slogan',
+};
+
+// ============================================================
 // MAIN COMPILER FUNCTION
 // ============================================================
 
@@ -423,6 +435,14 @@ export function compileRuntimePrompt(
   // Step 4: Replace raw config placeholders (using working config)
   prompt = prompt.replace(/\{\{([^}]+)\}\}/g, (_, path) => {
     return getConfigValue(workingConfig, path.trim());
+  });
+  
+  // Step 5: Second pass - resolve nested placeholders
+  // (from greeting/closing templates that contain {{A.website_name}} etc)
+  prompt = prompt.replace(/\{\{([^}]+)\}\}/g, (_, path) => {
+    const trimmed = path.trim();
+    const resolvedPath = ALIAS_MAP[trimmed] || trimmed;
+    return getConfigValue(workingConfig, resolvedPath);
   });
   
   return prompt;
