@@ -192,7 +192,7 @@ const Dashboard = () => {
   const legacyForm = useForm<Pick<VOCConfig, 'account' | 'apiData'>>({
     defaultValues: {
       account: { userName: "", whatsappNumber: "", email: "", position: "" },
-      apiData: { supabaseApi: "", chatGptApi: "" }
+      apiData: { supabaseApi: "", chatGptApi: "", debounceSeconds: 3 }
     },
     mode: "onChange"
   });
@@ -333,7 +333,7 @@ const Dashboard = () => {
       liveChat: "Live Chat",
       testConsole: "Test Console",
       account: "Account",
-      apiData: "API Data",
+      apiData: "API & Settings",
       legalSupport: "Legal & Support"
     };
     return sectionNames[key] || key;

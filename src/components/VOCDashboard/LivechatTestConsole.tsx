@@ -15,6 +15,15 @@ import {
 } from "@/lib/livechat-engine";
 import type { PromoItem } from "@/components/VOCDashboard/PromoFormWizard/types";
 
+function getDebounceSeconds(): number {
+  const stored = localStorage.getItem("voc_debounce_seconds");
+  if (stored) {
+    const n = parseInt(stored, 10);
+    if (!isNaN(n) && n >= 1 && n <= 15) return n;
+  }
+  return 3;
+}
+
 export function LivechatTestConsole() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -25,6 +34,12 @@ export function LivechatTestConsole() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Debounce state
+  const pendingMessagesRef = useRef<ChatMessage[]>([]);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [debounceCountdown, setDebounceCountdown] = useState<number | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // Load promo list
   useEffect(() => {
     loadPromoList().then(setPromos);
@@ -33,7 +48,7 @@ export function LivechatTestConsole() {
   // Auto-scroll on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, debounceCountdown]);
 
   const selectedPromo = promos.find(p => p.id === selectedPromoId) || null;
 
@@ -42,25 +57,29 @@ export function LivechatTestConsole() {
     return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const handleSend = useCallback(async () => {
-    const text = input.trim();
-    if (!text || isLoading) return;
+  // Core send function — called when debounce timer expires
+  const executeSend = useCallback(async (pendingMsgs: ChatMessage[]) => {
+    if (pendingMsgs.length === 0) return;
 
-    const userMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content: text,
-      timestamp: new Date().toISOString(),
-    };
+    // Merge all pending messages into one content string
+    const mergedContent = pendingMsgs.map(m => m.content).join("\n");
 
-    setMessages(prev => [...prev, userMsg]);
-    setInput("");
     setIsLoading(true);
 
     const systemPrompt = await buildSystemPrompt(selectedPromo, debugMode);
 
-    // Build message history for API
-    const apiMessages = [...messages, userMsg].map(m => ({
+    // Build message history: all existing messages + merged user message
+    const mergedUserMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: mergedContent,
+      timestamp: new Date().toISOString(),
+    };
+
+    // For API, use all messages except the individual pending ones (they're already displayed),
+    // and add the merged content as a single user message
+    const historyMessages = messages.filter(m => !pendingMsgs.some(p => p.id === m.id));
+    const apiMessages = [...historyMessages, mergedUserMsg].map(m => ({
       role: m.role,
       content: m.rawContent || m.content,
     }));
@@ -72,7 +91,6 @@ export function LivechatTestConsole() {
     const updateAssistant = (chunk: string) => {
       assistantContent += chunk;
       
-      // Strip debug section from displayed content
       let displayContent = assistantContent;
       if (debugMode && displayContent.includes('---DEBUG---')) {
         displayContent = displayContent.split('---DEBUG---')[0].trim();
@@ -106,7 +124,6 @@ export function LivechatTestConsole() {
         );
       },
       () => {
-        // Save full raw content (including debug section) for API history
         setMessages(prev =>
           prev.map(m => m.id === assistantId ? { ...m, rawContent: assistantContent } : m)
         );
@@ -123,7 +140,54 @@ export function LivechatTestConsole() {
       },
       selectedPromo,
     );
-  }, [input, isLoading, messages, selectedPromo, debugMode]);
+  }, [messages, selectedPromo, debugMode]);
+
+  // Debounced send — adds message to buffer and resets timer
+  const handleSend = useCallback(() => {
+    const text = input.trim();
+    if (!text || isLoading) return;
+
+    const userMsg: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: text,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Show message immediately in chat
+    setMessages(prev => [...prev, userMsg]);
+    setInput("");
+
+    // Add to pending buffer
+    pendingMessagesRef.current = [...pendingMessagesRef.current, userMsg];
+
+    // Clear existing timers
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+
+    const debounceMs = getDebounceSeconds() * 1000;
+
+    // Start countdown display
+    setDebounceCountdown(getDebounceSeconds());
+    const startTime = Date.now();
+    countdownIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, Math.ceil((debounceMs - elapsed) / 1000));
+      setDebounceCountdown(remaining);
+      if (remaining <= 0) {
+        clearInterval(countdownIntervalRef.current!);
+      }
+    }, 200);
+
+    // Set debounce timer
+    debounceTimerRef.current = setTimeout(() => {
+      const batch = [...pendingMessagesRef.current];
+      pendingMessagesRef.current = [];
+      setDebounceCountdown(null);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      executeSend(batch);
+    }, debounceMs);
+  }, [input, isLoading, executeSend]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -134,7 +198,19 @@ export function LivechatTestConsole() {
 
   const handleClear = () => {
     setMessages([]);
+    pendingMessagesRef.current = [];
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    setDebounceCountdown(null);
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    };
+  }, []);
 
   return (
     <div className="mx-auto max-w-[900px] w-full">
@@ -181,6 +257,7 @@ export function LivechatTestConsole() {
               <div className="text-center text-muted-foreground text-sm py-20">
                 <p className="font-medium">Dev-only Livechat Test Console</p>
                 <p className="mt-1 text-xs">Pilih promo dari KB, toggle Debug Mode, lalu mulai chat.</p>
+                <p className="mt-1 text-xs">Debounce: <strong>{getDebounceSeconds()}s</strong> — atur di API & Settings</p>
               </div>
             )}
 
@@ -215,6 +292,16 @@ export function LivechatTestConsole() {
                 </div>
               </div>
             ))}
+
+            {/* Debounce waiting indicator */}
+            {debounceCountdown !== null && debounceCountdown > 0 && !isLoading && (
+              <div className="flex justify-end">
+                <div className="bg-muted/60 border border-border rounded-lg px-4 py-2 text-xs text-muted-foreground flex items-center gap-2 animate-pulse">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Menunggu pesan lanjutan... ({debounceCountdown}s)
+                </div>
+              </div>
+            )}
 
             {isLoading && messages[messages.length - 1]?.role === 'user' && (
               <div className="flex justify-end">
