@@ -1847,6 +1847,40 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
     }
   }
 
+  // Auto-activate toggles based on hydrated values
+  if (normalized.min_calculation && normalized.min_calculation > 0) {
+    (normalized as any).min_calculation_enabled = true;
+  }
+
+  // reward_type → dinamis_reward_type (form field for Dinamis mode)
+  if (normalized.reward_type && !(normalized as any).dinamis_reward_type) {
+    const rtLower = String(normalized.reward_type).toLowerCase();
+    const rewardTypeMap: Record<string, string> = {
+      'bonus': 'saldo',
+      'saldo': 'saldo',
+      'bonus_saldo': 'saldo',
+      'free_spin': 'free_spin',
+      'freespin': 'free_spin',
+      'lucky_spin': 'lucky_spin',
+      'voucher': 'voucher',
+      'cashback': 'saldo',
+      'uang_tunai': 'uang_tunai',
+      'hadiah_fisik': 'hadiah_fisik',
+    };
+    const mapped = rewardTypeMap[rtLower];
+    if (mapped) {
+      (normalized as any).dinamis_reward_type = mapped;
+    }
+  }
+
+  // max_bonus → dinamis_max_claim (form field for Dinamis mode)
+  if (normalized.max_bonus && !(normalized as any).dinamis_max_claim) {
+    (normalized as any).dinamis_max_claim = normalized.max_bonus;
+  }
+  if (normalized.max_bonus_unlimited) {
+    (normalized as any).dinamis_max_claim_unlimited = true;
+  }
+
   // ============================================
   // 5. Normalize reward_mode based on actual data context
   // ============================================
