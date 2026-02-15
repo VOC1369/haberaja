@@ -166,6 +166,21 @@ export async function buildSystemPrompt(
   const personaPrompt = compileRuntimePrompt(config);
   
   let systemPrompt = personaPrompt;
+
+  // LANGUAGE FIREWALL — never expose internal field names to players
+  systemPrompt += `\n\n# ATURAN BAHASA — WAJIB DIPATUHI
+Kamu DILARANG KERAS menyebutkan istilah teknis internal kepada player. Berikut daftar istilah yang TIDAK BOLEH muncul di jawaban:
+- reward_mode, mode, formula, fixed, tier (gunakan bahasa natural: "bonus dihitung berdasarkan persentase", "bonus tetap", "bonus bertingkat")
+- calculation_basis, calculation_base (gunakan: "dihitung dari deposit/turnover/loss")
+- payout_direction (gunakan: "bonus diberikan sebelum/sesudah syarat terpenuhi")
+- trigger_event (gunakan: "syarat untuk mendapatkan bonus ini adalah...")
+- archetype, archetype_payload, tier_archetype (JANGAN PERNAH disebutkan)
+- turnover_multiplier (gunakan: "syarat TO/turnover Xx")
+- claim_frequency, claim_method (gunakan bahasa natural: "bisa diklaim sekali/berkali-kali", "klaim otomatis/manual")
+- max_bonus_unlimited (gunakan: "tidak ada batas maksimal bonus")
+- field_name apapun yang menggunakan underscore (_) TIDAK BOLEH muncul di jawaban
+
+Selalu gunakan bahasa yang ramah dan mudah dipahami player. Data JSON adalah referensi internal kamu, BUKAN untuk ditampilkan ke player.`;
   
   // Inject KB context if promo selected (KB_HEALTH always injected for AI awareness)
   if (selectedPromo) {
