@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
-import { Database, BookOpen, Settings, Shield, LogOut, LucideIcon, HelpCircle, ChevronDown, Ticket, MessageCircle } from "lucide-react";
+import { Database, BookOpen, Settings, Shield, LogOut, LucideIcon, HelpCircle, ChevronDown, Ticket, MessageCircle, Bug } from "lucide-react";
+import { IS_DEV_MODE } from "@/lib/config/openai.dev";
 import { useNavigate } from "react-router-dom";
 import predictoLogo from "@/assets/predicto-logo.svg";
 import {
@@ -352,6 +353,24 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
                   )}>Live Chat</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {IS_DEV_MODE && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={activeSection === "testConsole"}
+                    onClick={() => onSectionChange("testConsole")}
+                    tooltip="Test Console"
+                  >
+                    <Bug className={cn(
+                      "h-5 w-5 shrink-0 transition-colors",
+                      activeSection === "testConsole" ? "text-button-hover-foreground" : "text-foreground/70 group-hover/menu-button:text-button-hover-foreground"
+                    )} />
+                    <span className={cn(
+                      "text-sm transition-colors",
+                      activeSection === "testConsole" ? "text-button-hover-foreground" : "group-hover/menu-button:text-button-hover-foreground"
+                    )}>Test Console</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

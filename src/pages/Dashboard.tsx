@@ -12,6 +12,7 @@ import { ChatSection } from "@/components/VOCDashboard/ChatSection";
 import { AccountSection } from "@/components/VOCDashboard/AccountSection";
 import { APIDataSection } from "@/components/VOCDashboard/APIDataSection";
 import { LegalSupportSection } from "@/components/VOCDashboard/LegalSupportSection";
+import { LivechatTestConsole } from "@/components/VOCDashboard/LivechatTestConsole";
 import { TicketCategory } from "@/types/ticket";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Search } from "lucide-react";
@@ -330,6 +331,7 @@ const Dashboard = () => {
       user: "User",
       adminRole: "Admin Role",
       liveChat: "Live Chat",
+      testConsole: "Test Console",
       account: "Account",
       apiData: "API Data",
       legalSupport: "Legal & Support"
@@ -389,6 +391,7 @@ const Dashboard = () => {
     if (activeSection === "ticket") return <TicketList category={activeTicketCategory} />;
     if (activeSection === "adminRole") return <AdminRoleSection />;
     if (activeSection === "liveChat") return <ChatSection />;
+    if (activeSection === "testConsole") return <LivechatTestConsole />;
     if (activeSection === "account") return <AccountSection form={legacyForm as any} onSave={handleSave} />;
     if (activeSection === "apiData") return <APIDataSection form={legacyForm as any} onSave={handleSave} />;
     if (activeSection === "legalSupport") return <LegalSupportSection />;
