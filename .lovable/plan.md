@@ -1,131 +1,73 @@
 
 
-# Fix: JSON Import Autofill untuk Konfigurasi Reward
+# Fix: Persona Placeholder di Greeting Tidak Ter-resolve
 
 ## Problem
 
-Saat user import JSON promo via "Upload JSON", data masuk ke list tapi **Konfigurasi Reward (Step 4) kosong 0%**. Ini terjadi karena field-field di JSON yang diimport menggunakan nama yang berbeda dari yang diharapkan form wizard.
-
-Contoh dari JSON user:
-```json
-{
-  "calculation_percentage": 0.5,
-  "calculation_basis": "slot_turnover",
-  "archetype_invariants": { "mode_must_be": "formula", "percentage_required": true },
-  "archetype_payload": { "min_turnover_required": 1000000 }
-}
+Greeting persona "Maya" menampilkan raw placeholder:
+```
+Selamat datang di {{A.website_name}}. Saya {{agent_name}}, siap membantu Kak hari ini.
 ```
 
-Form wizard mengharapkan:
+Seharusnya:
 ```
-calculation_value = 0.5
-calculation_method = "percentage"
-calculation_base = "turnover"
-reward_mode = "formula"
+Selamat datang di Spontan77. Saya Maya, siap membantu Kak hari ini.
 ```
-
-`normalizePromoData()` tidak menangani mapping ini, sehingga reward config tetap kosong.
 
 ## Root Cause
 
-Ada 3 gap di `normalizePromoData()` (file `src/components/VOCDashboard/PromoFormWizard/types.ts`):
+Di `compileRuntimePrompt()` (`src/lib/apbe-prompt-template.ts`), regex replace hanya berjalan **1 kali**. Saat `{{L.greetings.default}}` di-resolve menjadi text yang mengandung `{{A.website_name}}`, placeholder baru ini tidak diproses lagi.
 
-1. **`calculation_percentage`** tidak dimapping ke `calculation_value` + `calculation_method: 'percentage'`
-2. **`calculation_basis`** (canonical v2.1) tidak dimapping ke `calculation_base` (form field)
-3. **`archetype_invariants.mode_must_be`** tidak digunakan untuk set `reward_mode`
-4. **`archetype_payload`** fields (min_turnover_required, dll) tidak di-unpack ke form fields
+Juga ada mismatch notasi: greeting template pakai `{{agent_name}}` (underscore) tapi config path yang valid adalah `agent.name` (dot).
 
 ## Fix
 
-**File**: `src/components/VOCDashboard/PromoFormWizard/types.ts`
+**File**: `src/lib/apbe-prompt-template.ts`
 
-**Lokasi**: Di `normalizePromoData()`, tambah section baru **sebelum** section 5 (reward_mode normalization), karena reward_mode logic bergantung pada field yang perlu di-resolve dulu.
+### 1. Tambah alias map untuk underscore notation
 
-### Section 4.5: JSON Import Field Hydration
+Sebelum regex replace, buat map alias:
+```typescript
+const ALIAS_MAP: Record<string, string> = {
+  'agent_name': 'agent.name',
+  'website_name': 'A.website_name',
+  'group_name': 'A.group_name',
+  'call_to_player': 'A.call_to_player',
+  'slogan': 'A.slogan',
+};
+```
+
+### 2. Tambah second pass di compileRuntimePrompt()
+
+Setelah Step 4 (line 424-427), tambah **Step 5: Resolve nested placeholders**:
 
 ```typescript
-// ============================================
-// 4.5. Hydrate from JSON import fields
-// Maps alternative/canonical field names to form fields
-// ============================================
-
-// calculation_percentage → calculation_value + calculation_method
-if (!normalized.calculation_value && (normalized as any).calculation_percentage) {
-  normalized.calculation_value = (normalized as any).calculation_percentage;
-  if (!normalized.calculation_method) {
-    normalized.calculation_method = 'percentage';
-  }
-}
-
-// calculation_basis (canonical v2.1) → calculation_base (form field)
-if (!normalized.calculation_base && (normalized as any).calculation_basis) {
-  const basisRaw = String((normalized as any).calculation_basis).toLowerCase();
-  // Map common variants
-  if (basisRaw.includes('turnover') || basisRaw.includes('slot_turnover')) {
-    normalized.calculation_base = 'turnover';
-  } else if (basisRaw.includes('loss')) {
-    normalized.calculation_base = 'loss';
-  } else if (basisRaw.includes('deposit')) {
-    normalized.calculation_base = 'deposit';
-  } else if (basisRaw.includes('withdraw')) {
-    normalized.calculation_base = 'withdraw';
-  } else {
-    normalized.calculation_base = basisRaw;
-  }
-}
-
-// archetype_invariants.mode_must_be → reward_mode
-const invariants = (normalized as any).archetype_invariants;
-if (invariants && typeof invariants === 'object') {
-  if (invariants.mode_must_be && !normalized.reward_mode) {
-    normalized.reward_mode = invariants.mode_must_be;
-  }
-  if (invariants.percentage_required && !normalized.calculation_method) {
-    normalized.calculation_method = 'percentage';
-  }
-}
-
-// archetype_payload → unpack to form fields
-const payload = (normalized as any).archetype_payload;
-if (payload && typeof payload === 'object') {
-  if (payload.min_turnover_required && !normalized.min_calculation) {
-    normalized.min_calculation = payload.min_turnover_required;
-  }
-  if (payload.calculation_percentage && !normalized.calculation_value) {
-    normalized.calculation_value = payload.calculation_percentage;
-  }
-  if (payload.calculation_basis && !normalized.calculation_base) {
-    normalized.calculation_base = String(payload.calculation_basis)
-      .replace('slot_', '').toLowerCase();
-  }
-  if (payload.automatic_distribution !== undefined) {
-    // Map to distribution_mode
-    if (payload.automatic_distribution === true && !normalized.distribution_mode) {
-      normalized.distribution_mode = 'setelah_syarat';
-    }
-  }
-}
+// Step 5: Second pass - resolve nested placeholders
+// (from greeting/closing templates that contain {{A.website_name}} etc)
+prompt = prompt.replace(/\{\{([^}]+)\}\}/g, (_, path) => {
+  const trimmed = path.trim();
+  // Check alias first (underscore notation)
+  const resolvedPath = ALIAS_MAP[trimmed] || trimmed;
+  return getConfigValue(workingConfig, resolvedPath);
+});
 ```
+
+Ini akan menangkap semua placeholder yang muncul dari hasil replace pertama, termasuk `{{agent_name}}` yang akan di-resolve via alias ke `agent.name`.
 
 ## Expected Result
 
-Sebelum fix:
-- Konfigurasi Reward: **0%** (semua field kosong)
-- Mode Reward: tidak terpilih
-
-Sesudah fix:
-- Mode Reward: **Dinamis** (formula) -- auto-selected
-- Calculation Value: **0.5** (0.5%)
-- Calculation Base: **turnover**
-- Min Calculation: **1,000,000**
-- Readiness score naik dari 58 ke ~80+
+| Sebelum | Sesudah |
+|---------|---------|
+| `{{A.website_name}}` | Spontan77 |
+| `{{agent_name}}` | Maya |
+| `{{agent.name}}` | Maya |
 
 ## Impact
 
 | Item | Detail |
 |------|--------|
-| File | `types.ts` (normalizePromoData) |
-| Lines | ~25 lines ditambahkan |
-| Breaking change | Zero -- hanya menambah fallback mapping |
-| Existing flow | Tidak terpengaruh (guard `if (!field)` di setiap mapping) |
+| File | `apbe-prompt-template.ts` |
+| Lines | ~15 lines ditambah |
+| Breaking change | Zero -- hanya menambah second pass |
+| Performance | Negligible -- 1 extra regex pass pada string |
 
