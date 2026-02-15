@@ -1,73 +1,64 @@
 
 
-# Fix: Persona Placeholder di Greeting Tidak Ter-resolve
+# Rename "API Data" to "API & Settings" + Tambah Debounce Setting
 
-## Problem
+## Apa yang berubah
 
-Greeting persona "Maya" menampilkan raw placeholder:
+Halaman **API Data** akan di-rename menjadi **API & Settings**, dan ditambahkan setting **Debounce Timer** yang bisa diatur (misalnya 3 detik atau 10 detik). Nilai ini akan digunakan oleh Livechat Test Console untuk menggabungkan pesan berturut-turut sebelum dikirim ke AI.
+
+## Perubahan
+
+### 1. Update type VOCConfig
+**File:** `src/types/voc-config.ts`
+- Tambah field `debounceSeconds: number` di interface `APIData` (default: 3)
+
+### 2. Rename + Tambah Debounce Setting di form
+**File:** `src/components/VOCDashboard/APIDataSection.tsx`
+- Rename judul dari "API Data" menjadi "API & Settings"
+- Tambah Card kedua berisi:
+  - **Debounce Timer** slider (1-15 detik) dengan angka yang terlihat
+  - Deskripsi penjelasan: "Waktu tunggu sebelum pesan berturut-turut digabung dan dikirim ke AI"
+  - Preview: "Jika user kirim 3 pesan dalam X detik, akan digabung jadi 1 request"
+
+### 3. Update navigasi sidebar
+**File:** `src/components/VOCDashboard/CategoryNav.tsx`
+- Ubah label "API Data" menjadi "API & Settings"
+
+### 4. Update Dashboard references
+**File:** `src/pages/Dashboard.tsx`
+- Update label mapping dari `"API Data"` menjadi `"API & Settings"`
+- Update default value untuk `apiData.debounceSeconds: 3`
+
+### 5. Implementasi debounce di Livechat Test Console
+**File:** `src/components/VOCDashboard/LivechatTestConsole.tsx`
+- Baca `debounceSeconds` dari localStorage (sama seperti VOC config lainnya)
+- Saat user tekan Enter:
+  - Pesan langsung muncul di chat sebagai bubble user
+  - Timer dimulai (sesuai setting)
+  - Jika user kirim pesan lagi sebelum timer habis, timer di-reset dan pesan baru ditambahkan
+  - Saat timer habis, semua pesan pending digabung jadi 1 string lalu kirim 1x API call
+- Tampilkan "typing indicator" kecil selama debounce window aktif (misal: "Menunggu pesan lanjutan... (3s)")
+
+## Contoh Flow
+
+```text
+Setting: debounceSeconds = 3
+
+User: "kak,"              -> tampil di chat, timer mulai (3s)
+User: "ada promo gak?"    -> tampil di chat, timer reset (3s)
+User: "yang gede"         -> tampil di chat, timer reset (3s)
+... 3 detik berlalu ...
+-> Gabung: "kak,\nada promo gak?\nyang gede"
+-> 1x API call
 ```
-Selamat datang di {{A.website_name}}. Saya {{agent_name}}, siap membantu Kak hari ini.
-```
 
-Seharusnya:
-```
-Selamat datang di Spontan77. Saya Maya, siap membantu Kak hari ini.
-```
-
-## Root Cause
-
-Di `compileRuntimePrompt()` (`src/lib/apbe-prompt-template.ts`), regex replace hanya berjalan **1 kali**. Saat `{{L.greetings.default}}` di-resolve menjadi text yang mengandung `{{A.website_name}}`, placeholder baru ini tidak diproses lagi.
-
-Juga ada mismatch notasi: greeting template pakai `{{agent_name}}` (underscore) tapi config path yang valid adalah `agent.name` (dot).
-
-## Fix
-
-**File**: `src/lib/apbe-prompt-template.ts`
-
-### 1. Tambah alias map untuk underscore notation
-
-Sebelum regex replace, buat map alias:
-```typescript
-const ALIAS_MAP: Record<string, string> = {
-  'agent_name': 'agent.name',
-  'website_name': 'A.website_name',
-  'group_name': 'A.group_name',
-  'call_to_player': 'A.call_to_player',
-  'slogan': 'A.slogan',
-};
-```
-
-### 2. Tambah second pass di compileRuntimePrompt()
-
-Setelah Step 4 (line 424-427), tambah **Step 5: Resolve nested placeholders**:
-
-```typescript
-// Step 5: Second pass - resolve nested placeholders
-// (from greeting/closing templates that contain {{A.website_name}} etc)
-prompt = prompt.replace(/\{\{([^}]+)\}\}/g, (_, path) => {
-  const trimmed = path.trim();
-  // Check alias first (underscore notation)
-  const resolvedPath = ALIAS_MAP[trimmed] || trimmed;
-  return getConfigValue(workingConfig, resolvedPath);
-});
-```
-
-Ini akan menangkap semua placeholder yang muncul dari hasil replace pertama, termasuk `{{agent_name}}` yang akan di-resolve via alias ke `agent.name`.
-
-## Expected Result
-
-| Sebelum | Sesudah |
-|---------|---------|
-| `{{A.website_name}}` | Spontan77 |
-| `{{agent_name}}` | Maya |
-| `{{agent.name}}` | Maya |
-
-## Impact
+## Technical Details
 
 | Item | Detail |
 |------|--------|
-| File | `apbe-prompt-template.ts` |
-| Lines | ~15 lines ditambah |
-| Breaking change | Zero -- hanya menambah second pass |
-| Performance | Negligible -- 1 extra regex pass pada string |
+| Files diubah | 4 files |
+| New dependency | Tidak ada |
+| Storage | localStorage (existing pattern) |
+| Default debounce | 3 detik |
+| Range slider | 1-15 detik |
 
