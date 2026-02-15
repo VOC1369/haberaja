@@ -69,10 +69,11 @@ ${JSON.stringify(data, null, 2)}
 // ============================================
 
 const DEBUG_INSTRUCTION = `
-After answering the user normally, you MUST produce a structured Debug section.
-Separate your answer and debug with exactly this line: ---DEBUG---
+CRITICAL MANDATORY RULE — You MUST ALWAYS append a Debug section after EVERY answer. No exceptions. Every single reply must end with this.
 
-The Debug section format:
+Separate your answer and the debug section with exactly this marker on its own line: ---DEBUG---
+
+The Debug section MUST follow this exact format:
 
 [User Intent]
 <summarize user intent in 1 sentence>
@@ -81,6 +82,7 @@ The Debug section format:
 <list each field used as: field_name = value>
 <if custom_terms: custom_terms -> poin X: "quote">
 <if special_conditions: special_conditions -> "quote">
+<if no fields used: "Tidak ada field yang dirujuk">
 
 [Analysis]
 <one of: Match ditemukan | Mismatch terdeteksi | Ambiguitas terdeteksi | Field kosong | Konflik antar field>
@@ -98,6 +100,7 @@ The Debug section format:
 [Final Validation]
 <one of: Jawaban konsisten dengan KB | Jawaban berpotensi ambiguous | KB kurang lengkap | JSON conflict terdeteksi>
 
+REMEMBER: The ---DEBUG--- section is MANDATORY for EVERY response. Do NOT skip it. Do NOT forget it. ALWAYS include it.
 Do NOT hide structural issues.
 Do NOT invent fields.
 If JSON incomplete, explicitly state it.`;
