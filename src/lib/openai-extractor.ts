@@ -4033,6 +4033,14 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     const claimFreq = extracted.claim_frequency?.toLowerCase() || '';
     const promoType = extracted.promo_type?.toLowerCase() || '';
     
+    // Priority 0: Chance-based promos = always setelah_syarat
+    // Lucky Spin, Gacha, dll → player claims after meeting requirements
+    // Never "hari_tertentu" or "otomatis_setelah_periode"
+    const chanceTypes = ['lucky spin', 'lucky draw', 'gacha', 'spin', 'undian', 'wheel'];
+    if (chanceTypes.some(t => promoType.includes(t))) {
+      return 'setelah_syarat';
+    }
+    
     // Priority 1: Explicit distribution_day → 'hari_tertentu'
     if (hasDistributionDay) {
       return 'hari_tertentu';
