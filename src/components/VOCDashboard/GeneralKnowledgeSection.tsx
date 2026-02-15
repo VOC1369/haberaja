@@ -38,11 +38,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Upload, FileText, Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
+import { FileJson, Download, FileText, Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import {
   GeneralKnowledgeItem,
   getGeneralKnowledge,
+  saveGeneralKnowledge,
   addGeneralKnowledge,
   updateGeneralKnowledge,
   deleteGeneralKnowledge,
@@ -58,6 +59,7 @@ export function GeneralKnowledgeSection({ onBack }: GeneralKnowledgeSectionProps
   const [items, setItems] = useState<GeneralKnowledgeItem[]>([]);
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [jsonInput, setJsonInput] = useState("");
   const [editingItem, setEditingItem] = useState<GeneralKnowledgeItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   
@@ -120,6 +122,53 @@ export function GeneralKnowledgeSection({ onBack }: GeneralKnowledgeSectionProps
     }
   };
 
+  const handleJsonImport = () => {
+    if (!jsonInput.trim()) {
+      toast.error("JSON tidak boleh kosong");
+      return;
+    }
+    try {
+      const parsed = JSON.parse(jsonInput.trim());
+      const arr = Array.isArray(parsed) ? parsed : [parsed];
+      if (arr.length === 0) { toast.error("Array kosong"); return; }
+      const invalid = arr.filter((i: any) => !i.question?.trim() || !i.answer?.trim());
+      if (invalid.length > 0) {
+        toast.error(`${invalid.length} entry tidak punya question/answer wajib`);
+        return;
+      }
+      const existing = getGeneralKnowledge();
+      const newItems = arr.map((i: any) => ({
+        id: crypto.randomUUID(),
+        question: i.question.trim(),
+        answer: i.answer.trim(),
+        category: i.category?.trim() || "Other",
+        knowledgeType: i.knowledgeType?.trim() || "Static",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }));
+      saveGeneralKnowledge([...existing, ...newItems]);
+      setItems(getGeneralKnowledge());
+      toast.success(`${newItems.length} knowledge berhasil diimport`);
+      setJsonInput("");
+      setIsUploadDialogOpen(false);
+    } catch {
+      toast.error("Format JSON tidak valid");
+    }
+  };
+
+  const handleExportJson = () => {
+    const data = getGeneralKnowledge();
+    if (data.length === 0) { toast.error("Tidak ada data untuk diexport"); return; }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `general-knowledge-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Export JSON berhasil");
+  };
+
   // formatDate now imported from @/lib/utils
 
   return (
@@ -139,10 +188,18 @@ export function GeneralKnowledgeSection({ onBack }: GeneralKnowledgeSectionProps
           <Button 
             variant="outline"
             className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-            onClick={() => setIsUploadDialogOpen(true)}
+            onClick={handleExportJson}
           >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload CSV
+            <Download className="h-4 w-4 mr-2" />
+            Export JSON
+          </Button>
+          <Button 
+            variant="outline"
+            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+            onClick={() => { setJsonInput(""); setIsUploadDialogOpen(true); }}
+          >
+            <FileJson className="h-4 w-4 mr-2" />
+            Upload JSON
           </Button>
           <Button 
             variant="outline"
@@ -310,33 +367,37 @@ export function GeneralKnowledgeSection({ onBack }: GeneralKnowledgeSectionProps
         </DialogContent>
       </Dialog>
 
-      {/* Upload CSV Dialog */}
+      {/* Upload JSON Dialog */}
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-[560px]">
           <DialogHeader>
-            <DialogTitle className="text-button-hover text-base">Upload CSV</DialogTitle>
+            <DialogTitle className="text-button-hover text-base">Upload JSON — General Knowledge</DialogTitle>
           </DialogHeader>
-          <div className="py-2">
-            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-              <Upload className="h-8 w-8 mx-auto text-muted-foreground/60 mb-3" />
-              <p className="text-sm text-muted-foreground mb-1">
-                Drag and drop file CSV, atau klik untuk browse
-              </p>
-              <p className="text-xs text-muted-foreground/70 mb-4">
-                CSV files only
-              </p>
-              <Button size="sm" variant="outline" className="border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover">
-                <Upload className="h-4 w-4 mr-2" />
-                Pilih File
-              </Button>
-            </div>
-            <div className="mt-4">
-              <Button variant="outline" size="sm" className="w-full border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover">
-                <FileText className="h-4 w-4 mr-2" />
-                Download Template (CSV)
-              </Button>
-            </div>
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              Paste JSON array atau single object. Field wajib: <code className="text-foreground">question</code>, <code className="text-foreground">answer</code>.
+            </p>
+            <Textarea
+              className="font-mono text-xs min-h-[200px]"
+              placeholder={`[\n  {\n    "question": "Bagaimana cara deposit?",\n    "answer": "Deposit bisa via bank transfer...",\n    "category": "FAQ",\n    "knowledgeType": "Static"\n  }\n]`}
+              value={jsonInput}
+              onChange={(e) => setJsonInput(e.target.value)}
+            />
           </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setIsUploadDialogOpen(false)} className="border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover">
+              Batal
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+              onClick={handleJsonImport}
+            >
+              <FileJson className="h-4 w-4 mr-2" />
+              Import
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
