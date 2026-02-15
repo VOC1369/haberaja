@@ -46,7 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2, Zap, Trophy, Cog, RefreshCw } from "lucide-react";
+import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2, Zap, Trophy, Cog, RefreshCw, FileJson } from "lucide-react";
 import { classifyContent, type ProgramCategory } from "@/lib/extractors/category-classifier";
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
@@ -77,6 +77,77 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set());
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
   const classifyQueueRef = useRef<Set<string>>(new Set()); // To prevent duplicate calls
+
+  // Upload JSON states
+  const [showJsonDialog, setShowJsonDialog] = useState(false);
+  const [jsonInput, setJsonInput] = useState('');
+  const [isImportingJson, setIsImportingJson] = useState(false);
+
+  const handleJsonImport = async () => {
+    if (!jsonInput.trim()) {
+      toast.error('JSON kosong, silakan paste data JSON');
+      return;
+    }
+
+    setIsImportingJson(true);
+    try {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(jsonInput);
+      } catch {
+        toast.error('JSON tidak valid — cek format dan coba lagi');
+        setIsImportingJson(false);
+        return;
+      }
+
+      const promoArray: Record<string, unknown>[] = Array.isArray(parsed) ? parsed : [parsed];
+
+      if (promoArray.length === 0) {
+        toast.error('Array JSON kosong');
+        setIsImportingJson(false);
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const raw of promoArray) {
+        if (!raw || typeof raw !== 'object') {
+          failCount++;
+          continue;
+        }
+        const obj = raw as Record<string, unknown>;
+        if (!obj.promo_name || typeof obj.promo_name !== 'string' || !obj.promo_name.trim()) {
+          failCount++;
+          continue;
+        }
+
+        try {
+          const normalized = normalizePromoData(obj as any);
+          await promoKB.add(normalized as any);
+          successCount++;
+        } catch (err) {
+          console.error('[UploadJSON] Failed to add promo:', err);
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} promo berhasil diimport${failCount > 0 ? ` (${failCount} gagal)` : ''}`);
+        await loadPromos();
+      } else {
+        toast.error(`Semua ${failCount} promo gagal diimport — pastikan setiap object punya field "promo_name"`);
+      }
+
+      setShowJsonDialog(false);
+      setJsonInput('');
+    } catch (error) {
+      console.error('[UploadJSON] Unexpected error:', error);
+      toast.error('Terjadi error saat import JSON');
+    } finally {
+      setIsImportingJson(false);
+    }
+  };
 
   const toggleExpanded = (promoId: string) => {
     setExpandedPromos(prev => {
@@ -713,6 +784,14 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           <Button 
             variant="outline"
             className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+            onClick={() => setShowJsonDialog(true)}
+          >
+            <FileJson className="h-4 w-4 mr-2" />
+            Upload JSON
+          </Button>
+          <Button 
+            variant="outline"
+            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
             onClick={handleAddNew}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -1087,6 +1166,42 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload JSON Dialog */}
+      <Dialog open={showJsonDialog} onOpenChange={setShowJsonDialog}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Upload JSON Promo</DialogTitle>
+            <DialogDescription>
+              Paste JSON promo (single object atau array). Setiap object harus punya field <code className="text-foreground">promo_name</code>.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder={'{\n  "promo_name": "Welcome Bonus 100%",\n  "promo_type": "deposit",\n  "reward_amount": 100,\n  ...\n}'}
+            value={jsonInput}
+            onChange={(e) => setJsonInput(e.target.value)}
+            className="min-h-[300px] font-mono text-xs"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowJsonDialog(false); setJsonInput(''); }}>
+              Batal
+            </Button>
+            <Button onClick={handleJsonImport} disabled={isImportingJson || !jsonInput.trim()}>
+              {isImportingJson ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <FileJson className="h-4 w-4 mr-2" />
+                  Import
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       </div>
