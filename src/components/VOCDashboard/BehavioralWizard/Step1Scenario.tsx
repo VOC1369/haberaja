@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { WizardFormData, scenarioCards } from "./types";
 
 interface Step1Props {
@@ -17,7 +18,8 @@ export function Step1Scenario({ data, onChange }: Step1Props) {
         intent_perilaku: scenario.mapping.intent_perilaku,
         pattern_trigger: scenario.mapping.pattern_trigger,
         mode_respons: scenario.mapping.suggested_mode,
-        severity_level: scenario.mapping.default_severity
+        severity_level: scenario.mapping.default_severity,
+        applicability_criteria: scenario.mapping.default_applicability_criteria
       });
     }
   };
@@ -78,6 +80,26 @@ export function Step1Scenario({ data, onChange }: Step1Props) {
                 <span className="ml-1 text-foreground">{data.severity_level}/5</span>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Applicability Criteria */}
+      {data.scenario && (
+        <Card className="border-border bg-card">
+          <CardContent className="p-6 space-y-2">
+            <Label className="text-sm font-medium text-primary">
+              Kriteria Penerapan (Applicability Criteria)
+            </Label>
+            <Textarea
+              value={data.applicability_criteria}
+              onChange={(e) => onChange({ applicability_criteria: e.target.value })}
+              placeholder="Jelaskan dalam 1-3 kalimat kondisi apa yang membuat rule ini berlaku..."
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">
+              Digunakan oleh LLM untuk menentukan rule mana yang paling relevan dengan situasi player.
+            </p>
           </CardContent>
         </Card>
       )}

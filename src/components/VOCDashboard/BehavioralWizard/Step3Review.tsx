@@ -299,6 +299,18 @@ export function Step3Review({ data, onChange, editingItem }: Step3Props) {
         </CardContent>
       </Card>
 
+      {/* Applicability Criteria */}
+      <Card className="bg-card">
+        <CardHeader className="p-6 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Kriteria Penerapan</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-muted p-4 rounded-lg text-sm text-foreground">
+            {data.applicability_criteria || <span className="text-muted-foreground italic">Belum diisi</span>}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Response Template Preview */}
       {data.response_template && (
         <Card className="bg-card">
