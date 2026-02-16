@@ -35,6 +35,7 @@ export function LivechatTestConsole() {
   const [selectedPromoId, setSelectedPromoId] = useState<string>("none");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Debounce state
   const pendingMessagesRef = useRef<ChatMessage[]>([]);
@@ -163,6 +164,7 @@ export function LivechatTestConsole() {
     // Show message immediately in chat
     setMessages(prev => [...prev, userMsg]);
     setInput("");
+    inputRef.current?.focus();
 
     // Add to pending buffer
     pendingMessagesRef.current = [...pendingMessagesRef.current, userMsg];
@@ -339,6 +341,7 @@ export function LivechatTestConsole() {
         <div className="shrink-0 px-4 py-3 border-t border-border">
           <div className="flex gap-2">
             <Input
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
