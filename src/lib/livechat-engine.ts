@@ -8,8 +8,10 @@ import { compileRuntimePrompt } from './apbe-prompt-template';
 import { loadInitialConfig } from './apbe-storage';
 import { promoKB } from './promo-storage';
 import { getPayloadContract } from './extractors/promo-taxonomy';
+import { createTicketFromChat, buildTicketFeedbackContext } from './ticket-storage';
 import type { PromoItem } from '@/components/VOCDashboard/PromoFormWizard/types';
 import type { APBEConfig } from '@/types/apbe-config';
+import type { TicketCategory } from '@/types/ticket';
 import {
   type BehavioralRuleItem,
   extractAIPayload,
@@ -27,6 +29,7 @@ export interface ChatMessage {
   rawContent?: string;
   debug?: DebugBreakdown | null;
   timestamp: string;
+  ticketCreated?: { ticket_number: string; category: string };
 }
 
 export interface DebugBreakdown {
@@ -285,6 +288,12 @@ ${JSON.stringify(kbData, null, 2)}
     }
   }
 
+  // Inject ticket status feedback if any chat tickets were resolved
+  const ticketFeedback = buildTicketFeedbackContext();
+  if (ticketFeedback) {
+    systemPrompt += '\n\n' + ticketFeedback;
+  }
+
   // Inject debug instructions if debug mode ON
   if (debugMode) {
     systemPrompt += '\n\n' + DEBUG_INSTRUCTION;
@@ -351,6 +360,7 @@ export async function streamChat(
   onDone: () => void,
   onError: (error: string) => void,
   selectedPromo?: PromoItem | null,
+  onTicketCreated?: (ticket: { ticket_number: string; category: string }) => void,
 ): Promise<void> {
   if (!IS_DEV_MODE) {
     onError('Livechat Test Console hanya tersedia di dev mode');
@@ -447,6 +457,18 @@ export async function streamChat(
           clientDebug.kbHealth = kbHealth;
         }
         onDebug(clientDebug);
+      }
+    }
+
+    // Detect and process [TICKET:category:summary] marker
+    const ticketMatch = fullResponse.match(/\[TICKET:(\w+):([^\]]+)\]/);
+    if (ticketMatch && onTicketCreated) {
+      const category = ticketMatch[1] as TicketCategory;
+      const summary = ticketMatch[2].trim();
+      const validCategories: TicketCategory[] = ['general', 'deposit', 'withdraw', 'reward'];
+      if (validCategories.includes(category)) {
+        const ticket = createTicketFromChat(category, summary);
+        onTicketCreated({ ticket_number: ticket.ticket_number, category });
       }
     }
 

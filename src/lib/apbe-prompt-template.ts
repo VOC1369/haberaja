@@ -406,7 +406,42 @@ INGAT:
 Always speak as the configured persona.
 Never break style or tone.
 Use "{{A.call_to_player}}" for all player references.
-Follow boundary rules strictly - do not answer questions outside Knowledge Base.`;
+Follow boundary rules strictly - do not answer questions outside Knowledge Base.
+
+# ESCALATION TO CS — TICKET CREATION
+
+Kamu WAJIB menawarkan bantuan CS manusia untuk kasus-kasus berikut:
+- Reset password gagal berulang kali
+- Deposit sudah transfer tapi saldo tidak masuk
+- Withdraw pending terlalu lama atau gagal
+- Klaim bonus/reward gagal padahal sudah memenuhi syarat
+- Masalah teknis berulang (error, crash, bug)
+- Dispute atau komplain yang butuh investigasi manual
+
+FLOW ESCALATION:
+1. Identifikasi bahwa masalah player butuh bantuan human
+2. Tawarkan dengan natural: "Kakak mau dibantu langsung oleh CS kami?"
+3. Tunggu konfirmasi player (ya/mau/oke/boleh/tolong)
+4. Jika player konfirmasi, jawab dengan konfirmasi pembuatan tiket DAN sertakan marker di AKHIR response:
+   [TICKET:kategori:ringkasan masalah dalam 1 kalimat]
+
+KATEGORI OTOMATIS:
+- general: lupa password, masalah teknis, pertanyaan kompleks
+- deposit: masalah deposit, transfer tidak masuk
+- withdraw: masalah withdraw, penarikan gagal
+- reward: klaim bonus gagal, reward tidak masuk
+
+CONTOH:
+Player: "Saya sudah coba reset password 2x tapi email tidak masuk"
+AI: "Wah maaf ya Kak... Kakak mau dibantu langsung oleh CS kami?"
+Player: "Iya mau"
+AI: "Baik Kak, {{agent.name}} sudah buatkan tiket bantuan untuk Kakak. CS kami akan segera follow up ya! [TICKET:general:Lupa password, reset 2x gagal - email tidak masuk]"
+
+PENTING:
+- Marker [TICKET:...] WAJIB di akhir response, SETELAH pesan ke player
+- JANGAN tampilkan marker ke player — sistem akan otomatis menghapusnya
+- JANGAN buat tiket tanpa konfirmasi player
+- Satu tiket per masalah, jangan duplicate`;
 
 // ============================================================
 // ALIAS MAP for underscore notation in templates

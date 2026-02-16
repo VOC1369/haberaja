@@ -102,6 +102,8 @@ export function LivechatTestConsole() {
       if (debugMode && displayContent.includes('---DEBUG---')) {
         displayContent = displayContent.split('---DEBUG---')[0].trim();
       }
+      // Strip [TICKET:...] marker from display
+      displayContent = displayContent.replace(/\[TICKET:\w+:[^\]]+\]/g, '').trim();
 
       setMessages(prev => {
         const last = prev[prev.length - 1];
@@ -146,6 +148,15 @@ export function LivechatTestConsole() {
         }]);
       },
       selectedPromo,
+      (ticketInfo) => {
+        setMessages(prev => [...prev, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: `🎫 Ticket ${ticketInfo.ticket_number} (${ticketInfo.category}) berhasil dibuat. Cek di admin dashboard.`,
+          timestamp: new Date().toISOString(),
+          ticketCreated: ticketInfo,
+        }]);
+      },
     );
   }, [messages, selectedPromo, selectedPromoId, promos, debugMode, generalKBEnabled, behavioralKBEnabled]);
 
