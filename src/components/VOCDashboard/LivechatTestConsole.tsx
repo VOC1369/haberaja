@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, Trash2, Loader2, Bug, BookOpen } from "lucide-react";
+import { Send, Trash2, Loader2, Bug, BookOpen, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { DebugPanel } from "./DebugPanel";
 import {
@@ -30,6 +30,7 @@ export function LivechatTestConsole() {
   const [isLoading, setIsLoading] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [generalKBEnabled, setGeneralKBEnabled] = useState(false);
+  const [behavioralKBEnabled, setBehavioralKBEnabled] = useState(false);
   const [promos, setPromos] = useState<PromoItem[]>([]);
   const [selectedPromoId, setSelectedPromoId] = useState<string>("none");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -69,6 +70,7 @@ export function LivechatTestConsole() {
 
     const systemPrompt = await buildSystemPrompt(selectedPromo, debugMode, {
       generalKBEnabled,
+      behavioralKBEnabled,
       allPromos: selectedPromoId === 'all' ? promos : undefined,
     });
 
@@ -144,7 +146,7 @@ export function LivechatTestConsole() {
       },
       selectedPromo,
     );
-  }, [messages, selectedPromo, selectedPromoId, promos, debugMode, generalKBEnabled]);
+  }, [messages, selectedPromo, selectedPromoId, promos, debugMode, generalKBEnabled, behavioralKBEnabled]);
 
   // Debounced send — adds message to buffer and resets timer
   const handleSend = useCallback(() => {
@@ -247,6 +249,13 @@ export function LivechatTestConsole() {
               <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">General KB</span>
               <Switch checked={generalKBEnabled} onCheckedChange={setGeneralKBEnabled} />
+            </div>
+
+            {/* Behavioral KB Toggle */}
+            <div className="flex items-center gap-2">
+              <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">B-KB</span>
+              <Switch checked={behavioralKBEnabled} onCheckedChange={setBehavioralKBEnabled} />
             </div>
 
             {/* Debug Toggle */}

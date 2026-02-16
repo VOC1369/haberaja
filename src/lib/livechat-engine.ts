@@ -10,6 +10,11 @@ import { promoKB } from './promo-storage';
 import { getPayloadContract } from './extractors/promo-taxonomy';
 import type { PromoItem } from '@/components/VOCDashboard/PromoFormWizard/types';
 import type { APBEConfig } from '@/types/apbe-config';
+import {
+  type BehavioralRuleItem,
+  extractAIPayload,
+  getBehavioralRules,
+} from '@/components/VOCDashboard/BehavioralWizard/types';
 
 // ============================================
 // TYPES
@@ -159,7 +164,36 @@ If JSON incomplete, explicitly state it.`;
 
 export interface BuildSystemPromptOptions {
   generalKBEnabled?: boolean;
+  behavioralKBEnabled?: boolean;
   allPromos?: PromoItem[];
+}
+
+// ============================================
+// BEHAVIORAL KB CONTEXT BUILDER
+// ============================================
+
+function buildBehavioralKBContext(): string | null {
+  const rules = getBehavioralRules();
+  const activeRules = rules.filter(r => r.status === 'active');
+  if (activeRules.length === 0) return null;
+
+  const aiPayloads = activeRules.map(r => extractAIPayload(r));
+
+  return `# BEHAVIORAL RULES (Reaction Engine)
+Berikut ${aiPayloads.length} behavioral rules yang aktif. Gunakan untuk mendeteksi pola perilaku player dan merespons sesuai template.
+
+\`\`\`json
+${JSON.stringify(aiPayloads, null, 2)}
+\`\`\`
+
+# BEHAVIORAL PRECEDENCE RULE
+Jika ada rule Behavioral yang match dengan pesan player:
+- Gunakan response_template dari rule tersebut sebagai dasar jawaban
+- Tone dan gaya bahasa TETAP mengikuti Persona identity di atas
+- Escalation mengikuti handoff_protocol dari rule
+Jika TIDAK ada rule yang match:
+- Gunakan Persona default behavior seperti biasa
+- Crisis tone dan escalation dari Persona tetap berlaku penuh`;
 }
 
 export async function buildSystemPrompt(
@@ -214,6 +248,14 @@ Gunakan data di atas untuk menjawab pertanyaan umum. Jika pertanyaan player coco
     systemPrompt += '\n\nPRIORITAS: Jika data tersedia di archetype_payload, gunakan archetype_payload. custom_terms hanya untuk narasi S&K yang tidak terstruktur.';
   }
   
+  // Inject Behavioral KB if enabled (additive layer, default OFF)
+  if (options.behavioralKBEnabled) {
+    const bkbContext = buildBehavioralKBContext();
+    if (bkbContext) {
+      systemPrompt += '\n\n' + bkbContext;
+    }
+  }
+
   // Inject debug instructions if debug mode ON
   if (debugMode) {
     systemPrompt += '\n\n' + DEBUG_INSTRUCTION;
