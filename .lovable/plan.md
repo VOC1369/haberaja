@@ -1,42 +1,41 @@
 
-# Tombol "Prompt Result" di Behavioral Knowledge Base
 
-## Tujuan
-Menambahkan tombol **"Prompt Result"** di sebelah judul "Behavioral Knowledge Base" yang ketika diklik akan menampilkan **prompt final** yang dihasilkan dari semua aturan B-KB aktif. Ini memungkinkan kamu melihat dan mengoreksi instruksi yang dikirim ke AI.
+## Fix: Auto-Generate Fields on Mount When Auto is ON
 
-## Perubahan
+### Problem
+The "Auto" toggle for Template Respons and Reasoning Guideline is ON by default, but the fields remain empty because auto-generation only triggers on user interaction (click reaction, change mode, toggle switch). There is no logic to generate content when the component first renders.
 
-### 1. Tambah tombol "Prompt Result" di header (BehavioralKnowledgeSection.tsx)
-- Tombol ditempatkan **sejajar** dengan judul "Behavioral Knowledge Base" (flex row)
-- Icon: `FileText` dari lucide-react
-- Klik tombol membuka **Dialog/Modal** yang menampilkan prompt hasil kompilasi
+### Solution
+Add a `useEffect` in `Step2Reaction.tsx` that checks on mount (and when relevant dependencies change): if auto is enabled AND the field is empty AND a reaction + mode are already selected, then auto-generate the content.
 
-### 2. Dialog Prompt Result
-- Modal full-width menampilkan output dari fungsi `buildBehavioralKBContext()`
-- Prompt ditampilkan dalam blok `<pre>` dengan font mono agar mudah dibaca
-- Tombol **"Copy"** untuk menyalin prompt ke clipboard
-- Jika tidak ada rule aktif, tampilkan pesan "Tidak ada rule aktif"
+### Technical Changes
 
-### 3. Export fungsi `buildBehavioralKBContext`
-- Fungsi ini saat ini `private` di `livechat-engine.ts` — perlu di-export agar bisa dipanggil dari komponen UI
+**File: `src/components/VOCDashboard/BehavioralWizard/Step2Reaction.tsx`**
 
----
+Add a `useEffect` after the existing state declarations (around line 27):
 
-## Detail Teknis
+```typescript
+import { useState, useEffect } from "react";
 
-**File yang diubah:**
-1. `src/lib/livechat-engine.ts` — Export `buildBehavioralKBContext()` (tambah keyword `export`)
-2. `src/components/VOCDashboard/BehavioralKnowledgeSection.tsx`:
-   - Import `Dialog` components dan `buildBehavioralKBContext`
-   - Tambah state `showPrompt` (boolean)
-   - Tambah tombol "Prompt Result" sejajar dengan title
-   - Tambah Dialog yang render output prompt dalam `<pre>` block
-   - Tombol copy ke clipboard
-
-**Layout header baru:**
-```text
-+----------------------------------------------+
-| Behavioral Knowledge Base  [Prompt Result]   |
-| B-KB V5.0 — Kelola aturan perilaku AI...     |
-+----------------------------------------------+
+// After line 26 (autoReasoning state), add:
+useEffect(() => {
+  if (autoTemplate && !data.response_template && data.mode_respons && data.scenario) {
+    const autoContent = getTemplateForMode(data.mode_respons, data.scenario);
+    if (autoContent) {
+      onChange({ response_template: autoContent });
+    }
+  }
+  if (autoReasoning && !data.reasoning_guideline && data.mode_respons && data.scenario) {
+    const autoContent = getReasoningForMode(data.mode_respons, data.scenario);
+    if (autoContent) {
+      onChange({ reasoning_guideline: autoContent });
+    }
+  }
+}, [data.mode_respons, data.scenario]);
 ```
+
+This ensures:
+- When Step 2 renders with a scenario already selected from Step 1, and a default mode is set, the fields auto-populate immediately
+- It only fills empty fields (won't overwrite user edits)
+- It re-triggers if scenario or mode changes
+
