@@ -114,7 +114,7 @@ export function BehavioralKnowledgeSection({ onBack, forceResetKey }: Behavioral
       </div>
 
       {/* Title */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-button-hover">Behavioral Knowledge Base</h2>
           <p className="text-sm text-muted-foreground">
