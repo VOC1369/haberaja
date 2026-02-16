@@ -67,7 +67,8 @@ export function BehavioralWizard({ onBack, editingItem }: BehavioralWizardProps)
         behavior_category: editingItem.behavior_category,
         intent_perilaku: editingItem.intent_perilaku,
         pattern_trigger: editingItem.pattern_trigger,
-        mode_respons: editingItem.mode_respons
+        mode_respons: editingItem.mode_respons,
+        applicability_criteria: (editingItem as any).applicability_criteria || ""
       };
     }
     return initialWizardData;
