@@ -26,10 +26,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { FileText, DollarSign, Banknote, Gift, Search, Clock, CheckCircle, XCircle, Filter, User, Calendar, CreditCard, MessageSquare } from "lucide-react";
+import { FileText, DollarSign, Banknote, Gift, Search, Clock, CheckCircle, XCircle, Filter, User, Calendar, CreditCard, MessageSquare, Headphones } from "lucide-react";
 import { Ticket, TicketStatus, TicketCategory, statusLabels, categoryLabels } from "@/types/ticket";
 import { PromoItem, getPromoDrafts } from "./PromoFormWizard/types";
 import { useToast } from "@/hooks/use-toast";
+import { getChatTickets } from "@/lib/ticket-storage";
 
 // LocalStorage key for ticket status updates
 const TICKET_STATUS_KEY = "voc_ticket_statuses";
@@ -163,8 +164,9 @@ export function TicketList({ category }: TicketListProps) {
     loadData();
   }, []);
 
-  // Combine base tickets with dynamically generated reward tickets and apply stored statuses
-  const allTickets = [...baseMockTickets, ...rewardTickets].map(ticket => {
+  // Combine base tickets with dynamically generated reward tickets, chat tickets, and apply stored statuses
+  const chatTickets = getChatTickets();
+  const allTickets = [...baseMockTickets, ...rewardTickets, ...chatTickets].map(ticket => {
     const storedStatus = ticketStatuses[ticket.id];
     if (storedStatus) {
       return { ...ticket, status: storedStatus.status, updated_at: storedStatus.updated_at };
@@ -494,6 +496,29 @@ export function TicketList({ category }: TicketListProps) {
                     >
                       <XCircle className="h-4 w-4 mr-2" />
                       Decline
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="flex-1 border-button-hover text-button-hover hover:bg-button-hover hover:text-button-hover-foreground rounded-full"
+                      onClick={() => {
+                        if (!selectedTicket) return;
+                        // Mark as taken over
+                        const statuses = JSON.parse(localStorage.getItem(TICKET_STATUS_KEY) || '{}');
+                        statuses[selectedTicket.id] = { 
+                          status: selectedTicket.status, 
+                          updated_at: new Date().toISOString(),
+                          is_taken_over: true 
+                        };
+                        localStorage.setItem(TICKET_STATUS_KEY, JSON.stringify(statuses));
+                        toast({
+                          title: "Chat Diambil Alih",
+                          description: `Anda mengambil alih chat untuk ticket ${selectedTicket.ticket_number}`,
+                        });
+                        setIsDetailOpen(false);
+                      }}
+                    >
+                      <Headphones className="h-4 w-4 mr-2" />
+                      Ambil Alih Chat
                     </Button>
                   </>
                 )}

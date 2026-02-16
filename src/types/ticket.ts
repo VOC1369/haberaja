@@ -30,6 +30,9 @@ export interface Ticket {
   decline_note?: string;
   admin_note?: string;
   promo_id?: string; // Reference to promo from Knowledge Base
+  source?: 'manual' | 'livechat';
+  chat_summary?: string;
+  is_taken_over?: boolean;
   created_at: string;
   updated_at: string;
   attachments?: TicketAttachment[];
