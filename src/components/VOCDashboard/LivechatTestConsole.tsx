@@ -30,7 +30,7 @@ export function LivechatTestConsole() {
   const [isLoading, setIsLoading] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [generalKBEnabled, setGeneralKBEnabled] = useState(false);
-  const [behavioralKBEnabled, setBehavioralKBEnabled] = useState(false);
+  const [behavioralKBEnabled, setBehavioralKBEnabled] = useState(true);
   const [promos, setPromos] = useState<PromoItem[]>([]);
   const [selectedPromoId, setSelectedPromoId] = useState<string>("none");
   const scrollRef = useRef<HTMLDivElement>(null);

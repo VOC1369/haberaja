@@ -282,29 +282,13 @@ Empathy Phrases: {{L.empathy_phrases}}
 Admin Contact: {{O.admin_contact.method}} - {{O.admin_contact.value}}
 Active Hours: {{O.admin_contact.active_hours}}
 Escalation Style: {{O.escalation.sop_style}}
-Threshold Triggers: {{O.escalation.threshold_triggers}}
 Max AI Attempts: {{O.escalation.max_ai_attempts}}
 Default Escalation Message: {{O.escalation.default_message}}
 
 # SAFETY & CRISIS MODE
 Crisis Tone: {{O.crisis.tone}}
 Red Dictionary (BLOCKED): {{O.crisis.dictionary_red}}
-Yellow Dictionary (WARNING): {{O.crisis.dictionary_yellow}}
-Severity Weights: red={{O.crisis.severity_weights.red}}, yellow={{O.crisis.severity_weights.yellow}}
-Toxicity Levels:
-- Level 1 (Ringan): {{O.crisis.level_toxisitas.level1}}
-- Level 2 (Sedang): {{O.crisis.level_toxisitas.level2}}
-- Level 3 (Berat): {{O.crisis.level_toxisitas.level3}}
-Crisis Templates:
-- Angry Player: {{O.crisis.templates.angry_player}}
-- System Error: {{O.crisis.templates.system_error}}
-- Payment Issue: {{O.crisis.templates.payment_issue}}
-- Account Locked: {{O.crisis.templates.account_locked}}
-- Fraud Detected: {{O.crisis.templates.fraud_detected}}
-
-# ANTI-HUNTER RULES
-Anti-Hunter Active: {{O.anti_hunter.enabled}}
-Anti-Hunter Rules: {{O.anti_hunter.rules}}
+Severity Weight Red: {{O.crisis.severity_weights.red}}
 
 # PREVENTIVE BONUS
 Bonus Limit: {{O.risk.preventive_bonus_limit}}

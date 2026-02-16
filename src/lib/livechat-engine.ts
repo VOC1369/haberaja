@@ -180,15 +180,16 @@ function buildBehavioralKBContext(): string | null {
   const aiPayloads = activeRules.map(r => extractAIPayload(r));
 
   return `# BEHAVIORAL RULES (Reaction Engine)
-Berikut ${aiPayloads.length} behavioral rules yang aktif. Gunakan untuk mendeteksi pola perilaku player dan merespons sesuai template.
+Berikut ${aiPayloads.length} behavioral rules. Gunakan applicability_criteria untuk menentukan rule mana yang berlaku, lalu ikuti reasoning_guideline untuk merespons.
 
 \`\`\`json
 ${JSON.stringify(aiPayloads, null, 2)}
 \`\`\`
 
 # BEHAVIORAL PRECEDENCE RULE
-Jika ada rule Behavioral yang match dengan pesan player:
-- Gunakan response_template dari rule tersebut sebagai dasar jawaban
+Jika ada rule yang applicability_criteria-nya match dengan situasi player:
+- Ikuti reasoning_guideline dari rule tersebut
+- Gunakan response_template sebagai dasar jawaban
 - Tone dan gaya bahasa TETAP mengikuti Persona identity di atas
 - Escalation mengikuti handoff_protocol dari rule
 Jika TIDAK ada rule yang match:
