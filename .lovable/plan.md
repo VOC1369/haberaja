@@ -1,31 +1,65 @@
 
 
-# Fix Remaining 2 Items — Wizard UI for applicability_criteria
+# Quick Fix — Explicit Rule Selection Instructions for B-KB
 
-## File 1: `src/components/VOCDashboard/BehavioralWizard/Step1Scenario.tsx`
+## Problem
+LLM menerima 5 behavioral rules sekaligus tapi instruksi saat ini terlalu longgar:
+- Tidak ada perintah "pilih SATU rule"
+- Tidak ada enforcement untuk pakai `response_template`
+- Tidak ada severity-based tiebreaker
+- LLM blend atau fallback ke generic response
 
-**Changes:**
-- Import `Textarea` from `@/components/ui/textarea`
-- Import `Label` (already imported)
-- Update `handleScenarioSelect` to also set `applicability_criteria` from `scenario.mapping.default_applicability_criteria`
-- Add a new Card section after the "Auto-Mapping Aktif" card (after line 82), visible only when `data.scenario` is selected:
-  - Label: "Kriteria Penerapan (Applicability Criteria)"
-  - Textarea bound to `data.applicability_criteria`
-  - Placeholder: "Jelaskan dalam 1-3 kalimat kondisi apa yang membuat rule ini berlaku..."
-  - Help text explaining this is used by LLM for rule selection
+## Solution
+Update `buildBehavioralKBContext()` di `src/lib/livechat-engine.ts` (lines 182-197) dengan instruksi yang jauh lebih explicit.
 
-## File 2: `src/components/VOCDashboard/BehavioralWizard/Step3Review.tsx`
+## File: `src/lib/livechat-engine.ts`
 
-**Changes:**
-- Add a new Card after the "Detail Teknis" card (after line 300) and before the "Template Respons" card:
-  - CardTitle: "Kriteria Penerapan"
-  - Display `data.applicability_criteria` in a styled div
-  - Show placeholder text if empty
+**Replace** the return string in `buildBehavioralKBContext()` (lines 182-197) with:
 
-## Technical Details
+```text
+# BEHAVIORAL RULES (Reaction Engine)
+Berikut {N} behavioral rules aktif.
 
-- No new dependencies
+```json
+[...aiPayloads...]
+```
+
+# BEHAVIORAL RULE SELECTION — WAJIB DIPATUHI
+
+STEP 1: Analisis pesan player terhadap SETIAP rule's applicability_criteria.
+STEP 2: Pilih SATU rule yang paling match. Jika ada tie, pilih yang severity_level tertinggi.
+STEP 3: Sebutkan secara internal rule mana yang kamu pilih (rule_name).
+STEP 4: Gunakan response_template dari rule yang dipilih sebagai BASIS jawaban kamu. JANGAN generate dari nol.
+STEP 5: Terapkan reasoning_guideline untuk tone dan pendekatan.
+STEP 6: Escalation ikuti handoff_protocol dari rule tersebut.
+
+LARANGAN:
+- JANGAN blend multiple rules dalam satu jawaban.
+- JANGAN gunakan respons generik jika ada rule yang match.
+- JANGAN abaikan response_template — itu WAJIB dipakai sebagai dasar.
+- JANGAN gunakan kalimat "Komunikasi yang sopan diperlukan" kecuali itu ada di template.
+
+JIKA TIDAK ADA rule yang match:
+- Gunakan Persona default behavior seperti biasa.
+- Crisis tone dan escalation dari Persona tetap berlaku penuh.
+```
+
+## What Changes
+- Added explicit 6-step selection process
+- Added "LARANGAN" block to prevent blending and generic fallback
+- Added severity-based tiebreaker instruction
+- Added explicit ban on the repetitive phrase "Komunikasi yang sopan diperlukan"
+- Template enforcement: LLM WAJIB pakai `response_template` sebagai basis
+
+## What Does NOT Change
 - No schema changes
-- Both files are small, straightforward additions
-- `default_applicability_criteria` already exists in all 7 `scenarioCards` mappings -- just needs to be wired to `handleScenarioSelect`
+- No new files
+- No dependency changes
+- Only 1 function body updated (~15 lines replaced)
+
+## Expected Impact
+- LLM akan pilih satu rule, bukan blend
+- "nipu" -> Emotional Distress rule (payment context) -> template spesifik
+- "taiklah" -> Aggressive Player rule (severity 4) -> template escalation
+- Response berbeda karena template berbeda
 
