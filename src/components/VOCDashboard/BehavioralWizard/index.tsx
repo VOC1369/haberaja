@@ -172,7 +172,7 @@ export function BehavioralWizard({ onBack, editingItem }: BehavioralWizardProps)
   };
 
   return (
-    <div className="space-y-6">
+    <div className="page-wrapper space-y-6">
       {/* Header with Back Button */}
       <div className="flex items-center gap-4">
         <Button
