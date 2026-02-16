@@ -77,6 +77,23 @@ export interface AILayerFields {
   mode_respons: string;      // snake_case enum: calming, high_empathy, etc.
   response_template: string; // What AI says
   reasoning_guideline: string; // How AI thinks
+  applicability_criteria: string; // NEW: When this rule applies (natural language)
+  handoff_protocol: {
+    required: boolean;
+    type: "active_handover" | "silent_handover" | "monitoring";
+    tag_alert: string;
+  };
+}
+
+// ========== AI PROMPT PAYLOAD (subset of AILayerFields for LLM) ==========
+export interface AIPromptPayload {
+  behavior_category: string;
+  intent_perilaku: string;
+  applicability_criteria: string;
+  severity_level: number;
+  mode_respons: string;
+  response_template: string;
+  reasoning_guideline: string;
   handoff_protocol: {
     required: boolean;
     type: "active_handover" | "silent_handover" | "monitoring";
@@ -127,6 +144,9 @@ export interface WizardFormData {
   intent_perilaku: string;
   pattern_trigger: Record<string, boolean>;
   mode_respons: string;
+  
+  // Phase 2: Rule selection contract
+  applicability_criteria: string;
 }
 
 // ========== VALIDATION GUARD V6.1 ==========
@@ -176,8 +196,9 @@ export function calculatePriorityV6(behavior_category: string, severity: number)
 }
 
 // V6.1: Validate rule_name format - WIZ_{ScenarioEngPascal}_{ReactionCamel}_{YYYYMMDD}
+// Also allows SEED_ prefix for seed data
 export function validateRuleNameFormat(ruleName: string): boolean {
-  const ruleNameRegex = /^WIZ_[A-Z][a-zA-Z]+_(Soft|Firm|Handoff)_\d{8}$/;
+  const ruleNameRegex = /^(WIZ|SEED)_[A-Z][a-zA-Z]+_(Soft|Firm|Handoff)_\d{8}$/;
   return ruleNameRegex.test(ruleName);
 }
 
@@ -189,7 +210,6 @@ export function validateBehavioralRuleV6(rule: BehavioralRuleItem): ValidationRe
   let isBlocked = false;
 
   // 🔒1: display_name is IGNORED (tidak digunakan dalam validasi)
-  // We simply don't read rule.display_name for any validation logic.
 
   // 🔒3: Validate rule_name format
   if (rule.rule_name && !validateRuleNameFormat(rule.rule_name)) {
@@ -300,9 +320,6 @@ export function validateBehavioralRuleV6(rule: BehavioralRuleItem): ValidationRe
     }
   }
 
-  // 🔒10: display_name tidak memengaruhi hasil apapun
-  // Already handled by not reading it above.
-
   return {
     isValid: violations.length === 0 && warnings.length === 0,
     isBlocked,
@@ -324,17 +341,19 @@ export function validateBehavioralRule(rule: BehavioralRuleItem): ValidationResu
 
 // ========== LAYER EXTRACTION HELPERS ==========
 
-export function extractAIPayload(rule: BehavioralRuleItem): AILayerFields {
+// Phase 2: Extract AI payload for LLM prompt — excludes admin-only fields
+export function extractAIPayload(rule: BehavioralRuleItem): AIPromptPayload {
   return {
-    rule_name: rule.rule_name,
     behavior_category: rule.behavior_category,
     intent_perilaku: rule.intent_perilaku,
-    pattern_trigger: rule.pattern_trigger,
+    applicability_criteria: rule.applicability_criteria || "",
     severity_level: rule.severity_level,
     mode_respons: rule.mode_respons,
     response_template: rule.response_template,
     reasoning_guideline: rule.reasoning_guideline,
-    handoff_protocol: rule.handoff_protocol
+    handoff_protocol: rule.handoff_protocol,
+    // pattern_trigger EXCLUDED — admin workflow tool, not for LLM
+    // rule_name EXCLUDED — system identifier, not relevant for LLM
   };
 }
 
@@ -460,7 +479,7 @@ export const scenarioSeverityRange: Record<string, { default: number; min: numbe
   merayu: { default: 1, min: 1, max: 2 }
 };
 
-// V5.1: Severity Range per REACTION (Double-Lock)
+// V5.2.1: Severity Range per REACTION (Double-Lock)
 export const reactionSeverityRange: Record<"soft" | "firm" | "handoff", { min: number; max: number }> = {
   soft: { min: 1, max: 3 },
   firm: { min: 2, max: 4 },
@@ -531,18 +550,6 @@ export const modeResponsReverseMapping: Record<string, string> = Object.fromEntr
 );
 
 // ========== V5.2.1: PRIORITY CALCULATION (Explicit Formula) ==========
-/**
- * Official Priority Calculation Formula
- * 
- * Base: severity × 10 (range 10-50)
- * Reaction Modifier: soft=+5, firm=+15, handoff=+25
- * Scenario Modifier: ancaman/marah_kasar=+10, mau_pindah=+5
- * 
- * Result Ranges:
- * - Soft: 10-55 (low-medium priority)
- * - Firm: 25-80 (medium-high priority)  
- * - Handoff: 45-100 (high-critical priority)
- */
 export function calculatePriority(scenario: string, reaction: string, severity: number): number {
   const severityBase = severity * 10;
   
@@ -647,8 +654,6 @@ export const reasoningGuidelinesMapping: Record<string, Record<string, string>> 
     curhat_kalah: "Jika menunjukkan tanda distress berat, transfer ke agen untuk pendampingan personal.",
     merayu: "Jika rayuan berubah jadi pressure atau harassment, transfer ke manusia."
   },
-
-  // V6: Removed "retention" and "expansion" modes - not in V6 spec
 };
 
 // ========== V5.2.1: RESPONSE TEMPLATES (snake_case keys) ==========
@@ -738,8 +743,6 @@ export const responseTemplateMapping: Record<string, Record<string, string>> = {
     curhat_kalah: "Saya ingin memastikan Anda mendapat pendampingan yang tepat. Izinkan saya menghubungkan dengan tim support kami. [TRANSFER_TO_AGENT]",
     merayu: "Untuk permintaan khusus seperti ini, saya perlu menghubungkan Anda dengan tim yang berwenang. [TRANSFER_TO_AGENT]"
   },
-
-  // V6: Removed "retention" and "expansion" templates - not in V6 spec
 };
 
 // V5.2.1: Helper function untuk get reasoning dengan snake_case key
@@ -775,6 +778,7 @@ export interface ScenarioCard {
     pattern_trigger: Record<string, boolean>;
     suggested_mode: string;
     default_severity: number;
+    default_applicability_criteria: string; // Phase 2: default criteria per scenario
   };
 }
 
@@ -785,12 +789,12 @@ export const scenarioCards: ScenarioCard[] = [
     label: "Marah Kasar",
     description: "User menggunakan kata-kata kasar atau menyerang",
     mapping: {
-      // V6: behavior_category → toxic_heavy
       behavior_category: "Toxic Berat (ToxicHeavy)",
       intent_perilaku: "Menguji Batas / Dominasi",
       pattern_trigger: { capslock: true, short_phrases: true },
       suggested_mode: "Anti-Toxic (Boundary)",
-      default_severity: 4
+      default_severity: 4,
+      default_applicability_criteria: "Berlaku jika user menggunakan hinaan, kata kasar, ancaman verbal, nada menyerang, capslock berlebihan, atau tanda seru berlebihan."
     }
   },
   {
@@ -799,12 +803,12 @@ export const scenarioCards: ScenarioCard[] = [
     label: "Spamming",
     description: "User mengirim pesan berulang-ulang dengan cepat",
     mapping: {
-      // V6: behavior_category → high_pressure
       behavior_category: "High-Pressure (HighPressure)",
       intent_perilaku: "Butuh Solusi Cepat",
       pattern_trigger: { rapid_message: true, repetitive_complaint: true },
       suggested_mode: "Tegas & Jelas (Assertive Clarity)",
-      default_severity: 2
+      default_severity: 2,
+      default_applicability_criteria: "Berlaku jika user mengirim pesan berulang-ulang, flooding chat, atau mengulangi pertanyaan yang sama berkali-kali."
     }
   },
   {
@@ -813,12 +817,12 @@ export const scenarioCards: ScenarioCard[] = [
     label: "Ancaman",
     description: "User mengancam akan sebar data atau lapor",
     mapping: {
-      // V6: behavior_category → toxic_heavy
       behavior_category: "Toxic Berat (ToxicHeavy)",
       intent_perilaku: "Takut Discam / Trust Issue",
       pattern_trigger: { threat_pattern: true },
       suggested_mode: "Crisis Handling (Crisis)",
-      default_severity: 5
+      default_severity: 5,
+      default_applicability_criteria: "Berlaku jika user mengancam akan menyebarkan data, melaporkan ke pihak berwajib, atau mengancam keselamatan."
     }
   },
   {
@@ -827,13 +831,12 @@ export const scenarioCards: ScenarioCard[] = [
     label: "Mau Pindah",
     description: "User mengancam akan pindah ke kompetitor",
     mapping: {
-      // V6: behavior_category → churn_threat
       behavior_category: "Ancaman Pergi (ChurnThreat)",
       intent_perilaku: "Ingin Kabur / Quit",
       pattern_trigger: { repetitive_complaint: true },
-      // V6: Removed Retention mode, use Assurance instead
       suggested_mode: "Trust Rebuild (Assurance)",
-      default_severity: 4
+      default_severity: 4,
+      default_applicability_criteria: "Berlaku jika user menyatakan ingin pindah ke kompetitor, mengancam berhenti, atau menunjukkan niat churn."
     }
   },
   {
@@ -842,12 +845,12 @@ export const scenarioCards: ScenarioCard[] = [
     label: "Sarkas",
     description: "User menggunakan nada sarkastik atau sindiran",
     mapping: {
-      // V6: behavior_category → toxic_light
       behavior_category: "Toxic Ringan (ToxicLight)",
       intent_perilaku: "Menguji AI / Menggertak",
       pattern_trigger: { sarcasm_markers: true },
       suggested_mode: "Empati Tinggi (High Empathy)",
-      default_severity: 1
+      default_severity: 1,
+      default_applicability_criteria: "Berlaku jika user menggunakan nada sarkastik, sindiran halus, atau komentar pasif-agresif."
     }
   },
   {
@@ -856,12 +859,12 @@ export const scenarioCards: ScenarioCard[] = [
     label: "Curhat Kalah",
     description: "User curhat tentang kekalahan dan butuh validasi",
     mapping: {
-      // V6: behavior_category → disappointment
       behavior_category: "Kecewa Berat (Disappointment)",
       intent_perilaku: "Butuh Validasi Emosi",
       pattern_trigger: { emoji_intensity: true },
       suggested_mode: "Empati Tinggi (High Empathy)",
-      default_severity: 2
+      default_severity: 2,
+      default_applicability_criteria: "Berlaku jika user curhat tentang kekalahan, kekecewaan, atau butuh validasi emosional."
     }
   },
   {
@@ -870,12 +873,12 @@ export const scenarioCards: ScenarioCard[] = [
     label: "Merayu",
     description: "User mencoba merayu untuk dapat bonus/promo",
     mapping: {
-      // V6: behavior_category → toxic_light (same as sarkas)
       behavior_category: "Toxic Ringan (ToxicLight)",
       intent_perilaku: "Menguji Batas / Dominasi",
-      pattern_trigger: {},  // V6: context-based, tidak otomatis
+      pattern_trigger: {},
       suggested_mode: "Tegas & Jelas (Assertive Clarity)",
-      default_severity: 1
+      default_severity: 1,
+      default_applicability_criteria: "Berlaku jika user mencoba merayu, membujuk, atau menggunakan taktik personal untuk mendapatkan bonus atau pengecualian."
     }
   }
 ];
@@ -919,7 +922,6 @@ export const reactionOptions: ReactionOption[] = [
       type: "monitoring",
       tag_alert: "FIRM_RESPONSE"
     },
-    // V6: Firm Cluster - assertive_clarity, boundary, warning, short
     suggested_modes: ["Tegas & Jelas (Assertive Clarity)", "Anti-Toxic (Boundary)", "Penjelasan Ringkas (Short)", "Penalty Warning (Warning)"]
   },
   {
@@ -1037,6 +1039,7 @@ export function addBehavioralRule(data: WizardFormData): BehavioralRuleItem | { 
     brand_tone: data.brand_tone,
     response_template: data.response_template,
     reasoning_guideline: data.reasoning_guideline,
+    applicability_criteria: data.applicability_criteria || "",
     handoff_protocol: data.reaction === "handoff" 
       ? { required: true, type: data.handoff_type || "active_handover", tag_alert: "HIGH_PRIORITY" }
       : data.reaction === "firm"
@@ -1118,6 +1121,131 @@ export function deleteBehavioralRule(id: string): void {
   saveBehavioralRules(items);
 }
 
+// ========== SEED DEFAULT BEHAVIORAL RULES ==========
+// Phase 2: Prevent authority vacuum after APBE reaction logic removed
+
+export function seedDefaultBehavioralRules(): void {
+  // Guard 1: Already seeded
+  if (localStorage.getItem('bkb_seeded_v1')) return;
+  // Guard 2: Admin already created rules manually
+  if (getBehavioralRules().length > 0) return;
+
+  const now = new Date().toISOString();
+  const date = now.split('T')[0].replace(/-/g, '');
+
+  const seedRules: BehavioralRuleItem[] = [
+    {
+      id: crypto.randomUUID(),
+      display_name: "Player Agresif / Marah Berat",
+      rule_name: `SEED_ToxicHeavy_Firm_${date}`,
+      status: "active",
+      version: "1.0.0",
+      behavior_category: "toxic_heavy",
+      intent_perilaku: "testing_limits",
+      pattern_trigger: { capslock: true, short_phrases: true, threat_pattern: true },
+      severity_level: 4,
+      priority: calculatePriorityV6("toxic_heavy", 4),
+      mode_respons: "boundary",
+      brand_tone: "Formal",
+      response_template: "Kami memahami perasaan {{A.call_to_player}}. Komunikasi yang sopan diperlukan agar kami bisa membantu. Mari fokus ke solusi.",
+      reasoning_guideline: "Player menunjukkan emosi tinggi: nada kasar, kata-kata makian, capslock. JANGAN balas dengan nada tinggi. Langkah: (1) Validasi emosi dulu, (2) Set boundary yang jelas, (3) Jika ada ancaman fisik/hukum → eskalasi langsung.",
+      applicability_criteria: "Berlaku jika user menggunakan hinaan, kata kasar, ancaman verbal, nada menyerang, capslock berlebihan, atau tanda seru berlebihan.",
+      handoff_protocol: { required: false, type: "monitoring", tag_alert: "FIRM_RESPONSE" },
+      created_at: now,
+      updated_at: now,
+      last_validated_at: now,
+    },
+    {
+      id: crypto.randomUUID(),
+      display_name: "Gangguan Sistem / Error Teknis",
+      rule_name: `SEED_Confusion_Soft_${date}`,
+      status: "active",
+      version: "1.0.0",
+      behavior_category: "confusion",
+      intent_perilaku: "clarity_need",
+      pattern_trigger: {},
+      severity_level: 2,
+      priority: calculatePriorityV6("confusion", 2),
+      mode_respons: "assurance",
+      brand_tone: "Semi-Formal",
+      response_template: "Mohon maaf atas kendala yang {{A.call_to_player}} alami. Tim teknis kami sedang menangani. Biasanya masalah ini selesai dalam 5-15 menit.",
+      reasoning_guideline: "Player melaporkan masalah teknis. Mereka butuh: (1) Acknowledgment bahwa masalah itu real, (2) Assurance sedang ditangani, (3) Estimasi waktu jika memungkinkan. Jangan blame user.",
+      applicability_criteria: "Berlaku jika user melaporkan error, loading lama, halaman stuck, fitur tidak berfungsi, atau sistem tidak merespons.",
+      handoff_protocol: { required: false, type: "monitoring", tag_alert: "" },
+      created_at: now,
+      updated_at: now,
+      last_validated_at: now,
+    },
+    {
+      id: crypto.randomUUID(),
+      display_name: "Masalah Pembayaran / Transaksi",
+      rule_name: `SEED_Urgency_Soft_${date}`,
+      status: "active",
+      version: "1.0.0",
+      behavior_category: "urgency",
+      intent_perilaku: "urgent_solution",
+      pattern_trigger: {},
+      severity_level: 3,
+      priority: calculatePriorityV6("urgency", 3),
+      mode_respons: "high_empathy",
+      brand_tone: "Semi-Formal",
+      response_template: "Kami paham ini penting untuk {{A.call_to_player}}. Agar bisa bantu cek, boleh info ID transaksi atau waktu transfernya?",
+      reasoning_guideline: "Player khawatir tentang uang — HIGH URGENCY. Langkah: (1) Tenangkan dengan empati, (2) Minta data spesifik (ID transaksi, waktu, jumlah), (3) Jangan janji timeline yang tidak bisa dipenuhi. Jika pending > 1 jam → eskalasi.",
+      applicability_criteria: "Berlaku jika user menyebut deposit belum masuk, withdraw pending, transfer gagal, saldo hilang, atau potongan tidak jelas.",
+      handoff_protocol: { required: false, type: "monitoring", tag_alert: "" },
+      created_at: now,
+      updated_at: now,
+      last_validated_at: now,
+    },
+    {
+      id: crypto.randomUUID(),
+      display_name: "Akun Terkunci / Masalah Akses",
+      rule_name: `SEED_Fear_Soft_${date}`,
+      status: "active",
+      version: "1.0.0",
+      behavior_category: "fear",
+      intent_perilaku: "trust_issue",
+      pattern_trigger: {},
+      severity_level: 3,
+      priority: calculatePriorityV6("fear", 3),
+      mode_respons: "assurance",
+      brand_tone: "Formal",
+      response_template: "Kami mengerti kekhawatiran {{A.call_to_player}}. Untuk keamanan akun, kami perlu verifikasi. Boleh konfirmasi username dan nomor HP terdaftar?",
+      reasoning_guideline: "Player tidak bisa akses akun, kondisi cemas. Langkah: (1) Yakinkan data aman, (2) Jelaskan prosedur keamanan standar, (3) Minta verifikasi identitas. JANGAN langsung unlock tanpa verifikasi.",
+      applicability_criteria: "Berlaku jika user tidak bisa login, akun suspended, akun banned, akun dikunci, atau merasa akun di-hack.",
+      handoff_protocol: { required: false, type: "monitoring", tag_alert: "" },
+      created_at: now,
+      updated_at: now,
+      last_validated_at: now,
+    },
+    {
+      id: crypto.randomUUID(),
+      display_name: "Deteksi Kecurangan / Manipulasi",
+      rule_name: `SEED_ToxicHeavy_Handoff_${date}`,
+      status: "active",
+      version: "1.0.0",
+      behavior_category: "toxic_heavy",
+      intent_perilaku: "testing_limits",
+      pattern_trigger: { threat_pattern: true },
+      severity_level: 5,
+      priority: calculatePriorityV6("toxic_heavy", 5),
+      mode_respons: "crisis",
+      brand_tone: "Formal",
+      response_template: "Mohon maaf {{A.call_to_player}}, kami mendeteksi aktivitas yang perlu diverifikasi lebih lanjut. Tim kami akan menghubungi untuk klarifikasi.",
+      reasoning_guideline: "Terdeteksi pola mencurigakan. JANGAN berikan informasi sensitif atau approve request apapun. Langkah: (1) Respons netral dan profesional, (2) Jangan tuduh langsung, (3) Segera eskalasi ke admin dengan log lengkap.",
+      applicability_criteria: "Berlaku jika user menunjukkan pola klaim bonus berulang dengan alasan berbeda, informasi kontradiktif, hints multiple account, atau pressure tactics untuk keuntungan tidak sah.",
+      handoff_protocol: { required: true, type: "active_handover", tag_alert: "HIGH_PRIORITY" },
+      created_at: now,
+      updated_at: now,
+      last_validated_at: now,
+    },
+  ];
+
+  saveBehavioralRules(seedRules);
+  localStorage.setItem('bkb_seeded_v1', 'true');
+  console.log("[B-KB Seed] 5 default behavioral rules seeded successfully.");
+}
+
 export const initialWizardData: WizardFormData = {
   scenario: "",
   reaction: "soft",
@@ -1134,5 +1262,6 @@ export const initialWizardData: WizardFormData = {
   pattern_trigger: {},
   mode_respons: "",
   notes_admin: "",
-  tags: []
+  tags: [],
+  applicability_criteria: "",
 };

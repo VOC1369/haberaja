@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Plus, Pencil, Trash2, Brain } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { BehavioralWizard } from "./BehavioralWizard";
-import { BehavioralRuleItem, getBehavioralRules, deleteBehavioralRule } from "./BehavioralWizard/types";
+import { BehavioralRuleItem, getBehavioralRules, deleteBehavioralRule, seedDefaultBehavioralRules } from "./BehavioralWizard/types";
 import { toast } from "sonner";
 
 interface BehavioralKnowledgeSectionProps {
@@ -21,6 +21,7 @@ export function BehavioralKnowledgeSection({ onBack, forceResetKey }: Behavioral
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
+    seedDefaultBehavioralRules();
     loadItems();
   }, []);
 

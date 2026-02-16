@@ -7,9 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Settings, Plus, Trash2, Save, Sparkles, Loader2 } from "lucide-react";
+import { Settings, Save, Sparkles, Loader2 } from "lucide-react";
 import { generateEscalationMessage } from "@/lib/apbe-interaction-generator";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -48,16 +47,6 @@ const sopStyleOptions: { value: SOPStyle; label: string; description: string }[]
 ];
 
 
-const escalationTriggerOptions = [
-  { id: "angry_level_8", label: "Jika player marah level 8+" },
-  { id: "wd_pending_10min", label: "Jika WD pending > 10 menit" },
-  { id: "account_locked", label: "Jika akun terkunci" },
-  { id: "fraud_detected", label: "Jika terdeteksi fraud" },
-  { id: "vip_complaint", label: "Jika VIP komplain" },
-  { id: "repeated_issue", label: "Jika masalah berulang 3x" },
-];
-
-
 export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn }: OperationalSOPFormProps) {
   // Local state for adaptive contact fields
   const [countryCode, setCountryCode] = useState("+62");
@@ -68,8 +57,6 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
   const [phoneError, setPhoneError] = useState("");
   const [telegramError, setTelegramError] = useState("");
   const [timeError, setTimeError] = useState("");
-  const [newCustomTrigger, setNewCustomTrigger] = useState("");
-  const [customTriggerError, setCustomTriggerError] = useState("");
 
   const contactMethod = form.watch("O.admin_contact.method");
 
@@ -78,7 +65,6 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
     const currentValue = form.getValues("O.admin_contact.value") || "";
     const currentHours = form.getValues("O.admin_contact.active_hours") || "";
 
-    // Parse WhatsApp number
     if (contactMethod === "whatsapp" && currentValue) {
       const matchedCode = countryCodeOptions.find(c => currentValue.startsWith(c.value));
       if (matchedCode) {
@@ -87,12 +73,10 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
       }
     }
 
-    // Parse Telegram username
     if (contactMethod === "telegram" && currentValue) {
       setTelegramUsername(currentValue);
     }
 
-    // Parse active hours (format: "HH:MM - HH:MM WIB")
     if (currentHours) {
       const hourMatch = currentHours.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
       if (hourMatch) {
@@ -102,13 +86,10 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
     }
   }, [contactMethod]);
 
-  // Validate and update WhatsApp number
   const handlePhoneChange = (value: string) => {
-    // Only allow digits
     const digitsOnly = value.replace(/\D/g, "");
     setPhoneNumber(digitsOnly);
 
-    // Validation
     if (digitsOnly.length > 0 && digitsOnly.startsWith("0")) {
       setPhoneError("Jangan awali dengan angka 0");
     } else if (digitsOnly.length > 0 && digitsOnly.length < 8) {
@@ -117,13 +98,11 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
       setPhoneError("");
     }
 
-    // Update form value
     if (digitsOnly && !digitsOnly.startsWith("0") && digitsOnly.length >= 8) {
       form.setValue("O.admin_contact.value", `${countryCode} ${digitsOnly}`);
     }
   };
 
-  // Update form when country code changes
   const handleCountryCodeChange = (code: string) => {
     setCountryCode(code);
     if (phoneNumber && !phoneNumber.startsWith("0") && phoneNumber.length >= 8) {
@@ -131,11 +110,9 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
     }
   };
 
-  // Validate and update Telegram username
   const handleTelegramChange = (value: string) => {
     setTelegramUsername(value);
 
-    // Validation
     if (value && !value.startsWith("@")) {
       setTelegramError("Harus diawali dengan @");
     } else if (value && /^@\d+$/.test(value)) {
@@ -148,7 +125,6 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
     }
   };
 
-  // Update active hours - supports overnight shifts (e.g., 21:00 - 08:00)
   const handleTimeChange = (type: "start" | "end", value: string) => {
     const newStart = type === "start" ? value : startTime;
     const newEnd = type === "end" ? value : endTime;
@@ -156,60 +132,15 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
     if (type === "start") setStartTime(value);
     if (type === "end") setEndTime(value);
 
-    // Check if it's overnight shift (end time is less than start time)
     const isOvernightShift = newEnd < newStart;
     
-    // Validate: start and end cannot be the same
     if (newStart === newEnd) {
       setTimeError("Jam Mulai dan Jam Berakhir tidak boleh sama");
     } else {
       setTimeError("");
-      // Format output with indicator for overnight shift
       const suffix = isOvernightShift ? "+1" : "";
       form.setValue("O.admin_contact.active_hours", `${newStart} - ${newEnd}${suffix} WIB`);
     }
-  };
-
-  const escalationTriggers = form.watch("O.escalation.threshold_triggers") || [];
-  
-  // Separate preset and custom triggers
-  const presetTriggerIds = escalationTriggerOptions.map(opt => opt.id);
-  const customTriggers = escalationTriggers.filter(t => t.startsWith("custom:"));
-
-  // Add custom trigger
-  const addCustomTrigger = () => {
-    const trimmed = newCustomTrigger.trim();
-    if (!trimmed) {
-      setCustomTriggerError("Trigger tidak boleh kosong");
-      return;
-    }
-    if (trimmed.length < 5) {
-      setCustomTriggerError("Minimal 5 karakter");
-      return;
-    }
-    const customId = `custom:${trimmed.toLowerCase().replace(/\s+/g, "_")}`;
-    if (escalationTriggers.includes(customId)) {
-      setCustomTriggerError("Trigger sudah ada");
-      return;
-    }
-    form.setValue("O.escalation.threshold_triggers", [...escalationTriggers, customId]);
-    setNewCustomTrigger("");
-    setCustomTriggerError("");
-    toast.success("Custom trigger ditambahkan!");
-  };
-
-  // Remove custom trigger
-  const removeCustomTrigger = (triggerId: string) => {
-    form.setValue(
-      "O.escalation.threshold_triggers",
-      escalationTriggers.filter(t => t !== triggerId)
-    );
-    toast.success("Custom trigger dihapus");
-  };
-
-  // Get display label for custom trigger
-  const getCustomTriggerLabel = (triggerId: string) => {
-    return triggerId.replace("custom:", "").replace(/_/g, " ");
   };
 
   const handleSaveSection = () => {
@@ -218,7 +149,6 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
       onSaveAndReturn();
     }
   };
-
 
   return (
     <div className="page-wrapper">
@@ -240,7 +170,6 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
           <div className="space-y-6">
             <h4 className="text-lg font-semibold text-button-hover">1. Kontak Admin</h4>
             
-            {/* Method Selection */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
                 control={form.control}
@@ -267,7 +196,6 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
                 )}
               />
 
-              {/* WhatsApp Fields */}
               {contactMethod === "whatsapp" && (
                 <>
                   <FormItem>
@@ -300,7 +228,6 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
                 </>
               )}
 
-              {/* Telegram Field */}
               {contactMethod === "telegram" && (
                 <FormItem className="md:col-span-2">
                   <FormLabel>Username Telegram *</FormLabel>
@@ -316,7 +243,6 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
               )}
             </div>
 
-            {/* Active Hours - Time Picker Range */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormItem>
                 <FormLabel>Jam Mulai *</FormLabel>
@@ -447,103 +373,6 @@ export function OperationalSOPForm({ form, isEditingFromSummary, onSaveAndReturn
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="O.escalation.threshold_triggers"
-              render={() => (
-                <FormItem className="space-y-2">
-                  <FormLabel>Trigger Eskalasi</FormLabel>
-                  
-                  <div className="space-y-4">
-                    {/* Preset Triggers */}
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {escalationTriggerOptions.map((option) => (
-                          <FormItem key={option.id} className="flex items-center space-x-2">
-                            <FormControl>
-                              <Checkbox
-                                checked={escalationTriggers.includes(option.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    form.setValue("O.escalation.threshold_triggers", [...escalationTriggers, option.id]);
-                                  } else {
-                                    form.setValue("O.escalation.threshold_triggers", escalationTriggers.filter((t) => t !== option.id));
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal cursor-pointer">{option.label}</FormLabel>
-                          </FormItem>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Custom Triggers */}
-                    <div className="space-y-2 pt-2">
-                      <p className="text-sm text-muted-foreground font-medium">Custom Triggers</p>
-                      
-                      {customTriggers.length > 0 && (
-                        <div className="space-y-4 mb-2">
-                          {customTriggers.map((triggerId) => (
-                            <div key={triggerId} className="flex items-center justify-between p-4 bg-muted rounded-lg border border-border">
-                              <div className="flex items-center gap-3">
-                                <Checkbox checked disabled className="opacity-70" />
-                                <span className="text-sm capitalize">{getCustomTriggerLabel(triggerId)}</span>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-button-hover/20 text-button-hover">Custom</span>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => removeCustomTrigger(triggerId)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Add Custom Trigger */}
-                      <div className="flex gap-4">
-                        <Input
-                          placeholder="Jika [kondisi custom]..."
-                          value={newCustomTrigger}
-                          onChange={(e) => {
-                            setNewCustomTrigger(e.target.value);
-                            setCustomTriggerError("");
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              addCustomTrigger();
-                            }
-                          }}
-                          className="flex-1"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={addCustomTrigger}
-                          className="border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Tambah
-                        </Button>
-                      </div>
-                      
-                      {customTriggerError && (
-                        <p className="text-sm text-destructive">{customTriggerError}</p>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <FormMessage />
                 </FormItem>
               )}
             />
