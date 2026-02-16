@@ -1,65 +1,83 @@
 
-# Tambah General KB Toggle + Semua Promo di Livechat Test Console
 
-## Apa yang berubah
+# Phase 1: Behavioral KB Injection — 100% Additive, Toggle-Gated
 
-Di header Livechat Test Console, ditambahkan 2 kontrol baru:
+## Prinsip
 
-1. **General KB toggle (ON/OFF)** — Switch untuk menyertakan data General Knowledge Base ke system prompt. Default OFF.
-2. **Opsi "Semua Promo" di dropdown Promo** — Selain pilih satu promo, user bisa pilih "Semua Promo" untuk inject semua promo KB sekaligus ke system prompt.
+Tidak ada yang dihapus. Tidak ada yang diubah dari behavior existing. Hanya menambahkan 1 toggle baru dan 1 blok injection baru. Default OFF sehingga runtime lama 100% tidak terpengaruh.
 
-## Perubahan UI (LivechatTestConsole.tsx)
+---
 
-### Header Controls (baris baru)
-- Tambah state `generalKBEnabled` (boolean, default false)
-- Tambah Switch "General KB" di sebelah Switch "Debug"
-- Di dropdown Promo, tambah opsi `all` = "-- Semua Promo --" di antara "Tanpa Promo" dan daftar individual
-- Update logic `selectedPromo`:
-  - `none` = null (tidak ada promo)
-  - `all` = semua promo array
-  - ID tertentu = single promo
+## Perubahan
 
-### Empty state text
-- Update placeholder text untuk mencerminkan opsi baru ("Toggle General KB, pilih promo...")
+### 1. `src/lib/livechat-engine.ts` — Tambah B-KB injection
 
-## Perubahan Engine (livechat-engine.ts)
+**Tambah ke `BuildSystemPromptOptions`:**
+- `behavioralKBEnabled?: boolean`
 
-### buildSystemPrompt signature
-- Tambah parameter `options: { generalKBEnabled?: boolean; allPromos?: PromoItem[] }`
-- Jika `generalKBEnabled = true`, load General KB dari storage dan inject sebagai section baru di system prompt:
-  ```
-  # GENERAL KNOWLEDGE BASE
-  Berikut referensi FAQ umum yang bisa kamu gunakan untuk menjawab:
-  [JSON array of {question, answer, category}]
-  ```
-- Jika `allPromos` diberikan (mode "Semua Promo"), loop semua promo dan build KB context gabungan (ringkasan per promo, bukan full dump per promo agar tidak terlalu panjang)
+**Tambah fungsi baru `buildBehavioralKBContext()`:**
+- Load rules via `getBehavioralRules()` dari `src/components/VOCDashboard/BehavioralWizard/types.ts` (versi V6 dengan auto-sanitization)
+- Filter hanya `status === "active"`
+- Extract AI-layer fields saja via `extractAIPayload()` (rule_name, behavior_category, severity_level, mode_respons, response_template, reasoning_guideline, handoff_protocol, pattern_trigger, intent_perilaku)
+- Return formatted string block
 
-### buildAllPromosContext (fungsi baru)
-- Mengambil array PromoItem[], build ringkasan tiap promo:
-  ```
-  # KNOWLEDGE BASE — Semua Promo (X promo)
-  ## 1. [promo_name]
-  ```json
-  { ...fields }
-  ```
-  ## 2. [promo_name]
-  ...
-  ```
-- KB Health di-skip untuk mode semua promo (terlalu banyak)
+**Di `buildSystemPrompt()`, setelah Promo KB dan sebelum Debug instruction:**
+- Jika `behavioralKBEnabled === true`, inject blok B-KB context
+- Inject **Precedence Contract** hanya ketika B-KB ON:
 
-## Perubahan di executeSend (LivechatTestConsole.tsx)
+```
+# BEHAVIORAL RULES (Reaction Engine)
+[...active rules as JSON...]
 
-- Saat memanggil `buildSystemPrompt`, pass parameter baru:
-  - `generalKBEnabled`
-  - Jika `selectedPromoId === "all"`, pass `allPromos: promos`
-  - Jika single promo, behavior sama seperti sekarang
+# BEHAVIORAL PRECEDENCE RULE
+Jika ada rule Behavioral yang match dengan pesan player:
+- Gunakan response_template dari rule tersebut sebagai dasar jawaban
+- Tone dan gaya bahasa TETAP mengikuti Persona identity di atas
+- Escalation mengikuti handoff_protocol dari rule
+Jika TIDAK ada rule yang match:
+- Gunakan Persona default behavior seperti biasa
+- Crisis tone dan escalation dari Persona tetap berlaku penuh
+```
 
-## Technical Details
+**Injection order (final):**
+1. Persona identity (existing, tidak berubah)
+2. Language firewall (existing, tidak berubah)
+3. General KB (existing, toggle-gated)
+4. Promo KB (existing, toggle-gated)
+5. **Behavioral KB + Precedence Contract (NEW, toggle-gated, default OFF)**
+6. Debug instructions (existing, toggle-gated)
 
-| Item | Detail |
+### 2. `src/components/VOCDashboard/LivechatTestConsole.tsx` — Tambah toggle B-KB
+
+**State baru:**
+- `behavioralKBEnabled` (boolean, default `false`)
+
+**UI di header (setelah General KB toggle, sebelum Debug toggle):**
+- Icon: `Shield` dari lucide-react
+- Label: "B-KB"
+- Switch component (sama style dengan General KB dan Debug)
+
+**Di `executeSend`:**
+- Pass `behavioralKBEnabled` ke `buildSystemPrompt` options
+
+---
+
+## Yang TIDAK Diubah
+
+| Item | Status |
 |------|--------|
-| Files diubah | 2 (`LivechatTestConsole.tsx`, `livechat-engine.ts`) |
-| New dependency | Tidak ada |
-| General KB loader | `getGeneralKnowledge()` dari `src/types/knowledge.ts` |
-| Promo "all" mode | Concat semua promo context ke system prompt |
-| General KB format di prompt | JSON array `[{question, answer, category}]` |
+| APBE schema (`apbe-config.ts`) | Tidak disentuh |
+| APBE prompt template (`apbe-prompt-template.ts`) | Tidak disentuh |
+| APBE forms (SafetyCrisis, Operational) | Tidak disentuh |
+| APBE storage | Tidak disentuh |
+| Behavioral KB schema/wizard | Tidak disentuh |
+| Promo KB | Tidak disentuh |
+| General KB | Tidak disentuh |
+
+## Keamanan
+
+- **Toggle OFF = 100% behavior lama.** Tidak ada perubahan runtime sama sekali.
+- **Toggle ON = additive context.** APBE crisis templates, anti_hunter, yellow dictionary tetap ter-inject seperti biasa. B-KB ditambahkan sebagai layer tambahan dengan precedence hint.
+- **Fallback guard built-in:** Precedence contract secara eksplisit bilang "jika tidak ada rule match, gunakan Persona default behavior."
+- **Tidak ada authority vacuum:** Karena tidak ada yang dihapus, safety net APBE tetap utuh.
+
