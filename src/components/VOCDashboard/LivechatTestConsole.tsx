@@ -24,15 +24,37 @@ function getDebounceSeconds(): number {
   return 3;
 }
 
+const STORAGE_KEY_MESSAGES = "voc_livechat_messages";
+const STORAGE_KEY_SETTINGS = "voc_livechat_settings";
+const MAX_PERSISTED_MESSAGES = 100;
+
+function loadPersistedMessages(): ChatMessage[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_MESSAGES);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(-MAX_PERSISTED_MESSAGES) : [];
+  } catch { return []; }
+}
+
+function loadPersistedSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SETTINGS);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
 export function LivechatTestConsole() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const savedSettings = loadPersistedSettings();
+  const [messages, setMessages] = useState<ChatMessage[]>(loadPersistedMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [debugMode, setDebugMode] = useState(false);
-  const [generalKBEnabled, setGeneralKBEnabled] = useState(false);
-  const [behavioralKBEnabled, setBehavioralKBEnabled] = useState(true);
+  const [debugMode, setDebugMode] = useState(savedSettings?.debugMode ?? false);
+  const [generalKBEnabled, setGeneralKBEnabled] = useState(savedSettings?.generalKBEnabled ?? false);
+  const [behavioralKBEnabled, setBehavioralKBEnabled] = useState(savedSettings?.behavioralKBEnabled ?? true);
   const [promos, setPromos] = useState<PromoItem[]>([]);
-  const [selectedPromoId, setSelectedPromoId] = useState<string>("none");
+  const [selectedPromoId, setSelectedPromoId] = useState<string>(savedSettings?.selectedPromoId ?? "none");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +69,23 @@ export function LivechatTestConsole() {
   useEffect(() => {
     loadPromoList().then(setPromos);
   }, []);
+
+  // Persist messages to localStorage
+  useEffect(() => {
+    try {
+      const toStore = messages.slice(-MAX_PERSISTED_MESSAGES);
+      localStorage.setItem(STORAGE_KEY_MESSAGES, JSON.stringify(toStore));
+    } catch { /* storage full — ignore */ }
+  }, [messages]);
+
+  // Persist settings to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify({
+        debugMode, generalKBEnabled, behavioralKBEnabled, selectedPromoId,
+      }));
+    } catch { /* ignore */ }
+  }, [debugMode, generalKBEnabled, behavioralKBEnabled, selectedPromoId]);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -217,6 +256,7 @@ export function LivechatTestConsole() {
 
   const handleClear = () => {
     setMessages([]);
+    localStorage.removeItem(STORAGE_KEY_MESSAGES);
     pendingMessagesRef.current = [];
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
