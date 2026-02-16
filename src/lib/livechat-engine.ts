@@ -172,7 +172,7 @@ export interface BuildSystemPromptOptions {
 // BEHAVIORAL KB CONTEXT BUILDER
 // ============================================
 
-function buildBehavioralKBContext(): string | null {
+export function buildBehavioralKBContext(): string | null {
   const rules = getBehavioralRules();
   const activeRules = rules.filter(r => r.status === 'active');
   if (activeRules.length === 0) return null;

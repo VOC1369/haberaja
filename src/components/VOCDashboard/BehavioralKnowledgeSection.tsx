@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Pencil, Trash2, Brain } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Brain, FileText, Copy } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BehavioralWizard } from "./BehavioralWizard";
 import { BehavioralRuleItem, getBehavioralRules, deleteBehavioralRule, seedDefaultBehavioralRules } from "./BehavioralWizard/types";
+import { buildBehavioralKBContext } from "@/lib/livechat-engine";
 import { toast } from "sonner";
 
 interface BehavioralKnowledgeSectionProps {
@@ -19,6 +21,8 @@ export function BehavioralKnowledgeSection({ onBack, forceResetKey }: Behavioral
   const [viewMode, setViewMode] = useState<"list" | "wizard">("list");
   const [editingItem, setEditingItem] = useState<BehavioralRuleItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [promptText, setPromptText] = useState("");
 
   useEffect(() => {
     seedDefaultBehavioralRules();
@@ -110,11 +114,26 @@ export function BehavioralKnowledgeSection({ onBack, forceResetKey }: Behavioral
       </div>
 
       {/* Title */}
-      <div>
-        <h2 className="text-lg font-semibold text-button-hover">Behavioral Knowledge Base</h2>
-        <p className="text-sm text-muted-foreground">
-          B-KB V5.0 — Kelola aturan perilaku AI dengan Wizard
-        </p>
+      <div className="flex items-center gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-button-hover">Behavioral Knowledge Base</h2>
+          <p className="text-sm text-muted-foreground">
+            B-KB V5.0 — Kelola aturan perilaku AI dengan Wizard
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 px-4 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+          onClick={() => {
+            const result = buildBehavioralKBContext();
+            setPromptText(result || "Tidak ada rule aktif.");
+            setShowPrompt(true);
+          }}
+        >
+          <FileText className="h-4 w-4 mr-1" />
+          Prompt Result
+        </Button>
       </div>
 
       {/* Table */}
@@ -197,6 +216,37 @@ export function BehavioralKnowledgeSection({ onBack, forceResetKey }: Behavioral
           </Table>
         </div>
       )}
+
+      {/* Prompt Result Dialog */}
+      <Dialog open={showPrompt} onOpenChange={setShowPrompt}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <FileText className="h-5 w-5 text-button-hover" />
+              Prompt Result — Behavioral KB
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto">
+            <pre className="text-sm font-mono whitespace-pre-wrap bg-muted p-4 rounded-lg border border-border text-foreground leading-relaxed">
+              {promptText}
+            </pre>
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+              onClick={() => {
+                navigator.clipboard.writeText(promptText);
+                toast.success("Prompt berhasil disalin ke clipboard");
+              }}
+            >
+              <Copy className="h-4 w-4 mr-1" />
+              Copy
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
