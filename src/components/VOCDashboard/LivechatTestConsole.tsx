@@ -346,7 +346,7 @@ export function LivechatTestConsole() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ketik pesan..."
-              disabled={isLoading}
+              disabled={false}
               className="flex-1"
             />
             <Button
