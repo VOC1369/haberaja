@@ -180,21 +180,30 @@ function buildBehavioralKBContext(): string | null {
   const aiPayloads = activeRules.map(r => extractAIPayload(r));
 
   return `# BEHAVIORAL RULES (Reaction Engine)
-Berikut ${aiPayloads.length} behavioral rules. Gunakan applicability_criteria untuk menentukan rule mana yang berlaku, lalu ikuti reasoning_guideline untuk merespons.
+Berikut ${aiPayloads.length} behavioral rules aktif.
 
 \`\`\`json
 ${JSON.stringify(aiPayloads, null, 2)}
 \`\`\`
 
-# BEHAVIORAL PRECEDENCE RULE
-Jika ada rule yang applicability_criteria-nya match dengan situasi player:
-- Ikuti reasoning_guideline dari rule tersebut
-- Gunakan response_template sebagai dasar jawaban
-- Tone dan gaya bahasa TETAP mengikuti Persona identity di atas
-- Escalation mengikuti handoff_protocol dari rule
-Jika TIDAK ada rule yang match:
-- Gunakan Persona default behavior seperti biasa
-- Crisis tone dan escalation dari Persona tetap berlaku penuh`;
+# BEHAVIORAL RULE SELECTION — WAJIB DIPATUHI
+
+STEP 1: Analisis pesan player terhadap SETIAP rule's applicability_criteria.
+STEP 2: Pilih SATU rule yang paling match. Jika ada tie, pilih yang severity_level tertinggi.
+STEP 3: Sebutkan secara internal rule mana yang kamu pilih (rule_name).
+STEP 4: Gunakan response_template dari rule yang dipilih sebagai BASIS jawaban kamu. JANGAN generate dari nol.
+STEP 5: Terapkan reasoning_guideline untuk tone dan pendekatan.
+STEP 6: Escalation ikuti handoff_protocol dari rule tersebut.
+
+LARANGAN:
+- JANGAN blend multiple rules dalam satu jawaban.
+- JANGAN gunakan respons generik jika ada rule yang match.
+- JANGAN abaikan response_template — itu WAJIB dipakai sebagai dasar.
+- JANGAN gunakan kalimat "Komunikasi yang sopan diperlukan" kecuali itu ada di template.
+
+JIKA TIDAK ADA rule yang match:
+- Gunakan Persona default behavior seperti biasa.
+- Crisis tone dan escalation dari Persona tetap berlaku penuh.`;
 }
 
 export async function buildSystemPrompt(
