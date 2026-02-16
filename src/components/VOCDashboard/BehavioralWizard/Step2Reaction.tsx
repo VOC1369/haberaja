@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,7 +24,23 @@ interface Step2Props {
 export function Step2Reaction({ data, onChange }: Step2Props) {
   const [autoTemplate, setAutoTemplate] = useState(true);
   const [autoReasoning, setAutoReasoning] = useState(true);
-  
+
+  // Auto-generate on mount/dependency change when Auto is ON and fields are empty
+  useEffect(() => {
+    if (autoTemplate && !data.response_template && data.mode_respons && data.scenario) {
+      const autoContent = getTemplateForMode(data.mode_respons, data.scenario);
+      if (autoContent) {
+        onChange({ response_template: autoContent });
+      }
+    }
+    if (autoReasoning && !data.reasoning_guideline && data.mode_respons && data.scenario) {
+      const autoContent = getReasoningForMode(data.mode_respons, data.scenario);
+      if (autoContent) {
+        onChange({ reasoning_guideline: autoContent });
+      }
+    }
+  }, [data.mode_respons, data.scenario]);
+
   const selectedScenario = scenarioCards.find(s => s.id === data.scenario);
   const selectedReaction = reactionOptions.find(r => r.id === data.reaction);
   
