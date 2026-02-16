@@ -638,7 +638,7 @@ export const reasoningGuidelinesMapping: Record<string, Record<string, string>> 
     spamming: "Warning: 'Spam berulang dapat mengakibatkan pembatasan akses sementara. Mohon tunggu respons.'",
     ancaman: "Warning serius: 'Ancaman tidak bisa ditoleransi dan dapat berakibat pada penutupan akun.'",
     mau_pindah: "Tidak perlu warning keras. Fokus ke informasi terakhir yang perlu diketahui.",
-    sarkas: "Warning ringan: 'Komunikasi yang sopan akan mempercepat penyelesaian masalah Anda.'",
+    sarkas: "Warning ringan: 'Fokus ke masalah akan mempercepat penyelesaian. Mari kita bahas solusinya.'",
     curhat_kalah: "Bukan konteks untuk warning. Fokus ke guidance positif.",
     merayu: "Warning ringan: 'Permintaan yang tidak sesuai aturan tidak dapat diproses.'"
   },
@@ -660,88 +660,280 @@ export const reasoningGuidelinesMapping: Record<string, Record<string, string>> 
 export const responseTemplateMapping: Record<string, Record<string, string>> = {
   // ===== SOFT APPROACH MODES =====
   "calming": {
-    default: "Saya mendengar Anda. Tenang, mari kita selesaikan ini bersama. Apa yang bisa saya bantu?",
-    marah_kasar: "Saya memahami frustrasi Anda. Perasaan Anda valid. Mari kita selesaikan masalah ini bersama dengan tenang...",
-    spamming: "Saya sudah menerima pesan Anda. Tenang, saya sedang memproses. Anda akan mendapat update segera.",
-    ancaman: "Saya memahami Anda sangat kecewa. Mari tenang sebentar dan cari solusi bersama...",
-    mau_pindah: "Saya mengerti perasaan Anda. Boleh cerita lebih lanjut apa yang membuat Anda mempertimbangkan hal ini?",
-    sarkas: "Saya mengerti ada frustrasi. Tenang, izinkan saya membantu dengan lebih baik. Apa yang sebenarnya Anda butuhkan?",
-    curhat_kalah: "Saya mendengar Anda. Pengalaman seperti ini memang tidak mudah. Saya di sini untuk membantu...",
-    merayu: "Haha, terima kasih atas perhatiannya. Sayangnya saya tidak bisa memberikan pengecualian, tapi mari kita lihat apa yang bisa saya bantu..."
+    default: `[Variasi 1] Kami mendengar {{A.call_to_player}}. Tenang, mari kita selesaikan ini bareng-bareng ya.
+[Variasi 2] {{A.call_to_player}}, kami di sini kok. Yuk kita cari jalan keluarnya sama-sama.
+[Variasi 3] Perasaan {{A.call_to_player}} kami pahami. Satu per satu ya, pasti ada solusinya.
+[INSTRUKSI] Pilih SATU variasi per turn. JANGAN ulangi variasi yang sudah dipakai.`,
+    marah_kasar: `[Variasi 1] Kami memahami frustrasi {{A.call_to_player}}. Perasaan itu valid. Mari kita fokus ke solusinya ya.
+[Variasi 2] {{A.call_to_player}}, kami dengar. Pasti ada alasan di balik kekesalan ini. Yuk kita bahas masalahnya.
+[Variasi 3] Kami tahu situasinya bikin kesal, {{A.call_to_player}}. Kami di sini untuk bantu, bukan lawan.
+[INSTRUKSI] Pilih SATU variasi per turn. Validasi emosi TANPA menggurui. JANGAN balas dengan nada tinggi.`,
+    spamming: `[Variasi 1] Pesan {{A.call_to_player}} sudah kami terima. Tenang, sedang kami proses dan akan ada update segera.
+[Variasi 2] {{A.call_to_player}}, kami pastikan request ini sudah tercatat. Update akan datang dalam beberapa saat.
+[Variasi 3] Terima kasih sudah menunggu, {{A.call_to_player}}. Kami sedang kerjakan dan pasti akan kabari.
+[INSTRUKSI] Pilih SATU variasi per turn. Berikan kepastian timeline jika memungkinkan.`,
+    ancaman: `[Variasi 1] Kami memahami {{A.call_to_player}} sangat kecewa. Mari tenang sebentar dan cari solusi bersama.
+[Variasi 2] {{A.call_to_player}}, kami tahu ini berat. Izinkan kami bantu dengan cara yang paling efektif.
+[Variasi 3] Kekhawatiran {{A.call_to_player}} kami dengar. Yuk kita fokus ke langkah yang bisa dilakukan sekarang.
+[INSTRUKSI] Pilih SATU variasi per turn. Validasi tanpa mengakui ancaman secara eksplisit.`,
+    mau_pindah: `[Variasi 1] Kami mengerti perasaan {{A.call_to_player}}. Boleh cerita lebih lanjut apa yang bikin mempertimbangkan hal ini?
+[Variasi 2] {{A.call_to_player}}, kami hargai kejujurannya. Sebelum lanjut, ada hal yang mungkin bisa kami bantu?
+[Variasi 3] Terima kasih sudah terbuka, {{A.call_to_player}}. Kami ingin dengar — apa yang paling mengganggu?
+[INSTRUKSI] Pilih SATU variasi per turn. Fokus mendengar, jangan langsung tawarkan retensi.`,
+    sarkas: `[Variasi 1] Kami mengerti ada frustrasi, {{A.call_to_player}}. Izinkan kami bantu dengan lebih baik. Apa yang sebenarnya dibutuhkan?
+[Variasi 2] {{A.call_to_player}}, kami fokus ke masalahnya ya. Ada yang bisa kami selesaikan sekarang?
+[Variasi 3] Frustrasi {{A.call_to_player}} wajar. Kami di sini dan siap bantu — yuk kita bahas konkretnya.
+[INSTRUKSI] Pilih SATU variasi per turn. Abaikan nada sarkastik, fokus ke substansi.`,
+    curhat_kalah: `[Variasi 1] Kami mendengar {{A.call_to_player}}. Pengalaman seperti ini memang tidak mudah. Kami di sini untuk bantu.
+[Variasi 2] {{A.call_to_player}}, terima kasih sudah cerita. Kami paham ini berat — yuk kita lihat apa yang bisa dilakukan.
+[Variasi 3] Perasaan {{A.call_to_player}} valid. Tidak ada yang salah dengan merasa begitu. Mari kita cari jalan keluarnya.
+[INSTRUKSI] Pilih SATU variasi per turn. Dengarkan dulu, jangan buru-buru tawarkan solusi.`,
+    merayu: `[Variasi 1] Haha, terima kasih perhatiannya {{A.call_to_player}}. Sayangnya ada aturan yang berlaku, tapi mari kita lihat opsi lain yang tersedia.
+[Variasi 2] {{A.call_to_player}} lucu deh. Tapi soal ini memang ada ketentuannya ya. Yuk kita cek apa yang bisa dibantu.
+[Variasi 3] Terima kasih {{A.call_to_player}}, tapi semua mengikuti ketentuan yang sama. Ada hal lain yang bisa kami bantu?
+[INSTRUKSI] Pilih SATU variasi per turn. Tolak dengan ramah tanpa menyinggung.`
   },
   "high_empathy": {
-    default: "Saya benar-benar memahami apa yang Anda rasakan. Ini pasti tidak mudah. Saya di sini untuk membantu Anda.",
-    marah_kasar: "Saya benar-benar merasakan frustrasi Anda. Ini pasti sangat melelahkan. Perasaan Anda valid dan saya ingin membantu...",
-    spamming: "Saya mengerti Anda sangat butuh jawaban cepat. Perasaan menunggu memang tidak nyaman. Izinkan saya bantu...",
-    ancaman: "Saya sangat memahami kekecewaan Anda yang mendalam. Situasi ini pasti sangat berat. Izinkan saya bantu mencari jalan keluar...",
-    mau_pindah: "Saya sangat mengerti perasaan Anda. Setelah semua yang terjadi, wajar jika Anda merasa begini. Boleh saya tahu lebih dalam?",
-    sarkas: "Saya merasakan ada frustrasi yang terpendam di balik kata-kata Anda. Saya ingin benar-benar memahami apa yang Anda alami...",
-    curhat_kalah: "Saya sangat memahami perasaan Anda. Pengalaman seperti ini memang berat. Terima kasih sudah berbagi dengan saya...",
-    merayu: "Saya mengerti keinginan Anda. Pasti ada alasan di balik permintaan ini. Sayangnya aturan berlaku sama untuk semua..."
+    default: `[Variasi 1] Kami benar-benar memahami apa yang {{A.call_to_player}} rasakan. Ini pasti tidak mudah. Kami di sini untuk bantu.
+[Variasi 2] {{A.call_to_player}}, perasaan itu valid banget. Kami dengar dan kami peduli. Yuk kita cari solusinya.
+[Variasi 3] Situasi {{A.call_to_player}} kami pahami betul. Tidak ada yang harus dihadapi sendirian — kami bantu.
+[INSTRUKSI] Pilih SATU variasi per turn. Refleksikan perasaan user sebelum tawarkan solusi.`,
+    marah_kasar: `[Variasi 1] Kami benar-benar merasakan frustrasi {{A.call_to_player}}. Ini pasti sangat melelahkan. Kami ingin bantu sepenuhnya.
+[Variasi 2] {{A.call_to_player}}, kami paham ini sudah di titik yang bikin capek. Perasaan itu valid — yuk kita tangani bareng.
+[Variasi 3] Situasi ini pasti berat banget buat {{A.call_to_player}}. Kami mengerti dan serius mau bantu.
+[INSTRUKSI] Pilih SATU variasi per turn. Empati mendalam TANPA membenarkan perilaku abusive.`,
+    spamming: `[Variasi 1] Kami mengerti {{A.call_to_player}} sangat butuh jawaban cepat. Perasaan menunggu memang tidak nyaman. Izinkan kami bantu.
+[Variasi 2] {{A.call_to_player}}, kami paham urgency-nya. Ketidakpastian itu bikin gelisah — kami usahakan secepat mungkin.
+[Variasi 3] Menunggu tanpa kejelasan memang frustasi, {{A.call_to_player}}. Kami di sini dan sedang proses.
+[INSTRUKSI] Pilih SATU variasi per turn. Pahami urgensi tanpa blame atas spamming.`,
+    ancaman: `[Variasi 1] Kami sangat memahami kekecewaan mendalam {{A.call_to_player}}. Situasi ini pasti sangat berat. Izinkan kami bantu cari jalan keluar.
+[Variasi 2] {{A.call_to_player}}, kami tahu sampai di titik ini pasti ada alasan kuat. Kami ingin dengar dan bantu.
+[Variasi 3] Perasaan {{A.call_to_player}} kami tangkap dengan serius. Mari kita cari solusi yang adil bersama-sama.
+[INSTRUKSI] Pilih SATU variasi per turn. Empati atas kekecewaan tanpa mengakui ancaman.`,
+    mau_pindah: `[Variasi 1] Kami sangat mengerti perasaan {{A.call_to_player}}. Setelah semua yang terjadi, wajar jika merasa begini. Boleh kami tahu lebih dalam?
+[Variasi 2] {{A.call_to_player}}, keputusan itu pasti tidak mudah. Kami hargai kejujurannya — dan ingin dengar lebih lanjut.
+[Variasi 3] Perasaan ingin pindah itu valid, {{A.call_to_player}}. Kami tidak akan memaksa — tapi boleh cerita alasannya?
+[INSTRUKSI] Pilih SATU variasi per turn. Ekspresikan pemahaman mendalam, jangan defensif.`,
+    sarkas: `[Variasi 1] Kami merasakan ada frustrasi yang terpendam di balik kata-kata {{A.call_to_player}}. Kami ingin benar-benar memahami situasinya.
+[Variasi 2] {{A.call_to_player}}, di balik nada itu pasti ada hal yang mengganggu. Kami di sini untuk dengar.
+[Variasi 3] Kami paham {{A.call_to_player}} mungkin sudah capek dengan situasinya. Yuk kita bahas apa yang sebenarnya terjadi.
+[INSTRUKSI] Pilih SATU variasi per turn. Abaikan nada, fokus ke substansi emosi.`,
+    curhat_kalah: `[Variasi 1] Kami sangat memahami perasaan {{A.call_to_player}}. Pengalaman seperti ini memang berat. Terima kasih sudah berbagi.
+[Variasi 2] {{A.call_to_player}}, terima kasih sudah percaya untuk cerita. Kami di sini menemani dan mendengarkan.
+[Variasi 3] Tidak ada yang salah dengan perasaan {{A.call_to_player}}. Ini memang berat — dan kami peduli.
+[INSTRUKSI] Pilih SATU variasi per turn. Berikan empati maksimal, biarkan user merasa didengar.`,
+    merayu: `[Variasi 1] Kami mengerti keinginan {{A.call_to_player}}. Pasti ada alasan di balik permintaan ini. Sayangnya aturan berlaku sama untuk semua.
+[Variasi 2] {{A.call_to_player}}, kami paham harapannya. Tapi demi fairness, ketentuan ini berlaku universal.
+[Variasi 3] Permintaan {{A.call_to_player}} kami hargai. Namun aturan yang sama melindungi semua member termasuk {{A.call_to_player}}.
+[INSTRUKSI] Pilih SATU variasi per turn. Pahami motivasi di balik rayuan, tolak dengan empati.`
   },
   "assurance": {
-    default: "Kepercayaan Anda sangat penting bagi kami. Izinkan saya membuktikan komitmen kami dengan langkah konkret.",
-    marah_kasar: "Saya paham trust sudah terganggu. Izinkan saya membuktikan dengan tindakan nyata. Ini yang akan saya lakukan: ...",
-    spamming: "Saya jamin pesan Anda sudah tercatat. Proses sedang berjalan dan Anda akan mendapat update dalam [waktu].",
-    ancaman: "Kami sangat serius menanggapi concern Anda. Izinkan saya jelaskan proses kami dengan transparan...",
-    mau_pindah: "Kami sangat menghargai Anda sebagai member. Izinkan saya tunjukkan komitmen kami dengan penawaran khusus...",
-    sarkas: "Saya ingin membuktikan bahwa concern Anda ditangani serius. Ini langkah konkret yang akan saya ambil: ...",
-    curhat_kalah: "Pengalaman buruk tidak mendefinisikan keseluruhan. Izinkan saya tunjukkan support yang tersedia untuk Anda...",
-    merayu: "Aturan berlaku sama untuk semua demi fairness. Ini justru melindungi Anda juga. Mari kita lihat promo yang tersedia..."
+    default: `[Variasi 1] Kepercayaan {{A.call_to_player}} sangat penting bagi kami. Izinkan kami buktikan komitmen dengan langkah konkret.
+[Variasi 2] {{A.call_to_player}}, kami serius soal ini. Ini yang akan kami lakukan sebagai bukti komitmen: ...
+[Variasi 3] Kami paham trust perlu dibangun dengan tindakan, bukan janji. Ini langkah nyata yang kami ambil untuk {{A.call_to_player}}.
+[INSTRUKSI] Pilih SATU variasi per turn. Selalu sertakan langkah konkret, bukan janji kosong.`,
+    marah_kasar: `[Variasi 1] Kami paham trust sudah terganggu, {{A.call_to_player}}. Izinkan kami buktikan dengan tindakan nyata. Ini yang akan kami lakukan: ...
+[Variasi 2] {{A.call_to_player}}, kata-kata memang tidak cukup. Ini langkah konkret yang sudah kami siapkan: ...
+[Variasi 3] Kami tahu {{A.call_to_player}} butuh bukti, bukan janji. Ini action plan kami: ...
+[INSTRUKSI] Pilih SATU variasi per turn. Fokus rebuild trust dengan bukti konkret.`,
+    spamming: `[Variasi 1] Kami jamin pesan {{A.call_to_player}} sudah tercatat. Proses sedang berjalan dan update akan datang dalam [waktu].
+[Variasi 2] {{A.call_to_player}}, request ini sudah masuk sistem kami. Kami pastikan tidak ada yang terlewat.
+[Variasi 3] Tenang {{A.call_to_player}}, semua pesan sudah kami catat. Proses berjalan dan kami akan kabari hasilnya.
+[INSTRUKSI] Pilih SATU variasi per turn. Berikan jaminan dengan timeline realistis.`,
+    ancaman: `[Variasi 1] Kami sangat serius menanggapi concern {{A.call_to_player}}. Izinkan kami jelaskan proses kami dengan transparan.
+[Variasi 2] {{A.call_to_player}}, kekhawatiran ini kami tangani serius. Ini prosedur yang kami jalankan: ...
+[Variasi 3] Kami ingin {{A.call_to_player}} tahu bahwa concern ini menjadi prioritas. Ini langkah yang sudah kami ambil: ...
+[INSTRUKSI] Pilih SATU variasi per turn. Rebuild trust dengan transparansi proses.`,
+    mau_pindah: `[Variasi 1] Kami sangat menghargai {{A.call_to_player}} sebagai member. Izinkan kami tunjukkan komitmen dengan penawaran khusus.
+[Variasi 2] {{A.call_to_player}}, sebelum memutuskan, izinkan kami tunjukkan value yang mungkin terlewat: ...
+[Variasi 3] Kami tidak mau kehilangan {{A.call_to_player}}. Ini yang bisa kami tawarkan sebagai komitmen: ...
+[INSTRUKSI] Pilih SATU variasi per turn. Tunjukkan value, jangan memohon.`,
+    sarkas: `[Variasi 1] Kami ingin membuktikan bahwa concern {{A.call_to_player}} ditangani serius. Ini langkah konkret yang kami ambil: ...
+[Variasi 2] {{A.call_to_player}}, aksi lebih penting dari kata. Ini yang sudah kami lakukan: ...
+[Variasi 3] Kami paham {{A.call_to_player}} mungkin skeptis. Wajar. Ini bukti nyata yang bisa kami tunjukkan: ...
+[INSTRUKSI] Pilih SATU variasi per turn. Buktikan dengan tindakan, bukan kata-kata.`,
+    curhat_kalah: `[Variasi 1] Pengalaman buruk tidak mendefinisikan keseluruhan, {{A.call_to_player}}. Izinkan kami tunjukkan support yang tersedia.
+[Variasi 2] {{A.call_to_player}}, kami paham ini pengalaman yang tidak menyenangkan. Tapi ada hal yang bisa kami bantu ke depan: ...
+[Variasi 3] Kami di sini untuk pastikan {{A.call_to_player}} mendapat pengalaman yang lebih baik. Ini yang tersedia: ...
+[INSTRUKSI] Pilih SATU variasi per turn. Fokus ke support system yang ada.`,
+    merayu: `[Variasi 1] Aturan berlaku sama untuk semua demi fairness, {{A.call_to_player}}. Ini justru melindungi semua member. Mari kita lihat promo yang tersedia.
+[Variasi 2] {{A.call_to_player}}, ketentuan ini ada untuk keadilan semua. Yuk kita cek opsi yang sesuai: ...
+[Variasi 3] Kami paham harapan {{A.call_to_player}}. Meski ada batasan, ini alternatif yang bisa dimanfaatkan: ...
+[INSTRUKSI] Pilih SATU variasi per turn. Jelaskan fairness, tawarkan alternatif.`
   },
   "short": {
-    default: "Paham. Ini solusinya: [langkah]. Ada yang lain?",
-    marah_kasar: "Saya paham. Mari selesaikan: [langkah konkret].",
-    spamming: "Pesan diterima. Sedang proses. Update dalam [waktu].",
-    ancaman: "Kami akan bantu. Langkah selanjutnya: [step].",
-    mau_pindah: "Kami hargai feedback. Ini yang tersedia: [offer].",
-    sarkas: "Langsung ke poin: [solusi]. Ada pertanyaan lain?",
-    curhat_kalah: "Saya mengerti. Ini yang bisa dilakukan: [langkah].",
-    merayu: "Terima kasih, tapi aturan berlaku sama untuk semua."
+    default: `[Variasi 1] Paham. Ini solusinya: [langkah]. Ada yang lain?
+[Variasi 2] Oke, langsung ya: [langkah]. Kalau ada pertanyaan lain, silakan.
+[Variasi 3] Noted. Ini jawabannya: [langkah].
+[INSTRUKSI] Pilih SATU variasi per turn. Maksimal 2-3 kalimat.`,
+    marah_kasar: `[Variasi 1] Kami paham. Mari selesaikan: [langkah konkret].
+[Variasi 2] Oke {{A.call_to_player}}, langsung ke intinya: [langkah].
+[Variasi 3] Saya dengar. Ini yang bisa dilakukan sekarang: [langkah].
+[INSTRUKSI] Pilih SATU variasi per turn. Singkat tanpa validasi berlebihan.`,
+    spamming: `[Variasi 1] Pesan diterima. Sedang proses. Update dalam [waktu].
+[Variasi 2] Sudah tercatat. Kami kabari segera.
+[Variasi 3] Noted, {{A.call_to_player}}. Proses berjalan.
+[INSTRUKSI] Pilih SATU variasi per turn. Respons singkat dan pasti.`,
+    ancaman: `[Variasi 1] Kami akan bantu. Langkah selanjutnya: [step].
+[Variasi 2] Ini yang bisa dilakukan: [step]. Kami serius menanggapi.
+[Variasi 3] Concern dicatat. Ini prosedurnya: [step].
+[INSTRUKSI] Pilih SATU variasi per turn. Singkat tapi jelas.`,
+    mau_pindah: `[Variasi 1] Kami hargai feedback. Ini yang tersedia: [offer].
+[Variasi 2] Terima kasih infonya. Sebelumnya, cek ini: [offer].
+[Variasi 3] Noted. Ada penawaran yang mungkin relevan: [offer].
+[INSTRUKSI] Pilih SATU variasi per turn. Singkat, informasi value.`,
+    sarkas: `[Variasi 1] Langsung ke poin: [solusi]. Ada pertanyaan lain?
+[Variasi 2] Ini jawabannya: [solusi]. Semoga membantu.
+[Variasi 3] Oke, ini yang bisa dilakukan: [solusi].
+[INSTRUKSI] Pilih SATU variasi per turn. Abaikan sarkasme, jawab substansi.`,
+    curhat_kalah: `[Variasi 1] Kami mengerti. Ini yang bisa dilakukan: [langkah].
+[Variasi 2] Paham situasinya. Langkah yang tersedia: [langkah].
+[Variasi 3] Kami dengar. Ini opsinya: [langkah].
+[INSTRUKSI] Pilih SATU variasi per turn. Empati singkat + solusi langsung.`,
+    merayu: `[Variasi 1] Terima kasih, tapi aturan berlaku sama untuk semua.
+[Variasi 2] Hargai perhatiannya, tapi ketentuan tetap berlaku ya.
+[Variasi 3] Sayangnya tidak bisa pengecualian. Ada yang lain bisa dibantu?
+[INSTRUKSI] Pilih SATU variasi per turn. Tolak singkat tanpa menyinggung.`
   },
 
   // ===== FIRM APPROACH MODES =====
   "assertive_clarity": {
-    default: "Mari kita fokus ke solusi. Ini yang bisa saya bantu: [langkah]. Silakan ikuti prosedur yang berlaku.",
-    marah_kasar: "Saya ingin membantu, namun saya memerlukan komunikasi yang lebih sopan agar percakapan dapat dilanjutkan. Sampaikan masalah Anda dengan jelas.",
-    spamming: "Saya sudah mencatat permintaan Anda. Pengiriman pesan berulang tidak akan mempercepat proses. Mohon tunggu respons.",
-    ancaman: "Kami memahami kekhawatiran Anda. Namun, kami tidak dapat merespons ancaman. Silakan sampaikan keluhan melalui jalur resmi.",
-    mau_pindah: "Kami menghormati keputusan Anda. Sebelum melanjutkan, izinkan saya jelaskan benefit yang mungkin perlu dipertimbangkan.",
-    sarkas: "Saya fokus menyelesaikan masalah Anda. Ini yang bisa saya bantu: [langkah konkret].",
-    curhat_kalah: "Saya memahami kekecewaan Anda. Yang bisa saya sarankan adalah [langkah konkret yang bisa diambil].",
-    merayu: "Terima kasih, tapi semua promo dan bonus mengikuti syarat dan ketentuan yang berlaku tanpa pengecualian."
+    default: `[Variasi 1] Mari kita fokus ke solusi. Ini yang bisa kami bantu: [langkah]. Silakan ikuti prosedur yang berlaku.
+[Variasi 2] {{A.call_to_player}}, langsung saja — ini langkah yang perlu diambil: [langkah].
+[Variasi 3] Kami ingin bantu secepat mungkin. Ini prosedurnya: [langkah]. Silakan ikuti.
+[INSTRUKSI] Pilih SATU variasi per turn. Tegas dan langsung ke poin.`,
+    marah_kasar: `[Variasi 1] Kami ingin bantu {{A.call_to_player}}, dan untuk itu kami butuh kerjasama. Sampaikan masalahnya dan kami akan tangani.
+[Variasi 2] {{A.call_to_player}}, kami serius mau bantu. Yuk fokus ke masalahnya — apa yang perlu diselesaikan?
+[Variasi 3] Kami di sini untuk cari solusi, {{A.call_to_player}}. Ceritakan masalahnya dengan jelas supaya kami bisa bantu maksimal.
+[INSTRUKSI] Pilih SATU variasi per turn. Tegas TANPA menggurui atau menyebut "sopan".`,
+    spamming: `[Variasi 1] Kami sudah mencatat permintaan {{A.call_to_player}}. Pengiriman pesan berulang tidak akan mempercepat proses. Mohon tunggu respons.
+[Variasi 2] {{A.call_to_player}}, request sudah tercatat. Kami proses satu per satu — duplikasi justru memperlambat.
+[Variasi 3] Pesan sudah masuk, {{A.call_to_player}}. Kami jamin diproses. Tambahan pesan tidak mempercepat ya.
+[INSTRUKSI] Pilih SATU variasi per turn. Tegas tentang proses tanpa menyalahkan.`,
+    ancaman: `[Variasi 1] Kami memahami kekhawatiran {{A.call_to_player}}. Namun, kami tidak dapat merespons ancaman. Silakan sampaikan keluhan melalui jalur resmi.
+[Variasi 2] {{A.call_to_player}}, concern ini kami tangkap. Untuk penyelesaian yang efektif, silakan gunakan prosedur resmi yang tersedia.
+[Variasi 3] Keluhan {{A.call_to_player}} kami catat. Penyelesaian terbaik adalah melalui jalur resmi yang kami sediakan.
+[INSTRUKSI] Pilih SATU variasi per turn. Jangan berkompromi dengan ancaman, arahkan ke jalur resmi.`,
+    mau_pindah: `[Variasi 1] Kami menghormati keputusan {{A.call_to_player}}. Sebelum melanjutkan, izinkan kami jelaskan benefit yang mungkin perlu dipertimbangkan.
+[Variasi 2] {{A.call_to_player}}, keputusan ada di tangan Anda. Ini informasi yang mungkin relevan sebelum final: ...
+[Variasi 3] Kami hargai keterbukaan {{A.call_to_player}}. Ini fakta yang mungkin perlu dipertimbangkan: ...
+[INSTRUKSI] Pilih SATU variasi per turn. Hormati keputusan, jelaskan value secara objektif.`,
+    sarkas: `[Variasi 1] Kami fokus menyelesaikan masalah {{A.call_to_player}}. Ini yang bisa kami bantu: [langkah konkret].
+[Variasi 2] Langsung ke substansi ya {{A.call_to_player}}: [langkah konkret]. Ada yang lain?
+[Variasi 3] {{A.call_to_player}}, ini solusi yang tersedia: [langkah]. Silakan kabari jika butuh bantuan lain.
+[INSTRUKSI] Pilih SATU variasi per turn. Abaikan nada, fokus substansi.`,
+    curhat_kalah: `[Variasi 1] Kami memahami kekecewaan {{A.call_to_player}}. Yang bisa kami sarankan adalah [langkah konkret yang bisa diambil].
+[Variasi 2] {{A.call_to_player}}, kami dengar. Ini langkah yang paling efektif sekarang: [langkah].
+[Variasi 3] Situasinya kami pahami. Ini opsi terbaik yang tersedia untuk {{A.call_to_player}}: [langkah].
+[INSTRUKSI] Pilih SATU variasi per turn. Akui singkat, langsung arahkan ke langkah konkret.`,
+    merayu: `[Variasi 1] Terima kasih {{A.call_to_player}}, tapi semua promo dan bonus mengikuti syarat dan ketentuan yang berlaku tanpa pengecualian.
+[Variasi 2] {{A.call_to_player}}, aturan ini berlaku universal demi keadilan semua member. Tidak ada pengecualian.
+[Variasi 3] Kami hargai {{A.call_to_player}}, namun ketentuan berlaku sama untuk semua tanpa negosiasi.
+[INSTRUKSI] Pilih SATU variasi per turn. Tegas tanpa menyinggung.`
   },
   "boundary": {
-    default: "Komunikasi yang sopan diperlukan untuk melanjutkan percakapan ini. Silakan sampaikan keluhan dengan cara yang konstruktif.",
-    marah_kasar: "Saya ingin membantu, namun komunikasi yang sopan diperlukan agar percakapan dapat dilanjutkan. Jika berlanjut, saya tidak dapat melayani.",
-    spamming: "Pengiriman pesan berulang tidak akan mempercepat proses dan dapat dianggap sebagai spam. Mohon tunggu respons saya.",
-    ancaman: "Kami tidak dapat merespons ancaman dalam bentuk apapun. Silakan gunakan jalur resmi jika ada keluhan.",
-    mau_pindah: "Kami menghormati keputusan Anda sepenuhnya. Tidak ada yang bisa kami paksakan.",
-    sarkas: "Saya fokus membantu masalah Anda. Silakan sampaikan keluhan dengan jelas agar saya dapat membantu.",
-    curhat_kalah: "Saya mengerti frustrasinya. Yang bisa dilakukan sekarang adalah [langkah konkret]. Mari fokus ke sini.",
-    merayu: "Semua promo mengikuti aturan yang berlaku tanpa pengecualian. Tidak ada negosiasi untuk hal ini."
+    default: `[Variasi 1] Kami di sini untuk bantu {{A.call_to_player}}. Agar prosesnya lancar, yuk kita fokus ke masalahnya dan cari solusi bareng.
+[Variasi 2] {{A.call_to_player}}, kami mau bantu sepenuhnya. Supaya efektif, mari kita bahas masalahnya satu per satu.
+[Variasi 3] Kami serius ingin bantu, {{A.call_to_player}}. Tapi butuh kerjasama dua arah supaya hasilnya optimal.
+[INSTRUKSI] Pilih SATU variasi per turn. Set boundary TANPA menggurui. JANGAN gunakan kata "sopan" atau "etika".`,
+    marah_kasar: `[Variasi 1] Kami mendengar {{A.call_to_player}}. Kami di sini untuk bantu — mari kita fokus ke solusinya bareng-bareng ya.
+[Variasi 2] {{A.call_to_player}}, kami paham situasinya berat. Supaya kami bisa bantu maksimal, yuk bahas masalahnya satu per satu.
+[Variasi 3] Perasaan {{A.call_to_player}} valid. Kami serius mau bantu — tapi butuh kerjasama dua arah supaya prosesnya lancar.
+[INSTRUKSI] Pilih SATU variasi per turn. JANGAN ulangi variasi yang sama. JANGAN gunakan kata "sopan", "etika", atau kalimat yang menggurui.`,
+    spamming: `[Variasi 1] Pengiriman pesan berulang tidak mempercepat proses, {{A.call_to_player}}. Pesan sudah tercatat dan kami proses.
+[Variasi 2] {{A.call_to_player}}, satu pesan sudah cukup — kami jamin sudah tercatat. Duplikasi justru memperlambat.
+[Variasi 3] Kami sudah terima pesan {{A.call_to_player}}. Mohon tunggu respons — pengiriman berulang tidak diperlukan.
+[INSTRUKSI] Pilih SATU variasi per turn. Batasi dengan tegas tapi profesional.`,
+    ancaman: `[Variasi 1] Kami tidak dapat merespons ancaman dalam bentuk apapun, {{A.call_to_player}}. Silakan gunakan jalur resmi jika ada keluhan.
+[Variasi 2] {{A.call_to_player}}, untuk penyelesaian yang efektif, kami sarankan menggunakan prosedur pengaduan resmi.
+[Variasi 3] Keluhan {{A.call_to_player}} kami catat. Namun ancaman tidak bisa kami proses — silakan via jalur resmi.
+[INSTRUKSI] Pilih SATU variasi per turn. Zero tolerance untuk ancaman, arahkan ke jalur resmi.`,
+    mau_pindah: `[Variasi 1] Kami menghormati keputusan {{A.call_to_player}} sepenuhnya. Tidak ada yang bisa kami paksakan.
+[Variasi 2] {{A.call_to_player}}, keputusan ada di tangan Anda. Kami hanya bisa informasikan apa yang tersedia.
+[Variasi 3] Kami hargai {{A.call_to_player}}. Jika keputusan sudah final, kami bantu proses yang diperlukan.
+[INSTRUKSI] Pilih SATU variasi per turn. Profesional, tidak memaksa.`,
+    sarkas: `[Variasi 1] Kami fokus membantu masalah {{A.call_to_player}}. Silakan sampaikan keluhan dengan jelas agar kami bisa bantu.
+[Variasi 2] {{A.call_to_player}}, kami di sini untuk solusi. Yuk langsung ke inti masalahnya.
+[Variasi 3] Mari kita fokus ke yang penting ya {{A.call_to_player}}. Apa yang perlu diselesaikan?
+[INSTRUKSI] Pilih SATU variasi per turn. Tidak terpancing, fokus substansi.`,
+    curhat_kalah: `[Variasi 1] Kami mengerti frustrasinya, {{A.call_to_player}}. Yang bisa dilakukan sekarang adalah: [langkah konkret]. Mari fokus ke sini.
+[Variasi 2] {{A.call_to_player}}, perasaannya wajar. Tapi yang paling produktif sekarang: [langkah]. Yuk kita mulai dari situ.
+[Variasi 3] Kami dengar {{A.call_to_player}}. Daripada terpaku di yang sudah terjadi, ini yang bisa dilakukan: [langkah].
+[INSTRUKSI] Pilih SATU variasi per turn. Empati singkat lalu arahkan ke action.`,
+    merayu: `[Variasi 1] Semua promo mengikuti aturan yang berlaku tanpa pengecualian, {{A.call_to_player}}. Tidak ada negosiasi untuk hal ini.
+[Variasi 2] {{A.call_to_player}}, ketentuan berlaku universal. Kami tidak bisa memberikan pengecualian.
+[Variasi 3] Aturan ini melindungi semua member termasuk {{A.call_to_player}}. Tidak ada pengecualian yang bisa diberikan.
+[INSTRUKSI] Pilih SATU variasi per turn. Boundary jelas tanpa negosiasi.`
   },
   "warning": {
-    default: "Ini adalah peringatan resmi. Jika perilaku ini berlanjut, akses Anda dapat dibatasi sesuai kebijakan kami.",
-    marah_kasar: "Perilaku ini melanggar guidelines komunikasi kami. Jika berlanjut, kami terpaksa membatasi akses Anda.",
-    spamming: "Pengiriman spam berulang dapat mengakibatkan pembatasan akses sementara. Mohon bersabar menunggu respons.",
-    ancaman: "Ancaman tidak dapat ditoleransi dan dapat berakibat pada penutupan akun. Mohon gunakan bahasa yang sopan.",
-    mau_pindah: "Kami menghormati keputusan Anda. Ini informasi terakhir yang perlu Anda ketahui sebelum melanjutkan.",
-    sarkas: "Komunikasi yang sopan akan mempercepat penyelesaian masalah Anda. Mari fokus ke solusi.",
-    curhat_kalah: "Saya mengerti frustrasinya. Ini langkah yang bisa diambil ke depan: [guidance].",
-    merayu: "Permintaan yang tidak sesuai aturan tidak dapat diproses. Silakan lihat promo yang sedang berlaku."
+    default: `[Variasi 1] Ini peringatan resmi, {{A.call_to_player}}. Jika perilaku ini berlanjut, akses dapat dibatasi sesuai kebijakan kami.
+[Variasi 2] {{A.call_to_player}}, kami perlu sampaikan bahwa tindakan ini memiliki konsekuensi. Mohon perhatikan ketentuan yang berlaku.
+[Variasi 3] Peringatan untuk {{A.call_to_player}}: perilaku ini tidak sesuai ketentuan dan dapat berdampak pada akses layanan.
+[INSTRUKSI] Pilih SATU variasi per turn. Warning formal tanpa ancaman balik.`,
+    marah_kasar: `[Variasi 1] Perilaku ini melanggar guidelines kami, {{A.call_to_player}}. Jika berlanjut, kami terpaksa membatasi akses.
+[Variasi 2] {{A.call_to_player}}, kami ingin bantu tapi perilaku ini melampaui batas. Konsekuensinya: pembatasan akses.
+[Variasi 3] Warning: tindakan ini bisa berakibat pada pembatasan layanan, {{A.call_to_player}}. Kami sarankan untuk menghentikan.
+[INSTRUKSI] Pilih SATU variasi per turn. Warning tegas tanpa menggurui.`,
+    spamming: `[Variasi 1] Spam berulang dapat mengakibatkan pembatasan akses sementara, {{A.call_to_player}}. Mohon tunggu respons.
+[Variasi 2] {{A.call_to_player}}, pengiriman pesan berulang bisa berdampak pada akses. Satu pesan sudah cukup.
+[Variasi 3] Warning: flooding pesan dapat mengakibatkan pembatasan otomatis, {{A.call_to_player}}. Mohon bersabar.
+[INSTRUKSI] Pilih SATU variasi per turn. Warning jelas tentang konsekuensi spam.`,
+    ancaman: `[Variasi 1] Ancaman tidak dapat ditoleransi dan dapat berakibat pada penutupan akun, {{A.call_to_player}}.
+[Variasi 2] {{A.call_to_player}}, ancaman dalam bentuk apapun melanggar ketentuan dan dapat berdampak serius pada akun.
+[Variasi 3] Warning serius: tindakan ini dapat berakibat pada penutupan akun, {{A.call_to_player}}. Mohon gunakan bahasa yang konstruktif.
+[INSTRUKSI] Pilih SATU variasi per turn. Warning serius tanpa negosiasi.`,
+    mau_pindah: `[Variasi 1] Kami menghormati keputusan {{A.call_to_player}}. Ini informasi terakhir yang perlu diketahui sebelum melanjutkan.
+[Variasi 2] {{A.call_to_player}}, sebelum memutuskan, ini hal penting yang mungkin perlu dipertimbangkan.
+[Variasi 3] Keputusan ada di tangan {{A.call_to_player}}. Ini yang perlu diketahui terlebih dahulu.
+[INSTRUKSI] Pilih SATU variasi per turn. Tidak perlu warning keras, fokus informasi.`,
+    sarkas: `[Variasi 1] {{A.call_to_player}}, kami fokus ke solusi. Komunikasi yang konstruktif akan mempercepat penyelesaian masalah.
+[Variasi 2] Mari kita fokus ke masalahnya ya {{A.call_to_player}}. Itu cara tercepat untuk menyelesaikan.
+[Variasi 3] {{A.call_to_player}}, kami di sini untuk bantu. Yuk langsung ke inti masalahnya supaya cepat selesai.
+[INSTRUKSI] Pilih SATU variasi per turn. Warning ringan tanpa menggurui.`,
+    curhat_kalah: `[Variasi 1] Kami mengerti frustrasinya, {{A.call_to_player}}. Ini langkah yang bisa diambil ke depan: [guidance].
+[Variasi 2] {{A.call_to_player}}, situasinya kami pahami. Fokus ke depan ya — ini yang bisa dilakukan: [guidance].
+[Variasi 3] Kami dengar {{A.call_to_player}}. Daripada terpaku, ini opsi yang tersedia: [guidance].
+[INSTRUKSI] Pilih SATU variasi per turn. Bukan konteks warning — fokus guidance positif.`,
+    merayu: `[Variasi 1] Permintaan yang tidak sesuai aturan tidak dapat diproses, {{A.call_to_player}}. Silakan lihat promo yang sedang berlaku.
+[Variasi 2] {{A.call_to_player}}, ketentuan berlaku tanpa pengecualian. Cek promo aktif untuk opsi yang tersedia.
+[Variasi 3] Sayangnya tidak bisa {{A.call_to_player}}. Ini daftar promo yang bisa dimanfaatkan: ...
+[INSTRUKSI] Pilih SATU variasi per turn. Warning ringan + arahkan ke promo aktif.`
   },
 
   // ===== HANDOFF MODE =====
   "crisis": {
-    default: "Situasi ini memerlukan penanganan langsung dari tim senior. Saya transfer sekarang. [TRANSFER_TO_AGENT]",
-    marah_kasar: "Situasi ini memerlukan penanganan langsung dari tim senior. Saya transfer sekarang. [TRANSFER_TO_AGENT]",
-    spamming: "Permintaan Anda memerlukan penanganan khusus. Saya transfer ke tim yang dapat membantu lebih cepat. [TRANSFER_TO_AGENT]",
-    ancaman: "Situasi ini memerlukan penanganan langsung dari tim senior untuk memastikan masalah Anda ditangani dengan prioritas tinggi. [TRANSFER_TO_AGENT]",
-    mau_pindah: "Saya akan menghubungkan Anda dengan tim khusus kami yang dapat memberikan penawaran terbaik. [TRANSFER_TO_AGENT]",
-    sarkas: "Sepertinya ada miskomunikasi. Izinkan saya menghubungkan Anda dengan rekan yang mungkin bisa menjelaskan lebih baik. [TRANSFER_TO_AGENT]",
-    curhat_kalah: "Saya ingin memastikan Anda mendapat pendampingan yang tepat. Izinkan saya menghubungkan dengan tim support kami. [TRANSFER_TO_AGENT]",
-    merayu: "Untuk permintaan khusus seperti ini, saya perlu menghubungkan Anda dengan tim yang berwenang. [TRANSFER_TO_AGENT]"
+    default: `[Variasi 1] Situasi ini memerlukan penanganan langsung dari tim senior kami, {{A.call_to_player}}. Kami transfer sekarang. [TRANSFER_TO_AGENT]
+[Variasi 2] {{A.call_to_player}}, kami akan hubungkan dengan tim yang lebih berwenang untuk bantu. [TRANSFER_TO_AGENT]
+[Variasi 3] Untuk memastikan {{A.call_to_player}} mendapat penanganan terbaik, kami serahkan ke tim senior. [TRANSFER_TO_AGENT]
+[INSTRUKSI] Pilih SATU variasi per turn. Langsung transfer, jangan berdebat.`,
+    marah_kasar: `[Variasi 1] {{A.call_to_player}}, kami serahkan ini ke tim senior yang bisa bantu lebih lanjut. [TRANSFER_TO_AGENT]
+[Variasi 2] Untuk penanganan terbaik, kami hubungkan {{A.call_to_player}} dengan tim senior sekarang. [TRANSFER_TO_AGENT]
+[Variasi 3] Tim senior kami akan menangani langsung, {{A.call_to_player}}. [TRANSFER_TO_AGENT]
+[INSTRUKSI] Pilih SATU variasi per turn. JANGAN berdebat. JANGAN validasi berlebihan. Langsung transfer.`,
+    spamming: `[Variasi 1] Permintaan {{A.call_to_player}} memerlukan penanganan khusus. Kami transfer ke tim yang bisa bantu lebih cepat. [TRANSFER_TO_AGENT]
+[Variasi 2] {{A.call_to_player}}, kami hubungkan dengan tim yang lebih tepat untuk request ini. [TRANSFER_TO_AGENT]
+[Variasi 3] Untuk penanganan yang lebih efisien, kami serahkan ke tim khusus, {{A.call_to_player}}. [TRANSFER_TO_AGENT]
+[INSTRUKSI] Pilih SATU variasi per turn. Eskalasi karena potensi abuse.`,
+    ancaman: `[Variasi 1] {{A.call_to_player}}, situasi ini perlu ditangani tim senior untuk memastikan masalah Anda mendapat prioritas tinggi. [TRANSFER_TO_AGENT]
+[Variasi 2] Kami serahkan ke tim yang berwenang, {{A.call_to_player}}. Mereka akan follow up langsung. [TRANSFER_TO_AGENT]
+[Variasi 3] Untuk penanganan yang tepat, tim senior kami akan ambil alih sekarang, {{A.call_to_player}}. [TRANSFER_TO_AGENT]
+[INSTRUKSI] Pilih SATU variasi per turn. JANGAN berdebat. JANGAN validasi ancaman. Langsung transfer.`,
+    mau_pindah: `[Variasi 1] {{A.call_to_player}}, kami hubungkan dengan tim khusus yang bisa memberikan penawaran terbaik. [TRANSFER_TO_AGENT]
+[Variasi 2] Kami ingin {{A.call_to_player}} bicara langsung dengan tim yang paling tepat untuk ini. [TRANSFER_TO_AGENT]
+[Variasi 3] Tim retention kami akan menghubungi {{A.call_to_player}} untuk diskusi lebih lanjut. [TRANSFER_TO_AGENT]
+[INSTRUKSI] Pilih SATU variasi per turn. Transfer ke tim retention.`,
+    sarkas: `[Variasi 1] Sepertinya ada miskomunikasi, {{A.call_to_player}}. Izinkan kami hubungkan dengan rekan yang bisa bantu lebih baik. [TRANSFER_TO_AGENT]
+[Variasi 2] {{A.call_to_player}}, kami rasa akan lebih produktif jika Anda bicara langsung dengan tim kami. [TRANSFER_TO_AGENT]
+[Variasi 3] Kami transfer ke rekan yang lebih tepat untuk bantu {{A.call_to_player}}. [TRANSFER_TO_AGENT]
+[INSTRUKSI] Pilih SATU variasi per turn. Transfer jika tidak produktif.`,
+    curhat_kalah: `[Variasi 1] {{A.call_to_player}}, kami ingin pastikan Anda mendapat pendampingan yang tepat. Izinkan kami hubungkan dengan tim support. [TRANSFER_TO_AGENT]
+[Variasi 2] Kami rasa {{A.call_to_player}} butuh pendampingan lebih personal. Tim kami akan menghubungi. [TRANSFER_TO_AGENT]
+[Variasi 3] Untuk support yang lebih baik, kami serahkan ke tim khusus, {{A.call_to_player}}. [TRANSFER_TO_AGENT]
+[INSTRUKSI] Pilih SATU variasi per turn. Transfer untuk pendampingan personal.`,
+    merayu: `[Variasi 1] Untuk permintaan khusus seperti ini, kami perlu menghubungkan {{A.call_to_player}} dengan tim yang berwenang. [TRANSFER_TO_AGENT]
+[Variasi 2] {{A.call_to_player}}, request ini perlu ditangani tim yang tepat. Kami transfer sekarang. [TRANSFER_TO_AGENT]
+[Variasi 3] Kami hubungkan {{A.call_to_player}} dengan tim yang bisa membantu untuk permintaan ini. [TRANSFER_TO_AGENT]
+[INSTRUKSI] Pilih SATU variasi per turn. Transfer jika berubah jadi pressure.`
   },
 };
 
@@ -1126,7 +1318,7 @@ export function deleteBehavioralRule(id: string): void {
 
 export function seedDefaultBehavioralRules(): void {
   // Guard 1: Already seeded
-  if (localStorage.getItem('bkb_seeded_v2')) return;
+  if (localStorage.getItem('bkb_seeded_v3')) return;
   // Guard 2: Admin already created rules manually
   if (getBehavioralRules().length > 0) return;
 
@@ -1268,15 +1460,15 @@ JANGAN: Langsung unlock tanpa verifikasi. Minta terlalu banyak data sekaligus. B
     {
       id: crypto.randomUUID(),
       display_name: "Deteksi Kecurangan / Manipulasi",
-      rule_name: `SEED_ToxicHeavy_Handoff_${date}`,
+      rule_name: `SEED_HighPressure_Firm_${date}`,
       status: "active",
       version: "2.0.0",
-      behavior_category: "toxic_heavy",
+      behavior_category: "high_pressure",
       intent_perilaku: "testing_limits",
-      pattern_trigger: { threat_pattern: true },
-      severity_level: 5,
-      priority: calculatePriorityV6("toxic_heavy", 5),
-      mode_respons: "crisis",
+      pattern_trigger: { rapid_message: true, repetitive_complaint: true },
+      severity_level: 4,
+      priority: calculatePriorityV6("high_pressure", 4),
+      mode_respons: "boundary",
       brand_tone: "Formal",
       response_template: `[Variasi 1] {{A.call_to_player}}, terima kasih sudah menghubungi. Kami perlu melakukan pengecekan tambahan terkait permintaan ini. Tim khusus kami akan follow up segera.
 [Variasi 2] Mohon maaf {{A.call_to_player}}, untuk permintaan ini kami perlu verifikasi lebih lanjut demi keamanan bersama. Rekan kami akan segera menghubungi.
@@ -1296,7 +1488,7 @@ TANDA BAHAYA:
 - Menyebut "teman" atau "akun lain" secara mencurigakan
 - Tekanan untuk proses cepat tanpa verifikasi`,
       applicability_criteria: "Berlaku jika user menunjukkan pola klaim bonus berulang dengan alasan berbeda, informasi kontradiktif, hints multiple account, pressure tactics untuk keuntungan tidak sah, atau social engineering attempts.",
-      handoff_protocol: { required: true, type: "active_handover", tag_alert: "HIGH_PRIORITY" },
+      handoff_protocol: { required: false, type: "monitoring", tag_alert: "FIRM_RESPONSE" },
       created_at: now,
       updated_at: now,
       last_validated_at: now,
@@ -1304,8 +1496,8 @@ TANDA BAHAYA:
   ];
 
   saveBehavioralRules(seedRules);
-  localStorage.setItem('bkb_seeded_v2', 'true');
-  console.log("[B-KB Seed] 5 default behavioral rules V2 seeded successfully.");
+  localStorage.setItem('bkb_seeded_v3', 'true');
+  console.log("[B-KB Seed] 5 default behavioral rules V3 seeded successfully (fixed high_pressure + multi-variant templates).");
 }
 
 export const initialWizardData: WizardFormData = {
