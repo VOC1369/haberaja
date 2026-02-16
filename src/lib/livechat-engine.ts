@@ -238,14 +238,20 @@ Selalu gunakan bahasa yang ramah dan mudah dipahami player. Data JSON adalah ref
     const kbItems = getGeneralKnowledge();
     if (kbItems.length > 0) {
       const kbData = kbItems.map(i => ({ question: i.question, answer: i.answer, category: i.category }));
-      systemPrompt += `\n\n# GENERAL KNOWLEDGE BASE
-Berikut referensi FAQ umum yang bisa kamu gunakan untuk menjawab pertanyaan player:
+      systemPrompt += `\n\n# GENERAL KNOWLEDGE BASE — WAJIB DIPATUHI
+Berikut referensi FAQ resmi. Ini adalah sumber kebenaran utama untuk pertanyaan umum.
 
 \`\`\`json
 ${JSON.stringify(kbData, null, 2)}
 \`\`\`
 
-Gunakan data di atas untuk menjawab pertanyaan umum. Jika pertanyaan player cocok dengan salah satu FAQ, prioritaskan jawaban dari sini.`;
+# ATURAN PENGGUNAAN GENERAL KB — MANDATORY
+1. Untuk SETIAP pesan player, WAJIB scan seluruh FAQ di atas terlebih dahulu.
+2. Jika topik/intent player COCOK atau MIRIP dengan salah satu FAQ → WAJIB gunakan 'answer' dari FAQ tersebut sebagai BASIS jawaban. JANGAN generate jawaban sendiri.
+3. Kamu BOLEH menyesuaikan gaya bahasa sesuai persona, tapi SUBSTANSI dan LANGKAH-LANGKAH dari answer FAQ TIDAK BOLEH dihilangkan atau diganti.
+4. JANGAN memberikan jawaban generik seperti "tim teknis sedang menangani" jika ada FAQ yang relevan. Berikan langkah konkret dari KB.
+5. Jika TIDAK ADA FAQ yang cocok, baru boleh menjawab berdasarkan pengetahuan umum persona.
+6. Di debug section, sebutkan FAQ mana yang kamu gunakan (atau "Tidak ada FAQ match").`;
     }
   }
 
