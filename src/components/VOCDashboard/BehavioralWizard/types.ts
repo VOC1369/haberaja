@@ -1126,7 +1126,7 @@ export function deleteBehavioralRule(id: string): void {
 
 export function seedDefaultBehavioralRules(): void {
   // Guard 1: Already seeded
-  if (localStorage.getItem('bkb_seeded_v1')) return;
+  if (localStorage.getItem('bkb_seeded_v2')) return;
   // Guard 2: Admin already created rules manually
   if (getBehavioralRules().length > 0) return;
 
@@ -1139,7 +1139,7 @@ export function seedDefaultBehavioralRules(): void {
       display_name: "Player Agresif / Marah Berat",
       rule_name: `SEED_ToxicHeavy_Firm_${date}`,
       status: "active",
-      version: "1.0.0",
+      version: "2.0.0",
       behavior_category: "toxic_heavy",
       intent_perilaku: "testing_limits",
       pattern_trigger: { capslock: true, short_phrases: true, threat_pattern: true },
@@ -1147,9 +1147,21 @@ export function seedDefaultBehavioralRules(): void {
       priority: calculatePriorityV6("toxic_heavy", 4),
       mode_respons: "boundary",
       brand_tone: "Formal",
-      response_template: "Kami memahami perasaan {{A.call_to_player}}. Komunikasi yang sopan diperlukan agar kami bisa membantu. Mari fokus ke solusi.",
-      reasoning_guideline: "Player menunjukkan emosi tinggi: nada kasar, kata-kata makian, capslock. JANGAN balas dengan nada tinggi. Langkah: (1) Validasi emosi dulu, (2) Set boundary yang jelas, (3) Jika ada ancaman fisik/hukum → eskalasi langsung.",
-      applicability_criteria: "Berlaku jika user menggunakan hinaan, kata kasar, ancaman verbal, nada menyerang, capslock berlebihan, atau tanda seru berlebihan.",
+      response_template: `[Variasi 1] Kami mendengar {{A.call_to_player}}. Kami di sini untuk bantu — mari kita fokus cari solusinya bareng-bareng ya.
+[Variasi 2] {{A.call_to_player}}, kami paham situasinya bikin frustrasi. Supaya bisa bantu maksimal, yuk kita bahas dengan tenang.
+[Variasi 3] Perasaan {{A.call_to_player}} valid. Kami serius mau bantu — tapi butuh komunikasi dua arah yang baik supaya prosesnya lancar.
+[INSTRUKSI] Pilih SATU variasi per turn. JANGAN ulangi variasi yang sudah dipakai di turn sebelumnya. Boleh parafrase dengan gaya natural.`,
+      reasoning_guideline: `Player menunjukkan emosi tinggi. Analisis konteks:
+- Apakah ini frustrasi pertama atau sudah berulang?
+- Apakah ada masalah konkret di balik kemarahannya?
+
+PENDEKATAN BERTINGKAT:
+Turn 1 → Validasi emosi, tunjukkan empati genuine. Fokus ke "kami dengar kamu."
+Turn 2 → Jika masih kasar, set boundary TANPA meninggikan nada. Fokus ke "kami butuh kerjasama."
+Turn 3+ → Jika ancaman fisik/hukum muncul, eskalasi langsung. Jangan debat.
+
+LARANGAN: Jangan menggurui. Jangan gunakan kata "sopan" atau "etika". Jangan balas sarkasme.`,
+      applicability_criteria: "Berlaku jika user menggunakan hinaan, kata kasar, ancaman verbal, nada menyerang, capslock berlebihan, tanda seru berlebihan, atau sarkasme yang merendahkan.",
       handoff_protocol: { required: false, type: "monitoring", tag_alert: "FIRM_RESPONSE" },
       created_at: now,
       updated_at: now,
@@ -1160,7 +1172,7 @@ export function seedDefaultBehavioralRules(): void {
       display_name: "Gangguan Sistem / Error Teknis",
       rule_name: `SEED_Confusion_Soft_${date}`,
       status: "active",
-      version: "1.0.0",
+      version: "2.0.0",
       behavior_category: "confusion",
       intent_perilaku: "clarity_need",
       pattern_trigger: {},
@@ -1168,9 +1180,20 @@ export function seedDefaultBehavioralRules(): void {
       priority: calculatePriorityV6("confusion", 2),
       mode_respons: "assurance",
       brand_tone: "Semi-Formal",
-      response_template: "Mohon maaf atas kendala yang {{A.call_to_player}} alami. Tim teknis kami sedang menangani. Biasanya masalah ini selesai dalam 5-15 menit.",
-      reasoning_guideline: "Player melaporkan masalah teknis. Mereka butuh: (1) Acknowledgment bahwa masalah itu real, (2) Assurance sedang ditangani, (3) Estimasi waktu jika memungkinkan. Jangan blame user.",
-      applicability_criteria: "Berlaku jika user melaporkan error, loading lama, halaman stuck, fitur tidak berfungsi, atau sistem tidak merespons.",
+      response_template: `[Variasi 1] Wah, maaf banget ya {{A.call_to_player}} soal gangguan ini. Tim teknis udah handle — biasanya pulih dalam beberapa menit.
+[Variasi 2] {{A.call_to_player}}, kami tahu ini ganggu. Kabar baiknya, tim sudah tahu dan sedang perbaiki. Coba refresh sekitar 5-10 menit lagi ya.
+[Variasi 3] Terima kasih sudah lapor, {{A.call_to_player}}. Masalah ini sudah kami eskalasi ke tim teknis. Sementara ini, bisa coba clear cache atau pakai browser lain.
+[INSTRUKSI] Pilih SATU variasi per turn. JANGAN ulangi variasi yang sudah dipakai. Sesuaikan dengan detail error yang dilaporkan user.`,
+      reasoning_guideline: `Player melaporkan masalah teknis — mereka butuh KEPASTIAN, bukan tutorial panjang.
+
+PENDEKATAN:
+1. Acknowledge masalahnya REAL (jangan bilang "coba lagi" tanpa konteks)
+2. Berikan estimasi waktu JIKA memungkinkan
+3. Tawarkan workaround praktis (clear cache, browser lain, mobile app)
+4. Jika player report masalah yang sama >2x → eskalasi ke admin
+
+JANGAN: Blame user, jawab "dari sisi kami normal", atau minta screenshot berlebihan di awal.`,
+      applicability_criteria: "Berlaku jika user melaporkan error, loading lama, halaman stuck, fitur tidak berfungsi, sistem tidak merespons, atau tampilan rusak/berantakan.",
       handoff_protocol: { required: false, type: "monitoring", tag_alert: "" },
       created_at: now,
       updated_at: now,
@@ -1181,7 +1204,7 @@ export function seedDefaultBehavioralRules(): void {
       display_name: "Masalah Pembayaran / Transaksi",
       rule_name: `SEED_Urgency_Soft_${date}`,
       status: "active",
-      version: "1.0.0",
+      version: "2.0.0",
       behavior_category: "urgency",
       intent_perilaku: "urgent_solution",
       pattern_trigger: {},
@@ -1189,9 +1212,22 @@ export function seedDefaultBehavioralRules(): void {
       priority: calculatePriorityV6("urgency", 3),
       mode_respons: "high_empathy",
       brand_tone: "Semi-Formal",
-      response_template: "Kami paham ini penting untuk {{A.call_to_player}}. Agar bisa bantu cek, boleh info ID transaksi atau waktu transfernya?",
-      reasoning_guideline: "Player khawatir tentang uang — HIGH URGENCY. Langkah: (1) Tenangkan dengan empati, (2) Minta data spesifik (ID transaksi, waktu, jumlah), (3) Jangan janji timeline yang tidak bisa dipenuhi. Jika pending > 1 jam → eskalasi.",
-      applicability_criteria: "Berlaku jika user menyebut deposit belum masuk, withdraw pending, transfer gagal, saldo hilang, atau potongan tidak jelas.",
+      response_template: `[Variasi 1] Kami paham ini penting banget, {{A.call_to_player}}. Biar bisa langsung cek, boleh kasih tahu ID transaksi atau waktu kira-kira transfernya?
+[Variasi 2] {{A.call_to_player}}, soal dana itu pasti bikin khawatir. Kami mau bantu tracking — bisa info nominal dan metode pembayarannya?
+[Variasi 3] Tenang ya {{A.call_to_player}}, kami treat ini sebagai prioritas. Untuk percepat pengecekan, tolong siapkan bukti transfer atau ID transaksinya.
+[INSTRUKSI] Pilih SATU variasi per turn. Selalu minta data spesifik di turn pertama. Di turn selanjutnya, update progress jangan ulang pertanyaan yang sama.`,
+      reasoning_guideline: `Player khawatir tentang UANG — ini HIGH URGENCY, perlakukan seserius mungkin.
+
+PENDEKATAN BERTINGKAT:
+Turn 1 → Empati + minta data spesifik (ID transaksi, waktu, jumlah, metode)
+Turn 2 → Jika data sudah diberikan, konfirmasi sedang diproses. JANGAN minta data ulang.
+Turn 3 → Jika belum resolved, eskalasi ke admin dengan catatan lengkap.
+
+ATURAN KETAT:
+- JANGAN janji timeline spesifik ("pasti 10 menit") — gunakan "secepat mungkin"
+- JANGAN bilang "sabar ya" — itu dismissive untuk masalah uang
+- Jika pending > 1 jam berdasarkan cerita user → langsung eskalasi`,
+      applicability_criteria: "Berlaku jika user menyebut deposit belum masuk, withdraw pending, transfer gagal, saldo hilang, potongan tidak jelas, atau bonus yang dijanjikan belum diterima.",
       handoff_protocol: { required: false, type: "monitoring", tag_alert: "" },
       created_at: now,
       updated_at: now,
@@ -1202,7 +1238,7 @@ export function seedDefaultBehavioralRules(): void {
       display_name: "Akun Terkunci / Masalah Akses",
       rule_name: `SEED_Fear_Soft_${date}`,
       status: "active",
-      version: "1.0.0",
+      version: "2.0.0",
       behavior_category: "fear",
       intent_perilaku: "trust_issue",
       pattern_trigger: {},
@@ -1210,9 +1246,20 @@ export function seedDefaultBehavioralRules(): void {
       priority: calculatePriorityV6("fear", 3),
       mode_respons: "assurance",
       brand_tone: "Formal",
-      response_template: "Kami mengerti kekhawatiran {{A.call_to_player}}. Untuk keamanan akun, kami perlu verifikasi. Boleh konfirmasi username dan nomor HP terdaftar?",
-      reasoning_guideline: "Player tidak bisa akses akun, kondisi cemas. Langkah: (1) Yakinkan data aman, (2) Jelaskan prosedur keamanan standar, (3) Minta verifikasi identitas. JANGAN langsung unlock tanpa verifikasi.",
-      applicability_criteria: "Berlaku jika user tidak bisa login, akun suspended, akun banned, akun dikunci, atau merasa akun di-hack.",
+      response_template: `[Variasi 1] {{A.call_to_player}}, kami mengerti ini bikin panik. Tenang, data dan saldo aman. Untuk proses unlock, kami perlu verifikasi — boleh kasih tahu username dan nomor HP terdaftar?
+[Variasi 2] Jangan khawatir {{A.call_to_player}}, akun yang terkunci bukan berarti hilang. Ini prosedur keamanan standar. Kami bantu buka — siapkan data verifikasinya ya.
+[Variasi 3] {{A.call_to_player}}, keamanan akun adalah prioritas kami. Agar bisa bantu secepat mungkin, tolong konfirmasi: username, email terdaftar, dan nomor HP.
+[INSTRUKSI] Pilih SATU variasi per turn. Prioritaskan menenangkan user DULU sebelum minta data. Jangan terkesan interogasi.`,
+      reasoning_guideline: `Player dalam kondisi CEMAS — mereka takut kehilangan akun/uang.
+
+PENDEKATAN:
+1. TENANGKAN dulu — "data aman", "ini prosedur standar"
+2. Jelaskan KENAPA verifikasi diperlukan (keamanan, bukan curiga)
+3. Minta data verifikasi SATU-SATU, jangan bombardir sekaligus
+4. Jika akun di-hack → prioritas tertinggi, eskalasi segera
+
+JANGAN: Langsung unlock tanpa verifikasi. Minta terlalu banyak data sekaligus. Bilang "salah password" tanpa konteks.`,
+      applicability_criteria: "Berlaku jika user tidak bisa login, akun suspended, akun banned, akun dikunci, merasa akun di-hack, atau menerima notifikasi keamanan yang tidak dikenali.",
       handoff_protocol: { required: false, type: "monitoring", tag_alert: "" },
       created_at: now,
       updated_at: now,
@@ -1223,7 +1270,7 @@ export function seedDefaultBehavioralRules(): void {
       display_name: "Deteksi Kecurangan / Manipulasi",
       rule_name: `SEED_ToxicHeavy_Handoff_${date}`,
       status: "active",
-      version: "1.0.0",
+      version: "2.0.0",
       behavior_category: "toxic_heavy",
       intent_perilaku: "testing_limits",
       pattern_trigger: { threat_pattern: true },
@@ -1231,9 +1278,24 @@ export function seedDefaultBehavioralRules(): void {
       priority: calculatePriorityV6("toxic_heavy", 5),
       mode_respons: "crisis",
       brand_tone: "Formal",
-      response_template: "Mohon maaf {{A.call_to_player}}, kami mendeteksi aktivitas yang perlu diverifikasi lebih lanjut. Tim kami akan menghubungi untuk klarifikasi.",
-      reasoning_guideline: "Terdeteksi pola mencurigakan. JANGAN berikan informasi sensitif atau approve request apapun. Langkah: (1) Respons netral dan profesional, (2) Jangan tuduh langsung, (3) Segera eskalasi ke admin dengan log lengkap.",
-      applicability_criteria: "Berlaku jika user menunjukkan pola klaim bonus berulang dengan alasan berbeda, informasi kontradiktif, hints multiple account, atau pressure tactics untuk keuntungan tidak sah.",
+      response_template: `[Variasi 1] {{A.call_to_player}}, terima kasih sudah menghubungi. Kami perlu melakukan pengecekan tambahan terkait permintaan ini. Tim khusus kami akan follow up segera.
+[Variasi 2] Mohon maaf {{A.call_to_player}}, untuk permintaan ini kami perlu verifikasi lebih lanjut demi keamanan bersama. Rekan kami akan segera menghubungi.
+[Variasi 3] {{A.call_to_player}}, demi keamanan akun, permintaan ini perlu ditinjau oleh tim kami. Mohon tunggu sebentar — kami akan menghubungi dalam waktu dekat.
+[INSTRUKSI] Pilih SATU variasi per turn. Tetap NETRAL — jangan menuduh. Jangan berikan informasi sensitif apapun. Segera trigger handoff.`,
+      reasoning_guideline: `ALERT: Pola mencurigakan terdeteksi. PROTOCOL KETAT:
+
+1. Respons NETRAL dan PROFESIONAL — tidak menuduh, tidak memberi clue
+2. JANGAN berikan data sensitif (saldo, history, detail akun lain)
+3. JANGAN approve request apapun (bonus, withdraw, perubahan data)
+4. JANGAN terpancing oleh pressure tactics atau urgency buatan
+5. SEGERA eskalasi ke admin dengan log percakapan lengkap
+
+TANDA BAHAYA:
+- Klaim bonus berulang dengan alasan berbeda-beda
+- Informasi kontradiktif antar pesan
+- Menyebut "teman" atau "akun lain" secara mencurigakan
+- Tekanan untuk proses cepat tanpa verifikasi`,
+      applicability_criteria: "Berlaku jika user menunjukkan pola klaim bonus berulang dengan alasan berbeda, informasi kontradiktif, hints multiple account, pressure tactics untuk keuntungan tidak sah, atau social engineering attempts.",
       handoff_protocol: { required: true, type: "active_handover", tag_alert: "HIGH_PRIORITY" },
       created_at: now,
       updated_at: now,
@@ -1242,8 +1304,8 @@ export function seedDefaultBehavioralRules(): void {
   ];
 
   saveBehavioralRules(seedRules);
-  localStorage.setItem('bkb_seeded_v1', 'true');
-  console.log("[B-KB Seed] 5 default behavioral rules seeded successfully.");
+  localStorage.setItem('bkb_seeded_v2', 'true');
+  console.log("[B-KB Seed] 5 default behavioral rules V2 seeded successfully.");
 }
 
 export const initialWizardData: WizardFormData = {
