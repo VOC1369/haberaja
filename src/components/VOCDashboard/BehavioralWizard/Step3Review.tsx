@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -299,31 +300,35 @@ export function Step3Review({ data, onChange, editingItem }: Step3Props) {
         </CardContent>
       </Card>
 
-      {/* Applicability Criteria */}
+      {/* Applicability Criteria — Editable */}
       <Card className="bg-card">
         <CardHeader className="p-6 pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">Kriteria Penerapan</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="bg-muted p-4 rounded-lg text-sm text-foreground">
-            {data.applicability_criteria || <span className="text-muted-foreground italic">Belum diisi</span>}
-          </div>
+          <Textarea
+            className="min-h-[80px] bg-muted border-border text-sm"
+            placeholder="Kapan rule ini harus diterapkan?"
+            value={data.applicability_criteria}
+            onChange={(e) => onChange({ applicability_criteria: e.target.value })}
+          />
         </CardContent>
       </Card>
 
-      {/* Response Template Preview */}
-      {data.response_template && (
-        <Card className="bg-card">
-          <CardHeader className="p-6 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Template Respons</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-muted p-4 rounded-lg text-sm text-foreground whitespace-pre-wrap">
-              {data.response_template}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Response Template — Editable */}
+      <Card className="bg-card">
+        <CardHeader className="p-6 pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Template Respons</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            className="min-h-[120px] bg-muted border-border text-sm"
+            placeholder="Template respons AI..."
+            value={data.response_template}
+            onChange={(e) => onChange({ response_template: e.target.value })}
+          />
+        </CardContent>
+      </Card>
 
       {/* Handoff Protocol */}
       {data.reaction === "handoff" && (
