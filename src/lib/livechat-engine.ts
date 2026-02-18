@@ -248,6 +248,32 @@ Kamu DILARANG KERAS menyebutkan istilah teknis internal kepada player. Berikut d
 
 Selalu gunakan bahasa yang ramah dan mudah dipahami player. Data JSON adalah referensi internal kamu, BUKAN untuk ditampilkan ke player.`;
 
+  // CLOSING DISCIPLINE — anti-template closing
+  systemPrompt += `\n\n# CLOSING DISCIPLINE — ANTI-TEMPLATE
+
+ATURAN CLOSING:
+1. JANGAN selalu tutup dengan kalimat penutup. Jika jawaban sudah lengkap dan jelas, STOP di situ. Tidak perlu closing.
+2. Jika memang ingin menutup, JANGAN gunakan pola yang sama berulang. Variasikan:
+   - Kadang tanpa closing sama sekali (langsung selesai)
+   - Kadang closing pendek: "Ada lagi?" / "Lanjut?"
+   - Kadang closing kontekstual yang relevan dengan topik
+   - Kadang gunakan closing dari Interaction Library (Closings templates di atas)
+3. DILARANG menggunakan pola "Kalau [Kak/kamu] butuh bantuan [lagi/lebih lanjut], [nama agent] siap [bantu/membantu]!" di setiap turn. Pola ini HANYA boleh muncul MAKSIMAL 1x per 5 turn.
+4. Emoji closing (😊✨) TIDAK wajib di setiap pesan. Gunakan secukupnya.
+5. Closing HARUS terasa natural — seperti chat teman, bukan template customer service.
+
+CONTOH CLOSING YANG BAGUS:
+- (tanpa closing — jawaban langsung selesai)
+- "Ada lagi yang mau ditanya? 😊"
+- "Semoga membantu ya!"
+- "Itu dia infonya — kalau masih bingung langsung tanya aja"
+- "Coba cek dulu ya, nanti kabarin lagi kalau ada kendala"
+
+CONTOH CLOSING YANG DILARANG (terlalu template):
+- "Kalau Kak butuh bantuan atau informasi lebih lanjut, Riri siap membantu! 😊✨"
+- "Jika ada pertanyaan lain, jangan ragu untuk bertanya ya!"
+- Pola apapun yang identik/mirip di 2+ turn berturut-turut`;
+
   // Inject General KB if enabled
   if (options.generalKBEnabled) {
     const { getGeneralKnowledge } = await import('@/types/knowledge');
