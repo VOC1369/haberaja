@@ -1,26 +1,29 @@
 
-# Tambah Tombol "Delete All" di General Knowledge Base
+# Tambah Tombol "Delete All" di Behavioral Knowledge Base
 
 ## Perubahan
 
-### `src/components/VOCDashboard/GeneralKnowledgeSection.tsx`
+### `src/components/VOCDashboard/BehavioralKnowledgeSection.tsx`
 
-1. **Tombol "Delete All"** ditambahkan di baris Title, rata kanan (sejajar dengan "General Knowledge Base" di kiri)
-   - Style: `variant="outline"` dengan hover destructive (merah), konsisten dengan tombol delete yang sudah ada
-   - Icon: `Trash2` + teks "Delete All"
+1. **State baru**: Tambah `isDeleteAllOpen` state untuk kontrol AlertDialog.
+
+2. **Tombol "Delete All"** di baris Title (line 117-137), rata kanan bersama tombol "Prompt Result" yang sudah ada:
    - Hanya muncul jika `items.length > 0`
+   - Style konsisten: `variant="outline"`, `text-destructive`, hover `bg-destructive/20`
+   - Icon `Trash2` + teks "Delete All"
 
-2. **AlertDialog konfirmasi** sebelum hapus semua data
-   - Title: "Hapus Semua Knowledge?"
-   - Deskripsi: Peringatan bahwa data yang dihapus tidak dapat dikembalikan, termasuk jumlah entry yang akan dihapus
-   - Tombol: "Batal" dan "Hapus Semua" (warna destructive)
-   - Saat dikonfirmasi: panggil `saveGeneralKnowledge([])` untuk clear semua data, update state, tampilkan toast
+3. **AlertDialog konfirmasi**:
+   - Title: "Hapus Semua Aturan Behavioral?"
+   - Deskripsi: Peringatan data tidak bisa dikembalikan + jumlah entry (`items.length`)
+   - Saat dikonfirmasi: panggil `saveBehavioralRules([])` untuk clear semua data, update state, tampilkan toast sukses
 
-### Layout
+4. **Import tambahan**: `saveBehavioralRules` dari `BehavioralWizard/types`
+
+### Layout Title Setelah Perubahan
 
 ```text
-General Knowledge Base                              [ Delete All ]
-Kelola informasi umum untuk AI assistant
+Behavioral Knowledge Base          [ Delete All ] [ Prompt Result ]
+B-KB V5.0 — Kelola aturan...
 ```
 
-Tombol mengikuti CSS pattern yang sama: `border-border`, hover `bg-destructive/20 text-destructive border-destructive`.
+Kedua tombol sejajar rata kanan menggunakan `flex gap-2`.
