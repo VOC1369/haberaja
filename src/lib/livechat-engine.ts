@@ -9,6 +9,7 @@ import { loadInitialConfig } from './apbe-storage';
 import { promoKB } from './promo-storage';
 import { getPayloadContract } from './extractors/promo-taxonomy';
 import { createTicketFromChat, buildTicketFeedbackContext } from './ticket-storage';
+import { getGeneralKnowledge } from '@/types/knowledge';
 import type { PromoItem } from '@/components/VOCDashboard/PromoFormWizard/types';
 import type { APBEConfig } from '@/types/apbe-config';
 import type { TicketCategory } from '@/types/ticket';
@@ -32,6 +33,12 @@ export interface ChatMessage {
   ticketCreated?: { ticket_number: string; category: string };
 }
 
+export interface KBSourceMatch {
+  source: 'promo' | 'general' | 'behavioral';
+  label: string;
+  detail: string;
+}
+
 export interface DebugBreakdown {
   userIntent: string;
   jsonFieldsReferenced: string[];
@@ -42,6 +49,7 @@ export interface DebugBreakdown {
   finalValidation: string;
   raw: string;
   source?: 'llm' | 'client';
+  kbSources?: KBSourceMatch[];
   kbHealth?: {
     status: 'READY' | 'NOT_READY' | 'UNKNOWN';
     missingKeys: string[];
@@ -377,6 +385,11 @@ export function parseDebugSection(raw: string): DebugBreakdown {
 // STREAMING CHAT
 // ============================================
 
+export interface StreamChatOptions {
+  generalKBEnabled?: boolean;
+  behavioralKBEnabled?: boolean;
+}
+
 export async function streamChat(
   messages: { role: string; content: string }[],
   systemPrompt: string,
@@ -387,6 +400,7 @@ export async function streamChat(
   onError: (error: string) => void,
   selectedPromo?: PromoItem | null,
   onTicketCreated?: (ticket: { ticket_number: string; category: string }) => void,
+  kbOptions?: StreamChatOptions,
 ): Promise<void> {
   if (!IS_DEV_MODE) {
     onError('Livechat Test Console hanya tersedia di dev mode');
@@ -474,9 +488,9 @@ export async function streamChat(
           onDebug(debug);
         }
       } else {
-        // Client-side fallback
+      // Client-side fallback
         const lastUserMsg = messages[messages.length - 1]?.content || '';
-        const clientDebug = buildClientDebug(lastUserMsg, fullResponse, selectedPromo || null);
+        const clientDebug = buildClientDebug(lastUserMsg, fullResponse, selectedPromo || null, kbOptions);
         // Attach kbHealth from engine
         if (selectedPromo) {
           const { kbHealth } = buildKBContext(selectedPromo);
@@ -518,14 +532,19 @@ export function buildClientDebug(
   userMessage: string,
   assistantResponse: string,
   promo: PromoItem | null,
+  kbOptions?: StreamChatOptions,
 ): DebugBreakdown {
   const promoData = promo as unknown as Record<string, unknown> | null;
   const userNumbers = userMessage.match(/[\d][.\d,]*/g)?.map(n => parseFloat(n.replace(/,/g, ''))) || [];
+  const userLower = userMessage.toLowerCase();
+  const responseLower = assistantResponse.toLowerCase();
 
   const fieldsReferenced: string[] = [];
+  const kbSources: KBSourceMatch[] = [];
   let matchCount = 0;
   let mismatchCount = 0;
 
+  // ── PROMO KB CHECK ──
   if (promoData) {
     for (const field of CLIENT_DEBUG_FIELDS) {
       const val = promoData[field];
@@ -534,14 +553,12 @@ export function buildClientDebug(
       const valStr = String(val);
       const valNum = parseFloat(valStr);
 
-      // Check if user message or assistant response references this field
-      const mentioned = userMessage.toLowerCase().includes(field.replace(/_/g, ' '))
-        || assistantResponse.toLowerCase().includes(valStr.toLowerCase())
+      const mentioned = userLower.includes(field.replace(/_/g, ' '))
+        || responseLower.includes(valStr.toLowerCase())
         || (!isNaN(valNum) && userNumbers.includes(valNum));
 
       if (mentioned) {
-        fieldsReferenced.push(`${field} = ${valStr}`);
-        // Check consistency: does assistant response contain the KB value?
+        fieldsReferenced.push(`[Promo] ${field} = ${valStr}`);
         if (assistantResponse.includes(valStr)) {
           matchCount++;
         } else {
@@ -549,28 +566,96 @@ export function buildClientDebug(
         }
       }
     }
+    if (fieldsReferenced.length > 0) {
+      kbSources.push({
+        source: 'promo',
+        label: `Promo: ${(promoData as Record<string, unknown>).promo_name || 'Selected'}`,
+        detail: `${fieldsReferenced.length} field dirujuk`,
+      });
+    }
   }
 
-  const hasPromo = promo !== null;
-  const confidence = !hasPromo ? 'rendah'
+  // ── GENERAL KB CHECK ──
+  if (kbOptions?.generalKBEnabled) {
+    const kbItems = getGeneralKnowledge();
+    const matchedFAQs: string[] = [];
+
+    for (const item of kbItems) {
+      const qLower = item.question.toLowerCase();
+      const aLower = item.answer.toLowerCase();
+      const qWords = qLower.split(/\s+/).filter(w => w.length > 3);
+      const userWords = userLower.split(/\s+/).filter(w => w.length > 3);
+      const overlap = qWords.filter(w => userWords.some(uw => uw.includes(w) || w.includes(uw)));
+
+      const aPhrases = aLower.split(/[.!?\n]/).filter(s => s.trim().length > 10);
+      const answerUsed = aPhrases.some(phrase => responseLower.includes(phrase.trim()));
+
+      if (overlap.length >= 2 || answerUsed) {
+        matchedFAQs.push(item.question);
+        matchCount++;
+      }
+    }
+
+    if (matchedFAQs.length > 0) {
+      fieldsReferenced.push(...matchedFAQs.map(q => `[General KB] FAQ: "${q.slice(0, 60)}"`));
+      kbSources.push({
+        source: 'general',
+        label: 'General KB',
+        detail: `${matchedFAQs.length} FAQ match`,
+      });
+    }
+  }
+
+  // ── BEHAVIORAL KB CHECK ──
+  if (kbOptions?.behavioralKBEnabled) {
+    const rules = getBehavioralRules();
+    const activeRules = rules.filter(r => r.status === 'active');
+    const matchedRules: string[] = [];
+
+    for (const rule of activeRules) {
+      const criteria = (rule.applicability_criteria || '').toLowerCase();
+      const criteriaWords = criteria.split(/\s+/).filter(w => w.length > 3);
+      const userWords = userLower.split(/\s+/).filter(w => w.length > 3);
+      const overlap = criteriaWords.filter(w => userWords.some(uw => uw.includes(w) || w.includes(uw)));
+
+      if (overlap.length >= 2) {
+        matchedRules.push(rule.display_name || rule.behavior_category);
+        matchCount++;
+      }
+    }
+
+    if (matchedRules.length > 0) {
+      fieldsReferenced.push(...matchedRules.map(r => `[B-KB] Rule: "${r}"`));
+      kbSources.push({
+        source: 'behavioral',
+        label: 'Behavioral KB',
+        detail: `${matchedRules.length} rule match`,
+      });
+    }
+  }
+
+  const hasAnyKB = promo !== null || kbSources.length > 0;
+  const confidence = !hasAnyKB ? 'rendah'
     : mismatchCount > 0 ? 'rendah'
     : matchCount >= 2 ? 'sangat tinggi'
     : matchCount === 1 ? 'tinggi'
     : 'sedang';
 
+  const sourceLabels = kbSources.map(s => s.label).join(', ') || 'Tidak ada KB aktif';
+
   const analysis = mismatchCount > 0
     ? `Mismatch terdeteksi — ${mismatchCount} field tidak konsisten`
     : matchCount > 0
-    ? `Match ditemukan — ${matchCount} field konsisten`
-    : hasPromo
-    ? 'Tidak ada field numerik yang dirujuk langsung'
-    : 'Tidak ada promo KB yang dipilih';
+    ? `Match ditemukan — ${matchCount} referensi dari: ${sourceLabels}`
+    : hasAnyKB
+    ? 'Tidak ada field/FAQ yang dirujuk langsung'
+    : 'Tidak ada KB yang aktif';
 
   return {
     userIntent: userMessage.length > 120 ? userMessage.slice(0, 120) + '…' : userMessage,
     jsonFieldsReferenced: fieldsReferenced.length > 0 ? fieldsReferenced : ['Tidak ada field yang dirujuk'],
     analysis,
-    retrievalStatus: hasPromo ? (matchCount > 0 ? 'valid' : 'partial') : 'none',
+    retrievalStatus: hasAnyKB ? (matchCount > 0 ? 'valid' : 'partial') : 'none',
     conflictCheck: mismatchCount > 0 ? `ada (${mismatchCount} field)` : 'tidak ada',
     confidence,
     finalValidation: mismatchCount > 0
@@ -580,6 +665,7 @@ export function buildClientDebug(
       : 'KB kurang lengkap',
     raw: '[Client-generated trace]',
     source: 'client',
+    kbSources: kbSources.length > 0 ? kbSources : undefined,
   };
 }
 
