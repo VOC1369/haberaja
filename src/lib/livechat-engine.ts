@@ -164,6 +164,15 @@ The Debug section MUST follow this exact format:
 [Final Validation]
 <one of: Jawaban konsisten dengan KB | Jawaban berpotensi ambiguous | KB kurang lengkap | JSON conflict terdeteksi>
 
+[KB Sources Used]
+<untuk SETIAP KB source yang kamu gunakan untuk menjawab, tulis SATU baris per source:>
+<format: SOURCE_TYPE | label | detail>
+<SOURCE_TYPE harus salah satu dari: promo, general, behavioral>
+<contoh: general | FAQ: "Kapan LP kadaluwarsa?" | answer digunakan sebagai basis jawaban>
+<contoh: promo | Promo: Welcome Bonus | field: min_deposit, reward_amount>
+<contoh: behavioral | Rule: abusive_language | rule diterapkan untuk tone>
+<jika TIDAK ADA KB yang digunakan: none | Tidak ada KB match | jawaban murni dari persona>
+
 REMEMBER: The ---DEBUG--- section is MANDATORY for EVERY response. Do NOT skip it. Do NOT forget it. ALWAYS include it.
 Do NOT hide structural issues.
 Do NOT invent fields.
@@ -369,6 +378,22 @@ export function parseDebugSection(raw: string): DebugBreakdown {
     return match ? match[1].trim() : '';
   };
 
+  // Parse [KB Sources Used] section
+  const kbSourcesRaw = extract('KB Sources Used');
+  const kbSources: KBSourceMatch[] = [];
+  if (kbSourcesRaw) {
+    const lines = kbSourcesRaw.split('\n').filter(l => l.trim() && l.includes('|'));
+    for (const line of lines) {
+      const parts = line.split('|').map(p => p.trim());
+      if (parts.length >= 3) {
+        const sourceType = parts[0].toLowerCase();
+        if (sourceType === 'promo' || sourceType === 'general' || sourceType === 'behavioral') {
+          kbSources.push({ source: sourceType, label: parts[1], detail: parts[2] });
+        }
+      }
+    }
+  }
+
   return {
     userIntent: extract('User Intent'),
     jsonFieldsReferenced: extract('JSON Data Referenced').split('\n').filter(Boolean),
@@ -378,6 +403,7 @@ export function parseDebugSection(raw: string): DebugBreakdown {
     confidence: extract('Confidence'),
     finalValidation: extract('Final Validation'),
     raw,
+    kbSources: kbSources.length > 0 ? kbSources : undefined,
   };
 }
 
@@ -488,9 +514,9 @@ export async function streamChat(
           onDebug(debug);
         }
       } else {
-      // Client-side fallback
+      // Client-side fallback — use LLM reasoning call
         const lastUserMsg = messages[messages.length - 1]?.content || '';
-        const clientDebug = buildClientDebug(lastUserMsg, fullResponse, selectedPromo || null, kbOptions);
+        const clientDebug = await buildClientDebug(lastUserMsg, fullResponse, selectedPromo || null, kbOptions);
         // Attach kbHealth from engine
         if (selectedPromo) {
           const { kbHealth } = buildKBContext(selectedPromo);
@@ -519,154 +545,136 @@ export async function streamChat(
 }
 
 // ============================================
-// CLIENT-SIDE DEBUG FALLBACK
+// CLIENT-SIDE DEBUG FALLBACK — LLM REASONING
 // ============================================
 
-const CLIENT_DEBUG_FIELDS = [
-  'max_bonus', 'min_deposit', 'reward_amount', 'turnover_multiplier',
-  'reward_mode', 'payout_direction', 'calculation_base', 'calculation_basis',
-  'claim_frequency', 'claim_method', 'promo_type', 'trigger_event',
-] as const;
-
-export function buildClientDebug(
+export async function buildClientDebug(
   userMessage: string,
   assistantResponse: string,
   promo: PromoItem | null,
   kbOptions?: StreamChatOptions,
-): DebugBreakdown {
-  const promoData = promo as unknown as Record<string, unknown> | null;
-  const userNumbers = userMessage.match(/[\d][.\d,]*/g)?.map(n => parseFloat(n.replace(/,/g, ''))) || [];
-  const userLower = userMessage.toLowerCase();
-  const responseLower = assistantResponse.toLowerCase();
+): Promise<DebugBreakdown> {
+  // Build KB inventory for reasoning prompt
+  const kbInventory: string[] = [];
 
-  const fieldsReferenced: string[] = [];
-  const kbSources: KBSourceMatch[] = [];
-  let matchCount = 0;
-  let mismatchCount = 0;
-
-  // ── PROMO KB CHECK ──
-  if (promoData) {
-    for (const field of CLIENT_DEBUG_FIELDS) {
-      const val = promoData[field];
-      if (val === undefined || val === null || val === '') continue;
-
-      const valStr = String(val);
-      const valNum = parseFloat(valStr);
-
-      const mentioned = userLower.includes(field.replace(/_/g, ' '))
-        || responseLower.includes(valStr.toLowerCase())
-        || (!isNaN(valNum) && userNumbers.includes(valNum));
-
-      if (mentioned) {
-        fieldsReferenced.push(`[Promo] ${field} = ${valStr}`);
-        if (assistantResponse.includes(valStr)) {
-          matchCount++;
-        } else {
-          mismatchCount++;
-        }
-      }
-    }
-    if (fieldsReferenced.length > 0) {
-      kbSources.push({
-        source: 'promo',
-        label: `Promo: ${(promoData as Record<string, unknown>).promo_name || 'Selected'}`,
-        detail: `${fieldsReferenced.length} field dirujuk`,
-      });
-    }
+  if (promo) {
+    kbInventory.push(`[Promo KB] Promo: "${(promo as any).promo_name || promo.id}"`);
   }
 
-  // ── GENERAL KB CHECK ──
   if (kbOptions?.generalKBEnabled) {
     const kbItems = getGeneralKnowledge();
-    const matchedFAQs: string[] = [];
-
     for (const item of kbItems) {
-      const qLower = item.question.toLowerCase();
-      const aLower = item.answer.toLowerCase();
-      const qWords = qLower.split(/\s+/).filter(w => w.length > 3);
-      const userWords = userLower.split(/\s+/).filter(w => w.length > 3);
-      const overlap = qWords.filter(w => userWords.some(uw => uw.includes(w) || w.includes(uw)));
-
-      const aPhrases = aLower.split(/[.!?\n]/).filter(s => s.trim().length > 10);
-      const answerUsed = aPhrases.some(phrase => responseLower.includes(phrase.trim()));
-
-      if (overlap.length >= 2 || answerUsed) {
-        matchedFAQs.push(item.question);
-        matchCount++;
-      }
-    }
-
-    if (matchedFAQs.length > 0) {
-      fieldsReferenced.push(...matchedFAQs.map(q => `[General KB] FAQ: "${q.slice(0, 60)}"`));
-      kbSources.push({
-        source: 'general',
-        label: 'General KB',
-        detail: `${matchedFAQs.length} FAQ match`,
-      });
+      kbInventory.push(`[General KB] FAQ: "${item.question}" (category: ${item.category})`);
     }
   }
 
-  // ── BEHAVIORAL KB CHECK ──
   if (kbOptions?.behavioralKBEnabled) {
     const rules = getBehavioralRules();
     const activeRules = rules.filter(r => r.status === 'active');
-    const matchedRules: string[] = [];
-
     for (const rule of activeRules) {
-      const criteria = (rule.applicability_criteria || '').toLowerCase();
-      const criteriaWords = criteria.split(/\s+/).filter(w => w.length > 3);
-      const userWords = userLower.split(/\s+/).filter(w => w.length > 3);
-      const overlap = criteriaWords.filter(w => userWords.some(uw => uw.includes(w) || w.includes(uw)));
-
-      if (overlap.length >= 2) {
-        matchedRules.push(rule.display_name || rule.behavior_category);
-        matchCount++;
-      }
-    }
-
-    if (matchedRules.length > 0) {
-      fieldsReferenced.push(...matchedRules.map(r => `[B-KB] Rule: "${r}"`));
-      kbSources.push({
-        source: 'behavioral',
-        label: 'Behavioral KB',
-        detail: `${matchedRules.length} rule match`,
-      });
+      kbInventory.push(`[Behavioral KB] Rule: "${rule.display_name || rule.behavior_category}" (criteria: ${rule.applicability_criteria || 'N/A'})`);
     }
   }
 
-  const hasAnyKB = promo !== null || kbSources.length > 0;
-  const confidence = !hasAnyKB ? 'rendah'
-    : mismatchCount > 0 ? 'rendah'
-    : matchCount >= 2 ? 'sangat tinggi'
-    : matchCount === 1 ? 'tinggi'
-    : 'sedang';
+  if (kbInventory.length === 0) {
+    return {
+      userIntent: userMessage.length > 120 ? userMessage.slice(0, 120) + '…' : userMessage,
+      jsonFieldsReferenced: ['Tidak ada KB yang aktif'],
+      analysis: 'Tidak ada KB yang aktif — jawaban murni dari persona',
+      retrievalStatus: 'none',
+      conflictCheck: 'tidak ada',
+      confidence: 'rendah',
+      finalValidation: 'KB kurang lengkap',
+      raw: '[Client reasoning — no KB active]',
+      source: 'client',
+    };
+  }
 
-  const sourceLabels = kbSources.map(s => s.label).join(', ') || 'Tidak ada KB aktif';
+  // LLM reasoning call
+  try {
+    const reasoningPrompt = `Kamu adalah debugger untuk AI customer service. Tugasmu: tentukan KB (Knowledge Base) mana yang DIGUNAKAN oleh assistant untuk menjawab.
 
-  const analysis = mismatchCount > 0
-    ? `Mismatch terdeteksi — ${mismatchCount} field tidak konsisten`
-    : matchCount > 0
-    ? `Match ditemukan — ${matchCount} referensi dari: ${sourceLabels}`
-    : hasAnyKB
-    ? 'Tidak ada field/FAQ yang dirujuk langsung'
-    : 'Tidak ada KB yang aktif';
+## KB yang tersedia:
+${kbInventory.map((k, i) => `${i + 1}. ${k}`).join('\n')}
 
-  return {
-    userIntent: userMessage.length > 120 ? userMessage.slice(0, 120) + '…' : userMessage,
-    jsonFieldsReferenced: fieldsReferenced.length > 0 ? fieldsReferenced : ['Tidak ada field yang dirujuk'],
-    analysis,
-    retrievalStatus: hasAnyKB ? (matchCount > 0 ? 'valid' : 'partial') : 'none',
-    conflictCheck: mismatchCount > 0 ? `ada (${mismatchCount} field)` : 'tidak ada',
-    confidence,
-    finalValidation: mismatchCount > 0
-      ? 'JSON conflict terdeteksi'
-      : matchCount > 0
-      ? 'Jawaban konsisten dengan KB'
-      : 'KB kurang lengkap',
-    raw: '[Client-generated trace]',
-    source: 'client',
-    kbSources: kbSources.length > 0 ? kbSources : undefined,
-  };
+## Pesan user:
+"${userMessage}"
+
+## Respons assistant:
+"${assistantResponse.slice(0, 1500)}"
+
+## Instruksi:
+Analisis respons assistant dan tentukan:
+1. KB mana yang BENAR-BENAR digunakan (bukan hanya tersedia, tapi benar-benar menjadi sumber jawaban)
+2. Jika jawaban mengandung informasi spesifik yang ada di KB, itu MATCH
+3. Jika jawaban hanya berdasarkan persona/pengetahuan umum, tulis "none"
+
+Jawab HANYA dalam format JSON valid (tanpa markdown, tanpa backtick):
+{
+  "kbSources": [{"source": "promo|general|behavioral", "label": "nama/judul KB", "detail": "penjelasan singkat kenapa match"}],
+  "confidence": "sangat tinggi|tinggi|sedang|rendah",
+  "analysis": "penjelasan 1 kalimat",
+  "fieldsReferenced": ["deskripsi field/FAQ/rule yang dirujuk"]
+}`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getOpenAIKey()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: reasoningPrompt }],
+        temperature: 0.1,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content || '';
+    
+    // Parse JSON from response (handle possible markdown wrapping)
+    let jsonStr = rawContent.trim();
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
+    
+    const parsed = JSON.parse(jsonStr);
+    const kbSources: KBSourceMatch[] = (parsed.kbSources || [])
+      .filter((s: any) => ['promo', 'general', 'behavioral'].includes(s.source))
+      .map((s: any) => ({ source: s.source, label: s.label, detail: s.detail }));
+
+    return {
+      userIntent: userMessage.length > 120 ? userMessage.slice(0, 120) + '…' : userMessage,
+      jsonFieldsReferenced: parsed.fieldsReferenced?.length > 0
+        ? parsed.fieldsReferenced
+        : ['Tidak ada field yang dirujuk'],
+      analysis: parsed.analysis || 'Reasoning call completed',
+      retrievalStatus: kbSources.length > 0 ? 'valid' : 'partial',
+      conflictCheck: 'tidak ada',
+      confidence: parsed.confidence || 'sedang',
+      finalValidation: kbSources.length > 0 ? 'Jawaban konsisten dengan KB' : 'KB kurang lengkap',
+      raw: `[Client reasoning trace]\n${rawContent}`,
+      source: 'client',
+      kbSources: kbSources.length > 0 ? kbSources : undefined,
+    };
+  } catch (err) {
+    // Fallback if reasoning call fails
+    return {
+      userIntent: userMessage.length > 120 ? userMessage.slice(0, 120) + '…' : userMessage,
+      jsonFieldsReferenced: ['⚠️ Reasoning call gagal — tidak bisa menentukan KB sources'],
+      analysis: `Reasoning call error: ${err instanceof Error ? err.message : 'unknown'}`,
+      retrievalStatus: 'none',
+      conflictCheck: 'tidak ada',
+      confidence: 'rendah',
+      finalValidation: 'KB kurang lengkap',
+      raw: `[Client reasoning — FAILED]\n${err}`,
+      source: 'client',
+    };
+  }
 }
 
 // ============================================
