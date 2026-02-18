@@ -62,6 +62,7 @@ export function GeneralKnowledgeSection({ onBack }: GeneralKnowledgeSectionProps
   const [jsonInput, setJsonInput] = useState("");
   const [editingItem, setEditingItem] = useState<GeneralKnowledgeItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
   
   // Form state
   const [question, setQuestion] = useState("");
@@ -120,6 +121,13 @@ export function GeneralKnowledgeSection({ onBack }: GeneralKnowledgeSectionProps
       toast.success("Knowledge berhasil dihapus");
       setDeleteId(null);
     }
+  };
+
+  const handleDeleteAll = () => {
+    saveGeneralKnowledge([]);
+    setItems([]);
+    toast.success("Semua knowledge berhasil dihapus");
+    setIsDeleteAllOpen(false);
   };
 
   const handleJsonImport = () => {
@@ -213,11 +221,23 @@ export function GeneralKnowledgeSection({ onBack }: GeneralKnowledgeSectionProps
       </div>
 
       {/* Title */}
-      <div>
-        <h2 className="text-lg font-semibold text-button-hover">General Knowledge Base</h2>
-        <p className="text-sm text-muted-foreground">
-          Kelola informasi umum untuk AI assistant
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-button-hover">General Knowledge Base</h2>
+          <p className="text-sm text-muted-foreground">
+            Kelola informasi umum untuk AI assistant
+          </p>
+        </div>
+        {items.length > 0 && (
+          <Button
+            variant="outline"
+            className="h-11 px-6 border-border text-destructive hover:bg-destructive/20 hover:text-destructive hover:border-destructive"
+            onClick={() => setIsDeleteAllOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete All
+          </Button>
+        )}
       </div>
 
       {/* Content Table */}
@@ -420,7 +440,28 @@ export function GeneralKnowledgeSection({ onBack }: GeneralKnowledgeSectionProps
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-        </AlertDialog>
+      </AlertDialog>
+
+      {/* Delete All Confirmation Dialog */}
+      <AlertDialog open={isDeleteAllOpen} onOpenChange={setIsDeleteAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base">Hapus Semua Knowledge?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              Anda akan menghapus <strong>{items.length}</strong> knowledge entry. Tindakan ini tidak dapat dibatalkan dan semua data akan hilang permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-sm">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm"
+              onClick={handleDeleteAll}
+            >
+              Hapus Semua
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </div>
     </div>
   );
