@@ -78,6 +78,9 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
   const classifyQueueRef = useRef<Set<string>>(new Set()); // To prevent duplicate calls
 
+  // Delete All state
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
+
   // Upload JSON states
   const [showJsonDialog, setShowJsonDialog] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
@@ -801,11 +804,23 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
       </div>
 
       {/* Title */}
-      <div>
-        <h2 className="text-lg font-semibold text-button-hover">Promo Knowledge Base</h2>
-        <p className="text-sm text-muted-foreground">
-          Kelola informasi promo untuk AI assistant
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-button-hover">Promo Knowledge Base</h2>
+          <p className="text-sm text-muted-foreground">
+            Kelola informasi promo untuk AI assistant
+          </p>
+        </div>
+        {items.length > 0 && (
+          <Button
+            variant="outline"
+            className="h-11 px-6 border-border text-destructive hover:bg-destructive/20 hover:text-destructive hover:border-destructive"
+            onClick={() => setIsDeleteAllOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete All
+          </Button>
+        )}
       </div>
 
       {/* Content Table */}
@@ -1204,6 +1219,40 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete All Confirmation Dialog */}
+      <AlertDialog open={isDeleteAllOpen} onOpenChange={setIsDeleteAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base">Hapus Semua Promo?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              Anda akan menghapus <strong>{items.length}</strong> promo entry. Tindakan ini tidak dapat dibatalkan dan semua data akan hilang permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-sm">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm"
+              onClick={async () => {
+                try {
+                  for (const item of items) {
+                    await deletePromoDraft(item.id);
+                  }
+                  setItems([]);
+                  toast.success("Semua promo berhasil dihapus");
+                } catch (error) {
+                  console.error('[PromoKnowledgeSection] Delete all failed:', error);
+                  toast.error("Gagal menghapus semua promo");
+                  await loadPromos();
+                }
+                setIsDeleteAllOpen(false);
+              }}
+            >
+              Hapus Semua
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </div>
     </div>
   );
