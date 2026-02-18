@@ -196,6 +196,7 @@ export function LivechatTestConsole() {
           ticketCreated: ticketInfo,
         }]);
       },
+      { generalKBEnabled, behavioralKBEnabled },
     );
   }, [messages, selectedPromo, selectedPromoId, promos, debugMode, generalKBEnabled, behavioralKBEnabled]);
 
