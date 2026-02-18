@@ -1,51 +1,75 @@
 
-# Fix: Closing Template yang Repetitif & Kaku
 
-## Masalah
-Setiap respons AI diakhiri dengan pola yang hampir identik:
-- "Kalau ada yang mau ditanya lebih lanjut, Riri siap bantu! 😊✨"
-- "Kalau Kak belum pernah... Riri siap membantu! 😊✨"
-- "Kalau Kak butuh bantuan..., Riri siap bantu! 😊✨"
+# Fix: Debug KB Detection — dari Keyword Matching ke LLM Reasoning
 
-Ini terjadi karena system prompt tidak punya instruksi anti-repetisi khusus untuk closing, dan AI default-nya selalu menempel closing template di setiap turn.
+## Masalah Inti
+`buildClientDebug()` saat ini menggunakan keyword matching murni:
+- Split kata, filter panjang > 3, hitung overlap
+- Gagal mendeteksi typo, sinonim, parafrase
+- Tidak bisa memahami *intent* — hanya cocokkan string
 
-## Solusi
-Tambahkan blok instruksi **CLOSING DISCIPLINE** di `buildSystemPrompt()` yang mengajarkan AI kapan dan bagaimana menutup respons.
+Ini bukan cara kerja AI. Ini cara kerja bot 2015.
 
-## Perubahan
+## Solusi: Dua Perubahan
 
-### `src/lib/livechat-engine.ts` — di dalam `buildSystemPrompt()`
+### 1. Upgrade LLM Debug Protocol — tambah `[KB Sources Used]`
 
-Tambahkan blok instruksi baru setelah Language Firewall (setelah line ~249), sebelum General KB injection:
+Saat ini `DEBUG_INSTRUCTION` hanya minta LLM melaporkan field JSON yang dirujuk. LLM tidak diminta secara eksplisit untuk melaporkan **dari KB mana** data diambil.
+
+**Perubahan di `DEBUG_INSTRUCTION`**: Tambahkan section baru `[KB Sources Used]` yang memaksa LLM melaporkan:
+- General KB FAQ mana yang digunakan (sebutkan question-nya)
+- Behavioral KB rule mana yang diterapkan (sebutkan rule_name)
+- Promo field mana yang dirujuk
+- Atau "Tidak ada KB match" jika murni dari pengetahuan persona
+
+**Upgrade `parseDebugSection()`**: Parse section `[KB Sources Used]` menjadi array `KBSourceMatch[]` yang sudah ada di interface.
+
+### 2. Ganti Client Fallback — dari Keyword ke Reasoning Call
+
+Hapus seluruh logic keyword matching di `buildClientDebug()`. Ganti dengan **mini LLM reasoning call** (non-streaming, model ringan) yang bertanya:
+
+> "Berdasarkan system prompt yang berisi KB berikut [daftar KB aktif], dan respons assistant berikut [response], KB mana yang digunakan? Format: JSON array."
+
+Ini memastikan bahkan fallback tetap menggunakan **reasoning**, bukan keyword.
+
+## Detail Teknis
+
+### File: `src/lib/livechat-engine.ts`
+
+**A. `DEBUG_INSTRUCTION` (line ~135-170)**
+Tambahkan section baru setelah `[Final Validation]`:
 
 ```
-# CLOSING DISCIPLINE — ANTI-TEMPLATE
-
-ATURAN CLOSING:
-1. JANGAN selalu tutup dengan kalimat penutup. Jika jawaban sudah lengkap dan jelas, STOP di situ. Tidak perlu closing.
-2. Jika memang ingin menutup, JANGAN gunakan pola yang sama berulang. Variasikan:
-   - Kadang tanpa closing sama sekali (langsung selesai)
-   - Kadang closing pendek: "Ada lagi?" / "Lanjut?"
-   - Kadang closing kontekstual yang relevan dengan topik
-   - Kadang gunakan closing dari Interaction Library (Closings templates di atas)
-3. DILARANG menggunakan pola "Kalau [Kak/kamu] butuh bantuan [lagi/lebih lanjut], [nama agent] siap [bantu/membantu]!" di setiap turn. Pola ini HANYA boleh muncul MAKSIMAL 1x per 5 turn.
-4. Emoji closing (😊✨) TIDAK wajib di setiap pesan. Gunakan secukupnya.
-5. Closing HARUS terasa natural — seperti chat teman, bukan template customer service.
-
-CONTOH CLOSING YANG BAGUS:
-- (tanpa closing — jawaban langsung selesai)
-- "Ada lagi yang mau ditanya? 😊"
-- "Semoga membantu ya!"
-- "Itu dia infonya — kalau masih bingung langsung tanya aja"
-- "Coba cek dulu ya, nanti kabarin lagi kalau ada kendala"
-
-CONTOH CLOSING YANG DILARANG (terlalu template):
-- "Kalau Kak butuh bantuan atau informasi lebih lanjut, Riri siap membantu! 😊✨"
-- "Jika ada pertanyaan lain, jangan ragu untuk bertanya ya!"
-- Pola apapun yang identik/mirip di 2+ turn berturut-turut
+[KB Sources Used]
+<untuk SETIAP KB source yang kamu gunakan, tulis satu baris:>
+<format: SOURCE_TYPE | label | detail>
+<SOURCE_TYPE: promo, general, behavioral>
+<contoh: general | FAQ: "Kapan LP kadaluwarsa?" | answer digunakan sebagai basis>
+<contoh: promo | Promo: Welcome Bonus | field: min_deposit, reward_amount>
+<contoh: behavioral | Rule: abusive_language | rule diterapkan>
+<jika tidak ada: none | Tidak ada KB match | jawaban dari persona>
 ```
 
-### Ringkasan
-- 1 file diubah: `src/lib/livechat-engine.ts`
-- Hanya menambahkan blok instruksi baru di system prompt
-- Tidak ada perubahan UI atau logic lainnya
+**B. `parseDebugSection()` (line ~365-382)**
+Tambahkan parsing `[KB Sources Used]`:
+- Split tiap baris by ` | `
+- Map ke `KBSourceMatch { source, label, detail }`
+
+**C. `buildClientDebug()` (line ~531-669) — REWRITE**
+Hapus seluruh keyword matching logic. Ganti dengan:
+1. Buat prompt singkat yang berisi daftar KB aktif (nama FAQ / nama rule / nama promo)
+2. Kirim non-streaming call ke OpenAI (model: gpt-4o-mini untuk speed/cost)
+3. Minta output JSON: `[{ source, label, detail }]`
+4. Parse dan return sebagai `DebugBreakdown`
+5. Tambahkan try/catch — jika call gagal, return basic "reasoning call failed" debug
+
+**D. Ubah `buildClientDebug` jadi `async`**
+Karena sekarang melakukan API call, fungsi harus async. Update caller di `streamChat()` (line ~493) untuk `await`.
+
+### Estimasi Impact
+- `DEBUG_INSTRUCTION`: +15 baris instruksi
+- `parseDebugSection()`: +15 baris parsing
+- `buildClientDebug()`: rewrite ~140 baris keyword logic menjadi ~60 baris reasoning call
+- `streamChat()`: 1 baris ubah ke await
+- Total: ~90 baris baru, ~140 baris dihapus
+
