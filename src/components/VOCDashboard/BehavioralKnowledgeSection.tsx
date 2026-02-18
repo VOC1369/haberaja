@@ -7,7 +7,7 @@ import { ArrowLeft, Plus, Pencil, Trash2, Brain, FileText, Copy } from "lucide-r
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BehavioralWizard } from "./BehavioralWizard";
-import { BehavioralRuleItem, getBehavioralRules, deleteBehavioralRule, seedDefaultBehavioralRules } from "./BehavioralWizard/types";
+import { BehavioralRuleItem, getBehavioralRules, deleteBehavioralRule, saveBehavioralRules, seedDefaultBehavioralRules } from "./BehavioralWizard/types";
 import { buildBehavioralKBContext } from "@/lib/livechat-engine";
 import { toast } from "sonner";
 
@@ -21,6 +21,7 @@ export function BehavioralKnowledgeSection({ onBack, forceResetKey }: Behavioral
   const [viewMode, setViewMode] = useState<"list" | "wizard">("list");
   const [editingItem, setEditingItem] = useState<BehavioralRuleItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
   const [promptText, setPromptText] = useState("");
 
@@ -121,19 +122,32 @@ export function BehavioralKnowledgeSection({ onBack, forceResetKey }: Behavioral
             B-KB V5.0 — Kelola aturan perilaku AI dengan Wizard
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 px-4 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-          onClick={() => {
-            const result = buildBehavioralKBContext();
-            setPromptText(result || "Tidak ada rule aktif.");
-            setShowPrompt(true);
-          }}
-        >
-          <FileText className="h-4 w-4 mr-1" />
-          Prompt Result
-        </Button>
+        <div className="flex gap-2">
+          {items.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-4 border-border text-destructive hover:bg-destructive/20 hover:text-destructive hover:border-destructive/50"
+              onClick={() => setIsDeleteAllOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete All
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 px-4 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+            onClick={() => {
+              const result = buildBehavioralKBContext();
+              setPromptText(result || "Tidak ada rule aktif.");
+              setShowPrompt(true);
+            }}
+          >
+            <FileText className="h-4 w-4 mr-1" />
+            Prompt Result
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -268,6 +282,32 @@ export function BehavioralKnowledgeSection({ onBack, forceResetKey }: Behavioral
           </AlertDialogFooter>
         </AlertDialogContent>
         </AlertDialog>
+
+      {/* Delete All Confirmation */}
+      <AlertDialog open={isDeleteAllOpen} onOpenChange={setIsDeleteAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base text-foreground">Hapus Semua Aturan Behavioral?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Semua {items.length} aturan behavioral akan dihapus secara permanen dan tidak dapat dikembalikan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                saveBehavioralRules([]);
+                loadItems();
+                toast.success("Semua aturan behavioral berhasil dihapus");
+                setIsDeleteAllOpen(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Hapus Semua
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       </div>
     </div>
   );
