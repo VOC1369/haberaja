@@ -1,64 +1,70 @@
 
-# Fix: Canonical JSON Import → Form Hydration Konsisten
+# Fix: Round-Trip Integrity — Canonical JSON Import/Export Konsisten
 
 ## Masalah
-Saat import JSON canonical v2.1 (seperti Loyalty Point SPONTAN77), form hanya terisi sebagian:
-- **Identitas Promo: 67%** — `promo_type` kosong (tidak diinfer dari context)
-- **Konfigurasi Reward: 0%** — `reward_mode` kosong (`mode` tidak dimapping), `promo_unit` kosong, tiers tidak dikonversi
+Setelah import canonical JSON v2.1 lalu edit dan export, beberapa field hilang atau berubah nilai. Ini membuat data tidak round-trip safe.
 
-## Akar Masalah
-`normalizePromoData()` tidak memiliki mapping untuk beberapa field canonical v2.1 ke form fields:
-
-| Canonical Field | Value di JSON | Form Field | Status |
-|---|---|---|---|
-| `mode` | `"tier"` | `reward_mode` | TIDAK DIMAPPING |
-| `tier_archetype` | `"point_store"` | `tier_archetype` = `"tier_point_store"` | VALUE SALAH |
-| `platform_access` | `"apk_only"` | `platform_access` = `"apk"` | TIDAK DIMAPPING |
-| `category` | `"C"` | `program_classification` = `"C"` | TIDAK DIMAPPING |
-| `tiers[]` | format canonical (`lp_required`) | `tiers[]` format form (`minimal_point`) | TIDAK DIKONVERSI |
-| `tiers[]` | - | `redeem_items[]` | TIDAK DIKONVERSI |
-| `promo_type` | tidak ada di JSON | harus diinfer | TIDAK ADA LOGIC |
-| `promo_unit` | tidak ada di JSON | harus diinfer dari `tier_archetype` | TIDAK ADA LOGIC |
-| `claim_frequency` | `"monthly"` | `"bulanan"` | ENUM `bulanan` TIDAK ADA di CLAIM_FREQUENCIES |
-
-## Solusi
+## 6 Fixes
 
 ### File: `src/components/VOCDashboard/PromoFormWizard/types.ts`
 
-**A. Tambah `bulanan` ke `CLAIM_FREQUENCIES` enum** (~line 2321)
-- Tambahkan `{ value: 'bulanan', label: 'Bulanan' }` ke array
+**Fix 1 — `reward_unit` hardcoded "fixed"** (line ~1329)
 
-**B. Tambah section baru di `normalizePromoData()` — "Section 0: Canonical v2.1 Hydration"** (sebelum section 1, ~line 1697)
+Saat ini:
+```
+canonical.reward_unit = data.calculation_method === 'percentage' ? 'percent' : 'fixed';
+```
 
-8 mapping baru:
+Seharusnya: Preserve `data.reward_unit` jika sudah ada, baru fallback ke logic lama.
+```
+canonical.reward_unit = data.reward_unit || (data.calculation_method === 'percentage' ? 'percent' : 'fixed');
+```
 
-1. **`mode` → `reward_mode`**: Jika `reward_mode` kosong tapi `(data as any).mode` ada, copy langsung
-2. **`tier_archetype` normalisasi**: Map value pendek ke value form:
-   - `"point_store"` → `"tier_point_store"`
-   - `"level"` → `"tier_level"`
-   - `"network"` → `"tier_network"`
-   - `"formula"` → `"tier_formula"`
-3. **`platform_access` normalisasi**: Tambah `"apk_only"` → `"apk"` di section 11
-4. **`category` → `program_classification`**: Map `"C"` → `"C"`, `"REWARD"` → `"A"`, `"EVENT"` → `"C"`
-5. **`promo_type` inference**: Jika kosong, infer dari context:
-   - `tier_archetype` contains `"point_store"` → `"Loyalty Point"`
-   - `trigger_event` = `"Turnover"` + `mode` = `"tier"` → `"Event / Level Up"`
-   - `calculation_basis` = `"loyalty_point"` → `"Loyalty Point"`
-6. **`promo_unit` inference**: Jika kosong dan `tier_archetype` mengandung `"point_store"` → `"lp"`
-7. **`tiers[]` konversi canonical → form**: Detect tiers tanpa field `type` (bukan format form), lalu konversi:
-   - `lp_required` atau `requirement_value` → `minimal_point`
-   - `reward_amount` atau `reward_value` → `reward`
-   - `tier_name` → `type`
-   - Default: `reward_type: "fixed"`, `jenis_hadiah: "credit_game"`
-8. **`redeem_items[]` hydration**: Untuk `tier_point_store`, konversi tiers ke `redeem_items[]`:
-   - `tier_name` → `nama_hadiah`
-   - `reward_amount` → `nilai_hadiah`
-   - `lp_required` → `biaya_lp`
+**Fix 2 — `special_conditions` field name mismatch** (line ~1430)
 
-### Dampak
-- 1 file diubah: `types.ts`
-- Tambah ~80 baris di `normalizePromoData()` (section 0)
-- Tambah 1 item di `CLAIM_FREQUENCIES`
-- Tambah 1 mapping di section 11 (platform_access)
-- Tidak ada perubahan UI — completion percentage otomatis benar setelah field terisi
-- Backward compatible — hanya trigger saat field canonical terdeteksi
+Saat ini:
+```
+canonical.special_conditions = data.special_requirements || [];
+```
+
+Seharusnya: Juga cek `data.special_conditions` (field canonical v2.1).
+```
+canonical.special_conditions = data.special_requirements || (data as any).special_conditions || [];
+```
+
+**Fix 3 — `calculation_basis` round-trip loss** (normalizePromoData section)
+
+Pada saat import, `calculation_basis` dimapping ke `calculation_base` (form field). Tapi untuk tier_point_store, `calculation_basis = "loyalty_point"` tidak selalu dimapping dengan benar.
+
+Di Section 0 (Canonical Hydration) tambahkan:
+- Jika `calculation_basis` ada dan `calculation_base` kosong, copy langsung: `normalized.calculation_base = (normalized as any).calculation_basis`
+
+**Fix 4 — `conversion_formula` round-trip loss** (normalizePromoData section)
+
+`conversion_formula` sudah ada di canonical whitelist dan di form. Tapi saat import, field ini mungkin hilang karena tidak di-preserve. Pastikan di normalizePromoData:
+- Jika `data.conversion_formula` ada, keep as-is (sudah handled di export line 1340, tapi perlu cek normalizer tidak menghapusnya)
+
+**Fix 5 — `platform_access` vs `require_apk` kontradiksi** (buildCanonicalPayload, line ~1416-1418)
+
+Tambahkan auto-sync: Jika `require_apk === true` dan `platform_access` bukan "apk"/"apk_only", set `platform_access = "apk"`.
+
+```
+canonical.platform_access = data.platform_access || '';
+if (data.require_apk && !['apk', 'apk_only'].includes(canonical.platform_access)) {
+  canonical.platform_access = 'apk';
+}
+```
+
+**Fix 6 — Non-canonical fields bocor ke output**
+
+Ini terjadi jika output JSON dibuat langsung dari form data tanpa melewati `enforceCanonicalGuard()`. Perlu memastikan semua export path selalu melalui canonical guard.
+
+Cek apakah `savePromoDraft` atau export function langsung dump form data — jika iya, pastikan filter melalui `CANONICAL_EXPORT_WHITELIST`.
+
+Kemungkinan fix: Di function yang menghasilkan JSON output yang user lihat, tambahkan whitelist filter sebelum return.
+
+## Dampak
+- 1 file utama diubah: `types.ts`
+- ~15 baris perubahan total (5 fixes kecil + 1 cek export path)
+- Backward compatible — hanya memperbaiki data yang sebelumnya hilang
+- Semua canonical JSON yang diimport akan round-trip dengan benar
