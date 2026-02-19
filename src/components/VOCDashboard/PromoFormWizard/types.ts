@@ -732,7 +732,7 @@ export interface ReferralCommissionTier {
   _commission_source?: string;                      // How commission_percentage was determined
   _commission_fix_applied?: boolean;                // Was backstop applied?
   _calculated_by?: 'calculator';                    // Audit trail for derived fields
-}
+  }
 
 
 // Sub Kategori (Combo Promo) - for Dinamis mode with multiple variants
@@ -1336,9 +1336,20 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // CALCULATION
   // ===============================
   canonical.calculation_basis = data.calculation_base || '';
+  // Fix 1: Archetype-aware default for tier_point_store
+  if (!canonical.calculation_basis && data.tier_archetype === 'tier_point_store') {
+    canonical.calculation_basis = 'loyalty_point';
+  }
   canonical.min_calculation = data.min_calculation ?? null;
   canonical.payout_direction = (data.payout_direction as 'depan' | 'belakang') || null;
   canonical.conversion_formula = data.conversion_formula || '';
+  // Fix 2: Auto-generate conversion_formula for tier_point_store
+  if (!canonical.conversion_formula && data.tier_archetype === 'tier_point_store') {
+    const basis = data.lp_earn_basis || 'turnover';
+    const amount = data.lp_earn_amount || 1000;
+    const points = data.lp_earn_point_amount || 1;
+    canonical.conversion_formula = `IDR ${amount.toLocaleString('id-ID')} ${basis} = ${points} LP. LP ditukar sesuai tabel tier.`;
+  }
   
   // ===============================
   // CLAIM RULES
@@ -1359,7 +1370,8 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     return null;
   })();
   canonical.max_claim = data.max_claim ?? null;
-  canonical.max_claim_unlimited = data.dinamis_max_claim_unlimited || data.fixed_max_claim_unlimited || false;
+  // Fix 3: Prioritize canonical max_claim_unlimited over derived form fields
+  canonical.max_claim_unlimited = (data as any).max_claim_unlimited ?? data.dinamis_max_claim_unlimited ?? data.fixed_max_claim_unlimited ?? false;
   canonical.claim_frequency = normalizeClaimFrequency(data.claim_frequency);
   canonical.claim_method = data.claim_method || '';
   canonical.claim_deadline_days = data.claim_deadline_days ?? null;
@@ -1593,7 +1605,7 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
       reward_value: r.nilai_hadiah,
       reward_type: 'fixed',
       turnover_multiplier: null,
-      extra: { is_active: r.is_active },
+      extra: { is_active: r.is_active, ...((r as any)._extra || {}) },
     }));
   }
   
@@ -1611,6 +1623,7 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
       extra: { 
         jenis_hadiah: t.jenis_hadiah,
         physical_reward_name: t.physical_reward_name,
+        ...((t as any)._extra || {}),
       },
     }));
   }
@@ -1768,14 +1781,26 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
     const firstTier = tiers[0] as unknown as Record<string, unknown>;
     // Detect canonical format: has lp_required or requirement_value but no minimal_point
     if ((firstTier.lp_required !== undefined || firstTier.requirement_value !== undefined) && firstTier.minimal_point === undefined) {
-      (normalized as PromoFormData).tiers = (tiers as unknown as Record<string, unknown>[]).map((t) => ({
-        id: String(t.tier_id || t.id || generateUUID()),
-        type: (t.tier_name as string) || '',
-        minimal_point: Number(t.lp_required ?? t.requirement_value ?? 0),
-        reward: Number(t.reward_amount ?? t.reward_value ?? 0),
-        reward_type: 'fixed' as const,
-        jenis_hadiah: 'credit_game',
-      })) as PromoFormData['tiers'];
+      // Fix 5: Preserve rich tier fields (tier_group, max_claim_per_month, note, etc.) into extra
+      (normalized as PromoFormData).tiers = (tiers as unknown as Record<string, unknown>[]).map((t) => {
+        const KNOWN_KEYS = ['tier_id', 'id', 'tier_name', 'tier_order', 'lp_required', 'requirement_value',
+          'requirement_max', 'reward_amount', 'reward_value', 'reward_type', 'turnover_multiplier', 'extra'];
+        const extraFields: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(t)) {
+          if (!KNOWN_KEYS.includes(k)) {
+            extraFields[k] = v;
+          }
+        }
+        return {
+          id: String(t.tier_id || t.id || generateUUID()),
+          type: (t.tier_name as string) || '',
+          minimal_point: Number(t.lp_required ?? t.requirement_value ?? 0),
+          reward: Number(t.reward_amount ?? t.reward_value ?? 0),
+          reward_type: 'fixed' as const,
+          jenis_hadiah: 'credit_game',
+          _extra: { ...(t.extra as Record<string, unknown> || {}), ...extraFields },
+        };
+      }) as PromoFormData['tiers'];
     }
   }
 
@@ -1785,12 +1810,21 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
     if (!existingRedeem || existingRedeem.length === 0) {
       const firstT = tiers[0] as unknown as Record<string, unknown>;
       if (firstT.lp_required !== undefined || firstT.requirement_value !== undefined) {
-        (normalized as PromoFormData).redeem_items = (tiers as unknown as Record<string, unknown>[]).map((t) => ({
-          id: String(t.tier_id || t.id || generateUUID()),
-          nama_hadiah: (t.tier_name as string) || '',
-          nilai_hadiah: Number(t.reward_amount ?? t.reward_value ?? 0),
-          biaya_lp: Number(t.lp_required ?? t.requirement_value ?? 0),
-        })) as PromoFormData['redeem_items'];
+        (normalized as PromoFormData).redeem_items = (tiers as unknown as Record<string, unknown>[]).map((t) => {
+          const KNOWN_KEYS = ['tier_id', 'id', 'tier_name', 'tier_order', 'lp_required', 'requirement_value',
+            'requirement_max', 'reward_amount', 'reward_value', 'reward_type', 'turnover_multiplier', 'extra'];
+          const extraFields: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(t)) {
+            if (!KNOWN_KEYS.includes(k)) extraFields[k] = v;
+          }
+          return {
+            id: String(t.tier_id || t.id || generateUUID()),
+            nama_hadiah: (t.tier_name as string) || '',
+            nilai_hadiah: Number(t.reward_amount ?? t.reward_value ?? 0),
+            biaya_lp: Number(t.lp_required ?? t.requirement_value ?? 0),
+            _extra: { ...(t.extra as Record<string, unknown> || {}), ...extraFields },
+          };
+        }) as PromoFormData['redeem_items'];
       }
     }
   }
@@ -1812,6 +1846,17 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
   // 0j. conversion_formula preserve (ensure not stripped by normalizer)
   if ((raw.conversion_formula as string) && !normalized.conversion_formula) {
     normalized.conversion_formula = raw.conversion_formula as string;
+  }
+
+  // 0k. game_scope → game_restriction hydration
+  if ((raw.game_scope as string) && !normalized.game_restriction) {
+    const scopeMap: Record<string, string> = { 'all': 'semua', 'specific': 'tertentu' };
+    normalized.game_restriction = scopeMap[(raw.game_scope as string).toLowerCase()] || (raw.game_scope as string);
+  }
+
+  // 0l. max_claim_unlimited → preserve as separate field (don't merge with dinamis_max_claim_unlimited)
+  if (raw.max_claim_unlimited !== undefined) {
+    (normalized as any).max_claim_unlimited = raw.max_claim_unlimited;
   }
 
   // ============================================
