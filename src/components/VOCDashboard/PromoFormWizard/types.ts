@@ -4,6 +4,7 @@ import { generateUUID } from '@/lib/supabase-client';
 import { applyInertValuesToPayload } from '@/lib/extractors/field-applicability-map';
 import { calculateAllReferralTiers, getDefaultReferralFormulaMetadata } from '@/lib/referral-tier-calculator';
 import { sanitizeByMode } from '@/lib/sanitize-by-mode';
+import { CANONICAL_EXPORT_WHITELIST } from '@/lib/canonical-guard';
 // PKB FIELD WHITELIST
 // ============================================
 
@@ -1326,7 +1327,7 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     // Fallback
     return data.reward_amount ?? data.dinamis_reward_amount ?? null;
   })();
-  canonical.reward_unit = data.calculation_method === 'percentage' ? 'percent' : 'fixed';
+  canonical.reward_unit = data.reward_unit || (data.calculation_method === 'percentage' ? 'percent' : 'fixed');
   canonical.reward_is_percentage = data.calculation_method === 'percentage';
   canonical.max_bonus = data.max_bonus ?? data.max_claim ?? data.dinamis_max_claim ?? null;
   canonical.max_bonus_unlimited = data.max_bonus_unlimited ?? data.dinamis_max_claim_unlimited ?? data.fixed_max_claim_unlimited ?? false;
@@ -1414,6 +1415,9 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ACCESS & RESTRICTION
   // ===============================
   canonical.platform_access = data.platform_access || '';
+  if (data.require_apk && !['apk', 'apk_only'].includes(canonical.platform_access)) {
+    canonical.platform_access = 'apk';
+  }
   canonical.geo_restriction = data.geo_restriction || '';
   canonical.require_apk = data.require_apk || false;
   canonical.one_account_rule = data.one_account_rule || false;
@@ -1427,7 +1431,7 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   // ESCAPE HATCH
   // ===============================
-  canonical.special_conditions = data.special_requirements || [];
+  canonical.special_conditions = data.special_requirements || (data as any).special_conditions || [];
   canonical.custom_terms = data.custom_terms || '';
   
   // Build extra_config with derived fields audit trail
@@ -1513,7 +1517,21 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   const sanitized = sanitizeByMode(canonical as unknown as Record<string, unknown>);
   
-  return sanitized as unknown as CanonicalPromoKB;
+  // ===============================
+  // FINAL WHITELIST FILTER
+  // Strip any non-canonical fields that may have leaked through
+  // ===============================
+  const whitelistSet = new Set(CANONICAL_EXPORT_WHITELIST as readonly string[]);
+  // Also allow archetype extension fields
+  const allowedExtras = ['turnover_basis', 'archetype_payload', 'archetype_invariants'];
+  const filtered: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(sanitized)) {
+    if (whitelistSet.has(key) || allowedExtras.includes(key)) {
+      filtered[key] = value;
+    }
+  }
+  
+  return filtered as unknown as CanonicalPromoKB;
 }
 
 /**
@@ -1784,6 +1802,16 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
     };
     const mapped = freqMap[normalized.claim_frequency.toLowerCase()];
     if (mapped) normalized.claim_frequency = mapped;
+  }
+
+  // 0i. calculation_basis → calculation_base (round-trip preserve)
+  if ((raw.calculation_basis as string) && !normalized.calculation_base) {
+    normalized.calculation_base = raw.calculation_basis as string;
+  }
+
+  // 0j. conversion_formula preserve (ensure not stripped by normalizer)
+  if ((raw.conversion_formula as string) && !normalized.conversion_formula) {
+    normalized.conversion_formula = raw.conversion_formula as string;
   }
 
   // ============================================
