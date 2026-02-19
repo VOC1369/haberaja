@@ -1,70 +1,95 @@
 
-# Fix: Round-Trip Integrity — Canonical JSON Import/Export Konsisten
+
+# Fix: Complete Round-Trip Integrity (5 Remaining Gaps)
 
 ## Masalah
-Setelah import canonical JSON v2.1 lalu edit dan export, beberapa field hilang atau berubah nilai. Ini membuat data tidak round-trip safe.
+Setelah import canonical JSON v2.1 lalu edit dan export, masih ada 5 field yang hilang/berubah. Fix #1 dan #2 sudah diapprove sebelumnya, fix #3-#5 adalah temuan baru.
 
-## 6 Fixes
+## 5 Fixes dalam 1 File
 
 ### File: `src/components/VOCDashboard/PromoFormWizard/types.ts`
 
-**Fix 1 — `reward_unit` hardcoded "fixed"** (line ~1329)
+### Fix 1 — `calculation_basis` hilang (APPROVED, belum implemented)
 
-Saat ini:
-```
-canonical.reward_unit = data.calculation_method === 'percentage' ? 'percent' : 'fixed';
-```
-
-Seharusnya: Preserve `data.reward_unit` jika sudah ada, baru fallback ke logic lama.
-```
-canonical.reward_unit = data.reward_unit || (data.calculation_method === 'percentage' ? 'percent' : 'fixed');
-```
-
-**Fix 2 — `special_conditions` field name mismatch** (line ~1430)
-
-Saat ini:
-```
-canonical.special_conditions = data.special_requirements || [];
-```
-
-Seharusnya: Juga cek `data.special_conditions` (field canonical v2.1).
-```
-canonical.special_conditions = data.special_requirements || (data as any).special_conditions || [];
-```
-
-**Fix 3 — `calculation_basis` round-trip loss** (normalizePromoData section)
-
-Pada saat import, `calculation_basis` dimapping ke `calculation_base` (form field). Tapi untuk tier_point_store, `calculation_basis = "loyalty_point"` tidak selalu dimapping dengan benar.
-
-Di Section 0 (Canonical Hydration) tambahkan:
-- Jika `calculation_basis` ada dan `calculation_base` kosong, copy langsung: `normalized.calculation_base = (normalized as any).calculation_basis`
-
-**Fix 4 — `conversion_formula` round-trip loss** (normalizePromoData section)
-
-`conversion_formula` sudah ada di canonical whitelist dan di form. Tapi saat import, field ini mungkin hilang karena tidak di-preserve. Pastikan di normalizePromoData:
-- Jika `data.conversion_formula` ada, keep as-is (sudah handled di export line 1340, tapi perlu cek normalizer tidak menghapusnya)
-
-**Fix 5 — `platform_access` vs `require_apk` kontradiksi** (buildCanonicalPayload, line ~1416-1418)
-
-Tambahkan auto-sync: Jika `require_apk === true` dan `platform_access` bukan "apk"/"apk_only", set `platform_access = "apk"`.
+Di `buildCanonicalPayload()`, setelah line `canonical.calculation_basis = data.calculation_base || '';`:
 
 ```
-canonical.platform_access = data.platform_access || '';
-if (data.require_apk && !['apk', 'apk_only'].includes(canonical.platform_access)) {
-  canonical.platform_access = 'apk';
+if (!canonical.calculation_basis && data.tier_archetype === 'tier_point_store') {
+  canonical.calculation_basis = 'loyalty_point';
 }
 ```
 
-**Fix 6 — Non-canonical fields bocor ke output**
+### Fix 2 — `conversion_formula` hilang (APPROVED, belum implemented)
 
-Ini terjadi jika output JSON dibuat langsung dari form data tanpa melewati `enforceCanonicalGuard()`. Perlu memastikan semua export path selalu melalui canonical guard.
+Di `buildCanonicalPayload()`, setelah `canonical.conversion_formula = data.conversion_formula || '';`:
 
-Cek apakah `savePromoDraft` atau export function langsung dump form data — jika iya, pastikan filter melalui `CANONICAL_EXPORT_WHITELIST`.
+```
+if (!canonical.conversion_formula && data.tier_archetype === 'tier_point_store') {
+  const basis = data.lp_earn_basis || 'turnover';
+  const amount = data.lp_earn_amount || 1000;
+  const points = data.lp_earn_point_amount || 1;
+  canonical.conversion_formula = `IDR ${amount.toLocaleString('id-ID')} ${basis} = ${points} LP. LP ditukar sesuai tabel tier.`;
+}
+```
 
-Kemungkinan fix: Di function yang menghasilkan JSON output yang user lihat, tambahkan whitelist filter sebelum return.
+### Fix 3 — `max_claim_unlimited` berubah dari false ke true (BARU)
+
+Root cause: Di `normalizePromoData()` line ~2001, `max_bonus_unlimited = true` otomatis set `dinamis_max_claim_unlimited = true`. Lalu di export line ~1362, `canonical.max_claim_unlimited = data.dinamis_max_claim_unlimited || ...` jadi `true`.
+
+Tapi `max_bonus_unlimited` dan `max_claim_unlimited` adalah 2 field berbeda di canonical:
+- `max_bonus_unlimited` = tidak ada batas reward per claim
+- `max_claim_unlimited` = tidak ada batas jumlah klaim
+
+Fix: Di `buildCanonicalPayload()`, prioritaskan `data.max_claim_unlimited` langsung jika ada:
+
+```
+canonical.max_claim_unlimited = data.max_claim_unlimited ?? data.dinamis_max_claim_unlimited ?? data.fixed_max_claim_unlimited ?? false;
+```
+
+Dan di `normalizePromoData()` Section 0, hydrate `max_claim_unlimited` ke form field terpisah (jangan merge dengan `dinamis_max_claim_unlimited`).
+
+### Fix 4 — `game_scope = "all"` hilang jadi `""` (BARU)
+
+Root cause: Canonical `game_scope` dimapping ke form `game_restriction` saat export (line 1394: `canonical.game_scope = data.game_restriction || ''`). Tapi di import/hydration (Section 0), tidak ada mapping `game_scope -> game_restriction`.
+
+Fix: Di `normalizePromoData()` Section 0, tambahkan:
+
+```
+// 0k. game_scope → game_restriction hydration
+if ((raw.game_scope as string) && !normalized.game_restriction) {
+  const scopeMap: Record<string, string> = { 'all': 'semua', 'specific': 'tertentu' };
+  normalized.game_restriction = scopeMap[(raw.game_scope as string).toLowerCase()] || (raw.game_scope as string);
+}
+```
+
+### Fix 5 — Rich tier fields hilang (`tier_group`, `max_claim_per_month`, `note`) (BARU)
+
+Root cause: Tier konversi di Section 0f hanya ambil 4 field dasar. Rich fields dari Claude (tier_group, max_claim_per_month, note) dibuang.
+
+Fix: Di Section 0f tier conversion, preserve extra fields ke `extra` object di UniversalTier:
+
+Dan di `buildCanonicalPayload()` tier export section, pastikan `extra` field dari tiers di-preserve.
+
+Juga di Section 0f, saat convert canonical tiers ke form tiers, simpan rich fields:
+
+```
+// In tier conversion, preserve additional fields
+const extraFields: Record<string, unknown> = {};
+for (const [k, v] of Object.entries(t)) {
+  if (!['tier_id', 'tier_name', 'tier_order', 'lp_required', 'requirement_value', 
+        'reward_amount', 'reward_value', 'reward_type', 'turnover_multiplier', 'extra'].includes(k)) {
+    extraFields[k] = v;
+  }
+}
+// Merge with existing extra
+return {
+  ...basicTierFields,
+  extra: { ...(t.extra as Record<string, unknown> || {}), ...extraFields }
+};
+```
 
 ## Dampak
-- 1 file utama diubah: `types.ts`
-- ~15 baris perubahan total (5 fixes kecil + 1 cek export path)
-- Backward compatible — hanya memperbaiki data yang sebelumnya hilang
-- Semua canonical JSON yang diimport akan round-trip dengan benar
+- 1 file diubah: `types.ts`
+- ~30 baris tambahan (5 fixes kecil)
+- Backward compatible
+- Setelah fix, canonical JSON yang diimport akan round-trip dengan benar (kecuali normalisasi casing yang by design)
