@@ -57,26 +57,34 @@ export function DebugPanel({ debug }: DebugPanelProps) {
             </div>
           )}
 
-          {/* 0b. KB Health Status — only show when promo KB is relevant */}
-          {debug.kbHealth && debug.kbSources?.some(s => s.source === 'promo') && (
-            <div className="flex items-start gap-2">
-              <span className="text-button-hover font-semibold">KB Status</span>
-              {debug.kbHealth.status === 'READY' && (
-                <Badge variant="success" size="xs">READY</Badge>
-              )}
-              {debug.kbHealth.status === 'NOT_READY' && (
-                <div className="flex flex-col gap-0.5">
-                  <Badge variant="warning" size="xs">NOT_READY</Badge>
-                  {debug.kbHealth.missingKeys.length > 0 && (
-                    <span className="text-foreground/70 pl-1">
-                      Missing: {debug.kbHealth.missingKeys.join(', ')}
-                    </span>
-                  )}
-                </div>
-              )}
-              {debug.kbHealth.status === 'UNKNOWN' && (
-                <Badge variant="secondary" size="xs">UNKNOWN (archetype tidak terdeteksi)</Badge>
-              )}
+          {/* 0b. Sumber Jawaban — ringkasan KB mana yang berkontribusi */}
+          {debug.kbSources && debug.kbSources.length > 0 && (
+            <div>
+              <span className="text-button-hover font-semibold">Sumber Jawaban</span>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {(() => {
+                  const sourceTypes = [...new Set(debug.kbSources!.map(s => s.source))];
+                  const sourceLabels: Record<string, { label: string; className: string }> = {
+                    promo: { label: '📦 Promo KB', className: 'bg-blue-500/15 text-blue-600 dark:text-blue-400' },
+                    general: { label: '📚 General KB', className: 'bg-violet-500/15 text-violet-600 dark:text-violet-400' },
+                    behavioral: { label: '🛡️ Behavioral KB', className: 'bg-orange-500/15 text-orange-600 dark:text-orange-400' },
+                  };
+                  return sourceTypes.map(type => {
+                    const cfg = sourceLabels[type] || { label: type, className: 'bg-muted text-foreground/70' };
+                    return (
+                      <span key={type} className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${cfg.className}`}>
+                        {cfg.label}
+                      </span>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          )}
+          {(!debug.kbSources || debug.kbSources.length === 0) && (
+            <div>
+              <span className="text-button-hover font-semibold">Sumber Jawaban</span>
+              <p className="text-foreground/50 mt-0.5 italic text-xs">Persona knowledge only — tidak ada KB yang digunakan</p>
             </div>
           )}
 
