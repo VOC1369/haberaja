@@ -1693,7 +1693,99 @@ export async function deletePromoDraft(id: string): Promise<boolean> {
  */
 export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoFormData> {
   let normalized = { ...data };
+  const raw = data as Record<string, unknown>;
   
+  // ============================================
+  // 0. Canonical v2.1 Hydration — map canonical fields to form fields
+  // ============================================
+
+  // 0a. mode → reward_mode
+  if (!normalized.reward_mode && raw.mode && typeof raw.mode === 'string') {
+    normalized.reward_mode = raw.mode as PromoFormData['reward_mode'];
+  }
+
+  // 0b. tier_archetype normalization (short → full form value)
+  if (normalized.tier_archetype) {
+    const archetypeMap: Record<string, string> = {
+      'point_store': 'tier_point_store',
+      'level': 'tier_level',
+      'network': 'tier_network',
+      'formula': 'tier_formula',
+    };
+    const mapped = archetypeMap[normalized.tier_archetype] as PromoFormData['tier_archetype'];
+    if (mapped) {
+      normalized.tier_archetype = mapped;
+    }
+  }
+
+  // 0c. category → program_classification
+  if (!normalized.program_classification && raw.category && typeof raw.category === 'string') {
+    const catMap: Record<string, string> = {
+      'C': 'C', 'REWARD': 'A', 'EVENT': 'C', 'A': 'A', 'B': 'B',
+    };
+    normalized.program_classification = (catMap[raw.category.toUpperCase()] || '') as PromoFormData['program_classification'];
+  }
+
+  // 0d. promo_type inference from canonical context
+  if (!normalized.promo_type) {
+    const archetype = normalized.tier_archetype || '';
+    const trigger = (normalized.trigger_event || '').toLowerCase();
+    const calcBasis = (raw.calculation_basis as string || '').toLowerCase();
+    
+    if (archetype.includes('point_store') || calcBasis === 'loyalty_point') {
+      normalized.promo_type = 'Loyalty Point';
+    } else if (trigger === 'turnover' && normalized.reward_mode === 'tier') {
+      normalized.promo_type = 'Event / Level Up';
+    }
+  }
+
+  // 0e. promo_unit inference
+  if (!normalized.promo_unit && (normalized.tier_archetype || '').includes('point_store')) {
+    normalized.promo_unit = 'lp';
+  }
+
+  // 0f. tiers[] canonical → form conversion
+  const tiers = (normalized as PromoFormData).tiers;
+  if (tiers && Array.isArray(tiers) && tiers.length > 0) {
+    const firstTier = tiers[0] as unknown as Record<string, unknown>;
+    // Detect canonical format: has lp_required or requirement_value but no minimal_point
+    if ((firstTier.lp_required !== undefined || firstTier.requirement_value !== undefined) && firstTier.minimal_point === undefined) {
+      (normalized as PromoFormData).tiers = (tiers as unknown as Record<string, unknown>[]).map((t) => ({
+        id: String(t.tier_id || t.id || generateUUID()),
+        type: (t.tier_name as string) || '',
+        minimal_point: Number(t.lp_required ?? t.requirement_value ?? 0),
+        reward: Number(t.reward_amount ?? t.reward_value ?? 0),
+        reward_type: 'fixed' as const,
+        jenis_hadiah: 'credit_game',
+      })) as PromoFormData['tiers'];
+    }
+  }
+
+  // 0g. redeem_items[] hydration for tier_point_store
+  if ((normalized.tier_archetype || '').includes('point_store') && tiers && Array.isArray(tiers) && tiers.length > 0) {
+    const existingRedeem = (normalized as PromoFormData).redeem_items;
+    if (!existingRedeem || existingRedeem.length === 0) {
+      const firstT = tiers[0] as unknown as Record<string, unknown>;
+      if (firstT.lp_required !== undefined || firstT.requirement_value !== undefined) {
+        (normalized as PromoFormData).redeem_items = (tiers as unknown as Record<string, unknown>[]).map((t) => ({
+          id: String(t.tier_id || t.id || generateUUID()),
+          nama_hadiah: (t.tier_name as string) || '',
+          nilai_hadiah: Number(t.reward_amount ?? t.reward_value ?? 0),
+          biaya_lp: Number(t.lp_required ?? t.requirement_value ?? 0),
+        })) as PromoFormData['redeem_items'];
+      }
+    }
+  }
+
+  // 0h. claim_frequency canonical → form mapping
+  if (normalized.claim_frequency) {
+    const freqMap: Record<string, string> = {
+      'monthly': 'bulanan', 'daily': 'harian', 'weekly': 'mingguan', 'once': 'sekali',
+    };
+    const mapped = freqMap[normalized.claim_frequency.toLowerCase()];
+    if (mapped) normalized.claim_frequency = mapped;
+  }
+
   // ============================================
   // 1. Normalize reward_distribution (CASE-INSENSITIVE)
   // ============================================
@@ -2033,7 +2125,7 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
       normalized.platform_access = 'semua';
     } else if (lowerPlatform === 'web') {
       normalized.platform_access = 'web';
-    } else if (lowerPlatform === 'apk') {
+    } else if (lowerPlatform === 'apk' || lowerPlatform === 'apk_only') {
       normalized.platform_access = 'apk';
     } else if (lowerPlatform === 'mobile') {
       normalized.platform_access = 'mobile';
@@ -2322,6 +2414,7 @@ export const CLAIM_FREQUENCIES = [
   { value: 'sekali', label: 'Sekali' },
   { value: 'harian', label: 'Harian' },
   { value: 'mingguan', label: 'Mingguan' },
+  { value: 'bulanan', label: 'Bulanan' },
   { value: 'unlimited', label: 'Unlimited' },
   { value: 'tanggal_tertentu', label: 'Tanggal Tertentu' },
 ];
