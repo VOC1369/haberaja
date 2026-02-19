@@ -57,8 +57,8 @@ export function DebugPanel({ debug }: DebugPanelProps) {
             </div>
           )}
 
-          {/* 0b. KB Health Status */}
-          {debug.kbHealth && (
+          {/* 0b. KB Health Status — only show when promo KB is relevant */}
+          {debug.kbHealth && debug.kbSources?.some(s => s.source === 'promo') && (
             <div className="flex items-start gap-2">
               <span className="text-button-hover font-semibold">KB Status</span>
               {debug.kbHealth.status === 'READY' && (
