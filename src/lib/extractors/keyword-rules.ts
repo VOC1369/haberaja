@@ -657,7 +657,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'MILESTONE → Event Program (target-based)',
     defaults: {
       reward_mode: 'tier',
-      tier_archetype: 'tier_level',
+      tier_archetype: 'level',
       trigger_event: 'Deposit',
       promo_type: 'Milestone Deposit',
       intent_category: 'Retention',
