@@ -3979,8 +3979,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           </div>
 
-          {/* 1. Tabel Perhitungan - Only for tier_point_store */}
-          {data.tier_archetype === 'tier_point_store' && (
+          {/* 1. Tabel Perhitungan - Only for point_store */}
+          {data.tier_archetype === 'point_store' && (
             <Collapsible>
               <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
                 <div className="flex items-center gap-3">
