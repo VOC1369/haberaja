@@ -4903,9 +4903,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
           {(() => {
             // Tier Archetype field visibility helpers (UI-gating only)
-            const tierArchetype = data.tier_archetype || 'tier_level';
-            const showLevelFields = tierArchetype === 'tier_level';
-            const showPointStoreFields = tierArchetype === 'tier_point_store';
+            const tierArchetype = data.tier_archetype || 'level';
+            const showLevelFields = tierArchetype === 'level';
+            const showPointStoreFields = tierArchetype === 'point_store';
             
             return (
             <>
