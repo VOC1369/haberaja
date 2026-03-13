@@ -295,6 +295,65 @@ Contoh BENAR:
 Contoh SALAH:
 - Download APK lalu login dan klaim → trigger_event: "Download lalu klaim" ❌
 
+🆕 FIELD BARU v2.2 (WAJIB EXTRACT jika ada di S&K):
+
+📸 BUKTI & KLAIM:
+- proof_required: true jika S&K menyebut player WAJIB kirim bukti (screenshot, foto struk, post sosmed) sebelum klaim. false jika tidak ada syarat bukti.
+- proof_type: tipe bukti yang diminta.
+  'screenshot' → "kirim screenshot", "foto tangkapan layar"
+  'bill_share' → "foto struk", "share bukti pembayaran"
+  'social_post' → "post di sosmed", "tag kami di Instagram", "share di Facebook"
+  'none' → tidak ada syarat bukti (default jika proof_required=false)
+- proof_destination: ke mana bukti dikirim.
+  'livechat' → "kirim ke livechat", "hubungi CS"
+  'whatsapp' → "kirim ke WhatsApp", "WA ke nomor"
+  'telegram' → "kirim ke Telegram"
+  'facebook' → "kirim ke Facebook", "DM Facebook"
+  'none' → tidak disebutkan
+
+⛔ PENALTY:
+- penalty_type: jenis hukuman jika melanggar S&K.
+  null → tidak ada hukuman eksplisit, atau hanya klausa umum ("berhak membatalkan")
+  'bonus_cancel' → HANYA bonus dibatalkan ("bonus akan dibatalkan", "klaim hangus")
+  'full_balance_void' → SELURUH saldo dihanguskan — wajib ada kata EKSPLISIT:
+    "seluruh saldo dihanguskan", "saldo akan dihanguskan", "semua saldo hangus",
+    "akun diblokir dan saldo hangus", "balance akan di-void"
+  JANGAN gunakan 'full_balance_void' hanya dari kata "hangus" tanpa konteks "saldo/balance"!
+
+🔗 CLAIM URL & PLATFORM:
+- claim_url: URL form klaim jika claim_method='form'. null jika tidak ada URL.
+- claim_platform: platform SPESIFIK untuk klaim jika ada restriksi eksplisit.
+  'livechat' | 'whatsapp' | 'telegram' | 'form' | 'apk' | 'auto' | null
+
+🎁 ITEM FISIK:
+- reward_item_description: deskripsi detail item fisik jika reward_type='merchandise' atau 'physical_item'.
+  Contoh: "Kaos eksklusif berlogo brand, ukuran M/L/XL, bahan cotton combed 30s"
+  null jika reward bukan item fisik.
+
+📊 TIER DIMENSION (untuk promo dengan tiers[]):
+Untuk setiap tier yang di-extract, WAJIB tentukan tier_dimension:
+- Tier dibedakan oleh level membership (Bronze/Silver/Gold/dll) → 'level'
+- Tier dibedakan oleh jumlah downline/referral aktif → 'downline_count'
+- Tier dibedakan oleh jumlah tim dalam parlay → 'team_count'
+- Tier dibedakan oleh nominal deposit → 'deposit_amount'
+- Tier dibedakan oleh total turnover → 'turnover_amount'
+- Tier dibedakan oleh saldo poin (LP) → 'point_balance'
+
+Untuk setiap tier, isi:
+- min_dimension_value: nilai minimum inklusif (null jika tidak ada batas bawah)
+- max_dimension_value: nilai maximum inklusif (null jika tier tertinggi tanpa batas atas)
+- special_conditions: array string kondisi khusus tier ini ([] jika tidak ada)
+
+📂 SUBCATEGORY FIELDS BARU:
+Untuk setiap subcategory:
+- subcategory_code: kode promo khusus sub-bonus ini jika disebutkan di S&K. null jika tidak ada.
+- game_exclusions: array game/provider yang dikecualikan KHUSUS untuk sub-bonus ini ([] jika tidak ada).
+- conversion_formula: formula perhitungan khusus subcategory ini. WAJIB DIISI jika ada mechanic.
+  Contoh: "Cashback 5% × total loss minggu ini, maks 500rb"
+  "" jika tidak ada formula spesifik.
+
+Tambahkan field-field baru ini ke output JSON di bagian yang relevan.
+
 📤 OUTPUT: JSON VALID saja, tanpa markdown.
 `;
 
@@ -628,6 +687,20 @@ Jika tidak ada provider spesifik → eligible_providers: []
   "subcategories": [] | null
 }
 
+🆕 FIELD BARU v2.2 (WAJIB EXTRACT untuk Policy jika ada):
+
+⛔ PENALTY (wajib extract dari bagian "Sanksi" / "Konsekuensi"):
+- penalty_type: null | 'bonus_cancel' | 'full_balance_void'
+  null → hanya klausa umum tanpa detail
+  'bonus_cancel' → "bonus dibatalkan", "klaim hangus"
+  'full_balance_void' → "seluruh saldo dihanguskan", "saldo akan di-void", "semua saldo hangus"
+  CATATAN: 'full_balance_void' WAJIB ada kata "saldo/balance" secara eksplisit!
+
+📸 BUKTI (untuk policy dengan syarat verifikasi):
+- proof_required: true jika policy mensyaratkan bukti verifikasi
+- proof_type: 'screenshot' | 'bill_share' | 'social_post' | 'none'
+- proof_destination: 'livechat' | 'whatsapp' | 'telegram' | 'facebook' | 'none'
+
 🚫 ATURAN KERAS:
 1. Jika tidak yakin field ada → SET null
 2. DILARANG mengisi field reward (bonus_percentage, max_bonus, cashback_rate, dll)
@@ -648,6 +721,7 @@ Jika tidak ada provider spesifik → eligible_providers: []
 
 📤 OUTPUT: JSON VALID saja, tanpa markdown.
 `;
+
 
 // ============================================
 // CANONICAL OUTPUT PROMPT (INJECTED INTO ALL PROMPTS)

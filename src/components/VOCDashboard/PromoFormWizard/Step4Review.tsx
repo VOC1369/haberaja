@@ -1382,6 +1382,29 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                 value={PROMO_RISK_LEVELS.find(r => r.value === data.promo_risk_level)?.label || data.promo_risk_level} 
               />
             )}
+            {/* v2.2 fields */}
+            {data.claim_platform && data.claim_platform !== 'auto' && (
+              <ValueBox label="Platform Klaim" value={data.claim_platform} />
+            )}
+            {data.claim_url && (
+              <ValueBox label="Claim URL" value={data.claim_url} />
+            )}
+            {data.proof_required && (
+              <>
+                <ValueBox label="Wajib Bukti" value="Ya" />
+                <ValueBox label="Tipe Bukti" value={data.proof_type || '-'} />
+                <ValueBox label="Kirim Bukti ke" value={data.proof_destination || '-'} />
+              </>
+            )}
+            {data.penalty_type && (
+              <ValueBox 
+                label="Penalti" 
+                value={data.penalty_type === 'full_balance_void' ? '⚠️ Seluruh Saldo Hangus' : 'Bonus Dibatalkan'} 
+              />
+            )}
+            {data.reward_item_description && (
+              <ValueBox label="Deskripsi Item Fisik" value={data.reward_item_description} />
+            )}
           </CollapsibleSection>
 
           {/* Step 4 Summary - Konfigurasi Reward */}

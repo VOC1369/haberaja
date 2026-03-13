@@ -5301,6 +5301,140 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </CollapsibleContent>
           </Collapsible>
 
+          {/* Section v2.2 — Klaim, Bukti & Penalti */}
+          <Collapsible defaultOpen={!!(data.proof_required || data.claim_url || data.penalty_type)}>
+            <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center gap-2 text-sm font-medium text-button-hover hover:opacity-80">
+                  <Info className="h-4 w-4" />
+                  Klaim, Bukti & Penalti
+                  <ChevronDown className="h-4 w-4 ml-auto" />
+                </button>
+              </CollapsibleTrigger>
+              <p className="text-xs text-muted-foreground ml-auto">Field baru v2.2</p>
+            </div>
+            <CollapsibleContent>
+              <div className="p-4 bg-muted rounded-lg space-y-4">
+                {/* Claim URL & Platform */}
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Claim Platform</Label>
+                    <Select
+                      value={data.claim_platform || ''}
+                      onValueChange={(v) => onChange({ claim_platform: v as typeof data.claim_platform })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Pilih platform klaim" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto (tidak ada restriksi)</SelectItem>
+                        <SelectItem value="livechat">Live Chat</SelectItem>
+                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                        <SelectItem value="telegram">Telegram</SelectItem>
+                        <SelectItem value="form">Form (URL)</SelectItem>
+                        <SelectItem value="apk">APK Only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {data.claim_platform === 'form' && (
+                    <div className="space-y-2">
+                      <Label>Claim URL</Label>
+                      <Input
+                        value={data.claim_url || ''}
+                        onChange={(e) => onChange({ claim_url: e.target.value })}
+                        placeholder="https://..."
+                        type="url"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Reward Item Description (for physical items) */}
+                {(data.reward_type === 'merchandise' || data.reward_type === 'hadiah_fisik' || data.reward_type === 'physical_item') && (
+                  <div className="space-y-2">
+                    <Label>Deskripsi Item Fisik</Label>
+                    <Textarea
+                      value={data.reward_item_description || ''}
+                      onChange={(e) => onChange({ reward_item_description: e.target.value })}
+                      placeholder="Contoh: Kaos eksklusif logo brand, ukuran M/L/XL, bahan cotton combed 30s"
+                      rows={2}
+                    />
+                  </div>
+                )}
+
+                {/* Proof Required */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Wajib Kirim Bukti</Label>
+                    <p className="text-xs text-muted-foreground">Player wajib kirim screenshot/bukti sebelum klaim</p>
+                  </div>
+                  <Switch
+                    checked={data.proof_required || false}
+                    onCheckedChange={(checked) => onChange({
+                      proof_required: checked,
+                      proof_type: checked ? (data.proof_type || 'screenshot') : 'none',
+                      proof_destination: checked ? (data.proof_destination || 'livechat') : 'none',
+                    })}
+                  />
+                </div>
+
+                {data.proof_required && (
+                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Tipe Bukti</Label>
+                      <Select
+                        value={data.proof_type || 'screenshot'}
+                        onValueChange={(v) => onChange({ proof_type: v as typeof data.proof_type })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="screenshot">Screenshot</SelectItem>
+                          <SelectItem value="bill_share">Foto Struk / Bill</SelectItem>
+                          <SelectItem value="social_post">Post di Sosmed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Kirim Bukti ke</Label>
+                      <Select
+                        value={data.proof_destination || 'livechat'}
+                        onValueChange={(v) => onChange({ proof_destination: v as typeof data.proof_destination })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="livechat">Live Chat</SelectItem>
+                          <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                          <SelectItem value="telegram">Telegram</SelectItem>
+                          <SelectItem value="facebook">Facebook</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Penalty Type */}
+                <div className="space-y-2">
+                  <Label>Jenis Penalti</Label>
+                  <Select
+                    value={data.penalty_type || ''}
+                    onValueChange={(v) => onChange({ penalty_type: (v || null) as typeof data.penalty_type })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Tidak ada penalti eksplisit" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Tidak ada / Klausa umum</SelectItem>
+                      <SelectItem value="bonus_cancel">Bonus Dibatalkan</SelectItem>
+                      <SelectItem value="full_balance_void">Seluruh Saldo Dihanguskan ⚠️</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {data.penalty_type === 'full_balance_void' && (
+                    <p className="text-xs text-destructive flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      Hati-hati: S&K menyebutkan seluruh saldo player bisa dihanguskan
+                    </p>
+                  )}
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+
           {/* Section 5 - Manual Claim & Contact Official */}
           <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl">
             <Switch checked={data.contact_channel_enabled || false} onCheckedChange={(checked) => onChange({ contact_channel_enabled: checked })} />
