@@ -297,8 +297,7 @@ export function assertModeFromGate(
     const error = `[INVARIANT VIOLATION] ${source}: mode=formula but calculation_basis is empty. IMPOSSIBLE STATE.`;
     console.error(error);
     
-    const isDevelopment = typeof process !== 'undefined' && 
-      process.env?.NODE_ENV === 'development';
+    const isDevelopment = import.meta.env?.DEV === true;
     
     if (isDevelopment) {
       throw new Error(error);
