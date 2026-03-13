@@ -818,6 +818,12 @@ export interface ExtractedPromo {
     };
   };
   
+  // Root-level extraction fields (P1/P2 — from prompt fix)
+  conversion_formula?: string;
+  turnover_basis?: 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null;
+  mode?: 'fixed' | 'formula' | 'tier';
+  tier_archetype?: string | null;
+
   ready_to_commit: boolean;  // SELALU false sampai user confirm
 }
 
