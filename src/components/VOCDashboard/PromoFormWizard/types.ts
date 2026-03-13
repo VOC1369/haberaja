@@ -2364,25 +2364,25 @@ export async function getPromoById(id: string): Promise<PromoItem | undefined> {
 }
 
 // Tier Archetype Options (UI-gating only, NOT business logic)
-// Taxonomy: 3 Tier Archetypes per category
+// Taxonomy: 4 Tier Archetypes v2.2 (no prefix)
 export const TIER_ARCHETYPE_OPTIONS = [
   { 
-    value: 'tier_level' as const, 
+    value: 'level' as const, 
     label: 'Sistem Level / Tier',
     description: 'Event berbasis level atau milestone (NALEN, VIP Upgrade, Winstreak)'
   },
   { 
-    value: 'tier_point_store' as const, 
+    value: 'point_store' as const, 
     label: 'Sistem Point (LP/EXP)',
     description: 'Point exchange, redemption store (Loyalty Program)'
   },
   { 
-    value: 'tier_network' as const, 
+    value: 'referral' as const, 
     label: 'Network Metric (Referral)',
     description: 'Commission berbasis jumlah downline (Referral Commission)'
   },
   { 
-    value: 'tier_formula' as const, 
+    value: 'formula' as const, 
     label: 'Tier Percentage',
     description: 'Persentase berbeda per VIP level (VIP Rebate, VIP Cashback, VIP Max Bonus)'
   },

@@ -1826,7 +1826,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                 </div>
                 <Button 
                   variant="outline" 
-                  onClick={() => onGoToStep?.(4, data.tier_archetype === 'tier_level' ? 'section-tier-level' : 'section-subcategories')}
+                  onClick={() => onGoToStep?.(4, data.tier_archetype === 'level' ? 'section-tier-level' : 'section-subcategories')}
                   className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
                 >
                   <Edit2 className="h-4 w-4" />
