@@ -187,6 +187,17 @@ export interface CanonicalPromoKB {
   extra_config: Record<string, unknown>;
 
   // ===============================
+  // NEW v2.2 FIELDS (ADDITIVE)
+  // ===============================
+  reward_item_description?: string | null;
+  claim_url?: string | null;
+  claim_platform?: 'auto' | 'livechat' | 'whatsapp' | 'telegram' | 'form' | 'apk' | null;
+  proof_required?: boolean;
+  proof_type?: 'screenshot' | 'bill_share' | 'social_post' | 'none';
+  proof_destination?: 'livechat' | 'whatsapp' | 'telegram' | 'facebook' | 'none';
+  penalty_type?: 'bonus_cancel' | 'full_balance_void' | null;
+
+  // ===============================
   // ARCHETYPE PAYLOAD (ADDITIVE — SSoT SAFE)
   // ===============================
   turnover_basis: 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null;
