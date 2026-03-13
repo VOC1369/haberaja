@@ -687,6 +687,20 @@ Jika tidak ada provider spesifik → eligible_providers: []
   "subcategories": [] | null
 }
 
+🆕 FIELD BARU v2.2 (WAJIB EXTRACT untuk Policy jika ada):
+
+⛔ PENALTY (wajib extract dari bagian "Sanksi" / "Konsekuensi"):
+- penalty_type: null | 'bonus_cancel' | 'full_balance_void'
+  null → hanya klausa umum tanpa detail
+  'bonus_cancel' → "bonus dibatalkan", "klaim hangus"
+  'full_balance_void' → "seluruh saldo dihanguskan", "saldo akan di-void", "semua saldo hangus"
+  CATATAN: 'full_balance_void' WAJIB ada kata "saldo/balance" secara eksplisit!
+
+📸 BUKTI (untuk policy dengan syarat verifikasi):
+- proof_required: true jika policy mensyaratkan bukti verifikasi
+- proof_type: 'screenshot' | 'bill_share' | 'social_post' | 'none'
+- proof_destination: 'livechat' | 'whatsapp' | 'telegram' | 'facebook' | 'none'
+
 🚫 ATURAN KERAS:
 1. Jika tidak yakin field ada → SET null
 2. DILARANG mengisi field reward (bonus_percentage, max_bonus, cashback_rate, dll)
@@ -707,6 +721,7 @@ Jika tidak ada provider spesifik → eligible_providers: []
 
 📤 OUTPUT: JSON VALID saja, tanpa markdown.
 `;
+
 
 // ============================================
 // CANONICAL OUTPUT PROMPT (INJECTED INTO ALL PROMPTS)
