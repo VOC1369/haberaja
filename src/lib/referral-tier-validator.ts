@@ -186,8 +186,8 @@ export function autoCorrectReferralTiers(tiers: ReferralCommissionTier[]): {
   corrected_tiers: ReferralCommissionTier[];
   validation_result: ReferralTiersValidationResult;
 } {
-  // Import calculator dynamically to avoid circular dependency
-  const { calculateAllReferralTiers } = require('./referral-tier-calculator');
+  // Delegate to imported calculator (no require needed)
+  const { calculateAllReferralTiers } = await import('./referral-tier-calculator');
   
   const validation_result = validateReferralTiersBeforeCalc(tiers);
   const corrected_tiers = calculateAllReferralTiers(tiers);
