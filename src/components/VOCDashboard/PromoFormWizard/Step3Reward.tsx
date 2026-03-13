@@ -4801,8 +4801,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </>
           )}
 
-          {/* Section 1 - Dasar Perhitungan Bonus - ONLY for tier_point_store (tier_level uses simplified Tabel Level Reward above) */}
-          {false && data.tier_archetype !== 'tier_point_store' && (
+          {/* Section 1 - Dasar Perhitungan Bonus - ONLY for point_store (level uses simplified Tabel Level Reward above) */}
+          {false && data.tier_archetype !== 'point_store' && (
             <Collapsible defaultOpen>
               <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
                 <div className="flex items-center gap-3">
