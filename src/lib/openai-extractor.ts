@@ -4253,11 +4253,28 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   
   // ============================================
   // INVARIANT ASSERTION: Fail-Loud if impossible state
-  // This catches bugs early in development
+  // Build full fallback chain for calculation_basis before asserting.
   // ============================================
-  const calculationBasisForAssertion = lockedFields?.calculation_basis || 
+  const calculationBasisForAssertion = 
+    lockedFields?.calculation_basis || 
     taxonomyDecision.calculation_basis ||
-    extracted.subcategories?.[0]?.calculation_base || null;
+    extracted.subcategories?.[0]?.calculation_base ||
+    (extracted as any).calculation_basis ||
+    null;
+
+  // Guard: if Gate says formula but NO basis found anywhere, downgrade to fixed
+  // This means Gate misfired (e.g. formula keyword without a real basis).
+  if (initialMode === 'formula' && !calculationBasisForAssertion) {
+    console.warn(
+      '[mapExtractedToPromoFormData] Gate returned formula but calculation_basis is empty — ' +
+      'downgrading to fixed to prevent IMPOSSIBLE STATE.'
+    );
+    initialMode = 'fixed';
+    if (lockedFields) {
+      lockedFields.mode = 'fixed' as any;
+    }
+  }
+
   assertModeFromGate(initialMode, calculationBasisForAssertion, 'mapExtractedToPromoFormData');
   
   const skipFormulaDefaults = NON_FORMULA_MODES.includes(initialMode as typeof NON_FORMULA_MODES[number]);
