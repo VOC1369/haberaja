@@ -20,7 +20,7 @@
 
 /**
  * Universal Tier structure for all tier-based promos
- * Works for: tier_level, tier_point_store, tier_network, tier_formula
+ * Works for: level, point_store, referral, formula — v2.2
  */
 export interface UniversalTier {
   tier_id: string;
@@ -31,11 +31,18 @@ export interface UniversalTier {
   reward_value: number | null;
   reward_type: string;
   turnover_multiplier?: number | null;
-  extra: Record<string, unknown>;  // Escape hatch per-tier
+
+  // === NEW v2.2 ===
+  tier_dimension?: 'level' | 'downline_count' | 'team_count' | 'deposit_amount' | 'turnover_amount' | 'point_balance' | null;
+  min_dimension_value?: number | null;
+  max_dimension_value?: number | null;
+  special_conditions?: string[];        // default: []
+
+  extra: Record<string, unknown>;       // Escape hatch per-tier
 }
 
 /**
- * Canonical Subcategory structure
+ * Canonical Subcategory structure — v2.2
  */
 export interface CanonicalSubCategory {
   sub_id: string;
@@ -48,6 +55,11 @@ export interface CanonicalSubCategory {
   min_deposit: number | null;
   turnover_multiplier: number | null;
   payout_direction: 'depan' | 'belakang' | null;
+
+  // === NEW v2.2 ===
+  subcategory_code?: string | null;
+  game_exclusions: string[];            // default: []
+  conversion_formula: string;           // mandatory for mechanic promos
 }
 
 /**
@@ -74,7 +86,7 @@ export interface CanonicalPromoKB {
   // ===============================
   category: 'REWARD' | 'EVENT' | '';
   mode: 'fixed' | 'tier' | 'formula' | '';
-  tier_archetype: 'tier_level' | 'tier_point_store' | 'tier_network' | 'tier_formula' | null;
+  tier_archetype: 'level' | 'point_store' | 'referral' | 'formula' | 'advanced' | 'parlay' | 'exchange_catalog' | null;
 
   // ===============================
   // INTENT & TRIGGER
@@ -173,6 +185,17 @@ export interface CanonicalPromoKB {
   special_conditions: string[];
   custom_terms: string;
   extra_config: Record<string, unknown>;
+
+  // ===============================
+  // NEW v2.2 FIELDS (ADDITIVE)
+  // ===============================
+  reward_item_description?: string | null;
+  claim_url?: string | null;
+  claim_platform?: 'auto' | 'livechat' | 'whatsapp' | 'telegram' | 'form' | 'apk' | null;
+  proof_required?: boolean;
+  proof_type?: 'screenshot' | 'bill_share' | 'social_post' | 'none';
+  proof_destination?: 'livechat' | 'whatsapp' | 'telegram' | 'facebook' | 'none';
+  penalty_type?: 'bonus_cancel' | 'full_balance_void' | null;
 
   // ===============================
   // ARCHETYPE PAYLOAD (ADDITIVE — SSoT SAFE)
@@ -355,6 +378,15 @@ export const CANONICAL_INERT: CanonicalPromoKB = {
   special_conditions: [],
   custom_terms: '',
   extra_config: {},
+  
+  // New v2.2 fields
+  reward_item_description: null,
+  claim_url: null,
+  claim_platform: null,
+  proof_required: false,
+  proof_type: 'none',
+  proof_destination: 'none',
+  penalty_type: null,
   
   // Archetype Payload
   turnover_basis: null,

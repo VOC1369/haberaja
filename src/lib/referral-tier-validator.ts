@@ -18,6 +18,7 @@
  */
 
 import type { ReferralCommissionTier } from '@/components/VOCDashboard/PromoFormWizard/types';
+import { calculateAllReferralTiers } from './referral-tier-calculator';
 
 // ============================================
 // VALIDATION INTERFACES
@@ -185,9 +186,6 @@ export function autoCorrectReferralTiers(tiers: ReferralCommissionTier[]): {
   corrected_tiers: ReferralCommissionTier[];
   validation_result: ReferralTiersValidationResult;
 } {
-  // Import calculator dynamically to avoid circular dependency
-  const { calculateAllReferralTiers } = require('./referral-tier-calculator');
-  
   const validation_result = validateReferralTiersBeforeCalc(tiers);
   const corrected_tiers = calculateAllReferralTiers(tiers);
   

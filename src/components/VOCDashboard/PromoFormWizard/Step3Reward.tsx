@@ -3979,8 +3979,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </div>
           </div>
 
-          {/* 1. Tabel Perhitungan - Only for tier_point_store */}
-          {data.tier_archetype === 'tier_point_store' && (
+          {/* 1. Tabel Perhitungan - Only for point_store */}
+          {data.tier_archetype === 'point_store' && (
             <Collapsible>
               <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
                 <div className="flex items-center gap-3">
@@ -4244,8 +4244,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </Collapsible>
           )}
 
-          {/* Network Metric UI (tier_network) - Cloned from tier_point_store pattern */}
-          {data.tier_archetype === 'tier_network' && (
+          {/* Network Metric UI (referral) - Cloned from point_store pattern */}
+          {data.tier_archetype === 'referral' && (
             <>
               {/* Section 1: Metode Perhitungan Komisi (Interactive) */}
               <div className="p-4 bg-card border border-border rounded-xl space-y-4">
@@ -4551,7 +4551,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               })()}
             </>
           )}
-          {data.tier_archetype === 'tier_level' && (
+          {data.tier_archetype === 'level' && (
             <>
               {/* Card 1: Aturan Progress Level (Simple, not accordion) */}
               <div id="section-lp-rules" className="p-4 bg-card border border-border rounded-xl space-y-4">
@@ -4801,8 +4801,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </>
           )}
 
-          {/* Section 1 - Dasar Perhitungan Bonus - ONLY for tier_point_store (tier_level uses simplified Tabel Level Reward above) */}
-          {false && data.tier_archetype !== 'tier_point_store' && (
+          {/* Section 1 - Dasar Perhitungan Bonus - ONLY for point_store (level uses simplified Tabel Level Reward above) */}
+          {false && data.tier_archetype !== 'point_store' && (
             <Collapsible defaultOpen>
               <CollapsibleTrigger className="w-full p-4 bg-card border border-border rounded-xl flex items-center justify-between mb-4 hover:bg-card/80 transition-colors group">
                 <div className="flex items-center gap-3">
@@ -4903,9 +4903,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
 
           {(() => {
             // Tier Archetype field visibility helpers (UI-gating only)
-            const tierArchetype = data.tier_archetype || 'tier_level';
-            const showLevelFields = tierArchetype === 'tier_level';
-            const showPointStoreFields = tierArchetype === 'tier_point_store';
+            const tierArchetype = data.tier_archetype || 'level';
+            const showLevelFields = tierArchetype === 'level';
+            const showPointStoreFields = tierArchetype === 'point_store';
             
             return (
             <>

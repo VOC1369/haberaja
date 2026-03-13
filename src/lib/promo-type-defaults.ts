@@ -13,7 +13,7 @@ import { PromoFormData } from '@/components/VOCDashboard/PromoFormWizard/types';
 
 export interface PromoTypeDefaultConfig {
   reward_mode?: 'fixed' | 'tier' | 'formula';
-  tier_archetype?: 'tier_level' | 'tier_point_store' | 'tier_network';  // NEW: For tier mode
+  tier_archetype?: 'level' | 'point_store' | 'referral';  // NEW: For tier mode
   calculation_base?: string;
   calculation_method?: string;
   turnover_rule_enabled?: boolean;

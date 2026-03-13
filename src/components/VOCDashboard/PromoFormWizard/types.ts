@@ -303,7 +303,7 @@ export interface PromoFormData {
   claim_date_until: string;
 
   // Tier mode
-  tier_archetype?: 'tier_level' | 'tier_point_store' | 'tier_network' | 'tier_formula';  // UI-gating only (optional for backward compat)
+  tier_archetype?: 'level' | 'point_store' | 'referral' | 'formula';  // UI-gating only (v2.2 — no prefix)
   tier_claim_mode?: 'otomatis' | 'manual';  // Mode claim untuk tier rewards
   promo_unit: 'lp' | 'exp' | 'hybrid';
   exp_mode: 'level_up' | 'exp_store' | 'both';
@@ -690,7 +690,7 @@ export interface VipTier {
   bonus_percent: number;
 }
 
-// Redeem Item untuk Point Store (tier_point_store)
+// Redeem Item untuk Point Store (point_store)
 export interface RedeemItem {
   id: string;
   nama_hadiah: string;         // Contoh: "Credit Game 10.000"
@@ -700,7 +700,7 @@ export interface RedeemItem {
   note?: string;               // Optional: catatan internal
 }
 
-// Referral Commission Tier untuk tier_network (Network Metric)
+// Referral Commission Tier untuk referral (Network Metric)
 export interface ReferralCommissionTier {
   id: string;
   tier_label: string;          // Auto-generated: "Tier 1", "Tier 2", etc.
@@ -1046,12 +1046,12 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   }
   
   // ============================================
-  // PATCH 10: Clean tier_network (Referral) - Set LP/EXP fields to INERT
+  // PATCH 10: Clean referral (Referral) - Set LP/EXP fields to INERT
   // ARSITEKTUR: Full-shape JSON dengan inert values (BUKAN delete!)
   // KONTRAK TIER MODE: Root fields (reward_type, reward_amount, max_claim) = INERT
   // Truth = referral_tiers[] array (BUKAN root fields!)
   // ============================================
-  if (data.reward_mode === 'tier' && data.tier_archetype === 'tier_network') {
+  if (data.reward_mode === 'tier' && data.tier_archetype === 'referral') {
     // ============================================
     // CALCULATOR CONTRACT: Calculate DERIVED fields before save
     // Only referral-tier-calculator.ts is allowed to calculate these!
@@ -1124,15 +1124,15 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.calculation_value = null;
     
     // Ensure tier_archetype is set
-    pkbData.tier_archetype = 'tier_network';
+    pkbData.tier_archetype = 'referral';
   }
   
   // ============================================
-  // PATCH 11B: tier_level (Event Level Up / BONUS NALEN) Semantic Rules
+  // PATCH 11B: level (Event Level Up / BONUS NALEN) Semantic Rules
   // Root calculation fields = INERT, truth is in tiers[] with minimal_point
   // ============================================
-  if (data.tier_archetype === 'tier_level') {
-    console.log('[buildPKBPayload] Applying tier_level (Event Level Up) semantic rules');
+  if (data.tier_archetype === 'level') {
+    console.log('[buildPKBPayload] Applying level (Event Level Up) semantic rules');
     
     // Event Level Up: Root calculation fields = INERT
     pkbData.min_deposit = null;          // Tidak ada min deposit per klaim (unlock via history)
@@ -1165,15 +1165,15 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.referral_admin_fee_percentage = null;
     
     // Ensure tier_archetype is set
-    pkbData.tier_archetype = 'tier_level';
+    pkbData.tier_archetype = 'level';
   }
   
   // ============================================
-  // PATCH 11C: tier_point_store (LP/EXP Redeem) Semantic Rules
+  // PATCH 11C: point_store (LP/EXP Redeem) Semantic Rules
   // Root calculation fields = INERT, truth is in redeem_items[]
   // ============================================
-  if (data.tier_archetype === 'tier_point_store') {
-    console.log('[buildPKBPayload] Applying tier_point_store (LP Redeem) semantic rules');
+  if (data.tier_archetype === 'point_store') {
+    console.log('[buildPKBPayload] Applying point_store (LP Redeem) semantic rules');
     
     // Point Store: Root calculation fields = INERT
     pkbData.calculation_base = "";       // Truth is in lp_earn_* fields
@@ -1198,15 +1198,15 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.level_up_rewards = [];
     
     // Ensure tier_archetype is set
-    pkbData.tier_archetype = 'tier_point_store';
+    pkbData.tier_archetype = 'point_store';
   }
   
   // ============================================
-  // PATCH 11D: tier_formula (VIP Rebate/Cashback %) Semantic Rules
+  // PATCH 11D: formula (VIP Rebate/Cashback %) Semantic Rules
   // Tier percentage table = tiers[], with formula-based rewards per tier
   // ============================================
-  if (data.tier_archetype === 'tier_formula') {
-    console.log('[buildPKBPayload] Applying tier_formula (VIP % Table) semantic rules');
+  if (data.tier_archetype === 'formula') {
+    console.log('[buildPKBPayload] Applying formula (VIP % Table) semantic rules');
     
     // VIP Percentage: calculation_base stays (turnover/loss), truth in tiers[]
     // Each tier has different reward percentage based on VIP level
@@ -1230,7 +1230,7 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.lp_earn_point_amount = null;
     
     // Ensure tier_archetype is set
-    pkbData.tier_archetype = 'tier_formula';
+    pkbData.tier_archetype = 'formula';
   }
   
   // ============================================
@@ -1336,15 +1336,15 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // CALCULATION
   // ===============================
   canonical.calculation_basis = data.calculation_base || '';
-  // Fix 1: Archetype-aware default for tier_point_store
-  if (!canonical.calculation_basis && data.tier_archetype === 'tier_point_store') {
+  // Fix 1: Archetype-aware default for point_store
+  if (!canonical.calculation_basis && data.tier_archetype === 'point_store') {
     canonical.calculation_basis = 'loyalty_point';
   }
   canonical.min_calculation = data.min_calculation ?? null;
   canonical.payout_direction = (data.payout_direction as 'depan' | 'belakang') || null;
   canonical.conversion_formula = data.conversion_formula || '';
-  // Fix 2: Auto-generate conversion_formula for tier_point_store
-  if (!canonical.conversion_formula && data.tier_archetype === 'tier_point_store') {
+  // Fix 2: Auto-generate conversion_formula for point_store
+  if (!canonical.conversion_formula && data.tier_archetype === 'point_store') {
     const basis = data.lp_earn_basis || 'turnover';
     const amount = data.lp_earn_amount || 1000;
     const points = data.lp_earn_point_amount || 1;
@@ -1574,8 +1574,8 @@ function normalizeClaimFrequency(freq?: string): string {
  * Helper: Unify all tier types into canonical UniversalTier[]
  */
 function unifyTiers(data: PromoFormData): UniversalTier[] {
-  // tier_network = Referral
-  if (data.tier_archetype === 'tier_network' && data.referral_tiers?.length) {
+  // referral = Referral
+  if (data.tier_archetype === 'referral' && data.referral_tiers?.length) {
     return data.referral_tiers.map((t, i) => ({
       tier_id: t.id,
       tier_name: t.tier_label,
@@ -1594,8 +1594,8 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
     }));
   }
   
-  // tier_point_store = LP Redeem
-  if (data.tier_archetype === 'tier_point_store' && data.redeem_items?.length) {
+  // point_store = LP Redeem
+  if (data.tier_archetype === 'point_store' && data.redeem_items?.length) {
     return data.redeem_items.map((r, i) => ({
       tier_id: r.id,
       tier_name: r.nama_hadiah,
@@ -1650,6 +1650,9 @@ function canonicalizeSubcategories(data: PromoFormData): CanonicalSubCategory[] 
       ? parseMultiplier(sub.turnover_rule) 
       : null,
     payout_direction: (sub.payout_direction as 'depan' | 'belakang') || null,
+    // v2.2 new fields — defaults for existing subcategories
+    game_exclusions: [],
+    conversion_formula: (sub as any).conversion_formula || '',
   }));
 }
 
@@ -2055,11 +2058,11 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
   const referralTiers = (normalized as PromoFormData).referral_tiers;
   const tierArchetype = normalized.tier_archetype;
 
-  if (tierArchetype === 'tier_network' || (referralTiers && referralTiers.length > 0)) {
+  if (tierArchetype === 'referral' || (referralTiers && referralTiers.length > 0)) {
     if (normalized.reward_mode !== 'tier') {
       console.log('[normalizePromoData] Fixing reward_mode: was', normalized.reward_mode, '→ tier (referral detected)');
       normalized.reward_mode = 'tier';
-      normalized.tier_archetype = 'tier_network';
+      normalized.tier_archetype = 'referral';
     }
   }
   // PRIORITY 2: Check for standard tiers (loyalty, level-up)
@@ -2364,25 +2367,25 @@ export async function getPromoById(id: string): Promise<PromoItem | undefined> {
 }
 
 // Tier Archetype Options (UI-gating only, NOT business logic)
-// Taxonomy: 3 Tier Archetypes per category
+// Taxonomy: 4 Tier Archetypes v2.2 (no prefix)
 export const TIER_ARCHETYPE_OPTIONS = [
   { 
-    value: 'tier_level' as const, 
+    value: 'level' as const, 
     label: 'Sistem Level / Tier',
     description: 'Event berbasis level atau milestone (NALEN, VIP Upgrade, Winstreak)'
   },
   { 
-    value: 'tier_point_store' as const, 
+    value: 'point_store' as const, 
     label: 'Sistem Point (LP/EXP)',
     description: 'Point exchange, redemption store (Loyalty Program)'
   },
   { 
-    value: 'tier_network' as const, 
+    value: 'referral' as const, 
     label: 'Network Metric (Referral)',
     description: 'Commission berbasis jumlah downline (Referral Commission)'
   },
   { 
-    value: 'tier_formula' as const, 
+    value: 'formula' as const, 
     label: 'Tier Percentage',
     description: 'Persentase berbeda per VIP level (VIP Rebate, VIP Cashback, VIP Max Bonus)'
   },
@@ -2687,7 +2690,7 @@ export const initialPromoData: PromoFormData = {
   claim_frequency: '',
   claim_date_from: '',
   claim_date_until: '',
-  tier_archetype: 'tier_level',  // Default: Level/Milestone Tier
+  tier_archetype: 'level',  // Default: Level/Milestone Tier
   promo_unit: 'lp',
   exp_mode: 'level_up',
   lp_calc_method: 'turnover',

@@ -206,9 +206,8 @@ export function assertModeInvariants(
     logInvariantError(`${contextStr}\n${errorMessage}`);
     
     // In development: throw to surface issues early
-    // Check for NODE_ENV or use a simpler check for browser
-    const isDevelopment = typeof process !== 'undefined' && 
-      process.env?.NODE_ENV === 'development';
+    // Check for Vite DEV flag (browser-safe, no process dependency)
+    const isDevelopment = import.meta.env?.DEV === true;
     
     if (isDevelopment) {
       throw new Error(`Invariant assertion failed${contextStr}:\n${errorMessage}`);
@@ -298,8 +297,7 @@ export function assertModeFromGate(
     const error = `[INVARIANT VIOLATION] ${source}: mode=formula but calculation_basis is empty. IMPOSSIBLE STATE.`;
     console.error(error);
     
-    const isDevelopment = typeof process !== 'undefined' && 
-      process.env?.NODE_ENV === 'development';
+    const isDevelopment = import.meta.env?.DEV === true;
     
     if (isDevelopment) {
       throw new Error(error);
@@ -311,8 +309,7 @@ export function assertModeFromGate(
     const error = `[INVARIANT VIOLATION] ${source}: mode=${mode} but calculation_basis=${calculation_basis}. IMPOSSIBLE STATE.`;
     console.error(error);
     
-    const isDevelopment = typeof process !== 'undefined' && 
-      process.env?.NODE_ENV === 'development';
+    const isDevelopment = import.meta.env?.DEV === true;
     
     if (isDevelopment) {
       throw new Error(error);

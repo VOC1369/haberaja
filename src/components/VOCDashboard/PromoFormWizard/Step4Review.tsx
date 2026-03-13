@@ -166,8 +166,8 @@ export const validatePercentageConsistency = (data: PromoFormData): string | nul
     /referral|referal|refferal/i.test(promoType);
   if (isReferral) return null;
   
-  // SKIP: Tier mode with network archetype (multi-tier has varying %)
-  if (data.tier_archetype === 'tier_network' || 
+  // SKIP: Tier mode with referral archetype (multi-tier has varying %)
+  if (data.tier_archetype === 'referral' || 
       (data.referral_tiers && data.referral_tiers.length > 0)) {
     return null;
   }
@@ -785,7 +785,7 @@ export const generateReferralTerms = (data: PromoFormData): string[] => {
  * Helper to check if promo is a Referral type
  */
 export const isReferralPromo = (data: PromoFormData): boolean => {
-  return data.tier_archetype === 'tier_network' || 
+  return data.tier_archetype === 'referral' || 
     (data.referral_tiers && data.referral_tiers.length > 0) ||
     /referral|referal|refferal|ajak\s*team/i.test(data.promo_name || '') ||
     /referral|referal|refferal/i.test(data.promo_type || '');
@@ -1027,8 +1027,8 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
         ];
       }
     } else if (data.reward_mode === 'tier') {
-      // Check for tier_network (Referral) vs standard tier
-      if (data.tier_archetype === 'tier_network') {
+      // Check for referral (Referral) vs standard tier
+      if (data.tier_archetype === 'referral') {
         step4Fields = [
           !!data.reward_mode,
           !!data.tier_archetype,
@@ -1277,9 +1277,9 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
         ? (data.fixed_reward_type && ((data.fixed_lucky_spin_rewards?.length || 0) > 0 || (data.fixed_min_depo || 0) > 0 || (data.fixed_reward_quantity || 0) > 0))
         : (data.reward_type && data.reward_amount > 0)
     )) ||
-    // Tier mode: Pisahkan validasi tier_network (Referral) vs standard tier
+    // Tier mode: Pisahkan validasi referral (Referral) vs standard tier
     (data.reward_mode === 'tier' && (
-      data.tier_archetype === 'tier_network' 
+      data.tier_archetype === 'referral' 
         ? ((data.referral_tiers?.length || 0) > 0 && 
            data.referral_tiers?.every(t => t.min_downline > 0 && t.commission_percentage > 0))
         : !!data.promo_unit
@@ -1389,13 +1389,13 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
             title="Konfigurasi Reward" 
             complete={!!isStep2Complete}
             stepNumber={4}
-            sectionId={data.tier_archetype === 'tier_level' ? 'section-lp-rules' : undefined}
+            sectionId={data.tier_archetype === 'level' ? 'section-lp-rules' : undefined}
             onEdit={onGoToStep}
           >
             <ValueBox label="Mode" value={data.reward_mode === 'formula' ? 'Dinamis' : data.reward_mode} isBadge badgeVariant="outline" />
             
-            {/* TIER LEVEL TABLE - Always render if tier_level archetype with tiers */}
-            {data.tiers && data.tiers.length > 0 && data.tier_archetype === 'tier_level' && (
+            {/* TIER LEVEL TABLE - Always render if level archetype with tiers */}
+            {data.tiers && data.tiers.length > 0 && data.tier_archetype === 'level' && (
               <div className="col-span-full mt-2">
                 <p className="text-muted-foreground text-xs mb-2">Detail Level Reward</p>
                 <div className="bg-muted rounded-lg overflow-hidden">
@@ -1439,8 +1439,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
               </div>
             )}
             
-            {/* COMBO PROMO MODE - Tampilkan info redirect (skip for tier_level) */}
-            {data.has_subcategories && data.subcategories && data.subcategories.length > 0 && data.tier_archetype !== 'tier_level' ? (
+            {/* COMBO PROMO MODE - Tampilkan info redirect (skip for level) */}
+            {data.has_subcategories && data.subcategories && data.subcategories.length > 0 && data.tier_archetype !== 'level' ? (
               <div className="col-span-full bg-muted/30 rounded-lg p-4">
                 <div className="flex items-center gap-2 text-foreground">
                   <span>📦</span>
@@ -1452,7 +1452,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                   Detail konfigurasi bonus masing-masing varian dapat dilihat di section "Sub Kategori Promo" di bawah.
                 </p>
               </div>
-            ) : data.tier_archetype !== 'tier_level' ? (
+            ) : data.tier_archetype !== 'level' ? (
               /* SINGLE PROMO MODE - Tampilkan detail lengkap */
               <>
                 {data.reward_mode === 'fixed' && (
@@ -1647,8 +1647,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       isBadge
                       badgeVariant="outline"
                     />
-                    {/* Loyalty/System Point fields - HIDE for tier_network (Referral) */}
-                    {data.tier_archetype !== 'tier_network' && (
+                    {/* Loyalty/System Point fields - HIDE for referral */}
+                    {data.tier_archetype !== 'referral' && (
                       <>
                         <ValueBox label="Satuan Poin" value={data.promo_unit?.toUpperCase() || 'LP'} />
                         <ValueBox label="Mode EXP" value={data.exp_mode} />
@@ -1685,8 +1685,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </>
                     )}
                     
-                    {/* Redeem Items Table - Untuk tier_point_store */}
-                    {data.tier_archetype === 'tier_point_store' && data.redeem_items && data.redeem_items.length > 0 && (
+                    {/* Redeem Items Table - Untuk point_store */}
+                    {data.tier_archetype === 'point_store' && data.redeem_items && data.redeem_items.length > 0 && (
                       <div className="col-span-full mt-2">
                         <p className="text-muted-foreground text-xs mb-2">Daftar Hadiah Redeem</p>
                         <div className="bg-muted rounded-lg overflow-hidden">
@@ -1719,8 +1719,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </div>
                     )}
                     
-                    {/* Referral Tiers - Untuk tier_network */}
-                    {data.tier_archetype === 'tier_network' && (
+                    {/* Referral Tiers - Untuk referral */}
+                    {data.tier_archetype === 'referral' && (
                       <>
                         <ValueBox 
                           label="Admin Fee Referral" 
@@ -1826,7 +1826,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                 </div>
                 <Button 
                   variant="outline" 
-                  onClick={() => onGoToStep?.(4, data.tier_archetype === 'tier_level' ? 'section-tier-level' : 'section-subcategories')}
+                  onClick={() => onGoToStep?.(4, data.tier_archetype === 'level' ? 'section-tier-level' : 'section-subcategories')}
                   className="gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
                 >
                   <Edit2 className="h-4 w-4" />

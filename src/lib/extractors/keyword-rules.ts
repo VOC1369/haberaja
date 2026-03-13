@@ -635,7 +635,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'WINSTREAK → Event Program (streak-based)',
     defaults: {
       reward_mode: 'tier',
-      tier_archetype: 'tier_level',
+      tier_archetype: 'level',
       trigger_event: 'Win',
       promo_type: 'Winstreak Bonus',
       intent_category: 'Retention',
@@ -657,7 +657,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'MILESTONE → Event Program (target-based)',
     defaults: {
       reward_mode: 'tier',
-      tier_archetype: 'tier_level',
+      tier_archetype: 'level',
       trigger_event: 'Deposit',
       promo_type: 'Milestone Deposit',
       intent_category: 'Retention',
@@ -679,7 +679,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'VIP REBATE → Reward Program (tier-based percentage)',
     defaults: {
       reward_mode: 'tier',
-      tier_archetype: 'tier_formula',
+      tier_archetype: 'formula',
       calculation_base: 'turnover',
       promo_type: 'VIP Rebate',
       intent_category: 'Retention',
@@ -725,7 +725,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'VIP BIRTHDAY → Event Program (tier-based)',
     defaults: {
       reward_mode: 'tier',
-      tier_archetype: 'tier_level',
+      tier_archetype: 'level',
       trigger_event: 'Login',
       promo_type: 'VIP Birthday',
       intent_category: 'Retention',
@@ -792,7 +792,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'LEADERBOARD REFERRAL → Event Program (rank-based)',
     defaults: {
       reward_mode: 'tier',
-      tier_archetype: 'tier_level',
+      tier_archetype: 'level',
       trigger_event: 'Mission Completed',
       promo_type: 'Leaderboard Referral',
       intent_category: 'Acquisition',

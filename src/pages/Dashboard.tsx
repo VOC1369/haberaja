@@ -110,7 +110,7 @@ const Dashboard = () => {
   }, []);
 
   // Debounced save function with status indicator
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedSave = useCallback((data: APBEConfig) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);

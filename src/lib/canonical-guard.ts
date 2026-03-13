@@ -130,7 +130,7 @@ export type CanonicalFieldName = typeof CANONICAL_EXPORT_WHITELIST[number];
 export const TAXONOMY_RULES = {
   category: ['reward', 'event', ''] as const,
   mode: ['fixed', 'dinamis', 'tier', ''] as const,
-  tier_archetype: ['level', 'point', 'network', null] as const,
+  tier_archetype: ['level', 'point_store', 'referral', 'formula', 'advanced', 'parlay', 'exchange_catalog', null] as const,
 } as const;
 
 export type CanonicalCategory = typeof TAXONOMY_RULES.category[number];
