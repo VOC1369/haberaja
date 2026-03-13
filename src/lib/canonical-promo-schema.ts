@@ -20,7 +20,7 @@
 
 /**
  * Universal Tier structure for all tier-based promos
- * Works for: level, point_store, referral, formula
+ * Works for: level, point_store, referral, formula — v2.2
  */
 export interface UniversalTier {
   tier_id: string;
@@ -31,11 +31,18 @@ export interface UniversalTier {
   reward_value: number | null;
   reward_type: string;
   turnover_multiplier?: number | null;
-  extra: Record<string, unknown>;  // Escape hatch per-tier
+
+  // === NEW v2.2 ===
+  tier_dimension?: 'level' | 'downline_count' | 'team_count' | 'deposit_amount' | 'turnover_amount' | 'point_balance' | null;
+  min_dimension_value?: number | null;
+  max_dimension_value?: number | null;
+  special_conditions?: string[];        // default: []
+
+  extra: Record<string, unknown>;       // Escape hatch per-tier
 }
 
 /**
- * Canonical Subcategory structure
+ * Canonical Subcategory structure — v2.2
  */
 export interface CanonicalSubCategory {
   sub_id: string;
@@ -48,6 +55,11 @@ export interface CanonicalSubCategory {
   min_deposit: number | null;
   turnover_multiplier: number | null;
   payout_direction: 'depan' | 'belakang' | null;
+
+  // === NEW v2.2 ===
+  subcategory_code?: string | null;
+  game_exclusions: string[];            // default: []
+  conversion_formula: string;           // mandatory for mechanic promos
 }
 
 /**
