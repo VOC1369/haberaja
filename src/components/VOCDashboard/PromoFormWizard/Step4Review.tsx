@@ -1452,7 +1452,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                   Detail konfigurasi bonus masing-masing varian dapat dilihat di section "Sub Kategori Promo" di bawah.
                 </p>
               </div>
-            ) : data.tier_archetype !== 'tier_level' ? (
+            ) : data.tier_archetype !== 'level' ? (
               /* SINGLE PROMO MODE - Tampilkan detail lengkap */
               <>
                 {data.reward_mode === 'fixed' && (
