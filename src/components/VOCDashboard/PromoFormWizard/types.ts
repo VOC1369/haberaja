@@ -1336,15 +1336,15 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // CALCULATION
   // ===============================
   canonical.calculation_basis = data.calculation_base || '';
-  // Fix 1: Archetype-aware default for tier_point_store
-  if (!canonical.calculation_basis && data.tier_archetype === 'tier_point_store') {
+  // Fix 1: Archetype-aware default for point_store
+  if (!canonical.calculation_basis && data.tier_archetype === 'point_store') {
     canonical.calculation_basis = 'loyalty_point';
   }
   canonical.min_calculation = data.min_calculation ?? null;
   canonical.payout_direction = (data.payout_direction as 'depan' | 'belakang') || null;
   canonical.conversion_formula = data.conversion_formula || '';
-  // Fix 2: Auto-generate conversion_formula for tier_point_store
-  if (!canonical.conversion_formula && data.tier_archetype === 'tier_point_store') {
+  // Fix 2: Auto-generate conversion_formula for point_store
+  if (!canonical.conversion_formula && data.tier_archetype === 'point_store') {
     const basis = data.lp_earn_basis || 'turnover';
     const amount = data.lp_earn_amount || 1000;
     const points = data.lp_earn_point_amount || 1;
