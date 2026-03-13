@@ -166,7 +166,7 @@ export const ARCHETYPE_RULES: Record<PromoArchetype, ArchetypeSemanticRule> = {
     derived_fields: {
       mode: {
         derive_from: 'evidence',
-        allowed_values: ['fixed', 'formula'],
+        allowed_values: ['fixed', 'formula', 'tier'],
         default_if_missing: 'formula',
         confidence_if_missing: 'medium',
         ambiguity_flag: 'mode_not_determined',

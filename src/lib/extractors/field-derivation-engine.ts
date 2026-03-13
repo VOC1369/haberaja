@@ -59,9 +59,14 @@ const EVIDENCE_PATTERNS = {
     /bonus\s*[\d.,]+[km]?\b/i,
   ],
   mode_tier: [
+    /\btier\b/i,
+    /tingkat\s+\d/i,
+    /level\s+\d/i,
     /tier\s*\d/i,
     /level\s*\d+\s*[→=:]/i,
     /bronze|silver|gold|platinum/i,
+    /deposit\s+(rp\s*)?\d.*bonus\s*\d+%.*\n.*deposit\s*(rp\s*)?\d.*bonus\s*\d+%/is,
+    /[-•]\s*(rp\s*)?\d[\d.,]+\s*[–-]\s*(rp\s*)?\d[\d.,]+.*:\s*bonus\s*\d+%/i,
   ],
 
   // Calculation basis
