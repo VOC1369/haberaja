@@ -166,8 +166,8 @@ export const validatePercentageConsistency = (data: PromoFormData): string | nul
     /referral|referal|refferal/i.test(promoType);
   if (isReferral) return null;
   
-  // SKIP: Tier mode with network archetype (multi-tier has varying %)
-  if (data.tier_archetype === 'tier_network' || 
+  // SKIP: Tier mode with referral archetype (multi-tier has varying %)
+  if (data.tier_archetype === 'referral' || 
       (data.referral_tiers && data.referral_tiers.length > 0)) {
     return null;
   }
