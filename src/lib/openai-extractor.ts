@@ -6345,7 +6345,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     
     if (archetypePayloadResult) {
       finalData.archetype_payload = archetypePayloadResult.archetype_payload;
-      finalData.turnover_basis = archetypePayloadResult.turnover_basis;
+      finalData.turnover_basis = archetypePayloadResult.turnover_basis
+        ?? extracted.turnover_basis
+        ?? null;
       finalData.archetype_invariants = archetypePayloadResult.archetype_invariants;
       
       console.log('[mapExtractedToPromoFormData] Populated archetype_payload:', {
