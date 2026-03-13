@@ -1439,8 +1439,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
               </div>
             )}
             
-            {/* COMBO PROMO MODE - Tampilkan info redirect (skip for tier_level) */}
-            {data.has_subcategories && data.subcategories && data.subcategories.length > 0 && data.tier_archetype !== 'tier_level' ? (
+            {/* COMBO PROMO MODE - Tampilkan info redirect (skip for level) */}
+            {data.has_subcategories && data.subcategories && data.subcategories.length > 0 && data.tier_archetype !== 'level' ? (
               <div className="col-span-full bg-muted/30 rounded-lg p-4">
                 <div className="flex items-center gap-2 text-foreground">
                   <span>📦</span>
