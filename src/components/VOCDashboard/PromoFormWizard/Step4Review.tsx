@@ -1389,13 +1389,13 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
             title="Konfigurasi Reward" 
             complete={!!isStep2Complete}
             stepNumber={4}
-            sectionId={data.tier_archetype === 'tier_level' ? 'section-lp-rules' : undefined}
+            sectionId={data.tier_archetype === 'level' ? 'section-lp-rules' : undefined}
             onEdit={onGoToStep}
           >
             <ValueBox label="Mode" value={data.reward_mode === 'formula' ? 'Dinamis' : data.reward_mode} isBadge badgeVariant="outline" />
             
-            {/* TIER LEVEL TABLE - Always render if tier_level archetype with tiers */}
-            {data.tiers && data.tiers.length > 0 && data.tier_archetype === 'tier_level' && (
+            {/* TIER LEVEL TABLE - Always render if level archetype with tiers */}
+            {data.tiers && data.tiers.length > 0 && data.tier_archetype === 'level' && (
               <div className="col-span-full mt-2">
                 <p className="text-muted-foreground text-xs mb-2">Detail Level Reward</p>
                 <div className="bg-muted rounded-lg overflow-hidden">
