@@ -6180,6 +6180,17 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       turnover_rule_enabled: false,
       claim_frequency: 'sekali',  // 1x per level naik
     }),
+
+    // Override for Deposit Bonus Tier: switch to tier mode with level archetype
+    // subcategories[] converted to depositBonusTiers[] (deposit_amount dimension)
+    ...(isDepositBonusTier && {
+      reward_mode: 'tier' as const,
+      tier_archetype: 'level' as const,
+      tiers: depositBonusTiers,
+      tier_count: depositBonusTiers.length,
+      has_subcategories: false,   // Truth is in tiers[], not subcategories
+      subcategories: [],          // Inert
+    }),
     
     // ============================================
     // FIXED v1.2.1: Event Lucky Spin Prize - NO MODE OVERRIDE
