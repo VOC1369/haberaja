@@ -1165,15 +1165,15 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.referral_admin_fee_percentage = null;
     
     // Ensure tier_archetype is set
-    pkbData.tier_archetype = 'tier_level';
+    pkbData.tier_archetype = 'level';
   }
   
   // ============================================
-  // PATCH 11C: tier_point_store (LP/EXP Redeem) Semantic Rules
+  // PATCH 11C: point_store (LP/EXP Redeem) Semantic Rules
   // Root calculation fields = INERT, truth is in redeem_items[]
   // ============================================
-  if (data.tier_archetype === 'tier_point_store') {
-    console.log('[buildPKBPayload] Applying tier_point_store (LP Redeem) semantic rules');
+  if (data.tier_archetype === 'point_store') {
+    console.log('[buildPKBPayload] Applying point_store (LP Redeem) semantic rules');
     
     // Point Store: Root calculation fields = INERT
     pkbData.calculation_base = "";       // Truth is in lp_earn_* fields
