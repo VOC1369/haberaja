@@ -58,13 +58,13 @@ import type { PromoFormData, PromoSubCategory } from '@/components/VOCDashboard/
 import { isInert } from './promo-field-normalizer';
 
 // ============================================
-// TIER_NETWORK (REFERRAL) TYPE GUARD
+// REFERRAL TIER TYPE GUARD
 // ============================================
 /**
- * Check if promo is a tier_network (Referral) promo
+ * Check if promo is a referral (Referral) promo
  * 
  * SEMANTIC CONTRACT:
- * - tier_network = Referral Bonus (multi-tier commission)
+ * - referral = Referral Bonus (multi-tier commission)
  * - Tier metric: min_downline (NOT nominal)
  * - Tier reward: commission_percentage (NOT reward_amount)
  * - Calculation: PROGRAM-LEVEL via referral_calculation_basis
@@ -72,7 +72,7 @@ import { isInert } from './promo-field-normalizer';
  * - Generic fields (calculation_*, admin_fee_*): MUST BE INERT
  */
 export function isTierNetworkPromo(data: Partial<PromoFormData>): boolean {
-  return data.reward_mode === 'tier' && data.tier_archetype === 'tier_network';
+  return data.reward_mode === 'tier' && data.tier_archetype === 'referral';
 }
 
 // ============================================

@@ -20,7 +20,7 @@
 
 /**
  * Universal Tier structure for all tier-based promos
- * Works for: tier_level, tier_point_store, tier_network, tier_formula
+ * Works for: level, point_store, referral, formula
  */
 export interface UniversalTier {
   tier_id: string;
