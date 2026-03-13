@@ -2246,6 +2246,23 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
   }
 
   // ============================================
+  // STEP -1: REJECT GATE (L1 rule-based → L2 LLM lightweight)
+  // Discard garbage input BEFORE spending classifier tokens.
+  // L1 = instant regex, L2 = gpt-4o-mini with 120-token cap.
+  // ============================================
+  const { runRejectGate } = await import('./reject-gate');
+  const rejectResult = await runRejectGate(content);
+  if (!rejectResult.valid && rejectResult.reason !== 'L2_ERROR_PASS') {
+    const msg = rejectResult.reason === 'L1_NO_PROMO_SIGNAL'
+      ? 'Input tidak mengandung sinyal promo yang cukup (butuh angka + kata kunci reward + mechanic)'
+      : rejectResult.reason === 'L1_TOO_SHORT'
+      ? 'Input terlalu pendek untuk diekstrak sebagai promo'
+      : `Input ditolak oleh validator: ${rejectResult.l2_reason ?? rejectResult.reason}`;
+    throw new Error(`[REJECT_GATE] ${msg}`);
+  }
+  console.log(`[Extractor] RejectGate PASS (level=${rejectResult.level}, hint=${rejectResult.promo_type_hint ?? 'n/a'})`);
+
+  // ============================================
   // STEP 0: PRE-PROCESS - Normalize HTML tables
   // This MUST happen BEFORE AI extraction
   // ============================================
