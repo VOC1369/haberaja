@@ -818,6 +818,12 @@ export interface ExtractedPromo {
     };
   };
   
+  // Root-level extraction fields (P1/P2 — from prompt fix)
+  conversion_formula?: string;
+  turnover_basis?: 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only' | null;
+  mode?: 'fixed' | 'formula' | 'tier';
+  tier_archetype?: string | null;
+
   ready_to_commit: boolean;  // SELALU false sampai user confirm
 }
 
@@ -5923,7 +5929,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     // Use nullish coalescing (??) not logical OR (||) to preserve explicit 0 values
     min_reward_claim: subcategories[0]?.min_reward_claim ?? null,  // ✅ null instead of 0
     min_reward_claim_enabled: (subcategories[0]?.min_reward_claim ?? 0) > 0,
-    conversion_formula: '',
+    conversion_formula: extracted.conversion_formula ?? '',
     
     // Dinamis Mode - Voucher / Ticket / Lucky Spin fields (WAJIB DIISI dari extraction)
     reward_quantity: extracted.subcategories[0]?.reward_quantity || 1,
