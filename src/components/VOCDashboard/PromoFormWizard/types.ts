@@ -1298,7 +1298,7 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   // CORE IDENTITY
   // ===============================
-  canonical.schema_version = '2.1';
+  canonical.schema_version = '2.2';
   canonical.client_id = data.client_id || '';
   canonical.client_name = data.client_name || '';
   canonical.promo_id = promoId || generatePromoId();
