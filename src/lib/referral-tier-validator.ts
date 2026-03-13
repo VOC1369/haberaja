@@ -17,6 +17,7 @@
  * 3. Delegates all calculation to referral-tier-calculator.ts
  */
 
+import type { ReferralCommissionTier } from '@/components/VOCDashboard/PromoFormWizard/types';
 import { calculateAllReferralTiers } from './referral-tier-calculator';
 
 // ============================================
