@@ -700,7 +700,7 @@ export interface RedeemItem {
   note?: string;               // Optional: catatan internal
 }
 
-// Referral Commission Tier untuk tier_network (Network Metric)
+// Referral Commission Tier untuk referral (Network Metric)
 export interface ReferralCommissionTier {
   id: string;
   tier_label: string;          // Auto-generated: "Tier 1", "Tier 2", etc.
