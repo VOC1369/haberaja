@@ -1685,8 +1685,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </>
                     )}
                     
-                    {/* Redeem Items Table - Untuk tier_point_store */}
-                    {data.tier_archetype === 'tier_point_store' && data.redeem_items && data.redeem_items.length > 0 && (
+                    {/* Redeem Items Table - Untuk point_store */}
+                    {data.tier_archetype === 'point_store' && data.redeem_items && data.redeem_items.length > 0 && (
                       <div className="col-span-full mt-2">
                         <p className="text-muted-foreground text-xs mb-2">Daftar Hadiah Redeem</p>
                         <div className="bg-muted rounded-lg overflow-hidden">
