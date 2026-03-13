@@ -1230,7 +1230,7 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.lp_earn_point_amount = null;
     
     // Ensure tier_archetype is set
-    pkbData.tier_archetype = 'tier_formula';
+    pkbData.tier_archetype = 'formula';
   }
   
   // ============================================
