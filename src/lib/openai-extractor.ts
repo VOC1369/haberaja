@@ -4782,21 +4782,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     !isEventLevelUp &&
     extracted.subcategories?.length > 0;
 
-  let depositBonusTiers: Array<{
-    tier_id: string;
-    tier_name: string;
-    tier_order: number;
-    requirement_value: number;
-    requirement_max: number | null;
-    reward_value: number;
-    reward_type: string;
-    turnover_multiplier: string | null;
-    tier_dimension: string;
-    min_dimension_value: number | null;
-    max_dimension_value: number | null;
-    special_conditions: unknown[];
-    _extra: Record<string, unknown>;
-  }> = [];
+  // TierReward shape (legacy) — used by tiers[] in PromoFormData
+  let depositBonusTiers: import('../components/VOCDashboard/PromoFormWizard/types').TierReward[] = [];
 
   if (isDepositBonusTier) {
     console.log('[Deposit Tier Converter] Converting subcategories to depositBonusTiers[]', {
@@ -4806,19 +4793,19 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     });
 
     depositBonusTiers = extracted.subcategories.map((sub, index) => ({
-      tier_id: generateUUID(),
-      tier_name: sub.sub_name || `Tier ${index + 1}`,
-      tier_order: index + 1,
-      requirement_value: sub.minimum_base ?? 0,
-      requirement_max: extracted.subcategories[index + 1]?.minimum_base ?? null,
-      reward_value: sub.calculation_value ?? 0,
-      reward_type: 'percentage',
-      turnover_multiplier: sub.turnover_rule ? String(sub.turnover_rule) : null,
-      tier_dimension: (sub as any).tier_dimension ?? 'deposit_amount',
-      min_dimension_value: sub.minimum_base ?? null,
-      max_dimension_value: extracted.subcategories[index + 1]?.minimum_base ?? null,
-      special_conditions: [],
-      _extra: {},
+      id: generateUUID(),
+      type: sub.sub_name || `Tier ${index + 1}`,
+      minimal_point: sub.minimum_base ?? 0,
+      reward: sub.calculation_value ?? 0,
+      reward_type: 'percentage' as const,
+      jenis_hadiah: 'credit_game',  // deposit bonus default
+      // Store tier boundary metadata in extra fields
+      _tier_order: index + 1,
+      _requirement_max: extracted.subcategories[index + 1]?.minimum_base ?? null,
+      _turnover_multiplier: sub.turnover_rule ? String(sub.turnover_rule) : null,
+      _tier_dimension: (sub as any).tier_dimension ?? 'deposit_amount',
+      _min_dimension_value: sub.minimum_base ?? null,
+      _max_dimension_value: extracted.subcategories[index + 1]?.minimum_base ?? null,
     }));
 
     console.log(`[Deposit Tier Converter] Mapped ${depositBonusTiers.length} deposit tiers`);
