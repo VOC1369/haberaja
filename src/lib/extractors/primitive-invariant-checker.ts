@@ -309,8 +309,7 @@ export function assertModeFromGate(
     const error = `[INVARIANT VIOLATION] ${source}: mode=${mode} but calculation_basis=${calculation_basis}. IMPOSSIBLE STATE.`;
     console.error(error);
     
-    const isDevelopment = typeof process !== 'undefined' && 
-      process.env?.NODE_ENV === 'development';
+    const isDevelopment = import.meta.env?.DEV === true;
     
     if (isDevelopment) {
       throw new Error(error);
