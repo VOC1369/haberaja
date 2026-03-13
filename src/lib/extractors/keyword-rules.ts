@@ -725,7 +725,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'VIP BIRTHDAY → Event Program (tier-based)',
     defaults: {
       reward_mode: 'tier',
-      tier_archetype: 'tier_level',
+      tier_archetype: 'level',
       trigger_event: 'Login',
       promo_type: 'VIP Birthday',
       intent_category: 'Retention',
