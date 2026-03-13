@@ -1719,8 +1719,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       </div>
                     )}
                     
-                    {/* Referral Tiers - Untuk tier_network */}
-                    {data.tier_archetype === 'tier_network' && (
+                    {/* Referral Tiers - Untuk referral */}
+                    {data.tier_archetype === 'referral' && (
                       <>
                         <ValueBox 
                           label="Admin Fee Referral" 
