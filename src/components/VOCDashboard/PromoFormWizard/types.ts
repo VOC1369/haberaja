@@ -1644,6 +1644,11 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
       reward_value: r.nilai_hadiah,
       reward_type: 'fixed',
       turnover_multiplier: null,
+      // B3: preserve dimension fields
+      tier_dimension: (r as any).tier_dimension ?? null,
+      min_dimension_value: (r as any).min_dimension_value ?? null,
+      max_dimension_value: (r as any).max_dimension_value ?? null,
+      special_conditions: (r as any).special_conditions ?? [],
       extra: { is_active: r.is_active, ...((r as any)._extra || {}) },
     }));
   }
