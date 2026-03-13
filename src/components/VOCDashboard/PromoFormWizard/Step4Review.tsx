@@ -1647,8 +1647,8 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                       isBadge
                       badgeVariant="outline"
                     />
-                    {/* Loyalty/System Point fields - HIDE for tier_network (Referral) */}
-                    {data.tier_archetype !== 'tier_network' && (
+                    {/* Loyalty/System Point fields - HIDE for referral */}
+                    {data.tier_archetype !== 'referral' && (
                       <>
                         <ValueBox label="Satuan Poin" value={data.promo_unit?.toUpperCase() || 'LP'} />
                         <ValueBox label="Mode EXP" value={data.exp_mode} />
