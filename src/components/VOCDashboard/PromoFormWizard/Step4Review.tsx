@@ -1027,8 +1027,8 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
         ];
       }
     } else if (data.reward_mode === 'tier') {
-      // Check for tier_network (Referral) vs standard tier
-      if (data.tier_archetype === 'tier_network') {
+      // Check for referral (Referral) vs standard tier
+      if (data.tier_archetype === 'referral') {
         step4Fields = [
           !!data.reward_mode,
           !!data.tier_archetype,
