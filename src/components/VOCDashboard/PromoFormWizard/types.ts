@@ -1198,15 +1198,15 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.level_up_rewards = [];
     
     // Ensure tier_archetype is set
-    pkbData.tier_archetype = 'tier_point_store';
+    pkbData.tier_archetype = 'point_store';
   }
   
   // ============================================
-  // PATCH 11D: tier_formula (VIP Rebate/Cashback %) Semantic Rules
+  // PATCH 11D: formula (VIP Rebate/Cashback %) Semantic Rules
   // Tier percentage table = tiers[], with formula-based rewards per tier
   // ============================================
-  if (data.tier_archetype === 'tier_formula') {
-    console.log('[buildPKBPayload] Applying tier_formula (VIP % Table) semantic rules');
+  if (data.tier_archetype === 'formula') {
+    console.log('[buildPKBPayload] Applying formula (VIP % Table) semantic rules');
     
     // VIP Percentage: calculation_base stays (turnover/loss), truth in tiers[]
     // Each tier has different reward percentage based on VIP level
