@@ -1821,6 +1821,52 @@ Parsing:
   }
 ]
 
+🔢 MODE DETECTION (P4 — WAJIB BACA SEBELUM OUTPUT)
+
+Tentukan mode berdasarkan STRUKTUR MEKANIK promo:
+
+"mode": 
+  "tier"    → ada MULTIPLE LEVEL reward dengan requirement berbeda
+              Contoh: deposit 100rb bonus 20%, deposit 500rb bonus 30%
+              Contoh: 5 downline komisi 5%, 10 downline komisi 10%
+  "formula" → SATU formula kalkulasi berlaku untuk semua
+              Contoh: bonus 100% dari deposit (flat percentage)
+              Contoh: rollingan 0.8% dari total turnover
+              Contoh: cashback 5% dari kekalahan
+  "fixed"   → reward FLAT tanpa kalkulasi apapun
+              Contoh: freebet Rp 50.000 langsung
+              Contoh: freechip Rp 100.000 tanpa syarat kalkulasi
+
+⚠️ ATURAN KERAS:
+- Jika promo punya TIER LEVELS → mode WAJIB "tier", BUKAN "formula"
+- tier_archetype WAJIB diisi jika mode = "tier":
+  • Reward dibedakan oleh LEVEL DEPOSIT → tier_archetype: "level"
+  • Reward dibedakan oleh JUMLAH DOWNLINE → tier_archetype: "referral"
+  • Reward dibedakan oleh JUMLAH TIM PARLAY → tier_archetype: "parlay"
+  • Reward dibedakan oleh SALDO POIN → tier_archetype: "point_store"
+- tier_archetype = null jika mode ≠ "tier"
+
+📐 TURNOVER BASIS (P2 — WAJIB DIISI jika turnover_enabled = true)
+
+turnover_basis: Basis kalkulasi requirement turnover.
+  "bonus_only"        → TO dihitung dari nilai BONUS saja
+                        Contoh: "bonus 100rb, TO 8x = wajib TO 800rb"
+  "deposit_only"      → TO dihitung dari nilai DEPOSIT saja
+                        Contoh: "deposit 500rb, TO 5x = wajib TO 2.5jt"
+  "deposit_plus_bonus"→ TO dihitung dari DEPOSIT + BONUS (paling umum)
+                        Contoh: "deposit 500rb + bonus 500rb, TO 5x = wajib TO 5jt"
+  null                → jika turnover_enabled = false atau tidak ada syarat turnover
+
+🔣 CONVERSION FORMULA (P1 — WAJIB DIISI jika ada mechanic kalkulasi)
+
+conversion_formula: String formula kalkulasi reward utama.
+  Contoh deposit bonus:  "min(deposit * 100%, 500000)"
+  Contoh rollingan:      "total_turnover * 0.8%"
+  Contoh referral tier:  "net_winlose_downline * komisi%"
+  Contoh cashback:       "total_loss * cashback%"
+  Contoh tier deposit:   "deposit * reward_percentage"
+  "" (string kosong) HANYA jika promo benar-benar tidak ada mechanic kalkulasi (misal freebet flat)
+
 🧾 OUTPUT FORMAT (STRICT JSON)
 Output HARUS:
 - Valid JSON
@@ -1830,12 +1876,16 @@ Output HARUS:
 
 Return HANYA JSON valid tanpa markdown code block.
 
-FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
+FORMAT OUTPUT (PHASE 7 - UPDATED WITH MODE + TIER DIMENSION + FORMULA):
 {
   "promo_name": "nama promo utama",
   "promo_type": "Welcome Bonus|Deposit Bonus|Withdraw Bonus|Cashback|Rollingan|Referral Bonus|Event Level Up|Mini Game|Freechip|Loyalty Point|Merchandise|Campaign Informational|Birthday Bonus",
   "target_user": "new_member|all|vip",
   "promo_mode": "single|multi",
+  "mode": "fixed|formula|tier",
+  "tier_archetype": "level|referral|parlay|point_store|null",
+  "conversion_formula": "total_turnover * 0.8%",
+  "turnover_basis": "bonus_only|deposit_only|deposit_plus_bonus|null",
   "valid_from": "YYYY-MM-DD atau null",
   "valid_until": "YYYY-MM-DD atau null",
   "claim_frequency": "mingguan|harian|bulanan|sekali",
@@ -1860,6 +1910,9 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
       "min_claim": 1000,
       "turnover_rule": 8,
       "payout_direction": "depan",
+      "tier_dimension": "level|downline_count|team_count|deposit_amount|turnover_amount|point_balance|null",
+      "min_dimension_value": 1,
+      "max_dimension_value": 4,
       "game_types": ["slot"],
       "eligible_providers": ["Pragmatic Play", "PG Soft"],
       "game_providers": ["ALL"],
@@ -1902,6 +1955,16 @@ FORMAT OUTPUT (PHASE 6 - UPDATED WITH DEPOSIT METHOD):
     "warnings": []
   }
 }
+
+⚠️ ATURAN tier_dimension PER SUBCATEGORY (P3):
+- Jika tier_archetype = "referral" → tier_dimension WAJIB "downline_count"
+  min_dimension_value = jumlah downline minimum tier ini
+  max_dimension_value = jumlah downline maximum tier ini (null jika tier tertinggi)
+- Jika tier_archetype = "level" → tier_dimension WAJIB "level"
+  min_dimension_value = nomor level minimum (misal: 1)
+  max_dimension_value = nomor level maximum (null jika level tertinggi)
+- Jika tier_archetype = "parlay" → tier_dimension = "team_count"
+- Jika mode ≠ "tier" → tier_dimension = null, min/max_dimension_value = null
 
 JIKA PROMO SINGLE (tidak ada tabel multi-varian):
 - promo_mode: "single"
