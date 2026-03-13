@@ -635,7 +635,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'WINSTREAK → Event Program (streak-based)',
     defaults: {
       reward_mode: 'tier',
-      tier_archetype: 'tier_level',
+      tier_archetype: 'level',
       trigger_event: 'Win',
       promo_type: 'Winstreak Bonus',
       intent_category: 'Retention',
