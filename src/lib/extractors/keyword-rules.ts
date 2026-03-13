@@ -792,7 +792,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'LEADERBOARD REFERRAL → Event Program (rank-based)',
     defaults: {
       reward_mode: 'tier',
-      tier_archetype: 'tier_level',
+      tier_archetype: 'level',
       trigger_event: 'Mission Completed',
       promo_type: 'Leaderboard Referral',
       intent_category: 'Acquisition',

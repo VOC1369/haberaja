@@ -74,7 +74,7 @@ export interface CanonicalPromoKB {
   // ===============================
   category: 'REWARD' | 'EVENT' | '';
   mode: 'fixed' | 'tier' | 'formula' | '';
-  tier_archetype: 'tier_level' | 'tier_point_store' | 'tier_network' | 'tier_formula' | null;
+  tier_archetype: 'level' | 'point_store' | 'referral' | 'formula' | 'advanced' | 'parlay' | 'exchange_catalog' | null;
 
   // ===============================
   // INTENT & TRIGGER

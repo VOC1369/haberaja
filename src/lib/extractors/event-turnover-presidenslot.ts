@@ -192,7 +192,7 @@ export function createEventTurnoverPresidenslot(): Partial<PromoFormData> {
     // STEP 3: REWARD CONFIG (TIER MODE)
     // ===============================
     reward_mode: 'tier',
-    tier_archetype: 'tier_level',
+    tier_archetype: 'level',
     promo_unit: 'lp', // placeholder
     
     // Tiers (15 tiers: 5 hadiah fisik + 10 uang tunai)
