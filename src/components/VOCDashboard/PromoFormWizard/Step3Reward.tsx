@@ -4244,8 +4244,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
             </Collapsible>
           )}
 
-          {/* Network Metric UI (tier_network) - Cloned from tier_point_store pattern */}
-          {data.tier_archetype === 'tier_network' && (
+          {/* Network Metric UI (referral) - Cloned from point_store pattern */}
+          {data.tier_archetype === 'referral' && (
             <>
               {/* Section 1: Metode Perhitungan Komisi (Interactive) */}
               <div className="p-4 bg-card border border-border rounded-xl space-y-4">
