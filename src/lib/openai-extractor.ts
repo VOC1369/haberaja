@@ -4256,6 +4256,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // This catches bugs early in development
   // ============================================
   const calculationBasisForAssertion = lockedFields?.calculation_basis || 
+    taxonomyDecision.calculation_basis ||
     extracted.subcategories?.[0]?.calculation_base || null;
   assertModeFromGate(initialMode, calculationBasisForAssertion, 'mapExtractedToPromoFormData');
   
