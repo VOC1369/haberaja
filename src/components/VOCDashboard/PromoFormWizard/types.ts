@@ -1574,8 +1574,8 @@ function normalizeClaimFrequency(freq?: string): string {
  * Helper: Unify all tier types into canonical UniversalTier[]
  */
 function unifyTiers(data: PromoFormData): UniversalTier[] {
-  // tier_network = Referral
-  if (data.tier_archetype === 'tier_network' && data.referral_tiers?.length) {
+  // referral = Referral
+  if (data.tier_archetype === 'referral' && data.referral_tiers?.length) {
     return data.referral_tiers.map((t, i) => ({
       tier_id: t.id,
       tier_name: t.tier_label,
