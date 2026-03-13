@@ -1405,6 +1405,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
             {data.reward_item_description && (
               <ValueBox label="Deskripsi Item Fisik" value={data.reward_item_description} />
             )}
+          </CollapsibleSection>
 
           {/* Step 4 Summary - Konfigurasi Reward */}
           <CollapsibleSection 
