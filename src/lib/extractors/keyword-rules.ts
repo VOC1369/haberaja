@@ -679,7 +679,7 @@ export const KEYWORD_RULES: KeywordRule[] = [
     reason: 'VIP REBATE → Reward Program (tier-based percentage)',
     defaults: {
       reward_mode: 'tier',
-      tier_archetype: 'tier_formula',
+      tier_archetype: 'formula',
       calculation_base: 'turnover',
       promo_type: 'VIP Rebate',
       intent_category: 'Retention',
