@@ -303,7 +303,7 @@ export interface PromoFormData {
   claim_date_until: string;
 
   // Tier mode
-  tier_archetype?: 'tier_level' | 'tier_point_store' | 'tier_network' | 'tier_formula';  // UI-gating only (optional for backward compat)
+  tier_archetype?: 'level' | 'point_store' | 'referral' | 'formula';  // UI-gating only (v2.2 — no prefix)
   tier_claim_mode?: 'otomatis' | 'manual';  // Mode claim untuk tier rewards
   promo_unit: 'lp' | 'exp' | 'hybrid';
   exp_mode: 'level_up' | 'exp_store' | 'both';
