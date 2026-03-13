@@ -2687,7 +2687,7 @@ export const initialPromoData: PromoFormData = {
   claim_frequency: '',
   claim_date_from: '',
   claim_date_until: '',
-  tier_archetype: 'tier_level',  // Default: Level/Milestone Tier
+  tier_archetype: 'level',  // Default: Level/Milestone Tier
   promo_unit: 'lp',
   exp_mode: 'level_up',
   lp_calc_method: 'turnover',
