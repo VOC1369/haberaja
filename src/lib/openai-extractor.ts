@@ -4769,7 +4769,61 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     
     console.log('[Extractor] Referral tiers extracted with DERIVED fields set to null (Calculator Contract)');
   }
-  
+
+  // ============================================
+  // DEPOSIT BONUS TIER CONVERTER
+  // Convert subcategories[] → depositTiers[] when mode=tier and tier_archetype=level
+  // Triggered by Taxonomy Pipeline decision — NOT referral or level-up path
+  // ============================================
+  const isDepositBonusTier =
+    initialMode === 'tier' &&
+    (taxonomyDecision.archetype === 'DEPOSIT_BONUS' || extracted.promo_type?.toLowerCase().includes('deposit')) &&
+    !isReferralMultiTier &&
+    !isEventLevelUp &&
+    extracted.subcategories?.length > 0;
+
+  let depositBonusTiers: Array<{
+    tier_id: string;
+    tier_name: string;
+    tier_order: number;
+    requirement_value: number;
+    requirement_max: number | null;
+    reward_value: number;
+    reward_type: string;
+    turnover_multiplier: string | null;
+    tier_dimension: string;
+    min_dimension_value: number | null;
+    max_dimension_value: number | null;
+    special_conditions: unknown[];
+    _extra: Record<string, unknown>;
+  }> = [];
+
+  if (isDepositBonusTier) {
+    console.log('[Deposit Tier Converter] Converting subcategories to depositBonusTiers[]', {
+      subcategoryCount: extracted.subcategories.length,
+      archetype: taxonomyDecision.archetype,
+      mode: initialMode,
+    });
+
+    depositBonusTiers = extracted.subcategories.map((sub, index) => ({
+      tier_id: generateUUID(),
+      tier_name: sub.sub_name || `Tier ${index + 1}`,
+      tier_order: index + 1,
+      requirement_value: sub.minimum_base ?? 0,
+      requirement_max: extracted.subcategories[index + 1]?.minimum_base ?? null,
+      reward_value: sub.calculation_value ?? 0,
+      reward_type: 'percentage',
+      turnover_multiplier: sub.turnover_rule ? String(sub.turnover_rule) : null,
+      tier_dimension: (sub as any).tier_dimension ?? 'deposit_amount',
+      min_dimension_value: sub.minimum_base ?? null,
+      max_dimension_value: extracted.subcategories[index + 1]?.minimum_base ?? null,
+      special_conditions: [],
+      _extra: {},
+    }));
+
+    console.log(`[Deposit Tier Converter] Mapped ${depositBonusTiers.length} deposit tiers`);
+  }
+
   // ✅ SEMANTIC SANITIZATION: Prevent Rupiah from becoming WD multiplier
   subcategories.forEach((sub) => {
     if (typeof sub.turnover_rule === 'number' || typeof sub.turnover_rule === 'string') {
