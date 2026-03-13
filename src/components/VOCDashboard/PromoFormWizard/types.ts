@@ -690,7 +690,7 @@ export interface VipTier {
   bonus_percent: number;
 }
 
-// Redeem Item untuk Point Store (tier_point_store)
+// Redeem Item untuk Point Store (point_store)
 export interface RedeemItem {
   id: string;
   nama_hadiah: string;         // Contoh: "Credit Game 10.000"
