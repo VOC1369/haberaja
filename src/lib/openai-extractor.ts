@@ -4769,7 +4769,48 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     
     console.log('[Extractor] Referral tiers extracted with DERIVED fields set to null (Calculator Contract)');
   }
-  
+
+  // ============================================
+  // DEPOSIT BONUS TIER CONVERTER
+  // Convert subcategories[] → depositTiers[] when mode=tier and tier_archetype=level
+  // Triggered by Taxonomy Pipeline decision — NOT referral or level-up path
+  // ============================================
+  const isDepositBonusTier =
+    initialMode === 'tier' &&
+    (taxonomyDecision.archetype === 'DEPOSIT_BONUS' || extracted.promo_type?.toLowerCase().includes('deposit')) &&
+    !isReferralMultiTier &&
+    !isEventLevelUp &&
+    extracted.subcategories?.length > 0;
+
+  // TierReward shape (legacy) — used by tiers[] in PromoFormData
+  let depositBonusTiers: import('../components/VOCDashboard/PromoFormWizard/types').TierReward[] = [];
+
+  if (isDepositBonusTier) {
+    console.log('[Deposit Tier Converter] Converting subcategories to depositBonusTiers[]', {
+      subcategoryCount: extracted.subcategories.length,
+      archetype: taxonomyDecision.archetype,
+      mode: initialMode,
+    });
+
+    depositBonusTiers = extracted.subcategories.map((sub, index) => ({
+      id: generateUUID(),
+      type: sub.sub_name || `Tier ${index + 1}`,
+      minimal_point: sub.minimum_base ?? 0,
+      reward: sub.calculation_value ?? 0,
+      reward_type: 'percentage' as const,
+      jenis_hadiah: 'credit_game',  // deposit bonus default
+      // Store tier boundary metadata in extra fields
+      _tier_order: index + 1,
+      _requirement_max: extracted.subcategories[index + 1]?.minimum_base ?? null,
+      _turnover_multiplier: sub.turnover_rule ? String(sub.turnover_rule) : null,
+      _tier_dimension: (sub as any).tier_dimension ?? 'deposit_amount',
+      _min_dimension_value: sub.minimum_base ?? null,
+      _max_dimension_value: extracted.subcategories[index + 1]?.minimum_base ?? null,
+    }));
+
+    console.log(`[Deposit Tier Converter] Mapped ${depositBonusTiers.length} deposit tiers`);
+  }
+
   // ✅ SEMANTIC SANITIZATION: Prevent Rupiah from becoming WD multiplier
   subcategories.forEach((sub) => {
     if (typeof sub.turnover_rule === 'number' || typeof sub.turnover_rule === 'string') {
@@ -6125,6 +6166,17 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       turnover_rule: '',
       turnover_rule_enabled: false,
       claim_frequency: 'sekali',  // 1x per level naik
+    }),
+
+    // Override for Deposit Bonus Tier: switch to tier mode with level archetype
+    // subcategories[] converted to depositBonusTiers[] (deposit_amount dimension)
+    ...(isDepositBonusTier && {
+      reward_mode: 'tier' as const,
+      tier_archetype: 'level' as const,
+      tiers: depositBonusTiers,
+      tier_count: depositBonusTiers.length,
+      has_subcategories: false,   // Truth is in tiers[], not subcategories
+      subcategories: [],          // Inert
     }),
     
     // ============================================
