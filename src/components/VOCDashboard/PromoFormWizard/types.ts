@@ -5,6 +5,7 @@ import { applyInertValuesToPayload } from '@/lib/extractors/field-applicability-
 import { calculateAllReferralTiers, getDefaultReferralFormulaMetadata } from '@/lib/referral-tier-calculator';
 import { sanitizeByMode } from '@/lib/sanitize-by-mode';
 import { CANONICAL_EXPORT_WHITELIST } from '@/lib/canonical-guard';
+import type { CanonicalTierArchetype } from '@/lib/canonical-guard';
 // PKB FIELD WHITELIST
 // ============================================
 
