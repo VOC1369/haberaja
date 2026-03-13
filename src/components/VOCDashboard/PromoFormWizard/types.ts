@@ -1124,15 +1124,15 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
     pkbData.calculation_value = null;
     
     // Ensure tier_archetype is set
-    pkbData.tier_archetype = 'tier_network';
+    pkbData.tier_archetype = 'referral';
   }
   
   // ============================================
-  // PATCH 11B: tier_level (Event Level Up / BONUS NALEN) Semantic Rules
+  // PATCH 11B: level (Event Level Up / BONUS NALEN) Semantic Rules
   // Root calculation fields = INERT, truth is in tiers[] with minimal_point
   // ============================================
-  if (data.tier_archetype === 'tier_level') {
-    console.log('[buildPKBPayload] Applying tier_level (Event Level Up) semantic rules');
+  if (data.tier_archetype === 'level') {
+    console.log('[buildPKBPayload] Applying level (Event Level Up) semantic rules');
     
     // Event Level Up: Root calculation fields = INERT
     pkbData.min_deposit = null;          // Tidak ada min deposit per klaim (unlock via history)
