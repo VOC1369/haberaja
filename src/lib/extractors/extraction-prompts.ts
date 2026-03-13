@@ -157,16 +157,43 @@ Jika ada pattern "Withdraw X% sisanya TO Y":
 - "30% bisa langsung WD, 70% syarat TO 5x"
   → special_requirements: ["Payout 30% langsung WD, 70% dengan TO 5x"]
 
+🎯 MODE DETECTION (WAJIB TENTUKAN SEBELUM MENGISI FIELDS):
+
+mode: Tentukan berdasarkan STRUKTUR MEKANIK promo, BUKAN namanya.
+  "tier"    → ada MULTIPLE level reward dengan requirement BERBEDA
+              Contoh: deposit 100rb bonus 20%, deposit 500rb bonus 30%, deposit 1jt bonus 40%
+  "formula" → SATU formula kalkulasi berlaku untuk semua (persentase dari basis)
+              Contoh: bonus 100% dari deposit, cashback 0.8% dari turnover, komisi 30% dari net
+  "fixed"   → reward FLAT tanpa kalkulasi berbasis jumlah
+              Contoh: freebet Rp 50.000, birthday bonus Rp 100.000
+
+  ⚠️ PENTING: Jika promo punya multiple level/tier → mode WAJIB "tier", BUKAN "formula"!
+  ⚠️ PENTING: Jika ada 1 persentase/formula berlaku universal → mode WAJIB "formula", BUKAN "fixed"!
+
+  tier_archetype WAJIB diisi jika mode = "tier":
+  - Tier dibedakan oleh LEVEL DEPOSIT nominal → "level"
+  - Tier dibedakan oleh JUMLAH DOWNLINE/REFERRAL aktif → "referral"
+  - Tier dibedakan oleh JUMLAH TIM dalam parlay → "parlay"
+  - Tier dibedakan oleh SALDO POIN → "point_store"
+  - Tier dibedakan oleh MEMBERSHIP LEVEL (Bronze/Silver/Gold) → "level"
+
 📋 EXTRACT FIELDS:
 {
   "promo_name": "nama promo",
   "promo_type": "welcome_bonus" | "deposit_bonus" | "cashback" | "rebate" | "reload_bonus" | "other",
   "client_id": "ID client jika disebutkan" | null,
   "target_user": "new_member" | "existing_member" | "vip" | "all",
+
+  "mode": "fixed" | "formula" | "tier",
+  "tier_archetype": "level" | "referral" | "parlay" | "point_store" | null,
   
   "calculation_base": "deposit" | "turnover" | "loss" | "bet",
   "calculation_method": "percentage" | "fixed" | "tiered",
   "calculation_value": number | null,
+
+  "conversion_formula": "Formula kalkulasi reward utama. WAJIB DIISI jika ada mechanic perhitungan. Contoh deposit bonus: 'min(deposit × 100%, 500000)'. Contoh rollingan: 'total_turnover × 0.8%'. Contoh referral: 'net_winlose_downline × komisi%'. Contoh cashback: 'total_loss × cashback%'. Gunakan string kosong '' HANYA jika promo benar-benar tidak ada mechanic kalkulasi (misal freebet flat).",
+
+  "turnover_basis": "Basis kalkulasi turnover requirement. Wajib diisi jika turnover_enabled = true. 'bonus_only' = TO dihitung dari nilai bonus saja. 'deposit_only' = TO dihitung dari nilai deposit saja. 'deposit_plus_bonus' = TO dari deposit + bonus (paling umum). null jika tidak ada syarat TO." | null,
   
   "minimum_base": number | null,
   "max_bonus": number | null,
@@ -339,10 +366,26 @@ Untuk setiap tier yang di-extract, WAJIB tentukan tier_dimension:
 - Tier dibedakan oleh total turnover → 'turnover_amount'
 - Tier dibedakan oleh saldo poin (LP) → 'point_balance'
 
-Untuk setiap tier, isi:
-- min_dimension_value: nilai minimum inklusif (null jika tidak ada batas bawah)
-- max_dimension_value: nilai maximum inklusif (null jika tier tertinggi tanpa batas atas)
-- special_conditions: array string kondisi khusus tier ini ([] jika tidak ada)
+⚠️ MANDATORY TIER DIMENSION RULES:
+- Jika tier_archetype = "referral" → SEMUA tier WAJIB punya tier_dimension = "downline_count"
+- Jika tier_archetype = "level" → SEMUA tier WAJIB punya tier_dimension = "level"
+- Jika tier_archetype = "point_store" → SEMUA tier WAJIB punya tier_dimension = "point_balance"
+- Jika tier_archetype = "parlay" → SEMUA tier WAJIB punya tier_dimension = "team_count"
+
+FORMAT JSON OUTPUT untuk setiap tier object (WAJIB sertakan 3 field ini):
+{
+  "tier_id": "t1",
+  "tier_name": "Bronze",
+  "tier_order": 1,
+  "requirement_value": 1,
+  "reward_value": 150000,
+  "reward_type": "credit_game",
+  "turnover_multiplier": 3,
+  "tier_dimension": "downline_count",   // enum: level|downline_count|team_count|deposit_amount|turnover_amount|point_balance
+  "min_dimension_value": 1,              // nilai minimum inklusif, null jika tidak ada batas bawah
+  "max_dimension_value": 4,             // nilai maximum inklusif, null jika tier tertinggi (tanpa batas atas)
+  "special_conditions": []              // array string kondisi khusus, [] jika tidak ada
+}
 
 📂 SUBCATEGORY FIELDS BARU:
 Untuk setiap subcategory:
