@@ -366,10 +366,26 @@ Untuk setiap tier yang di-extract, WAJIB tentukan tier_dimension:
 - Tier dibedakan oleh total turnover → 'turnover_amount'
 - Tier dibedakan oleh saldo poin (LP) → 'point_balance'
 
-Untuk setiap tier, isi:
-- min_dimension_value: nilai minimum inklusif (null jika tidak ada batas bawah)
-- max_dimension_value: nilai maximum inklusif (null jika tier tertinggi tanpa batas atas)
-- special_conditions: array string kondisi khusus tier ini ([] jika tidak ada)
+⚠️ MANDATORY TIER DIMENSION RULES:
+- Jika tier_archetype = "referral" → SEMUA tier WAJIB punya tier_dimension = "downline_count"
+- Jika tier_archetype = "level" → SEMUA tier WAJIB punya tier_dimension = "level"
+- Jika tier_archetype = "point_store" → SEMUA tier WAJIB punya tier_dimension = "point_balance"
+- Jika tier_archetype = "parlay" → SEMUA tier WAJIB punya tier_dimension = "team_count"
+
+FORMAT JSON OUTPUT untuk setiap tier object (WAJIB sertakan 3 field ini):
+{
+  "tier_id": "t1",
+  "tier_name": "Bronze",
+  "tier_order": 1,
+  "requirement_value": 1,
+  "reward_value": 150000,
+  "reward_type": "credit_game",
+  "turnover_multiplier": 3,
+  "tier_dimension": "downline_count",   // enum: level|downline_count|team_count|deposit_amount|turnover_amount|point_balance
+  "min_dimension_value": 1,              // nilai minimum inklusif, null jika tidak ada batas bawah
+  "max_dimension_value": 4,             // nilai maximum inklusif, null jika tier tertinggi (tanpa batas atas)
+  "special_conditions": []              // array string kondisi khusus, [] jika tidak ada
+}
 
 📂 SUBCATEGORY FIELDS BARU:
 Untuk setiap subcategory:
