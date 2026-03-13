@@ -1277,9 +1277,9 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
         ? (data.fixed_reward_type && ((data.fixed_lucky_spin_rewards?.length || 0) > 0 || (data.fixed_min_depo || 0) > 0 || (data.fixed_reward_quantity || 0) > 0))
         : (data.reward_type && data.reward_amount > 0)
     )) ||
-    // Tier mode: Pisahkan validasi tier_network (Referral) vs standard tier
+    // Tier mode: Pisahkan validasi referral (Referral) vs standard tier
     (data.reward_mode === 'tier' && (
-      data.tier_archetype === 'tier_network' 
+      data.tier_archetype === 'referral' 
         ? ((data.referral_tiers?.length || 0) > 0 && 
            data.referral_tiers?.every(t => t.min_downline > 0 && t.commission_percentage > 0))
         : !!data.promo_unit
