@@ -1594,8 +1594,8 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
     }));
   }
   
-  // tier_point_store = LP Redeem
-  if (data.tier_archetype === 'tier_point_store' && data.redeem_items?.length) {
+  // point_store = LP Redeem
+  if (data.tier_archetype === 'point_store' && data.redeem_items?.length) {
     return data.redeem_items.map((r, i) => ({
       tier_id: r.id,
       tier_name: r.nama_hadiah,
