@@ -1618,6 +1618,11 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
       reward_value: t.commission_percentage,
       reward_type: 'percentage',
       turnover_multiplier: null,
+      // B3: preserve dimension fields
+      tier_dimension: (t as any).tier_dimension ?? null,
+      min_dimension_value: (t as any).min_dimension_value ?? null,
+      max_dimension_value: (t as any).max_dimension_value ?? null,
+      special_conditions: (t as any).special_conditions ?? [],
       extra: { 
         winlose: t.winlose, 
         net_winlose: t.net_winlose,
