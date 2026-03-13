@@ -785,7 +785,7 @@ export const generateReferralTerms = (data: PromoFormData): string[] => {
  * Helper to check if promo is a Referral type
  */
 export const isReferralPromo = (data: PromoFormData): boolean => {
-  return data.tier_archetype === 'tier_network' || 
+  return data.tier_archetype === 'referral' || 
     (data.referral_tiers && data.referral_tiers.length > 0) ||
     /referral|referal|refferal|ajak\s*team/i.test(data.promo_name || '') ||
     /referral|referal|refferal/i.test(data.promo_type || '');
