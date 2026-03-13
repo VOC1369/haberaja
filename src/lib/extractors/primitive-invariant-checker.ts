@@ -206,9 +206,8 @@ export function assertModeInvariants(
     logInvariantError(`${contextStr}\n${errorMessage}`);
     
     // In development: throw to surface issues early
-    // Check for NODE_ENV or use a simpler check for browser
-    const isDevelopment = typeof process !== 'undefined' && 
-      process.env?.NODE_ENV === 'development';
+    // Check for Vite DEV flag (browser-safe, no process dependency)
+    const isDevelopment = import.meta.env?.DEV === true;
     
     if (isDevelopment) {
       throw new Error(`Invariant assertion failed${contextStr}:\n${errorMessage}`);

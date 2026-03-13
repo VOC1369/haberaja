@@ -6160,7 +6160,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // HARD GUARD: ARCHITECTURE VIOLATION CHECK (v1.2.1)
   // Fail-loud if reward_mode was overridden after Gate decision
   // ============================================
-  if (process.env.NODE_ENV === 'development' || import.meta.env?.DEV) {
+  if (import.meta.env?.DEV) {
     const finalMode = sanitizedData.reward_mode || sanitizedData.mode;
     if (finalMode && finalMode !== gateDecision.mode) {
       console.error('[ARCHITECTURE VIOLATION] reward_mode overridden after Primitive Gate!', {

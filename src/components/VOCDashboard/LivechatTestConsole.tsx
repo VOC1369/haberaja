@@ -61,9 +61,9 @@ export function LivechatTestConsole() {
 
   // Debounce state
   const pendingMessagesRef = useRef<ChatMessage[]>([]);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debounceCountdown, setDebounceCountdown] = useState<number | null>(null);
-  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load promo list
   useEffect(() => {
