@@ -1506,6 +1506,16 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     : baseExtraConfig;
   
   // ===============================
+  // v2.2 CLAIM & PROOF FIELDS
+  // ===============================
+  canonical.proof_required = data.proof_required ?? false;
+  canonical.proof_type = data.proof_type ?? 'none';
+  canonical.proof_destination = data.proof_destination ?? 'none';
+  canonical.penalty_type = data.penalty_type ?? null;
+  canonical.claim_url = data.claim_url ?? null;
+  canonical.claim_platform = data.claim_platform ?? null;
+
+  // ===============================
   // ARCHETYPE PAYLOAD (ADDITIVE LAYER)
   // Universal pass-through for ALL archetypes
   // ===============================
