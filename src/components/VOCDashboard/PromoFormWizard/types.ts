@@ -1652,7 +1652,7 @@ function canonicalizeSubcategories(data: PromoFormData): CanonicalSubCategory[] 
     payout_direction: (sub.payout_direction as 'depan' | 'belakang') || null,
     // v2.2 new fields — defaults for existing subcategories
     game_exclusions: [],
-    conversion_formula: sub.conversion_formula || '',
+    conversion_formula: (sub as any).conversion_formula || '',
   }));
 }
 
