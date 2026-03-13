@@ -1313,7 +1313,10 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   canonical.category = mapToCategory(data.program_classification) || (data.category as 'REWARD' | 'EVENT' | '') || '';
   canonical.mode = data.reward_mode || '';
-  canonical.tier_archetype = data.tier_archetype || null;
+  // B2: Strip 'tier_' prefix from internal form values before export
+  const rawArchetype = data.tier_archetype ?? '';
+  const strippedArchetype = rawArchetype.startsWith('tier_') ? rawArchetype.slice(5) : rawArchetype;
+  canonical.tier_archetype = (strippedArchetype as CanonicalTierArchetype) || null;
   
   // ===============================
   // INTENT & TRIGGER
