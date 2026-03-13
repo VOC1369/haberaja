@@ -5982,7 +5982,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     redeem_items: [],
     redeem_jenis_reward: '',
     
-    // Referral Commission Tiers (tier_network)
+    // Referral Commission Tiers (referral)
     // If multi-tier referral detected, use converted referral_tiers and set tier_archetype
     referral_tiers: referralTiers,
     // ✅ FIX: referral_calculation_basis ONLY for referral promos, otherwise INERT ("")
