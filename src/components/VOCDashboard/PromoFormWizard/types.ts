@@ -1046,12 +1046,12 @@ export function buildPKBPayload(data: PromoFormData): Partial<PromoFormData> {
   }
   
   // ============================================
-  // PATCH 10: Clean tier_network (Referral) - Set LP/EXP fields to INERT
+  // PATCH 10: Clean referral (Referral) - Set LP/EXP fields to INERT
   // ARSITEKTUR: Full-shape JSON dengan inert values (BUKAN delete!)
   // KONTRAK TIER MODE: Root fields (reward_type, reward_amount, max_claim) = INERT
   // Truth = referral_tiers[] array (BUKAN root fields!)
   // ============================================
-  if (data.reward_mode === 'tier' && data.tier_archetype === 'tier_network') {
+  if (data.reward_mode === 'tier' && data.tier_archetype === 'referral') {
     // ============================================
     // CALCULATOR CONTRACT: Calculate DERIVED fields before save
     // Only referral-tier-calculator.ts is allowed to calculate these!
