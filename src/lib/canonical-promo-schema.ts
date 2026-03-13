@@ -67,7 +67,7 @@ export interface CanonicalSubCategory {
  * This is the OUTPUT schema for storage/export/API
  */
 export interface CanonicalPromoKB {
-  schema_version: '2.1';
+  schema_version: '2.1' | '2.2';
 
   // ===============================
   // CORE IDENTITY

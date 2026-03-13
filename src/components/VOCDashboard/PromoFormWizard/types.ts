@@ -5,6 +5,7 @@ import { applyInertValuesToPayload } from '@/lib/extractors/field-applicability-
 import { calculateAllReferralTiers, getDefaultReferralFormulaMetadata } from '@/lib/referral-tier-calculator';
 import { sanitizeByMode } from '@/lib/sanitize-by-mode';
 import { CANONICAL_EXPORT_WHITELIST } from '@/lib/canonical-guard';
+import type { CanonicalTierArchetype } from '@/lib/canonical-guard';
 // PKB FIELD WHITELIST
 // ============================================
 
@@ -1298,7 +1299,7 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   // CORE IDENTITY
   // ===============================
-  canonical.schema_version = '2.1';
+  canonical.schema_version = '2.2';
   canonical.client_id = data.client_id || '';
   canonical.client_name = data.client_name || '';
   canonical.promo_id = promoId || generatePromoId();
@@ -1313,7 +1314,10 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // ===============================
   canonical.category = mapToCategory(data.program_classification) || (data.category as 'REWARD' | 'EVENT' | '') || '';
   canonical.mode = data.reward_mode || '';
-  canonical.tier_archetype = data.tier_archetype || null;
+  // B2: Strip 'tier_' prefix from internal form values before export
+  const rawArchetype = data.tier_archetype ?? '';
+  const strippedArchetype = rawArchetype.startsWith('tier_') ? rawArchetype.slice(5) : rawArchetype;
+  canonical.tier_archetype = (strippedArchetype as CanonicalTierArchetype) || null;
   
   // ===============================
   // INTENT & TRIGGER
@@ -1615,6 +1619,11 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
       reward_value: t.commission_percentage,
       reward_type: 'percentage',
       turnover_multiplier: null,
+      // B3: preserve dimension fields
+      tier_dimension: (t as any).tier_dimension ?? null,
+      min_dimension_value: (t as any).min_dimension_value ?? null,
+      max_dimension_value: (t as any).max_dimension_value ?? null,
+      special_conditions: (t as any).special_conditions ?? [],
       extra: { 
         winlose: t.winlose, 
         net_winlose: t.net_winlose,
@@ -1635,6 +1644,11 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
       reward_value: r.nilai_hadiah,
       reward_type: 'fixed',
       turnover_multiplier: null,
+      // B3: preserve dimension fields
+      tier_dimension: (r as any).tier_dimension ?? null,
+      min_dimension_value: (r as any).min_dimension_value ?? null,
+      max_dimension_value: (r as any).max_dimension_value ?? null,
+      special_conditions: (r as any).special_conditions ?? [],
       extra: { is_active: r.is_active, ...((r as any)._extra || {}) },
     }));
   }
@@ -1650,6 +1664,11 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
       reward_value: typeof t.reward === 'number' ? t.reward : null,
       reward_type: t.reward_type || 'fixed',
       turnover_multiplier: null,
+      // B3: preserve dimension fields
+      tier_dimension: (t as any).tier_dimension ?? null,
+      min_dimension_value: (t as any).min_dimension_value ?? null,
+      max_dimension_value: (t as any).max_dimension_value ?? null,
+      special_conditions: (t as any).special_conditions ?? [],
       extra: { 
         jenis_hadiah: t.jenis_hadiah,
         physical_reward_name: t.physical_reward_name,
