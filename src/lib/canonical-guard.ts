@@ -109,6 +109,14 @@ export const CANONICAL_EXPORT_WHITELIST = [
   'custom_terms',
   'extra_config',
   
+  // v2.2 CLAIM & PROOF FIELDS (6)
+  'proof_required',
+  'proof_type',
+  'proof_destination',
+  'penalty_type',
+  'claim_url',
+  'claim_platform',
+
   // SUBCATEGORIES (2)
   'has_subcategories',
   'subcategories',
