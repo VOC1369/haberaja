@@ -4259,7 +4259,6 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     lockedFields?.calculation_basis || 
     taxonomyDecision.calculation_basis ||
     extracted.subcategories?.[0]?.calculation_base ||
-    extracted.subcategories?.[0]?.calculation_basis ||
     (extracted as any).calculation_basis ||
     null;
 
