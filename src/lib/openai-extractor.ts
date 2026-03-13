@@ -6000,18 +6000,18 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     referral_admin_fee_enabled: isReferralMultiTier,
     referral_admin_fee_percentage: isReferralMultiTier ? 20 : null,  // ✅ INERT: null for non-referral
     
-    // Override for referral multi-tier: switch to tier mode with tier_network archetype
+    // Override for referral multi-tier: switch to tier mode with referral archetype
     ...(isReferralMultiTier && {
       reward_mode: 'tier' as const,
-      tier_archetype: 'tier_network' as const,
+      tier_archetype: 'referral' as const,
       has_subcategories: false,  // Disable combo subcategories mode
       subcategories: [],         // Clear generic subcategories
     }),
     
-    // Override for Event Level Up: switch to tier mode with tier_level archetype
+    // Override for Event Level Up: switch to tier mode with level archetype
     ...(isEventLevelUp && {
       reward_mode: 'tier' as const,
-      tier_archetype: 'tier_level' as const,
+      tier_archetype: 'level' as const,
       tiers: eventLevelUpTiers,  // ✅ Use existing tiers[] structure with minimal_point
       level_up_rewards: [],      // Inert - truth is in tiers[]
       has_subcategories: false,  // Data is in tiers[], not subcategories
