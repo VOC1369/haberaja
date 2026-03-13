@@ -1837,8 +1837,27 @@ export function PseudoKnowledgeSection() {
             {/* Center: Empty */}
             <div className="flex items-center gap-3" />
             
-            {/* Right: Primary Action */}
+            {/* Right: Copy JSON + Primary Action */}
             <div className="flex items-center gap-3">
+              {/* Copy Raw JSON button — always visible when extraction exists */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={handleCopyJSON}
+                      className="h-11 px-4 gap-2"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Copy JSON
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p>Salin raw JSON hasil ekstraksi (sebelum mapping ke form) ke clipboard</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
               {/* System Rule (C) cannot be saved to promo KB */}
               {extractedPromo.program_classification === 'C' ? (
                 <TooltipProvider>
