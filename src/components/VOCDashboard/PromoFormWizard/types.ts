@@ -637,6 +637,25 @@ export interface PromoFormData {
   }>;
   
   // =============================================
+  // NEW v2.2 FIELDS (ADDITIVE — Phase 2)
+  // =============================================
+
+  // Claim Evidence / Proof
+  proof_required?: boolean;
+  proof_type?: 'screenshot' | 'bill_share' | 'social_post' | 'none';
+  proof_destination?: 'livechat' | 'whatsapp' | 'telegram' | 'facebook' | 'none';
+
+  // Penalty
+  penalty_type?: 'bonus_cancel' | 'full_balance_void' | null;
+
+  // Claim URL & Platform
+  claim_url?: string | null;
+  claim_platform?: 'auto' | 'livechat' | 'whatsapp' | 'telegram' | 'form' | 'apk' | null;
+
+  // Physical reward detail
+  reward_item_description?: string | null;
+
+  // =============================================
   // TAXONOMY PIPELINE v1.0 — SSoT Audit Trail
   // Attached by extractor for debugging/auditability
   // =============================================
@@ -649,6 +668,7 @@ export interface PromoFormData {
     ambiguity_flags?: string[];
   };
 }
+
 
 export interface TierReward {
   id: string;
