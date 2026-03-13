@@ -379,6 +379,15 @@ export const CANONICAL_INERT: CanonicalPromoKB = {
   custom_terms: '',
   extra_config: {},
   
+  // New v2.2 fields
+  reward_item_description: null,
+  claim_url: null,
+  claim_platform: null,
+  proof_required: false,
+  proof_type: 'none',
+  proof_destination: 'none',
+  penalty_type: null,
+  
   // Archetype Payload
   turnover_basis: null,
   archetype_payload: {},
