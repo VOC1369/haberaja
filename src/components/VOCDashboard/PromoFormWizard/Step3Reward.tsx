@@ -4551,7 +4551,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
               })()}
             </>
           )}
-          {data.tier_archetype === 'tier_level' && (
+          {data.tier_archetype === 'level' && (
             <>
               {/* Card 1: Aturan Progress Level (Simple, not accordion) */}
               <div id="section-lp-rules" className="p-4 bg-card border border-border rounded-xl space-y-4">
