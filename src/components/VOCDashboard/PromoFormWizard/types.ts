@@ -2055,11 +2055,11 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
   const referralTiers = (normalized as PromoFormData).referral_tiers;
   const tierArchetype = normalized.tier_archetype;
 
-  if (tierArchetype === 'tier_network' || (referralTiers && referralTiers.length > 0)) {
+  if (tierArchetype === 'referral' || (referralTiers && referralTiers.length > 0)) {
     if (normalized.reward_mode !== 'tier') {
       console.log('[normalizePromoData] Fixing reward_mode: was', normalized.reward_mode, '→ tier (referral detected)');
       normalized.reward_mode = 'tier';
-      normalized.tier_archetype = 'tier_network';
+      normalized.tier_archetype = 'referral';
     }
   }
   // PRIORITY 2: Check for standard tiers (loyalty, level-up)
