@@ -187,6 +187,7 @@ export function autoCorrectReferralTiers(tiers: ReferralCommissionTier[]): {
   validation_result: ReferralTiersValidationResult;
 } {
   const validation_result = validateReferralTiersBeforeCalc(tiers);
+  const corrected_tiers = calculateAllReferralTiers(tiers);
   
   console.log('[ReferralValidator] Delegated calculation to referral-tier-calculator.ts');
   
