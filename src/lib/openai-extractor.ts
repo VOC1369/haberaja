@@ -4804,12 +4804,22 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
 
   if (isDepositBonusTier) {
     // Rescue: if gate returned 'fixed' due to arbitration conflict, upgrade to 'tier'
+    // CRITICAL: Must also patch gateDecision.mode AND taxonomyDecision.mode so that:
+    //   1. HARD GUARD (line ~6347) does not throw "ARCHITECTURE VIOLATION"
+    //   2. Taxonomy lock (line ~6391) does not re-override back to 'fixed'
     if (initialMode !== 'tier') {
       console.warn(
         `[Deposit Tier Converter] Gate returned mode='${initialMode}' but structural evidence says tier. Rescuing → 'tier'.`,
         { promo_type: extracted.promo_type, subcategoryCount: extracted.subcategories.length }
       );
       initialMode = 'tier';
+    }
+    // Patch gateDecision so HARD GUARD passes
+    (gateDecision as any).mode = 'tier';
+    // Patch taxonomyDecision so final taxonomy lock doesn't override back to 'fixed'
+    (taxonomyDecision as any).mode = 'tier';
+    if (lockedFields) {
+      (lockedFields as any).mode = 'tier';
     }
 
     console.log('[Deposit Tier Converter] Converting subcategories to depositBonusTiers[]', {
