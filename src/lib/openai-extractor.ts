@@ -4773,26 +4773,52 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // ============================================
   // DEPOSIT BONUS TIER CONVERTER
   // Convert subcategories[] → depositTiers[] when mode=tier and tier_archetype=level
-  // Triggered by Taxonomy Pipeline decision — NOT referral or level-up path
   // ============================================
-  const isDepositBonusTier =
-    initialMode === 'tier' &&
-    (taxonomyDecision.archetype === 'DEPOSIT_BONUS' || extracted.promo_type?.toLowerCase().includes('deposit')) &&
+  // DEPOSIT BONUS TIER CONVERTER — Structural Evidence (NOT mode-dependent)
+  //
+  // Root cause of previous bug: initialMode could be 'fixed' even when the
+  // promo is structurally a tier (mechanic_type='rollingan_turnover' from
+  // arbitration conflict collapses tier→fixed in gateDecision.mode).
+  //
+  // Fix: detect via STRUCTURAL EVIDENCE only:
+  //   1. has_subcategories=true AND subcategories.length > 0
+  //   2. deposit signal: promo_type includes 'deposit' OR each sub has minimum_base
+  //   3. NOT referral or level-up path
+  // If triggered, also rescue initialMode → 'tier' so downstream fields align.
+  // ============================================
+  const hasDepositSubcategoryEvidence =
+    extracted.subcategories?.length > 0 &&
+    (
+      extracted.promo_type?.toLowerCase().includes('deposit') ||
+      taxonomyDecision.archetype === 'DEPOSIT_BONUS' ||
+      // All subcategories have minimum_base (deposit threshold pattern)
+      extracted.subcategories.every((s: any) => s.minimum_base !== undefined)
+    ) &&
     !isReferralMultiTier &&
-    !isEventLevelUp &&
-    extracted.subcategories?.length > 0;
+    !isEventLevelUp;
+
+  const isDepositBonusTier = hasDepositSubcategoryEvidence;
 
   // TierReward shape (legacy) — used by tiers[] in PromoFormData
   let depositBonusTiers: import('../components/VOCDashboard/PromoFormWizard/types').TierReward[] = [];
 
   if (isDepositBonusTier) {
+    // Rescue: if gate returned 'fixed' due to arbitration conflict, upgrade to 'tier'
+    if (initialMode !== 'tier') {
+      console.warn(
+        `[Deposit Tier Converter] Gate returned mode='${initialMode}' but structural evidence says tier. Rescuing → 'tier'.`,
+        { promo_type: extracted.promo_type, subcategoryCount: extracted.subcategories.length }
+      );
+      initialMode = 'tier';
+    }
+
     console.log('[Deposit Tier Converter] Converting subcategories to depositBonusTiers[]', {
       subcategoryCount: extracted.subcategories.length,
       archetype: taxonomyDecision.archetype,
       mode: initialMode,
     });
 
-    depositBonusTiers = extracted.subcategories.map((sub, index) => ({
+    depositBonusTiers = extracted.subcategories.map((sub: any, index: number) => ({
       id: generateUUID(),
       type: sub.sub_name || `Tier ${index + 1}`,
       minimal_point: sub.minimum_base ?? 0,
@@ -4803,7 +4829,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       _tier_order: index + 1,
       _requirement_max: extracted.subcategories[index + 1]?.minimum_base ?? null,
       _turnover_multiplier: sub.turnover_rule ? String(sub.turnover_rule) : null,
-      _tier_dimension: (sub as any).tier_dimension ?? 'deposit_amount',
+      _tier_dimension: sub.tier_dimension ?? 'deposit_amount',
       _min_dimension_value: sub.minimum_base ?? null,
       _max_dimension_value: extracted.subcategories[index + 1]?.minimum_base ?? null,
     }));
