@@ -304,13 +304,15 @@ export const FIELD_APPLICABILITY_MAP: Record<string, FieldApplicabilityRule> = {
     applicable: [
       'min_deposit', 'reward_amount', 'turnover_rule', 'turnover_rule_enabled', 'max_claim',
       'subcategories', 'has_subcategories',
+      'tiers', // ✅ Deposit Bonus supports tier mode — tiers[] must NOT be wiped
       'fixed_reward_type', 'fixed_calculation_base', 'fixed_calculation_method', 'fixed_calculation_value',
       'fixed_max_claim', 'fixed_max_claim_unlimited', 'fixed_turnover_rule', 'fixed_turnover_rule_enabled',
       'fixed_min_depo', 'fixed_min_depo_enabled',
     ],
     not_applicable: [
       'referral_tiers', 'referral_calculation_basis', 'referral_admin_fee_enabled', 'referral_admin_fee_percentage',
-      'tiers', 'redeem_items', 'promo_unit', 'exp_mode', 'lp_calc_method', 'exp_calc_method',
+      // NOTE: 'tiers' is intentionally excluded — Deposit Bonus tier mode uses tiers[]
+      'redeem_items', 'promo_unit', 'exp_mode', 'lp_calc_method', 'exp_calc_method',
       'lp_earn_basis', 'lp_earn_amount', 'lp_earn_point_amount', 'exp_formula', 'lp_value', 'exp_value',
       'fast_exp_missions', 'level_up_rewards', 'vip_multiplier', 'redeem_jenis_reward',
     ],
