@@ -6441,21 +6441,31 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     
     if (archetypePayloadResult) {
       finalData.archetype_payload = archetypePayloadResult.archetype_payload;
-
-      // Fallback chain: archetype detector → LLM output → DEPOSIT_BONUS semantic default
-      const resolvedTurnoverBasis = archetypePayloadResult.turnover_basis
-        ?? extracted.turnover_basis
-        ?? (taxonomyDecision.archetype === 'DEPOSIT_BONUS' ? 'deposit_plus_bonus' : null);
-
-      finalData.turnover_basis = resolvedTurnoverBasis;
       finalData.archetype_invariants = archetypePayloadResult.archetype_invariants;
-      
-      console.log('[mapExtractedToPromoFormData] Populated archetype_payload:', {
-        archetype: taxonomyDecision.archetype,
-        payloadKeys: Object.keys(archetypePayloadResult.archetype_payload),
-        turnover_basis: resolvedTurnoverBasis,
-      });
     }
+
+    // ============================================
+    // POST-SANITIZE RE-INJECT: fields wiped by sanitizeByMode for 'tier' mode
+    // sanitizeByMode strips conversion_formula for NON_FORMULA_MODES (event/fixed/tier).
+    // For deposit bonus tiers, conversion_formula is still meaningful — re-inject here.
+    // ============================================
+
+    // turnover_basis: fallback chain regardless of archetypePayloadResult
+    const resolvedTurnoverBasis = archetypePayloadResult?.turnover_basis
+      ?? extracted.turnover_basis
+      ?? (taxonomyDecision.archetype === 'DEPOSIT_BONUS' ? 'deposit_plus_bonus' : null);
+    finalData.turnover_basis = resolvedTurnoverBasis;
+
+    // conversion_formula: re-inject after sanitizeByMode wipes it
+    if (!finalData.conversion_formula && extracted.conversion_formula) {
+      finalData.conversion_formula = extracted.conversion_formula;
+    }
+
+    console.log('[mapExtractedToPromoFormData] Post-sanitize re-inject:', {
+      archetype: taxonomyDecision.archetype,
+      turnover_basis: resolvedTurnoverBasis,
+      conversion_formula: finalData.conversion_formula,
+    });
   }
 
   return finalData as unknown as PromoFormData;
