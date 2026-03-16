@@ -412,8 +412,33 @@ export function detectObviousIntent(content: string): PromoIntent | null {
     };
   }
   
+  // ========== DEPOSIT BONUS (with turnover WR) - must check BEFORE rollingan ==========
+  // Deposit bonus promo often has "turnover Nx" as WR condition, NOT as the primary action.
+  // If there's deposit + tier/percentage structure → primary_action = 'deposit', not 'turnover'
+  const hasDepositKeyword = /\bdeposit\b/i.test(lower);
+  const hasTierStructure = /tier|level|–|—|-\s*\d+%|\d+%\s*bonus/i.test(lower);
+  const hasWrPattern = /turnover\s*\d+x|\d+x\s*turnover/i.test(lower); // e.g. "turnover 8x"
+  const hasBonusPercent = /bonus\s*\d+%|\d+%\s*bonus/i.test(lower);
+
+  if (hasDepositKeyword && hasBonusPercent && (hasTierStructure || hasWrPattern)) {
+    console.log('[Intent Reasoner] DETERMINISTIC: Deposit bonus (with WR/tier) detected — not rollingan');
+    return {
+      primary_action: 'deposit',
+      reward_nature: 'calculated',
+      value_determiner: 'system_calculate',
+      distribution_path: 'auto',
+      value_shape: hasTierStructure ? 'tier_table' : 'percent',
+      time_scope: 'ongoing',
+      intent_evidence: extractEvidence(lower, ['deposit', 'bonus', '%', 'turnover']),
+      confidence: 0.92,
+      reasoning: 'Deterministic: Deposit bonus with WR/tier structure — turnover is WR condition, not primary action',
+      reasoner_version: REASONER_VERSION,
+      processed_at: new Date().toISOString(),
+    };
+  }
+
   // ========== ROLLINGAN / TURNOVER-BASED - DEFINITE pattern ==========
-  if (/rollingan|roll(ing)?an/i.test(lower) || (/turnover|to\s*bonus/i.test(lower) && /%/i.test(lower))) {
+  if (/rollingan|roll(ing)?an/i.test(lower) || (/turnover|to\s*bonus/i.test(lower) && /%/i.test(lower) && !hasDepositKeyword)) {
     console.log('[Intent Reasoner] DETERMINISTIC: Rollingan (turnover-based) detected');
     return {
       primary_action: 'turnover',
