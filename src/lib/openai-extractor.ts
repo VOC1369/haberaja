@@ -6441,15 +6441,19 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     
     if (archetypePayloadResult) {
       finalData.archetype_payload = archetypePayloadResult.archetype_payload;
-      finalData.turnover_basis = archetypePayloadResult.turnover_basis
+
+      // Fallback chain: archetype detector → LLM output → DEPOSIT_BONUS semantic default
+      const resolvedTurnoverBasis = archetypePayloadResult.turnover_basis
         ?? extracted.turnover_basis
-        ?? null;
+        ?? (taxonomyDecision.archetype === 'DEPOSIT_BONUS' ? 'deposit_plus_bonus' : null);
+
+      finalData.turnover_basis = resolvedTurnoverBasis;
       finalData.archetype_invariants = archetypePayloadResult.archetype_invariants;
       
       console.log('[mapExtractedToPromoFormData] Populated archetype_payload:', {
         archetype: taxonomyDecision.archetype,
         payloadKeys: Object.keys(archetypePayloadResult.archetype_payload),
-        turnover_basis: archetypePayloadResult.turnover_basis,
+        turnover_basis: resolvedTurnoverBasis,
       });
     }
   }
