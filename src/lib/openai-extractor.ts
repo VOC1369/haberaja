@@ -4833,6 +4833,21 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       })();
       const minVal = sub.minimum_base ?? parsedMinFromName ?? null;
 
+      // Parse min from next tier's name too — needed when next tier minimum_base is null
+      // e.g. "Deposit Rp 2jt ke atas" → 2000000
+      const nextSub = extracted.subcategories[index + 1];
+      const nextParsedMin = (() => {
+        if (!nextSub) return null;
+        if (nextSub.minimum_base != null) return nextSub.minimum_base;
+        const name = nextSub.sub_name || '';
+        const match = name.match(/(?:rp\.?\s*)?(\d+(?:[.,]\d+)*)\s*(?:rb|jt|juta|ribu|k\b)/i);
+        if (!match) return null;
+        let val = parseFloat(match[1].replace(',', '.'));
+        if (/jt|juta/i.test(name.slice(name.indexOf(match[0])))) val *= 1_000_000;
+        else if (/rb|ribu|k\b/i.test(name.slice(name.indexOf(match[0])))) val *= 1_000;
+        return isNaN(val) ? null : val;
+      })();
+
       return {
         id: generateUUID(),
         type: sub.sub_name || `Tier ${index + 1}`,
@@ -4843,12 +4858,12 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
         jenis_hadiah: 'credit_game',  // deposit bonus default
         // Store tier boundary metadata in extra fields
         _tier_order: index + 1,
-        _requirement_max: extracted.subcategories[index + 1]?.minimum_base ?? null,
+        _requirement_max: nextParsedMin,
         _turnover_multiplier: sub.turnover_rule ? String(sub.turnover_rule) : null,
         // Force deposit_amount for all deposit tiers — LLM often sends "level" incorrectly
         _tier_dimension: 'deposit_amount',
         _min_dimension_value: minVal,
-        _max_dimension_value: extracted.subcategories[index + 1]?.minimum_base ?? null,
+        _max_dimension_value: nextParsedMin,
       };
     });
 
@@ -6441,21 +6456,31 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     
     if (archetypePayloadResult) {
       finalData.archetype_payload = archetypePayloadResult.archetype_payload;
-
-      // Fallback chain: archetype detector → LLM output → DEPOSIT_BONUS semantic default
-      const resolvedTurnoverBasis = archetypePayloadResult.turnover_basis
-        ?? extracted.turnover_basis
-        ?? (taxonomyDecision.archetype === 'DEPOSIT_BONUS' ? 'deposit_plus_bonus' : null);
-
-      finalData.turnover_basis = resolvedTurnoverBasis;
       finalData.archetype_invariants = archetypePayloadResult.archetype_invariants;
-      
-      console.log('[mapExtractedToPromoFormData] Populated archetype_payload:', {
-        archetype: taxonomyDecision.archetype,
-        payloadKeys: Object.keys(archetypePayloadResult.archetype_payload),
-        turnover_basis: resolvedTurnoverBasis,
-      });
     }
+
+    // ============================================
+    // POST-SANITIZE RE-INJECT: fields wiped by sanitizeByMode for 'tier' mode
+    // sanitizeByMode strips conversion_formula for NON_FORMULA_MODES (event/fixed/tier).
+    // For deposit bonus tiers, conversion_formula is still meaningful — re-inject here.
+    // ============================================
+
+    // turnover_basis: fallback chain regardless of archetypePayloadResult
+    const resolvedTurnoverBasis = archetypePayloadResult?.turnover_basis
+      ?? extracted.turnover_basis
+      ?? (taxonomyDecision.archetype === 'DEPOSIT_BONUS' ? 'deposit_plus_bonus' : null);
+    finalData.turnover_basis = resolvedTurnoverBasis;
+
+    // conversion_formula: re-inject after sanitizeByMode wipes it
+    if (!finalData.conversion_formula && extracted.conversion_formula) {
+      finalData.conversion_formula = extracted.conversion_formula;
+    }
+
+    console.log('[mapExtractedToPromoFormData] Post-sanitize re-inject:', {
+      archetype: taxonomyDecision.archetype,
+      turnover_basis: resolvedTurnoverBasis,
+      conversion_formula: finalData.conversion_formula,
+    });
   }
 
   return finalData as unknown as PromoFormData;
