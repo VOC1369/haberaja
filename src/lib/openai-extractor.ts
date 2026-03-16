@@ -4786,6 +4786,14 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   //   3. NOT referral or level-up path
   // If triggered, also rescue initialMode → 'tier' so downstream fields align.
   // ============================================
+  console.log('[DepositTierDebug]', {
+    subcategories_length: extracted.subcategories?.length,
+    promo_type: extracted.promo_type,
+    archetype: taxonomyDecision.archetype,
+    isReferralMultiTier,
+    isEventLevelUp,
+  });
+
   const hasDepositSubcategoryEvidence =
     extracted.subcategories?.length > 0 &&
     (
