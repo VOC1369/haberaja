@@ -3185,27 +3185,11 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     // DERIVE ready_to_commit from validation - never hardcode
     parsed.ready_to_commit = validationResult.status === 'ready' && validationResult.warnings.length === 0;
     
-    // ============================================
-    // CANONICAL GUARD - POST-EXTRACTION ENFORCEMENT
-    // Final line of defense for schema compliance
-    // ============================================
-    try {
-      const { enforceCanonicalGuard } = await import('./canonical-guard');
-      const guardResult = enforceCanonicalGuard(parsed as unknown as Record<string, unknown>);
-      
-      if (!guardResult.valid) {
-        console.warn('[Extractor] CANONICAL GUARD warnings:', guardResult.errors);
-        // Store guard warnings in extraction meta for UI display
-        (parsed._extraction_meta as Record<string, unknown>).canonical_guard_warnings = guardResult.errors;
-      }
-      
-      // Log any skipped fields
-      if (guardResult.warnings.length > 0) {
-        console.debug('[Extractor] Canonical guard skipped fields:', guardResult.warnings);
-      }
-    } catch (guardError) {
-      console.warn('[Extractor] Canonical guard failed (non-fatal):', guardError);
-    }
+    // NOTE: Canonical guard intentionally NOT run here.
+    // This function returns raw LLM output (ExtractedPromo) — tiers[] and other
+    // form fields are only populated AFTER mapExtractedToPromoFormData().
+    // Running the guard here produces false alarms (e.g. "mode=tier but tiers[] empty").
+    // Guard should be run on buildCanonicalPayload() output instead.
     
     // Tag extraction source for normalizer (HTML/text detection)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
