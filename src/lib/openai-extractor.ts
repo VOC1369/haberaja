@@ -4820,21 +4820,37 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       mode: initialMode,
     });
 
-    depositBonusTiers = extracted.subcategories.map((sub: any, index: number) => ({
-      id: generateUUID(),
-      type: sub.sub_name || `Tier ${index + 1}`,
-      minimal_point: sub.minimum_base ?? 0,
-      reward: sub.calculation_value ?? 0,
-      reward_type: 'percentage' as const,
-      jenis_hadiah: 'credit_game',  // deposit bonus default
-      // Store tier boundary metadata in extra fields
-      _tier_order: index + 1,
-      _requirement_max: extracted.subcategories[index + 1]?.minimum_base ?? null,
-      _turnover_multiplier: sub.turnover_rule ? String(sub.turnover_rule) : null,
-      _tier_dimension: sub.tier_dimension ?? 'deposit_amount',
-      _min_dimension_value: sub.minimum_base ?? null,
-      _max_dimension_value: extracted.subcategories[index + 1]?.minimum_base ?? null,
-    }));
+    depositBonusTiers = extracted.subcategories.map((sub: any, index: number) => {
+      // Parse minimum from tier_name for open-ended tiers (e.g. "Deposit Rp 2jt ke atas" → 2000000)
+      const parsedMinFromName = (() => {
+        const name = sub.sub_name || '';
+        const match = name.match(/(?:rp\.?\s*)?(\d+(?:[.,]\d+)*)\s*(?:rb|jt|juta|ribu|k\b)/i);
+        if (!match) return null;
+        let val = parseFloat(match[1].replace(',', '.'));
+        if (/jt|juta/i.test(name.slice(name.indexOf(match[0])))) val *= 1_000_000;
+        else if (/rb|ribu|k\b/i.test(name.slice(name.indexOf(match[0])))) val *= 1_000;
+        return isNaN(val) ? null : val;
+      })();
+      const minVal = sub.minimum_base ?? parsedMinFromName ?? null;
+
+      return {
+        id: generateUUID(),
+        type: sub.sub_name || `Tier ${index + 1}`,
+        // Use parsed min from name as fallback for open-ended last tiers (minimum_base: null)
+        minimal_point: minVal ?? 0,
+        reward: sub.calculation_value ?? 0,
+        reward_type: 'percentage' as const,
+        jenis_hadiah: 'credit_game',  // deposit bonus default
+        // Store tier boundary metadata in extra fields
+        _tier_order: index + 1,
+        _requirement_max: extracted.subcategories[index + 1]?.minimum_base ?? null,
+        _turnover_multiplier: sub.turnover_rule ? String(sub.turnover_rule) : null,
+        // Force deposit_amount for all deposit tiers — LLM often sends "level" incorrectly
+        _tier_dimension: 'deposit_amount',
+        _min_dimension_value: minVal,
+        _max_dimension_value: extracted.subcategories[index + 1]?.minimum_base ?? null,
+      };
+    });
 
     console.log(`[Deposit Tier Converter] Mapped ${depositBonusTiers.length} deposit tiers`);
   }
