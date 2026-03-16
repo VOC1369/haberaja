@@ -310,7 +310,7 @@ export const FIELD_APPLICABILITY_MAP: Record<string, FieldApplicabilityRule> = {
     ],
     not_applicable: [
       'referral_tiers', 'referral_calculation_basis', 'referral_admin_fee_enabled', 'referral_admin_fee_percentage',
-      'tiers', 'redeem_items', 'promo_unit', 'exp_mode', 'lp_calc_method', 'exp_calc_method',
+      'redeem_items', 'promo_unit', 'exp_mode', 'lp_calc_method', 'exp_calc_method',
       'lp_earn_basis', 'lp_earn_amount', 'lp_earn_point_amount', 'exp_formula', 'lp_value', 'exp_value',
       'fast_exp_missions', 'level_up_rewards', 'vip_multiplier', 'redeem_jenis_reward',
     ],
