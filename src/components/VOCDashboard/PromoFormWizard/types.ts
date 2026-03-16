@@ -1659,15 +1659,19 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
       tier_id: t.id,
       tier_name: t.type || `Tier ${i + 1}`,
       tier_order: i + 1,
-      requirement_value: t.minimal_point,
-      requirement_max: null,
+      // Fix: fallback to _min_dimension_value for open-ended tiers (e.g. "2jt ke atas" where minimal_point=0)
+      requirement_value: t.minimal_point || (t as any)._min_dimension_value || null,
+      requirement_max: (t as any)._requirement_max ?? null,
       reward_value: typeof t.reward === 'number' ? t.reward : null,
       reward_type: t.reward_type || 'fixed',
-      turnover_multiplier: null,
-      // B3: preserve dimension fields
-      tier_dimension: (t as any).tier_dimension ?? null,
-      min_dimension_value: (t as any).min_dimension_value ?? null,
-      max_dimension_value: (t as any).max_dimension_value ?? null,
+      // Fix: read _turnover_multiplier (underscore-prefixed) from converter output
+      turnover_multiplier: (t as any)._turnover_multiplier
+        ? Number((t as any)._turnover_multiplier)
+        : null,
+      // Fix: read underscore-prefixed dimension fields set by deposit tier converter
+      tier_dimension: (t as any)._tier_dimension ?? (t as any).tier_dimension ?? null,
+      min_dimension_value: (t as any)._min_dimension_value ?? (t as any).min_dimension_value ?? null,
+      max_dimension_value: (t as any)._max_dimension_value ?? (t as any).max_dimension_value ?? null,
       special_conditions: (t as any).special_conditions ?? [],
       extra: { 
         jenis_hadiah: t.jenis_hadiah,
