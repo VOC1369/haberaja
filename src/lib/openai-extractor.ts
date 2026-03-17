@@ -6534,12 +6534,40 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     }
   }
 
+  // -----------------------------------------------
+  // FIX 3: game_exclusions — aggregate from extracted.subcategories BEFORE they get cleared
+  // This runs on extracted (original LLM output), not finalData (which may have subcategories=[])
+  // -----------------------------------------------
+  if (!finalData.game_exclusions || !(finalData.game_exclusions as string[]).length) {
+    const subGameExclusions = (extracted.subcategories ?? [])
+      .flatMap((sub: any) => sub.blacklist?.games ?? []);
+    const subRuleExclusions = (extracted.subcategories ?? [])
+      .flatMap((sub: any) => sub.blacklist?.rules ?? [])
+      .flatMap((rule: string) => {
+        const match = rule.match(/kecuali\s+(.+)/i);
+        return match ? match[1].split(/,|dan/i).map((s: string) => s.trim()).filter(Boolean) : [];
+      });
+    const globalGameExclusions = extracted.global_blacklist?.games ?? [];
+    const globalRuleExclusions = (extracted.global_blacklist?.rules ?? [])
+      .flatMap((rule: string) => {
+        const match = rule.match(/kecuali\s+(.+)/i);
+        return match ? match[1].split(/,|dan/i).map((s: string) => s.trim()).filter(Boolean) : [];
+      });
+    
+    const allExclusions = [...new Set([...subGameExclusions, ...subRuleExclusions, ...globalGameExclusions, ...globalRuleExclusions])];
+    if (allExclusions.length) {
+      finalData.game_exclusions = allExclusions;
+      console.log('[mapExtractedToPromoFormData] game_exclusions aggregated from extracted.subcategories:', allExclusions);
+    }
+  }
+
   console.log('[mapExtractedToPromoFormData] Post-sanitize re-inject:', {
     archetype: taxonomyDecision.archetype,
     mechanic_type: (extracted._reasoning_v2 as any)?.mechanic_selection?.mechanic_type,
     useTaxonomy,
     turnover_basis: finalData.turnover_basis,
     conversion_formula: finalData.conversion_formula,
+    game_exclusions: finalData.game_exclusions,
   });
 
   return finalData as unknown as PromoFormData;
