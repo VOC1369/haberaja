@@ -1630,7 +1630,9 @@ function normalizeClaimFrequency(freq?: string): string {
 function unifyTiers(data: PromoFormData): UniversalTier[] {
   // referral = Referral
   if (data.tier_archetype === 'referral' && data.referral_tiers?.length) {
-    return data.referral_tiers.map((t, i) => ({
+    return data.referral_tiers.map((t, i) => {
+      const nextTier = data.referral_tiers![i + 1];
+      return {
       tier_id: t.id,
       tier_name: t.tier_label,
       tier_order: i + 1,
@@ -1639,10 +1641,10 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
       reward_value: t.commission_percentage,
       reward_type: 'percentage',
       turnover_multiplier: null,
-      // B3: preserve dimension fields
-      tier_dimension: (t as any).tier_dimension ?? null,
-      min_dimension_value: (t as any).min_dimension_value ?? null,
-      max_dimension_value: (t as any).max_dimension_value ?? null,
+      // FIX: referral tiers ALWAYS use downline_count dimension
+      tier_dimension: 'downline_count' as const,
+      min_dimension_value: t.min_downline ?? (t as any).min_dimension_value ?? null,
+      max_dimension_value: nextTier?.min_downline ?? (t as any).max_dimension_value ?? null,
       special_conditions: (t as any).special_conditions ?? [],
       extra: { 
         winlose: t.winlose, 
