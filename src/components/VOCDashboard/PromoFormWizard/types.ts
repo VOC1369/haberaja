@@ -1451,7 +1451,14 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     data.game_providers_blacklist,
     data.game_names_blacklist
   );
-  canonical.game_exclusions = [...new Set([...baseExclusions, ...subExclusions, ...globalExclusions])];
+  // FIX: also parse "kecuali X" patterns from blacklist.rules[]
+  const ruleExclusions = (data.subcategories ?? [])
+    .flatMap((sub: any) => sub.blacklist?.rules ?? [])
+    .flatMap((rule: string) => {
+      const match = rule.match(/kecuali\s+(.+)/i);
+      return match ? match[1].split(/,|dan/i).map((s: string) => s.trim()).filter(Boolean) : [];
+    });
+  canonical.game_exclusions = [...new Set([...baseExclusions, ...subExclusions, ...ruleExclusions, ...globalExclusions])];
   
   // ===============================
   // ACCESS & RESTRICTION
