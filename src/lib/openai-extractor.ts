@@ -1483,9 +1483,27 @@ Referral promo SERING memiliki struktur tier berdasarkan JUMLAH DOWNLINE AKTIF.
 
 CONTOH TABEL REFERRAL:
 | DOWNLINE | WINLOSE | COMMISION | CASHBACK | FEE 20% | WINLOSE BERSIH | KOMISI |
-| 5 ID     | 10.000.000 | 300.000 | 700.000 | -2.000.000 | 8.500.000 | 5%  |
-| 10 ID    | 50.000.000 | ... | ... | ... | ... | 10% |
-| 15 ID    | 100.000.000 | ... | ... | ... | ... | 15% |
+| 1-4 ID   | 10.000.000 | 300.000 | 700.000 | -2.000.000 | 8.500.000 | 5%  |
+| 5-9 ID   | 50.000.000 | ... | ... | ... | ... | 10% |
+| 10+ ID   | 100.000.000 | ... | ... | ... | ... | 15% |
+
+⚠️ PERBEDAAN KRITIS: min_downline vs calculation_value — JANGAN CAMPUR!
+┌─────────────────────────────────────────────────────────────────────────┐
+│  min_downline     = JUMLAH DOWNLINE MINIMUM untuk masuk tier ini        │
+│                     Ambil dari BATAS BAWAH range downline di kolom      │
+│                     Contoh: "1-4 ID" → min_downline = 1                │
+│                     Contoh: "5-9 ID" → min_downline = 5                │
+│                     Contoh: "10+ ID" → min_downline = 10               │
+│                                                                         │
+│  calculation_value = PERSENTASE KOMISI yang diterima per tier          │
+│                     Ambil dari kolom KOMISI                            │
+│                     Contoh: "5%" → calculation_value = 5               │
+│                     Contoh: "10%" → calculation_value = 10             │
+│                     Contoh: "15%" → calculation_value = 15             │
+│                                                                         │
+│  ❌ SALAH: min_downline = 5 untuk tier komisi 5%                       │
+│  ✅ BENAR: min_downline = 1, calculation_value = 5 untuk "1-4 ID: 5%" │
+└─────────────────────────────────────────────────────────────────────────┘
 
 ATURAN PARSING REFERRAL:
 1. Jika ada tabel dengan kolom DOWNLINE + KOMISI (persentase berbeda per tier):
@@ -1494,10 +1512,10 @@ ATURAN PARSING REFERRAL:
    
 2. sub_name = "Komisi X%" atau "Tier X ID" (dari nilai persentase/downline)
 
-3. calculation_value = nilai KOMISI (persentase) per tier
-   - 5 ID → 5%
-   - 10 ID → 10%
-   - 15 ID → 15%
+3. calculation_value = nilai KOMISI (persentase) per tier — BUKAN jumlah downline!
+   - "1-4 ID aktif: komisi 5%" → calculation_value = 5
+   - "5-9 ID aktif: komisi 10%" → calculation_value = 10
+   - "10+ ID aktif: komisi 15%" → calculation_value = 15
 
 4. ⚠️ ATURAN FINAL DARI TABEL PROMO - Extract semua nilai dari tabel:
    - winlose = nilai WINLOSE (ATURAN FINAL, bukan sample!)
@@ -1514,13 +1532,14 @@ ATURAN PARSING REFERRAL:
 
 5. minimum_base = null (TIDAK ADA threshold winlose eksplisit untuk referral)
    - Kolom WINLOSE di tabel = ATURAN FINAL perhitungan, bukan syarat kualifikasi
-   - Threshold tier sebenarnya = min_downline (5, 10, 15 ID)
+   - Threshold tier sebenarnya = min_downline (batas bawah range downline)
 
 6. Tambahkan metadata tier di terms_conditions:
-   - "Tier 5%: Minimal 5 ID aktif"
-   - "Tier 10%: Minimal 10 ID aktif"
+   - "Tier 5%: Minimal 1 ID aktif (range 1-4)"
+   - "Tier 10%: Minimal 5 ID aktif (range 5-9)"
+   - "Tier 15%: Minimal 10 ID aktif (range 10+)"
 
-OUTPUT FORMAT REFERRAL MULTI-TIER:
+OUTPUT FORMAT REFERRAL MULTI-TIER (CORRECT):
 {
   "promo_name": "EXTRA CUAN! REFERRAL UP TO 15%",
   "promo_type": "Referral Bonus",
@@ -1534,7 +1553,8 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
       "calculation_method": "percentage",
       "calculation_value": 5,
       "minimum_base": null,
-      "min_downline": 5,
+      "min_downline": 1,
+      "max_downline": 4,
       "winlose": 10000000,
       "cashback_deduction": 700000,
       "fee_deduction": 300000,
@@ -1558,7 +1578,8 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
       "calculation_method": "percentage",
       "calculation_value": 10,
       "minimum_base": null,
-      "min_downline": 10,
+      "min_downline": 5,
+      "max_downline": 9,
       "winlose": 50000000,
       "cashback_deduction": 3000000,
       "fee_deduction": 1500000,
@@ -1577,7 +1598,8 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
       "calculation_method": "percentage",
       "calculation_value": 15,
       "minimum_base": null,
-      "min_downline": 15,
+      "min_downline": 10,
+      "max_downline": null,
       "winlose": 100000000,
       "cashback_deduction": 7000000,
       "fee_deduction": 3500000,
@@ -1592,9 +1614,9 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
     }
   ],
   "terms_conditions": [
-    "Tier 5%: Minimal 5 ID aktif",
-    "Tier 10%: Minimal 10 ID aktif",
-    "Tier 15%: Minimal 15 ID aktif",
+    "Tier 5%: Minimal 1 ID aktif (range 1-4)",
+    "Tier 10%: Minimal 5 ID aktif (range 5-9)",
+    "Tier 15%: Minimal 10 ID aktif (range 10+)",
     "Hitungan komisi: Winlose - Commision - Cashback - Admin Fee 20% = hasil x persentase",
     "Admin Fee: 20%"
   ]
@@ -1607,7 +1629,8 @@ OUTPUT FORMAT REFERRAL MULTI-TIER:
 - minimum_base = null (TIDAK ada threshold nominal eksplisit!)
 - winlose = nilai WINLOSE dari tabel (ini ATURAN FINAL, bukan sample!)
 - Kolom WINLOSE/CASHBACK/FEE di tabel = FORMULA RESMI PROMO!
-- Threshold tier = min_downline SAJA (5, 10, 15 ID)
+- min_downline = BATAS BAWAH range downline (1 untuk tier pertama, BUKAN nilai commission %)
+- max_downline = BATAS ATAS range downline (null untuk tier terakhir "10+" / open-ended)
 - turnover_rule = null (not_applicable untuk referral)
 - payout_direction = "belakang" (komisi dihitung setelah downline bermain)
 - calculation_base = "loss" (iGaming Asia: WINLOSE = kekalahan player = loss)
@@ -6511,12 +6534,40 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     }
   }
 
+  // -----------------------------------------------
+  // FIX 3: game_exclusions — aggregate from extracted.subcategories BEFORE they get cleared
+  // This runs on extracted (original LLM output), not finalData (which may have subcategories=[])
+  // -----------------------------------------------
+  if (!finalData.game_exclusions || !(finalData.game_exclusions as string[]).length) {
+    const subGameExclusions = (extracted.subcategories ?? [])
+      .flatMap((sub: any) => sub.blacklist?.games ?? []);
+    const subRuleExclusions = (extracted.subcategories ?? [])
+      .flatMap((sub: any) => sub.blacklist?.rules ?? [])
+      .flatMap((rule: string) => {
+        const match = rule.match(/kecuali\s+(.+)/i);
+        return match ? match[1].split(/,|dan/i).map((s: string) => s.trim()).filter(Boolean) : [];
+      });
+    const globalGameExclusions = extracted.global_blacklist?.games ?? [];
+    const globalRuleExclusions = (extracted.global_blacklist?.rules ?? [])
+      .flatMap((rule: string) => {
+        const match = rule.match(/kecuali\s+(.+)/i);
+        return match ? match[1].split(/,|dan/i).map((s: string) => s.trim()).filter(Boolean) : [];
+      });
+    
+    const allExclusions = [...new Set([...subGameExclusions, ...subRuleExclusions, ...globalGameExclusions, ...globalRuleExclusions])];
+    if (allExclusions.length) {
+      finalData.game_exclusions = allExclusions;
+      console.log('[mapExtractedToPromoFormData] game_exclusions aggregated from extracted.subcategories:', allExclusions);
+    }
+  }
+
   console.log('[mapExtractedToPromoFormData] Post-sanitize re-inject:', {
     archetype: taxonomyDecision.archetype,
     mechanic_type: (extracted._reasoning_v2 as any)?.mechanic_selection?.mechanic_type,
     useTaxonomy,
     turnover_basis: finalData.turnover_basis,
     conversion_formula: finalData.conversion_formula,
+    game_exclusions: finalData.game_exclusions,
   });
 
   return finalData as unknown as PromoFormData;
