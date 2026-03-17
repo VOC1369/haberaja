@@ -1441,11 +1441,17 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     
     return [];
   })();
-  canonical.game_exclusions = data.game_exclusions || consolidateGameExclusions(
+  // FIX 3: game_exclusions — aggregate from subcategory blacklists + global blacklists
+  const subExclusions = (data.subcategories ?? [])
+    .flatMap((sub: any) => sub.blacklist?.games ?? [])
+    .filter(Boolean);
+  const globalExclusions = (data as any).global_blacklist?.games ?? [];
+  const baseExclusions = data.game_exclusions || consolidateGameExclusions(
     data.game_types_blacklist,
     data.game_providers_blacklist,
     data.game_names_blacklist
   );
+  canonical.game_exclusions = [...new Set([...baseExclusions, ...subExclusions, ...globalExclusions])];
   
   // ===============================
   // ACCESS & RESTRICTION

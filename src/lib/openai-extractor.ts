@@ -6469,27 +6469,51 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // Must run regardless of taxonomy confidence to avoid data loss.
   // ============================================
 
-  // turnover_basis: fallback chain
-  const resolvedTurnoverBasis = (finalData.archetype_payload as any)?.turnover_basis
-    ?? extracted.turnover_basis
-    ?? (taxonomyDecision.archetype === 'DEPOSIT_BONUS' ? 'deposit_plus_bonus' : null);
+  // -----------------------------------------------
+  // FIX 2: turnover_basis — LLM first, regex fallback, then archetype default
+  // -----------------------------------------------
+  const mechanicTypeForBasis = (extracted._reasoning_v2 as any)?.mechanic_selection?.mechanic_type as string | undefined;
+  const resolvedTurnoverBasis = 
+    extracted.turnover_basis ||                                           // LLM value — highest priority
+    (finalData.archetype_payload as any)?.turnover_basis ||              // archetype detector — fallback
+    (mechanicTypeForBasis?.startsWith('deposit_bonus') || taxonomyDecision.archetype === 'DEPOSIT_BONUS'
+      ? 'deposit_plus_bonus'
+      : null);                                                            // semantic default for deposit promos
   if (resolvedTurnoverBasis) {
-    finalData.turnover_basis = resolvedTurnoverBasis;
+    finalData.turnover_basis = resolvedTurnoverBasis as 'bonus_only' | 'deposit_plus_bonus' | 'deposit_only';
   }
 
-  // conversion_formula: re-inject after sanitizeByMode potentially wipes it
-  // Priority: (1) already in finalData, (2) LLM extracted value, (3) fallback for isDepositBonusTier
+  // -----------------------------------------------
+  // FIX 1: conversion_formula generator — mechanic_type-based fallbacks
+  // -----------------------------------------------
   if (!finalData.conversion_formula) {
     if (extracted.conversion_formula) {
+      // LLM provided a value — always use it first
       finalData.conversion_formula = extracted.conversion_formula;
-    } else if (isDepositBonusTier) {
-      // LLM sometimes returns "" for deposit tier — safe deterministic fallback
-      finalData.conversion_formula = 'deposit * reward_percentage';
+    } else {
+      // No LLM value — generate deterministic fallback based on mechanic_type
+      const mechanic = (extracted._reasoning_v2 as any)?.mechanic_selection?.mechanic_type as string | undefined
+        ?? (extracted as any).mechanic_type as string | undefined;
+      const firstSub = extracted.subcategories?.[0];
+      const rate = firstSub?.calculation_value ?? (extracted as any).reward_percentage ?? 'reward_percentage';
+      const maxB = (finalData as any).max_bonus ?? (finalData as any).fixed_max_bonus ?? 'max_bonus';
+
+      if (isDepositBonusTier || mechanic === 'deposit_bonus_percent') {
+        finalData.conversion_formula = `min(deposit * ${rate}%, ${maxB})`;
+      } else if (mechanic === 'deposit_bonus_fixed') {
+        finalData.conversion_formula = `deposit * reward_percentage`;
+      } else if (mechanic === 'rollingan_turnover' || mechanic === 'cashback_turnover' || mechanic === 'cashback') {
+        finalData.conversion_formula = `total_turnover * ${rate}%`;
+      } else if (mechanic === 'referral_commission' || taxonomyDecision.archetype === 'REFERRAL') {
+        finalData.conversion_formula = `net_winlose_downline * komisi%`;
+      }
+      // All other mechanic types: leave empty — LLM is responsible
     }
   }
 
   console.log('[mapExtractedToPromoFormData] Post-sanitize re-inject:', {
     archetype: taxonomyDecision.archetype,
+    mechanic_type: (extracted._reasoning_v2 as any)?.mechanic_selection?.mechanic_type,
     useTaxonomy,
     turnover_basis: finalData.turnover_basis,
     conversion_formula: finalData.conversion_formula,
