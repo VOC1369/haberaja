@@ -4789,7 +4789,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     !isReferralMultiTier &&
     !isEventLevelUp;
 
-  const isDepositBonusTier = hasDepositSubcategoryEvidence;
+  const isDepositBonusTier = hasDepositSubcategoryEvidence
+    && (extracted.subcategories?.length ?? 0) >= 2   // must have 2+ distinct deposit levels
+    && extracted.mode === 'tier';                      // LLM must explicitly detect as tier
 
   // TierReward shape (legacy) — used by tiers[] in PromoFormData
   let depositBonusTiers: import('../components/VOCDashboard/PromoFormWizard/types').TierReward[] = [];
