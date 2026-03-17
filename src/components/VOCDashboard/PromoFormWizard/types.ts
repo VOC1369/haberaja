@@ -1659,7 +1659,8 @@ function unifyTiers(data: PromoFormData): UniversalTier[] {
         cashback_deduction_amount: t.cashback_deduction_amount,
         admin_fee_deduction_amount: t.admin_fee_deduction_amount,
       },
-    }));
+      };
+    });
   }
   
   // point_store = LP Redeem
