@@ -1562,6 +1562,20 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
   // This runs AFTER validation to fix any remaining issues
   // ===============================
   const sanitized = sanitizeByMode(canonical as unknown as Record<string, unknown>);
+
+  // ===============================
+  // POST-SANITIZE RE-INJECT (buildCanonicalPayload)
+  // sanitizeByMode wipes conversion_formula for mode='tier' (NON_FORMULA_MODES).
+  // But conversion_formula IS valid for tier promos (overarching calc rule).
+  // Re-inject from pre-sanitize value here as the canonical SSoT.
+  // ===============================
+  if (!sanitized.conversion_formula && data.conversion_formula) {
+    sanitized.conversion_formula = data.conversion_formula;
+  }
+  // turnover_basis re-inject: sanitizeByMode doesn't touch it but guard anyway
+  if (!sanitized.turnover_basis && data.turnover_basis) {
+    sanitized.turnover_basis = data.turnover_basis;
+  }
   
   // ===============================
   // FINAL WHITELIST FILTER
