@@ -4838,7 +4838,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       const nextSub = extracted.subcategories[index + 1];
       const nextParsedMin = (() => {
         if (!nextSub) return null;
-        if (nextSub.minimum_base != null) return nextSub.minimum_base;
+        // Only trust minimum_base if it's a positive number (0 is invalid boundary)
+        if (nextSub.minimum_base != null && nextSub.minimum_base > 0) return nextSub.minimum_base;
         const name = nextSub.sub_name || '';
         const match = name.match(/(?:rp\.?\s*)?(\d+(?:[.,]\d+)*)\s*(?:rb|jt|juta|ribu|k\b)/i);
         if (!match) return null;
