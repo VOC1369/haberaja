@@ -6460,29 +6460,32 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       finalData.archetype_invariants = archetypePayloadResult.archetype_invariants;
     }
 
-    // ============================================
-    // POST-SANITIZE RE-INJECT: fields wiped by sanitizeByMode for 'tier' mode
-    // sanitizeByMode strips conversion_formula for NON_FORMULA_MODES (event/fixed/tier).
-    // For deposit bonus tiers, conversion_formula is still meaningful — re-inject here.
-    // ============================================
-
-    // turnover_basis: fallback chain regardless of archetypePayloadResult
-    const resolvedTurnoverBasis = archetypePayloadResult?.turnover_basis
-      ?? extracted.turnover_basis
-      ?? (taxonomyDecision.archetype === 'DEPOSIT_BONUS' ? 'deposit_plus_bonus' : null);
-    finalData.turnover_basis = resolvedTurnoverBasis;
-
-    // conversion_formula: re-inject after sanitizeByMode wipes it
-    if (!finalData.conversion_formula && extracted.conversion_formula) {
-      finalData.conversion_formula = extracted.conversion_formula;
-    }
-
-    console.log('[mapExtractedToPromoFormData] Post-sanitize re-inject:', {
-      archetype: taxonomyDecision.archetype,
-      turnover_basis: resolvedTurnoverBasis,
-      conversion_formula: finalData.conversion_formula,
-    });
   }
+
+  // ============================================
+  // POST-SANITIZE RE-INJECT (ALWAYS — outside useTaxonomy guard)
+  // Must run regardless of taxonomy confidence to avoid data loss.
+  // ============================================
+
+  // turnover_basis: fallback chain
+  const resolvedTurnoverBasis = (finalData.archetype_payload as any)?.turnover_basis
+    ?? extracted.turnover_basis
+    ?? (taxonomyDecision.archetype === 'DEPOSIT_BONUS' ? 'deposit_plus_bonus' : null);
+  if (resolvedTurnoverBasis) {
+    finalData.turnover_basis = resolvedTurnoverBasis;
+  }
+
+  // conversion_formula: re-inject after sanitizeByMode potentially wipes it
+  if (!finalData.conversion_formula && extracted.conversion_formula) {
+    finalData.conversion_formula = extracted.conversion_formula;
+  }
+
+  console.log('[mapExtractedToPromoFormData] Post-sanitize re-inject:', {
+    archetype: taxonomyDecision.archetype,
+    useTaxonomy,
+    turnover_basis: finalData.turnover_basis,
+    conversion_formula: finalData.conversion_formula,
+  });
 
   return finalData as unknown as PromoFormData;
 }
