@@ -243,8 +243,9 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const handleDuplicate = async (promo: PromoItem) => {
     try {
       const newPromo = await duplicatePromo(promo);
-      setItems([newPromo, ...items]);
       toast.success(`Promo "${promo.promo_name}" berhasil diduplikasi`);
+      // Reload dari storage (bukan optimistic update) untuk hindari double entry
+      await loadPromos();
       // Langsung buka edit page
       handleEdit(newPromo);
     } catch (error) {
