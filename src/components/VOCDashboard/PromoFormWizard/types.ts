@@ -1821,13 +1821,22 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
     normalized.reward_mode = raw.mode as PromoFormData['reward_mode'];
   }
 
-  // 0b. tier_archetype normalization (short → full form value)
+  // 0b. tier_archetype normalization
+  // v2.2 canonical uses short names (no prefix). Form also uses short names for referral/formula/level/point_store.
+  // Legacy canonical used prefix names (tier_level, tier_point_store) — map those to current form values.
   if (normalized.tier_archetype) {
     const archetypeMap: Record<string, string> = {
-      'point_store': 'tier_point_store',
-      'level': 'tier_level',
-      'network': 'tier_network',
-      'formula': 'tier_formula',
+      // Legacy prefixed → current short form values
+      'tier_point_store': 'point_store',
+      'tier_level': 'level',
+      'tier_network': 'referral',
+      'tier_formula': 'formula',
+      // v2.2 canonical short names — already correct, but ensure passthrough
+      'referral': 'referral',
+      'network': 'referral',  // alternative name → referral
+      'point_store': 'point_store',
+      'level': 'level',
+      'formula': 'formula',
     };
     const mapped = archetypeMap[normalized.tier_archetype] as PromoFormData['tier_archetype'];
     if (mapped) {
