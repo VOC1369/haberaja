@@ -6476,8 +6476,14 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   }
 
   // conversion_formula: re-inject after sanitizeByMode potentially wipes it
-  if (!finalData.conversion_formula && extracted.conversion_formula) {
-    finalData.conversion_formula = extracted.conversion_formula;
+  // Priority: (1) already in finalData, (2) LLM extracted value, (3) fallback for isDepositBonusTier
+  if (!finalData.conversion_formula) {
+    if (extracted.conversion_formula) {
+      finalData.conversion_formula = extracted.conversion_formula;
+    } else if (isDepositBonusTier) {
+      // LLM sometimes returns "" for deposit tier — safe deterministic fallback
+      finalData.conversion_formula = 'deposit * reward_percentage';
+    }
   }
 
   console.log('[mapExtractedToPromoFormData] Post-sanitize re-inject:', {
