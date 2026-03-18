@@ -4537,22 +4537,52 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     terms: string[] | undefined,
     tierIndex: number
   ): number => {
-    // Pattern 1: Check sub's name for downline pattern "Tier 5 ID"
+    // Pattern 1: Check sub's name for downline pattern "Tier 5 ID" or "minimal 5 ID"
     const nameMatch = sub.sub_name?.match(/(\d+)\s*(id|member|downline)/i);
     if (nameMatch) return parseInt(nameMatch[1]);
-    
-    // Pattern 2: Check global terms for tier-specific pattern "Tier X%: minimal Y ID"
-    const tierTerms = terms?.find(t => 
-      t.includes(`${sub.calculation_value}%`) && 
-      /(\d+)\s*(id|member|downline)/i.test(t)
-    );
-    if (tierTerms) {
-      const match = tierTerms.match(/(\d+)\s*(id|member|downline)/i);
-      if (match) return parseInt(match[1]);
+
+    // Pattern 1b: Check sub's minimum_base field (LLM may put threshold here)
+    if (sub.minimum_base && typeof sub.minimum_base === 'number' && sub.minimum_base > 0) {
+      return sub.minimum_base;
+    }
+
+    // Pattern 2a: Check global terms for tier-specific pattern "Tier X%: minimal Y ID"
+    // This version does NOT require commission match — scans ALL terms for downline thresholds
+    if (terms && terms.length > 0) {
+      // Try to find a term that mentions this tier's commission AND a downline count
+      const commissionVal = sub.calculation_value;
+      if (commissionVal) {
+        const tierTermByCommission = terms.find(t => 
+          t.includes(`${commissionVal}%`) && 
+          /(\d+)\s*(id|member|downline)/i.test(t)
+        );
+        if (tierTermByCommission) {
+          const match = tierTermByCommission.match(/(\d+)\s*(id|member|downline)/i);
+          if (match) return parseInt(match[1]);
+        }
+      }
+
+      // Pattern 2b: Collect ALL downline thresholds from terms, sorted ascending
+      // e.g. "minimal 1 ID", "minimal 5 ID", "minimal 10 ID" → [1, 5, 10]
+      const allThresholds: number[] = [];
+      for (const term of terms) {
+        const matches = term.matchAll(/(?:minimal|minimum|min\.?)\s*(\d+)\s*(id|member|downline)/gi);
+        for (const m of matches) {
+          const val = parseInt(m[1]);
+          if (!allThresholds.includes(val)) allThresholds.push(val);
+        }
+      }
+      if (allThresholds.length > 0) {
+        allThresholds.sort((a, b) => a - b);
+        if (allThresholds[tierIndex] !== undefined) {
+          return allThresholds[tierIndex];
+        }
+      }
     }
     
-    // Pattern 3: Auto-increment fallback (5, 10, 15...)
-    return (tierIndex + 1) * 5;
+    // Pattern 3: Industry-standard fallback — Tier 1 = 1 downline, then 5, 10, 15...
+    // Changed from (tierIndex+1)*5 to avoid Tier 1 = 5 (usually wrong)
+    return tierIndex === 0 ? 1 : tierIndex * 5;
   };
 
   // ============================================
