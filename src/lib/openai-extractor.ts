@@ -2695,6 +2695,12 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
       mechanicResult?.mechanic_type === 'komisi_turnover';
 
     if (isRollinganMechanic) {
+      // Fix 2B: Rollingan tidak punya TO requirement — turnover_basis tidak relevan
+      if (parsed.turnover_basis) {
+        console.warn('[Assertion][ROLLINGAN] turnover_basis set tapi turnover_enabled=false — clearing');
+        parsed.turnover_basis = null;
+      }
+
       parsed.subcategories = parsed.subcategories?.map((sub: any) => {
         // Warn: turnover_rule suspiciously high — likely LLM misplaced min_calculation here
         if (sub.turnover_rule && sub.turnover_rule > 10) {
@@ -2708,9 +2714,14 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
             `[Assertion][ROLLINGAN] sub "${sub.sub_name}": calculation_base="${sub.calculation_base}" — unusual for rollingan mechanic. Flagging for review, not overriding.`
           );
         }
+        // Fix 2B: Also clear turnover_basis at subcategory level
+        if (sub.turnover_basis) {
+          console.warn(`[Assertion][ROLLINGAN] sub "${sub.sub_name}": turnover_basis set tapi turnover_enabled=false — clearing`);
+        }
         // Always set turnover_rule_format default — this is a safe structural default, not an override
         return {
           ...sub,
+          turnover_basis: null,
           turnover_rule_format: sub.turnover_rule_format ?? 'min_rupiah',
         };
       }) || [];
