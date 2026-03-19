@@ -21,9 +21,13 @@
 
 export { LUCKY_SPIN_CONTRACT } from './lucky-spin';
 export { MERCHANDISE_CONTRACT } from './merchandise';
+export { ROLLINGAN_CONTRACT } from './rollingan';
+export { REFERRAL_CONTRACT } from './referral';
 
 import { LUCKY_SPIN_CONTRACT } from './lucky-spin';
 import { MERCHANDISE_CONTRACT } from './merchandise';
+import { ROLLINGAN_CONTRACT } from './rollingan';
+import { REFERRAL_CONTRACT } from './referral';
 
 // ============================================
 // CONTRACT MATCH TYPE
