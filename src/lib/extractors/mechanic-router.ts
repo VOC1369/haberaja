@@ -257,6 +257,20 @@ function determineMechanicType(intent: PromoIntent): MechanicType {
     return 'rollingan_turnover';
   }
   
+  // === Lucky Spin — deposit → ticket exchange ===
+  // Detection: keyword "lucky spin" + "tiket" + "deposit" threshold
+  // Mode: formula (floor(deposit / threshold)), NOT 'fixed'
+  if (primary_action === 'spin' || primary_action === 'lucky_spin') {
+    return 'lucky_spin';
+  }
+  
+  // === Merchandise — physical reward, klaim via form/CS ===
+  // Detection: keyword "merchandise" / "kaos" / "t-shirt" / "hadiah fisik" / "dikirim"
+  // Mode: fixed (reward flat item, bukan kalkulasi)
+  if (primary_action === 'merchandise' || primary_action === 'physical_reward') {
+    return 'merchandise_reward';
+  }
+  
   // === Deposit-based ===
   if (primary_action === 'deposit') {
     if (reward_nature === 'given') {
