@@ -848,11 +848,11 @@ export const KEYWORD_RULES: KeywordRule[] = [
  * Returns the first matching rule (rules are ordered by priority)
  */
 export function matchKeywordRule(
-  promoName: string, 
-  promoType?: string
+  promoName: string | undefined | null, 
+  promoType?: string | undefined | null
 ): KeywordRule | null {
-  const nameLower = promoName.toLowerCase();
-  const typeLower = (promoType || '').toLowerCase();
+  const nameLower = (promoName ?? '').toLowerCase();
+  const typeLower = (promoType ?? '').toLowerCase();
   
   // Check promo_name first (higher priority)
   for (const rule of KEYWORD_RULES) {
