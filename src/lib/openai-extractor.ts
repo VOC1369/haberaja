@@ -31,12 +31,12 @@ import { getDefaultsFromKeywords } from './extractors/keyword-rules';
 import { sanitizeByMode, NON_FORMULA_MODES } from './sanitize-by-mode';
 import { normalizeExtractedPromo, type ExtractionSource } from './extractors/post-extraction-normalizer';
 
-// DYNAMIC CONTRACT INJECTION (v1.0)
-// Mechanic-specific prompt contracts injected based on pre-classifier detection
+// DYNAMIC CONTRACT INJECTION (v2.0 — Taxonomy-Driven)
+// Mechanic-specific prompt contracts injected based on taxonomy/mechanic-router output.
+// No raw text scanning — mechanicType comes from upstream Primitive Gate + Router.
 import { 
   detectMechanicContracts, 
   buildContractInjection,
-  type DetectedMechanic 
 } from './extractors/contracts';
 
 // NEW: Reasoning-First Architecture imports (v2.0)
@@ -2494,16 +2494,19 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
   const enhancedPromptWithLocks = `${extractionPromptWithCount}${lockedFieldsContext}`;
 
   // ============================================
-  // STEP 0.9: DYNAMIC CONTRACT INJECTION
-  // Pre-classifier detects mechanic type → inject only relevant contract
-  // Max 2 contracts injected. Zero injection = no prompt bloat.
+  // STEP 0.9: DYNAMIC CONTRACT INJECTION (v2.0 — Taxonomy-Driven)
+  // mechanic_type comes from Mechanic Router (Primitive Gate output).
+  // No raw text scan — taxonomy decided this upstream.
   // ============================================
-  const detectedContracts = detectMechanicContracts(normalizedContent);
+  // mechanicResult is resolved by Primitive Gate → Mechanic Router at Step-0.75 above.
+  // taxonomyDecision is post-extraction; not available here — pass archetype as undefined.
+  const mechanicTypeForContract = mechanicResult?.mechanic_type ?? 'unknown';
+  const detectedContracts = detectMechanicContracts(mechanicTypeForContract);
   const contractInjection = buildContractInjection(detectedContracts);
-  
+
   if (detectedContracts.length > 0) {
-    console.log('[Extractor] Contract injection:', detectedContracts.map(d => 
-      `${d.mechanic}(${d.confidence}/${d.matched_by})`
+    console.log('[Extractor] Contract injection:', detectedContracts.map(d =>
+      `${d.mechanic}(${d.confidence}/${d.source})`
     ).join(', '));
   } else {
     console.log('[Extractor] No mechanic contract injected — generic extraction');

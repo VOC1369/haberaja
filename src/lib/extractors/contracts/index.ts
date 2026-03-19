@@ -1,136 +1,127 @@
 /**
- * Mechanic Contract Registry
- * 
- * Each contract is a self-contained instruction block injected into the
- * LLM prompt ONLY when the pre-classifier detects the relevant mechanic.
- * 
- * Architecture:
- *   Pre-Classifier → detects suspected_mechanics[]
- *   Contract Injector → loads only relevant contracts
- *   LLM → receives base_prompt + injected_contracts (no bloat)
+ * Mechanic Contract Registry — v2.0 (Taxonomy-Driven)
+ *
+ * ARCHITECTURE CHANGE (v2.0):
+ * ❌ OLD: detectMechanicContracts(rawContent: string) — scanned raw text directly
+ * ✅ NEW: detectMechanicContracts(mechanicType: string, archetypeHint?: string)
+ *         — receives mechanic type from taxonomy/mechanic-router output
+ *
+ * WHY:
+ * Contract injection MUST follow taxonomy output, not raw text keywords.
+ * Keywords may be evidence; they are NOT decision-makers.
+ * The mechanicType is already resolved by the Primitive Gate + Mechanic Router
+ * before this function is called.
+ *
+ * FLOW:
+ *   Primitive Gate → Mechanic Router → mechanicType
+ *   → detectMechanicContracts(mechanicType)
+ *   → inject only the relevant contract
+ *   → LLM receives base_prompt + injected_contracts
  */
 
-export { LUCKY_SPIN_CONTRACT, LUCKY_SPIN_TITLE_PATTERNS, LUCKY_SPIN_BODY_PATTERNS } from './lucky-spin';
-export { MERCHANDISE_CONTRACT, MERCHANDISE_TITLE_PATTERNS, MERCHANDISE_BODY_PATTERNS } from './merchandise';
-
-// ============================================
-// PRE-CLASSIFIER
-// Hybrid: title pattern (high confidence) + body keyword count (medium confidence)
-// Returns: list of mechanic slugs to inject
-// ============================================
-
-import {
-  LUCKY_SPIN_TITLE_PATTERNS,
-  LUCKY_SPIN_BODY_PATTERNS,
-} from './lucky-spin';
-import {
-  MERCHANDISE_TITLE_PATTERNS,
-  MERCHANDISE_BODY_PATTERNS,
-} from './merchandise';
-
-export type DetectedMechanic = 'lucky_spin' | 'merchandise';
-
-interface ContractMatch {
-  mechanic: DetectedMechanic;
-  confidence: 'high' | 'medium' | 'low';
-  matched_by: 'title' | 'body' | 'both';
-}
-
-/**
- * Pre-classify the promo content to detect which mechanic contracts to inject.
- * Uses title patterns (high confidence) + body keyword counting (medium confidence).
- * 
- * @param content - Full promo text content
- * @param titleHint - Optional: first ~200 chars or explicit title text
- * @returns Array of matched mechanics, sorted by confidence desc
- */
-export function detectMechanicContracts(
-  content: string,
-  titleHint?: string
-): ContractMatch[] {
-  const matches: ContractMatch[] = [];
-  
-  // Use first 300 chars as title region if no explicit title hint
-  const titleRegion = (titleHint || content.substring(0, 300)).toLowerCase();
-  const fullText = content.toLowerCase();
-
-  // ============================================
-  // LUCKY SPIN detection
-  // ============================================
-  const luckySpinTitleMatch = LUCKY_SPIN_TITLE_PATTERNS.some(p => p.test(titleRegion));
-  const luckySpinBodyMatches = LUCKY_SPIN_BODY_PATTERNS.filter(p => p.test(fullText)).length;
-
-  if (luckySpinTitleMatch) {
-    matches.push({
-      mechanic: 'lucky_spin',
-      confidence: 'high',
-      matched_by: luckySpinBodyMatches >= 1 ? 'both' : 'title',
-    });
-  } else if (luckySpinBodyMatches >= 2) {
-    matches.push({
-      mechanic: 'lucky_spin',
-      confidence: 'medium',
-      matched_by: 'body',
-    });
-  }
-
-  // ============================================
-  // MERCHANDISE detection
-  // ============================================
-  const merchandiseTitleMatch = MERCHANDISE_TITLE_PATTERNS.some(p => p.test(titleRegion));
-  const merchandiseBodyMatches = MERCHANDISE_BODY_PATTERNS.filter(p => p.test(fullText)).length;
-
-  if (merchandiseTitleMatch) {
-    matches.push({
-      mechanic: 'merchandise',
-      confidence: 'high',
-      matched_by: merchandiseBodyMatches >= 1 ? 'both' : 'title',
-    });
-  } else if (merchandiseBodyMatches >= 2) {
-    matches.push({
-      mechanic: 'merchandise',
-      confidence: 'medium',
-      matched_by: 'body',
-    });
-  }
-
-  // Sort: high > medium > low
-  return matches.sort((a, b) => {
-    const order = { high: 0, medium: 1, low: 2 };
-    return order[a.confidence] - order[b.confidence];
-  });
-}
-
-// ============================================
-// CONTRACT INJECTOR
-// Builds the mechanic-specific section to append to base prompt
-// ============================================
+export { LUCKY_SPIN_CONTRACT } from './lucky-spin';
+export { MERCHANDISE_CONTRACT } from './merchandise';
 
 import { LUCKY_SPIN_CONTRACT } from './lucky-spin';
 import { MERCHANDISE_CONTRACT } from './merchandise';
 
-const CONTRACT_MAP: Record<DetectedMechanic, string> = {
+// ============================================
+// CONTRACT MATCH TYPE
+// ============================================
+
+export interface ContractMatch {
+  mechanic: string;
+  confidence: 'high';           // Always high — source is taxonomy, not heuristic
+  source: 'mechanic_type';      // Always mechanic_type — never raw text scan
+  contract: string;
+}
+
+// ============================================
+// CONTRACT REGISTRY
+// Add new mechanic contracts here as system grows.
+// Key = MechanicType value from mechanic-router.ts
+// ============================================
+
+const CONTRACT_REGISTRY: Record<string, string> = {
   lucky_spin: LUCKY_SPIN_CONTRACT,
-  merchandise: MERCHANDISE_CONTRACT,
+  merchandise_reward: MERCHANDISE_CONTRACT,
 };
 
+// ============================================
+// CONTRACT DETECTOR — Taxonomy-Driven
+//
+// Receives mechanicType already resolved by:
+//   Primitive Gate → Mechanic Router → MechanicType
+//
+// Does NOT scan raw text. Does NOT use regex on content.
+// Keyword evidence was already consumed upstream.
+// ============================================
+
 /**
- * Build the contract injection block to append to the base prompt.
- * Only includes contracts for detected mechanics (max 2 to avoid bloat).
- * 
+ * Detect which mechanic contract to inject based on taxonomy output.
+ *
+ * @param mechanicType - MechanicType from mechanic-router.ts (e.g. 'lucky_spin')
+ * @param archetypeHint - Optional PromoArchetype for secondary contract lookup
+ * @returns Array of ContractMatch (max 1-2), empty if no contract registered
+ */
+export function detectMechanicContracts(
+  mechanicType: string,
+  archetypeHint?: string
+): ContractMatch[] {
+  const matches: ContractMatch[] = [];
+
+  // Primary lookup: mechanicType → contract
+  const primaryContract = CONTRACT_REGISTRY[mechanicType];
+  if (primaryContract) {
+    matches.push({
+      mechanic: mechanicType,
+      confidence: 'high',
+      source: 'mechanic_type',
+      contract: primaryContract,
+    });
+  }
+
+  // Secondary lookup: archetypeHint as fallback
+  // Only inject if not already covered by primary and archetype has a mapped contract.
+  // Example: LUCKY_DRAW archetype → lucky_spin contract (if mechanicType is 'unknown')
+  if (archetypeHint && matches.length === 0) {
+    const archetypeToMechanic: Record<string, string> = {
+      LUCKY_DRAW: 'lucky_spin',
+    };
+    const mappedMechanic = archetypeToMechanic[archetypeHint];
+    if (mappedMechanic) {
+      const fallbackContract = CONTRACT_REGISTRY[mappedMechanic];
+      if (fallbackContract) {
+        matches.push({
+          mechanic: mappedMechanic,
+          confidence: 'high',
+          source: 'mechanic_type',
+          contract: fallbackContract,
+        });
+      }
+    }
+  }
+
+  return matches;
+}
+
+// ============================================
+// CONTRACT INJECTOR
+// Builds the mechanic-specific block to append to base prompt.
+// ============================================
+
+/**
+ * Build the contract injection block to append to the extraction prompt.
+ *
  * @param detected - Array from detectMechanicContracts()
  * @returns String to append to extraction prompt, or empty string if no match
  */
 export function buildContractInjection(detected: ContractMatch[]): string {
   if (detected.length === 0) return '';
 
-  // Inject max 2 contracts (primary + fallback if ambiguous)
-  const toInject = detected.slice(0, 2);
-
-  const blocks = toInject.map(match => {
-    const contract = CONTRACT_MAP[match.mechanic];
-    return `\n\n[KONTRAK INJECTED: ${match.mechanic.toUpperCase()} — confidence: ${match.confidence}, source: ${match.matched_by}]\n${contract}`;
-  });
+  const blocks = detected.map(match =>
+    `\n\n[KONTRAK INJECTED: ${match.mechanic.toUpperCase()} — confidence: ${match.confidence}, source: ${match.source}]\n${match.contract}`
+  );
 
   return blocks.join('\n');
 }
