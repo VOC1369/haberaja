@@ -490,6 +490,31 @@ export function routeMechanic(intent: PromoIntent): MechanicRouterResult {
     console.log('[routeMechanic] WITHDRAW_BONUS_FIXED: Complete field locking applied');
   }
   
+  // Lucky Spin: formula mode, deposit trigger, reward_type=lucky_spin_ticket
+  // conversion_formula = floor(deposit / threshold)
+  // Turnover TIDAK terkait dengan tiket itu sendiri — hanya untuk withdraw
+  if (mechanic_type === 'lucky_spin') {
+    locked_fields.trigger_event = 'Deposit';
+    locked_fields.require_apk = false;
+    locked_fields.reward_is_percentage = false; // Reward adalah tiket, bukan %
+    // Note: max_claim, claim_frequency, min_deposit, turnover_multiplier dari extraction
+    
+    console.log('[routeMechanic] LUCKY_SPIN: formula mode, deposit→ticket, field locking applied');
+  }
+  
+  // Merchandise Reward: fixed mode, deposit+TO trigger, physical item
+  // proof_required=true (hampir selalu), claim via form/CS
+  if (mechanic_type === 'merchandise_reward') {
+    locked_fields.trigger_event = 'Deposit';
+    locked_fields.require_apk = false;
+    locked_fields.reward_is_percentage = false;
+    locked_fields.reward_amount = null; // Physical item, bukan nominal Rupiah
+    locked_fields.max_bonus = null;     // Physical item tidak punya max_bonus Rupiah
+    // Note: min_deposit, turnover_multiplier, claim_method, distribution_schedule dari extraction
+    
+    console.log('[routeMechanic] MERCHANDISE_REWARD: fixed mode, physical item, field locking applied');
+  }
+  
   // Add forbidden values based on mode
   if (mode !== 'formula') {
     locked_fields.forbidden_fields = {
