@@ -2494,16 +2494,18 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
   const enhancedPromptWithLocks = `${extractionPromptWithCount}${lockedFieldsContext}`;
 
   // ============================================
-  // STEP 0.9: DYNAMIC CONTRACT INJECTION
-  // Pre-classifier detects mechanic type → inject only relevant contract
-  // Max 2 contracts injected. Zero injection = no prompt bloat.
+  // STEP 0.9: DYNAMIC CONTRACT INJECTION (v2.0 — Taxonomy-Driven)
+  // mechanic_type comes from Mechanic Router (Primitive Gate output).
+  // No raw text scan — taxonomy decided this upstream.
   // ============================================
-  const detectedContracts = detectMechanicContracts(normalizedContent);
+  const mechanicTypeForContract = mechanicResult?.mechanic_type ?? 'unknown';
+  const archetypeForContract = taxonomyDecision?.archetype ?? undefined;
+  const detectedContracts = detectMechanicContracts(mechanicTypeForContract, archetypeForContract);
   const contractInjection = buildContractInjection(detectedContracts);
-  
+
   if (detectedContracts.length > 0) {
-    console.log('[Extractor] Contract injection:', detectedContracts.map(d => 
-      `${d.mechanic}(${d.confidence}/${d.matched_by})`
+    console.log('[Extractor] Contract injection:', detectedContracts.map(d =>
+      `${d.mechanic}(${d.confidence}/${d.source})`
     ).join(', '));
   } else {
     console.log('[Extractor] No mechanic contract injected — generic extraction');
