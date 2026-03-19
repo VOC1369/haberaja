@@ -167,6 +167,8 @@ Pilih SATU yang paling akurat:
 - range: Rentang nilai (5K - 20K, pilih antara)
 - tier_table: Tabel bertingkat (Level 1: X, Level 2: Y)
 - catalog: Katalog item untuk dipilih
+- ticket: Entitlement/tiket (deposit → dapat N tiket, lucky spin exchange)
+- physical: Barang fisik (merchandise, kaos, hadiah fisik dikirim)
 
 ## OUTPUT FORMAT (JSON):
 {
