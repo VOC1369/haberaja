@@ -2612,6 +2612,24 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
   const enhancedPromptWithLocks = `${extractionPromptWithCount}${lockedFieldsContext}`;
 
   // ============================================
+  // STEP 0.9: DYNAMIC CONTRACT INJECTION
+  // Pre-classifier detects mechanic type → inject only relevant contract
+  // Max 2 contracts injected. Zero injection = no prompt bloat.
+  // ============================================
+  const detectedContracts = detectMechanicContracts(normalizedContent);
+  const contractInjection = buildContractInjection(detectedContracts);
+  
+  if (detectedContracts.length > 0) {
+    console.log('[Extractor] Contract injection:', detectedContracts.map(d => 
+      `${d.mechanic}(${d.confidence}/${d.matched_by})`
+    ).join(', '));
+  } else {
+    console.log('[Extractor] No mechanic contract injected — generic extraction');
+  }
+
+  const finalPrompt = `${enhancedPromptWithLocks}${contractInjection}`;
+
+  // ============================================
   // STEP 1: AI Extraction - NOW RECEIVES CLEAN HTML + LOCKED FIELDS CONTEXT
   // AI will see tables with ALL cells filled (no "-" for rowspan)
   // ============================================
