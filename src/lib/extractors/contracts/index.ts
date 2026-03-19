@@ -47,8 +47,16 @@ export interface ContractMatch {
 // ============================================
 
 const CONTRACT_REGISTRY: Record<string, string> = {
+  // Lucky Spin — deposit → tiket exchange
   lucky_spin: LUCKY_SPIN_CONTRACT,
+  // Merchandise — reward fisik, klaim via form/CS
   merchandise_reward: MERCHANDISE_CONTRACT,
+  // Rollingan — komisi dari total turnover
+  rollingan_turnover: ROLLINGAN_CONTRACT,
+  komisi_turnover: ROLLINGAN_CONTRACT,
+  // Referral — komisi multi-tier dari net winlose downline
+  referral_commission: REFERRAL_CONTRACT,
+  referral_bonus: REFERRAL_CONTRACT,
 };
 
 // ============================================
