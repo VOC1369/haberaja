@@ -2498,9 +2498,10 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
   // mechanic_type comes from Mechanic Router (Primitive Gate output).
   // No raw text scan — taxonomy decided this upstream.
   // ============================================
+  // mechanicResult is resolved by Primitive Gate → Mechanic Router at Step-0.75 above.
+  // taxonomyDecision is post-extraction; not available here — pass archetype as undefined.
   const mechanicTypeForContract = mechanicResult?.mechanic_type ?? 'unknown';
-  const archetypeForContract = taxonomyDecision?.archetype ?? undefined;
-  const detectedContracts = detectMechanicContracts(mechanicTypeForContract, archetypeForContract);
+  const detectedContracts = detectMechanicContracts(mechanicTypeForContract);
   const contractInjection = buildContractInjection(detectedContracts);
 
   if (detectedContracts.length > 0) {
