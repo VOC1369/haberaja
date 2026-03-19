@@ -48,6 +48,8 @@ const REWARD_KEYWORDS: RegExp = new RegExp(
     'diskon', 'rebate', 'reward', 'prize', 'jackpot', 'kredit',
     'voucher', 'free ?bet', 'free ?spin', 'free ?play',
     'loyalty', 'loyalti', 'referral', 'referensi',
+    // Lucky Spin / ticket-based rewards
+    'tiket', 'ticket', 'lucky.?spin', 'lucky.?draw', 'spin',
   ].join('|'),
   'i'
 );
@@ -59,6 +61,8 @@ const MECHANIC_KEYWORDS: RegExp = new RegExp(
     'minimum', 'withdraw', 'wd\\b', 'taruhan', 'bet', 'main',
     'transaksi', 'transaction', 'periode', 'berlaku',
     'member', 'player', 'akun', 'account',
+    // Ticket mechanic signals
+    'reset', 'per hari', 'setiap hari', 'harian',
   ].join('|'),
   'i'
 );
