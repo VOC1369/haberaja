@@ -1,57 +1,84 @@
 /**
- * Mechanic Contract: REFERRAL TIER
+ * Mechanic Contract: REFERRAL TIER — 3-Layer Structure
  *
  * Pattern: Player recruits downlines → earns commission % of downline net win/loss.
  * Multiple tiers based on active downline count.
+ * 
+ * Architecture: HARD INVARIANT / SOFT EXPECTATION / ESCAPE HATCH
  */
 
 export const REFERRAL_CONTRACT = `
 === KONTRAK MECHANIC: REFERRAL TIER ===
 
-ATURAN KERAS (WAJIB IKUT — TIDAK BOLEH DILANGGAR):
+[HARD INVARIANT — tidak bisa berbeda, violation → extraction_confidence: low + flag]:
 
-1. SETIAP TIER harus jadi SUBCATEGORY TERPISAH
+1. SETIAP TIER WAJIB di-extract sebagai subcategory TERPISAH
    ❌ DILARANG collapse multiple tier ke 1 subcategory
-   ✅ Jika ada 3 tier komisil → 3 subcategory
+   ✅ Jika ada 3 tier komisi → 3 subcategory
+   ✅ Jika hanya 1 tier → 1 subcategory
+   Kalau LLM collapse → set extraction_confidence: low, catat di special_conditions
 
-2. Bedakan DUA angka berbeda dalam setiap tier:
-   a) min_downline = jumlah downline MINIMUM untuk masuk tier ini (threshold)
-      Ini adalah syarat masuk, bukan reward!
+2. minimum_base: null untuk SEMUA tier referral
+   Threshold masuk tier adalah jumlah downline (min_downline), BUKAN deposit minimum.
+   ❌ JANGAN isi minimum_base dari syarat referral
+
+3. payout_direction: "belakang" — komisi dihitung setelah periode selesai
+   Komisi tidak dibayar di muka. Selalu belakang.
+
+4. Bedakan DUA angka berbeda dalam setiap tier:
+   a) min_downline = jumlah downline MINIMUM untuk masuk tier (threshold masuk)
+      → Ini syarat masuk, BUKAN reward!
    b) calculation_value = persentase komisi yang didapat (reward %)
-      Ini adalah reward, bukan threshold!
-
+      → Ini reward, BUKAN threshold!
    ❌ DILARANG menukar kedua angka ini
-   ❌ JANGAN jadikan min_downline sebagai calculation_value
-   ❌ JANGAN jadikan calculation_value sebagai min_downline
 
-3. Cara mapping tier ke subcategory:
-   Format tabel: "5 ID aktif → komisi 5%"
-   → sub_name: "Komisi 5%"
-   → min_downline: 1       (tier pertama dimulai dari 1 ID)
-   → max_downline: 4       (sampai sebelum tier berikutnya = 5-1)
-   → calculation_value: 5  (persentase komisi)
+[SOFT EXPECTATION — pola umum, bisa berbeda per klien]:
 
-   Format tabel: "10 ID aktif → komisi 10%"
-   → sub_name: "Komisi 10%"
-   → min_downline: 5       (dari setelah tier sebelumnya)
-   → max_downline: 9
-   → calculation_value: 10
+- Threshold tier biasanya berdasarkan jumlah downline aktif
+  → tapi bisa berbasis total deposit downline, hari aktif, atau metrik lain
+  → Baca dari promo, jangan asumsi "pasti downline count"
 
-   Format tabel: "15 ID aktif → komisi 15%"
-   → sub_name: "Komisi 15%"
-   → min_downline: 10
-   → max_downline: null    (tier terakhir = tidak ada batas atas)
-   → calculation_value: 15
+- calculation_basis biasanya "net_loss" (komisi dari net winlose downline)
+  → tapi bisa "turnover" atau basis lain jika disebutkan
 
-4. calculation_basis: "net_loss" (komisi dari net winlose downline)
-   conversion_formula: "net_winlose_downline * komisi%"
+- commission_percentage biasanya kecil (5–15%)
+  → extract dari teks, jangan hardcode
 
-5. turnover_enabled: false, minimum_base: null
-   Referral tidak punya threshold deposit. Threshold = jumlah downline aktif.
+- claim_frequency biasanya "bulanan" kecuali disebutkan lain
+  → Bisa harian, mingguan — ikuti promo
 
-6. claim_frequency: "bulanan" kecuali disebutkan lain
+- Cara mapping tier ke subcategory (pola umum "X ID aktif → komisi Y%"):
+  "5 ID aktif → komisi 5%"
+  → sub_name: "Komisi 5%"
+  → min_downline: 1       (tier pertama dimulai dari 1 ID)
+  → max_downline: 4       (sampai sebelum tier berikutnya = 5-1)
+  → calculation_value: 5  (persentase komisi)
 
-7. payout_direction: "belakang" (komisi dihitung setelah periode selesai)
+  "10 ID aktif → komisi 10%"
+  → sub_name: "Komisi 10%"
+  → min_downline: 5
+  → max_downline: 9
+  → calculation_value: 10
+
+  "15 ID aktif → komisi 15%"
+  → sub_name: "Komisi 15%"
+  → min_downline: 10
+  → max_downline: null    (tier terakhir = tidak ada batas atas)
+  → calculation_value: 15
+
+[ESCAPE HATCH — untuk outlier]:
+
+- Tier berdasarkan metrik non-standar (win rate, lifetime value, tier VIP)
+  → taruh di special_conditions: "tier_dimension: <metrik>"
+
+- Hybrid referral + cashback (dapat komisi AND cashback personal)
+  → taruh di extra_config sebagai string deskriptif
+
+- Komisi per game category berbeda (slot: 5%, casino: 3%)
+  → taruh di special_conditions per subcategory
+
+- Constraint tidak masuk field standar → special_conditions
+- Kalau mechanic tidak bisa dipetakan bersih → extraction_confidence: low, flag untuk human review
 
 CONTOH OUTPUT YANG BENAR (3 tier):
 [

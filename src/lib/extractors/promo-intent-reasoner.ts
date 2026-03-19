@@ -82,7 +82,9 @@ export type ValueShape =
   | 'percent'       // Percentage (10%)
   | 'range'         // Range of values (5K - 20K)
   | 'tier_table'    // Tiered table (Level 1: X, Level 2: Y)
-  | 'catalog';      // Catalog of items to choose
+  | 'catalog'       // Catalog of items to choose
+  | 'ticket'        // Entitlement/tiket (deposit→ticket exchange, lucky spin)
+  | 'physical';     // Barang fisik (merchandise, hadiah fisik)
 
 // ============================================
 // PROMO INTENT INTERFACE
