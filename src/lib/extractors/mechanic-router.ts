@@ -69,7 +69,8 @@ export type MechanicType =
   | 'referral_bonus'           // Bonus per referral
   
   // === Event/Game ===
-  | 'lucky_spin'               // Lucky spin/gacha
+  | 'lucky_spin'               // Lucky spin — deposit→ticket exchange (formula)
+  | 'merchandise_reward'       // Hadiah fisik — deposit+TO, klaim via form/CS
   | 'tournament'               // Tournament/leaderboard
   | 'provider_event'           // Pragmatic, PG Soft events
   | 'scatter_bonus'            // Scatter achievement
@@ -201,7 +202,7 @@ export function checkInvariants(intent: PromoIntent): {
  * This is a deterministic mapping, NOT LLM-based.
  */
 function determineMechanicType(intent: PromoIntent): MechanicType {
-  const { primary_action, reward_nature, value_shape, distribution_path } = intent;
+  const { primary_action, reward_nature, value_shape, distribution_path, value_determiner } = intent;
   
   // === APK Download ===
   if (primary_action === 'download_apk') {
@@ -254,6 +255,30 @@ function determineMechanicType(intent: PromoIntent): MechanicType {
   // === Turnover-based ===
   if (primary_action === 'turnover') {
     return 'rollingan_turnover';
+  }
+  
+  // === Lucky Spin — deposit → ticket exchange ===
+  // Primary action tetap 'deposit' (trigger-nya deposit).
+  // Lucky Spin menggunakan value_shape='fixed' (1 tiket per threshold, bukan % bonus)
+  // dengan value_determiner='system_calculate' (floor formula).
+  // Taxonomy (LUCKY_DRAW) adalah authority final — router hanya hint awal.
+  if (primary_action === 'deposit' && value_shape === 'fixed' && value_determiner === 'system_calculate') {
+    // Hanya route ke lucky_spin jika ada konteks spin (via intent evidence)
+    const evidenceText = intent.intent_evidence.join(' ').toLowerCase();
+    if (/lucky.?spin|tiket.?spin|spin.?gratis|tiket.?deposit|deposit.*tiket/i.test(evidenceText)) {
+      return 'lucky_spin';
+    }
+  }
+  
+  // === Merchandise — physical reward, klaim via form/CS ===
+  // Primary action 'deposit' (trigger: minimal deposit + TO).
+  // Route ke merchandise_reward jika distribution_path = 'manual_cs'
+  // DAN value_determiner = 'fixed' (reward flat fisik, bukan kalkulasi).
+  if (primary_action === 'deposit' && distribution_path === 'manual_cs' && value_determiner === 'fixed') {
+    const evidenceText = intent.intent_evidence.join(' ').toLowerCase();
+    if (/merchandise|kaos|t-shirt|hadiah.?fisik|dikirim|paket.?hadiah/i.test(evidenceText)) {
+      return 'merchandise_reward';
+    }
   }
   
   // === Deposit-based ===
@@ -465,6 +490,31 @@ export function routeMechanic(intent: PromoIntent): MechanicRouterResult {
     console.log('[routeMechanic] WITHDRAW_BONUS_FIXED: Complete field locking applied');
   }
   
+  // Lucky Spin: formula mode, deposit trigger, reward_type=lucky_spin_ticket
+  // conversion_formula = floor(deposit / threshold)
+  // Turnover TIDAK terkait dengan tiket itu sendiri — hanya untuk withdraw
+  if (mechanic_type === 'lucky_spin') {
+    locked_fields.trigger_event = 'Deposit';
+    locked_fields.require_apk = false;
+    locked_fields.reward_is_percentage = false; // Reward adalah tiket, bukan %
+    // Note: max_claim, claim_frequency, min_deposit, turnover_multiplier dari extraction
+    
+    console.log('[routeMechanic] LUCKY_SPIN: formula mode, deposit→ticket, field locking applied');
+  }
+  
+  // Merchandise Reward: fixed mode, deposit+TO trigger, physical item
+  // proof_required=true (hampir selalu), claim via form/CS
+  if (mechanic_type === 'merchandise_reward') {
+    locked_fields.trigger_event = 'Deposit';
+    locked_fields.require_apk = false;
+    locked_fields.reward_is_percentage = false;
+    locked_fields.reward_amount = null; // Physical item, bukan nominal Rupiah
+    locked_fields.max_bonus = null;     // Physical item tidak punya max_bonus Rupiah
+    // Note: min_deposit, turnover_multiplier, claim_method, distribution_schedule dari extraction
+    
+    console.log('[routeMechanic] MERCHANDISE_REWARD: fixed mode, physical item, field locking applied');
+  }
+  
   // Add forbidden values based on mode
   if (mode !== 'formula') {
     locked_fields.forbidden_fields = {
@@ -508,7 +558,8 @@ export function getMechanicDisplayName(mechanic: MechanicType): string {
     point_redeem: 'Tukar Poin',
     referral_commission: 'Komisi Referral',
     referral_bonus: 'Bonus Referral',
-    lucky_spin: 'Lucky Spin',
+    lucky_spin: 'Lucky Spin (Tiket Exchange)',
+    merchandise_reward: 'Hadiah Merchandise',
     tournament: 'Tournament',
     provider_event: 'Event Provider',
     scatter_bonus: 'Bonus Scatter',
