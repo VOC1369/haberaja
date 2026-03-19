@@ -202,7 +202,7 @@ export function checkInvariants(intent: PromoIntent): {
  * This is a deterministic mapping, NOT LLM-based.
  */
 function determineMechanicType(intent: PromoIntent): MechanicType {
-  const { primary_action, reward_nature, value_shape, distribution_path } = intent;
+  const { primary_action, reward_nature, value_shape, distribution_path, value_determiner } = intent;
   
   // === APK Download ===
   if (primary_action === 'download_apk') {
