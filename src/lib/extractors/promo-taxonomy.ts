@@ -813,18 +813,13 @@ export const ARCHETYPE_RULES: Record<PromoArchetype, ArchetypeSemanticRule> = {
         default_if_missing: 'Deposit',
         confidence_if_missing: 'medium',
       },
-      conversion_formula: {
-        derive_from: 'evidence',
-        // Generator: "floor(deposit / threshold)" — threshold dari extraction
-        default_if_missing: 'floor(deposit / threshold)',
-        confidence_if_missing: 'derived',
-      },
     },
     
     optional_fields: [
       'lucky_spin_rewards', 'lucky_spin_max_per_day',
       'reward_quantity', 'claim_method', 'max_claim',
       'claim_frequency', 'turnover_multiplier',
+      'conversion_formula', // floor(deposit / threshold)
     ],
     
     invariants: [
