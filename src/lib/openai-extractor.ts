@@ -31,6 +31,14 @@ import { getDefaultsFromKeywords } from './extractors/keyword-rules';
 import { sanitizeByMode, NON_FORMULA_MODES } from './sanitize-by-mode';
 import { normalizeExtractedPromo, type ExtractionSource } from './extractors/post-extraction-normalizer';
 
+// DYNAMIC CONTRACT INJECTION (v1.0)
+// Mechanic-specific prompt contracts injected based on pre-classifier detection
+import { 
+  detectMechanicContracts, 
+  buildContractInjection,
+  type DetectedMechanic 
+} from './extractors/contracts';
+
 // NEW: Reasoning-First Architecture imports (v2.0)
 import { 
   reasonPromoIntent, 
