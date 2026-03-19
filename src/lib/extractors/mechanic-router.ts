@@ -69,7 +69,8 @@ export type MechanicType =
   | 'referral_bonus'           // Bonus per referral
   
   // === Event/Game ===
-  | 'lucky_spin'               // Lucky spin/gacha
+  | 'lucky_spin'               // Lucky spin — deposit→ticket exchange (formula)
+  | 'merchandise_reward'       // Hadiah fisik — deposit+TO, klaim via form/CS
   | 'tournament'               // Tournament/leaderboard
   | 'provider_event'           // Pragmatic, PG Soft events
   | 'scatter_bonus'            // Scatter achievement

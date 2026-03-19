@@ -785,42 +785,61 @@ export const ARCHETYPE_RULES: Record<PromoArchetype, ArchetypeSemanticRule> = {
 
   // ============================================
   // LUCKY_DRAW (Lucky Spin, Gacha, Raffle)
+  //
+  // SEMANTIC CONTRACT v2.0:
+  // Lucky Spin adalah EXCHANGE mechanic — bukan chance-based flat reward.
+  // Player deposit X → dapat tiket spin (floor(deposit/threshold)).
+  // mode = 'formula' karena ada deposit→ticket conversion.
+  // calculation_basis = 'deposit' karena tiket dihitung dari deposit.
+  // reward_type LOCKED = 'lucky_spin_ticket' (bukan credit_game).
+  //
+  // CONTOH: "Deposit 50.000 = 1 Tiket" → floor(deposit / 50000)
   // ============================================
   LUCKY_DRAW: {
     archetype: 'LUCKY_DRAW',
     display_name: 'Lucky Draw / Spin',
     
     locked_fields: {
-      mode: { value: 'fixed', reason: 'Chance-based rewards are not calculated' },
-      calculation_basis: null,  // No calculation for chance
+      // CORRECTED v2.0: Lucky Spin punya deposit→ticket conversion formula
+      // mode WAJIB 'formula' karena ada calculation: floor(deposit / threshold)
+      mode: { value: 'formula', reason: 'Lucky Spin has deposit-to-ticket exchange formula: floor(deposit/threshold)' },
+      calculation_basis: { value: 'deposit', reason: 'Tiket dihitung dari deposit amount' },
     },
     
     derived_fields: {
       trigger_event: {
         derive_from: 'evidence',
-        allowed_values: ['Deposit', 'Event', 'Login'],
-        default_if_missing: 'Event',
+        allowed_values: ['Deposit'],
+        default_if_missing: 'Deposit',
         confidence_if_missing: 'medium',
+      },
+      conversion_formula: {
+        derive_from: 'evidence',
+        // Generator: "floor(deposit / threshold)" — threshold dari extraction
+        default_if_missing: 'floor(deposit / threshold)',
+        confidence_if_missing: 'derived',
       },
     },
     
     optional_fields: [
       'lucky_spin_rewards', 'lucky_spin_max_per_day',
-      'reward_quantity', 'claim_method',
+      'reward_quantity', 'claim_method', 'max_claim',
+      'claim_frequency', 'turnover_multiplier',
     ],
     
     invariants: [
       {
         field: 'mode',
         condition: 'must_be',
-        value: 'fixed',
-        error_message: 'LUCKY_DRAW mode must be fixed (chance-based)',
+        value: 'formula',
+        error_message: 'LUCKY_DRAW mode must be formula (deposit→ticket exchange)',
         type: 'hard',
       },
       {
         field: 'calculation_basis',
-        condition: 'must_not_exist',
-        error_message: 'LUCKY_DRAW cannot have calculation_basis',
+        condition: 'must_be',
+        value: 'deposit',
+        error_message: 'LUCKY_DRAW calculation_basis must be deposit',
         type: 'hard',
       },
     ],
@@ -832,8 +851,10 @@ export const ARCHETYPE_RULES: Record<PromoArchetype, ArchetypeSemanticRule> = {
         /raffle/i,
         /undian/i,
         /wheel/i,
-        /free\s*spin/i,
         /tiket\s*spin/i,
+        /spin\s*gratis/i,
+        /tiket.*deposit/i,
+        /deposit.*tiket/i,
       ],
       negative_cues: [
         /deposit\s*bonus/i,
@@ -851,15 +872,16 @@ export const ARCHETYPE_RULES: Record<PromoArchetype, ArchetypeSemanticRule> = {
     applicable_fields: [
       'lucky_spin_rewards', 'lucky_spin_max_per_day',
       'reward_quantity', 'claim_method', 'min_deposit',
+      'max_claim', 'claim_frequency', 'conversion_formula',
       'archetype_payload', 'archetype_invariants', 'turnover_basis',
+      'game_scope', 'game_types', 'game_providers',
     ],
     not_applicable_fields: [
-      'calculation_basis', 'calculation_value', 'turnover_multiplier',
-      'referral_tiers', 'payout_direction',
+      'referral_tiers', 'tier_count',
     ],
     payload_contract: {
-      required_keys: ['daily_reset_time', 'claim_window', 'deposit_requirement', 'spin_limit', 'collection_mechanic'],
-      optional_keys: ['claim_channels', 'notes'],
+      required_keys: ['deposit_requirement', 'spin_limit', 'tickets_per_deposit', 'conversion_formula'],
+      optional_keys: ['daily_reset_time', 'claim_window', 'claim_channels', 'turnover_for_withdraw', 'notes'],
     },
   },
 
