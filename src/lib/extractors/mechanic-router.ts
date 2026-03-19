@@ -259,11 +259,15 @@ function determineMechanicType(intent: PromoIntent): MechanicType {
   
   // === Lucky Spin — deposit → ticket exchange ===
   // Primary action tetap 'deposit' (trigger-nya deposit).
-  // Routing ke lucky_spin jika distribution_path = 'redemption_store' 
-  // DAN value_shape = 'fixed' (1 tiket per threshold deposit, bukan % bonus).
+  // Lucky Spin menggunakan value_shape='fixed' (1 tiket per threshold, bukan % bonus)
+  // dengan value_determiner='system_calculate' (floor formula).
   // Taxonomy (LUCKY_DRAW) adalah authority final — router hanya hint awal.
-  if (primary_action === 'deposit' && distribution_path === 'redemption_store') {
-    return 'lucky_spin';
+  if (primary_action === 'deposit' && value_shape === 'fixed' && value_determiner === 'system_calculate') {
+    // Hanya route ke lucky_spin jika ada konteks spin (via intent evidence)
+    const evidenceText = intent.intent_evidence.join(' ').toLowerCase();
+    if (/lucky.?spin|tiket.?spin|spin.?gratis|tiket.?deposit|deposit.*tiket/i.test(evidenceText)) {
+      return 'lucky_spin';
+    }
   }
   
   // === Merchandise — physical reward, klaim via form/CS ===
@@ -271,7 +275,10 @@ function determineMechanicType(intent: PromoIntent): MechanicType {
   // Route ke merchandise_reward jika distribution_path = 'manual_cs'
   // DAN value_determiner = 'fixed' (reward flat fisik, bukan kalkulasi).
   if (primary_action === 'deposit' && distribution_path === 'manual_cs' && value_determiner === 'fixed') {
-    return 'merchandise_reward';
+    const evidenceText = intent.intent_evidence.join(' ').toLowerCase();
+    if (/merchandise|kaos|t-shirt|hadiah.?fisik|dikirim|paket.?hadiah/i.test(evidenceText)) {
+      return 'merchandise_reward';
+    }
   }
   
   // === Deposit-based ===
