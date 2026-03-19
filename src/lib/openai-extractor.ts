@@ -31,12 +31,12 @@ import { getDefaultsFromKeywords } from './extractors/keyword-rules';
 import { sanitizeByMode, NON_FORMULA_MODES } from './sanitize-by-mode';
 import { normalizeExtractedPromo, type ExtractionSource } from './extractors/post-extraction-normalizer';
 
-// DYNAMIC CONTRACT INJECTION (v1.0)
-// Mechanic-specific prompt contracts injected based on pre-classifier detection
+// DYNAMIC CONTRACT INJECTION (v2.0 — Taxonomy-Driven)
+// Mechanic-specific prompt contracts injected based on taxonomy/mechanic-router output.
+// No raw text scanning — mechanicType comes from upstream Primitive Gate + Router.
 import { 
   detectMechanicContracts, 
   buildContractInjection,
-  type DetectedMechanic 
 } from './extractors/contracts';
 
 // NEW: Reasoning-First Architecture imports (v2.0)
