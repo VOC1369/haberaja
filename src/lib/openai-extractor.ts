@@ -31,6 +31,14 @@ import { getDefaultsFromKeywords } from './extractors/keyword-rules';
 import { sanitizeByMode, NON_FORMULA_MODES } from './sanitize-by-mode';
 import { normalizeExtractedPromo, type ExtractionSource } from './extractors/post-extraction-normalizer';
 
+// DYNAMIC CONTRACT INJECTION (v1.0)
+// Mechanic-specific prompt contracts injected based on pre-classifier detection
+import { 
+  detectMechanicContracts, 
+  buildContractInjection,
+  type DetectedMechanic 
+} from './extractors/contracts';
+
 // NEW: Reasoning-First Architecture imports (v2.0)
 import { 
   reasonPromoIntent, 
@@ -1380,134 +1388,16 @@ JANGAN BINGUNG (ROLLINGAN):
 - "Minimal turnover untuk ikut" → turnover_rule: "1000000" ✅ (BUKAN minimum_base!)
 - "Syarat TO 1jt" → turnover_rule: "1000000" ✅ (LANGSUNG ANGKA!)
 
+
 🔹 Welcome Bonus / Deposit Bonus
 Ciri-ciri:
 - calculation_base = "deposit"
 - payout_direction = "depan" (diberikan sebelum main)
 - turnover_rule = dari tabel/S&K (biasanya 5x-20x)
 
-🎰 LUCKY SPIN — MECHANIC CONTRACT (WAJIB BACA!)
-
-Lucky Spin adalah EXCHANGE mechanic: player deposit sejumlah X untuk mendapat tiket spin.
-Ini BUKAN bonus deposit biasa. Ini deposit-to-ticket conversion.
-
-KARAKTERISTIK (harus semua terpenuhi):
-- Ada threshold deposit untuk dapat 1 tiket (contoh: "Deposit 50.000 = 1 Tiket")
-- Reward adalah TIKET SPIN, bukan credit game langsung
-- Biasanya ada batas maksimal tiket per hari ("Maksimal Claim 10 Tiket")
-- Tiket direset setiap hari ("Reset Setiap Hari")
-- Turnover untuk WITHDRAW terpisah (bukan TO untuk tiket)
-
-MAPPING WAJIB untuk Lucky Spin:
-- mode: "formula" (BUKAN "fixed"! — ada conversion formula)
-- reward_type: "lucky_spin" (WAJIB!)
-- conversion_formula: "floor(deposit / threshold)"
-  Contoh: "Deposit 50.000 = 1 Tiket" → "floor(deposit / 50000)"
-- calculation_base: "deposit"
-- claim_frequency: "harian" (tiket reset setiap hari)
-- max_claim: maksimal tiket per hari dari "Maksimal Claim X Tiket"
-  → Masukkan ke max_claim (angka), BUKAN max_bonus!
-- game_scope: hanya game yang disebutkan (contoh: "Hanya Berlaku Di Permainan SLOT")
-- turnover_rule: TO untuk WITHDRAW (bukan TO untuk tiket)
-  Contoh: "Minimal Turnover 1X Untuk Withdraw" → turnover_rule: 1
-
-⚠️ ATURAN KERAS Lucky Spin:
-- JANGAN set turnover_enabled: true untuk tiket itu sendiri
-- JANGAN set max_bonus = jumlah tiket (max_bonus untuk Rupiah, max_claim untuk tiket)
-- JANGAN set mode: "fixed" — Lucky Spin punya formula tiket!
-- Jika "Tidak Berlaku Kelipatan" → max_claim diprioritaskan dari "Maksimal X Tiket"
-
-CONTOH OUTPUT Lucky Spin (single):
-{
-  "promo_type": "Mini Game",
-  "mode": "formula",
-  "conversion_formula": "floor(deposit / 50000)",
-  "reward_type": "lucky_spin",
-  "calculation_base": "deposit",
-  "claim_frequency": "harian",
-  "max_claim": 10,
-  "game_types": ["slot"],
-  "turnover_rule": 1,
-  "subcategories": [{
-    "sub_name": "Lucky Spin",
-    "calculation_base": "deposit",
-    "calculation_method": "formula",
-    "calculation_value": 50000,
-    "minimum_base": 50000,
-    "max_bonus": null,
-    "turnover_rule": 1,
-    "reward_type": "lucky_spin",
-    "confidence": {
-      "calculation_value": "explicit_from_terms",
-      "minimum_base": "explicit_from_terms",
-      "max_bonus": "not_applicable",
-      "turnover_rule": "explicit_from_terms"
-    }
-  }]
-}
-
-🎁 MERCHANDISE — MECHANIC CONTRACT (WAJIB BACA!)
-
-Merchandise adalah reward FISIK: player penuhi syarat (deposit min + TO), klaim via form/CS, barang dikirim.
-Ini BUKAN bonus credit game. Player tidak dapat kredit, tapi item fisik (kaos, gadget, dll).
-
-KARAKTERISTIK:
-- Ada deposit minimum untuk qualify
-- Ada TO requirement (biasanya 1x atau lebih)
-- Reward adalah item fisik (bukan credit)
-- Klaim via Google Form atau CS/Livechat
-- Pengiriman ada jadwal (contoh: "setiap tanggal 16 & 31")
-- Biasanya 1 kali klaim per user
-
-MAPPING WAJIB untuk Merchandise:
-- mode: "fixed" (reward flat, bukan kalkulasi)
-- reward_type: "merchandise" (WAJIB!)
-- proof_required: true (hampir selalu butuh form/screenshot)
-- claim_platform: "form" jika ada Google Form, "livechat" jika via CS
-- claim_url: URL form klaim jika ada (contoh: "https://docs.google.com/forms/...")
-  → Extract TEPAT dari link yang tertulis di S&K
-- distribution_schedule: jadwal pengiriman jika disebutkan
-  Contoh: "setiap tanggal 16 & 31" → "tanggal 16 dan 31 setiap bulan"
-  Contoh: "setiap Senin" → "setiap Senin"
-- reward_item_description: nama item fisik
-  Contoh: "T-Shirt Eksklusif Citra77", "Kaos Jersey Brand X"
-- turnover_basis: "deposit_plus_bonus" jika TO dari deposit+bonus, atau extract dari S&K
-- conversion_formula: "" (string kosong — reward fisik tidak ada formula Rupiah)
-
-⚠️ ATURAN KERAS Merchandise:
-- JANGAN set reward_amount = harga merchandise (tidak relevan)
-- JANGAN set max_bonus (physical item tidak punya monetary cap)
-- JANGAN set conversion_formula dengan formula Rupiah
-- WAJIB extract claim_url jika ada link di S&K
-- WAJIB isi reward_item_description dengan nama item dari S&K
-
-CONTOH OUTPUT Merchandise:
-{
-  "promo_type": "Merchandise",
-  "mode": "fixed",
-  "conversion_formula": "",
-  "reward_type": "merchandise",
-  "proof_required": true,
-  "claim_platform": "form",
-  "claim_url": "https://docs.google.com/forms/xxx",
-  "distribution_schedule": "tanggal 16 dan 31 setiap bulan",
-  "subcategories": [{
-    "sub_name": "T-Shirt Eksklusif",
-    "calculation_base": "deposit",
-    "calculation_method": "fixed",
-    "calculation_value": null,
-    "minimum_base": 100000,
-    "max_bonus": null,
-    "turnover_rule": 1,
-    "reward_type": "merchandise",
-    "physical_reward_name": "T-Shirt Eksklusif",
-    "confidence": {
-      "minimum_base": "explicit_from_terms",
-      "max_bonus": "not_applicable",
-      "turnover_rule": "explicit_from_terms"
-    }
-  }]
-}
+[NOTE: Lucky Spin & Merchandise mechanic contracts TIDAK diinject di sini.
+ Mereka diinject secara dinamis berdasarkan pre-classifier detection.
+ Lihat: src/lib/extractors/contracts/]
 
 🔹 Mini Game (Spin, Lucky Draw) — PROMO TYPE DETECTION
 KEYWORDS yang menunjukkan Mini Game:
@@ -2604,6 +2494,24 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
   const enhancedPromptWithLocks = `${extractionPromptWithCount}${lockedFieldsContext}`;
 
   // ============================================
+  // STEP 0.9: DYNAMIC CONTRACT INJECTION
+  // Pre-classifier detects mechanic type → inject only relevant contract
+  // Max 2 contracts injected. Zero injection = no prompt bloat.
+  // ============================================
+  const detectedContracts = detectMechanicContracts(normalizedContent);
+  const contractInjection = buildContractInjection(detectedContracts);
+  
+  if (detectedContracts.length > 0) {
+    console.log('[Extractor] Contract injection:', detectedContracts.map(d => 
+      `${d.mechanic}(${d.confidence}/${d.matched_by})`
+    ).join(', '));
+  } else {
+    console.log('[Extractor] No mechanic contract injected — generic extraction');
+  }
+
+  const finalPrompt = `${enhancedPromptWithLocks}${contractInjection}`;
+
+  // ============================================
   // STEP 1: AI Extraction - NOW RECEIVES CLEAN HTML + LOCKED FIELDS CONTEXT
   // AI will see tables with ALL cells filled (no "-" for rowspan)
   // ============================================
@@ -2616,7 +2524,7 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: enhancedPromptWithLocks },
+        { role: "system", content: finalPrompt },
         { role: "user", content: `Ekstrak informasi promo dari konten berikut:\n\n${normalizedContent}` }
       ],
       temperature: 0.1,
