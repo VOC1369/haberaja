@@ -21,9 +21,13 @@
 
 export { LUCKY_SPIN_CONTRACT } from './lucky-spin';
 export { MERCHANDISE_CONTRACT } from './merchandise';
+export { ROLLINGAN_CONTRACT } from './rollingan';
+export { REFERRAL_CONTRACT } from './referral';
 
 import { LUCKY_SPIN_CONTRACT } from './lucky-spin';
 import { MERCHANDISE_CONTRACT } from './merchandise';
+import { ROLLINGAN_CONTRACT } from './rollingan';
+import { REFERRAL_CONTRACT } from './referral';
 
 // ============================================
 // CONTRACT MATCH TYPE
@@ -43,8 +47,16 @@ export interface ContractMatch {
 // ============================================
 
 const CONTRACT_REGISTRY: Record<string, string> = {
+  // Lucky Spin — deposit → tiket exchange
   lucky_spin: LUCKY_SPIN_CONTRACT,
+  // Merchandise — reward fisik, klaim via form/CS
   merchandise_reward: MERCHANDISE_CONTRACT,
+  // Rollingan — komisi dari total turnover
+  rollingan_turnover: ROLLINGAN_CONTRACT,
+  komisi_turnover: ROLLINGAN_CONTRACT,
+  // Referral — komisi multi-tier dari net winlose downline
+  referral_commission: REFERRAL_CONTRACT,
+  referral_bonus: REFERRAL_CONTRACT,
 };
 
 // ============================================

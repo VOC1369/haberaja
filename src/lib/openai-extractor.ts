@@ -2685,165 +2685,56 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     }
     
     // ============================================
-    // FIX 3B: Force calculation_base = 'turnover' for ROLLINGAN promos
-    // ROLLINGAN is ALWAYS turnover-based (total betting volume, NOT win/loss)
-    // This overrides LLM confusion between "Win/Loss" and "Turnover"
+    // TAXONOMY ASSERTION: ROLLINGAN — calculation_base lock
+    // Source of truth: ARCHETYPE_RULES.ROLLINGAN.locked_fields.calculation_basis = 'turnover'
+    // Contract injection (ROLLINGAN_CONTRACT) instructs the LLM to extract this correctly.
+    // This assertion is a post-extraction guard only — NOT a keyword decision.
     // ============================================
-    const isRollinganPromo = /rollingan|roll(ing)?an/i.test(parsed.promo_name || '') || 
-                             /rollingan/i.test(parsed.promo_type || '');
+    const isRollinganMechanic =
+      mechanicResult?.mechanic_type === 'rollingan_turnover' ||
+      mechanicResult?.mechanic_type === 'komisi_turnover';
 
-    if (isRollinganPromo) {
-      console.log('[Extractor] ROLLINGAN detected → forcing calculation_base = "turnover"');
+    if (isRollinganMechanic) {
       parsed.subcategories = parsed.subcategories?.map((sub: any) => {
-        let updatedSub = { ...sub };
-        
-        // Fix calculation_base
         if (sub.calculation_base !== 'turnover') {
-          console.log(`[Extractor] Fixing ${sub.sub_name}: ${sub.calculation_base} → turnover`);
-          updatedSub.calculation_base = 'turnover';
-          updatedSub.confidence = {
-            ...updatedSub.confidence,
-            calculation_base: 'derived'
+          console.warn(`[Extractor][ASSERTION] ROLLINGAN sub "${sub.sub_name}": calculation_base=${sub.calculation_base} → corrected to turnover`);
+          return {
+            ...sub,
+            calculation_base: 'turnover',
+            turnover_rule_format: 'min_rupiah',
+            confidence: { ...sub.confidence, calculation_base: 'derived' },
           };
         }
-        
-        // ⚠️ FIX ROLLINGAN FIELD CONFUSION: minimum_base filled but turnover_rule empty
-        // "Minimal turnover X" was likely misassigned to minimum_base
-        const hasMinTurnoverPattern = /minimal\s+turnover|min\s*to\b|syarat\s+to\b/i.test(rawText);
-        const hasMinDepositPattern = /minimal\s+deposit|min\s+deposit|min\s*dp\b/i.test(rawText);
-        
-        if (hasMinTurnoverPattern && !hasMinDepositPattern && 
-            sub.minimum_base !== null && sub.minimum_base > 0 && 
-            (!sub.turnover_rule || sub.turnover_rule === null)) {
-          console.warn(`⚠️ ROLLINGAN MISMAP DETECTED "${sub.sub_name}": minimum_base=${sub.minimum_base} but turnover_rule empty. Swapping...`);
-          // Langsung angka, tanpa prefix "min"
-          updatedSub.turnover_rule = String(sub.minimum_base).replace(/x$/i, '');
-          updatedSub.minimum_base = null;
-          updatedSub.confidence = {
-            ...updatedSub.confidence,
-            minimum_base: 'not_applicable',
-            turnover_rule: 'derived'
-          };
-        }
-        
-        // Sanitize turnover_rule: hapus "x" dan "min " prefix jika ada
-        if (updatedSub.turnover_rule && typeof updatedSub.turnover_rule === 'string') {
-          updatedSub.turnover_rule = updatedSub.turnover_rule
-            .replace(/^min\s+/i, '')  // Hapus "min " prefix
-            .replace(/x$/i, '');       // Hapus trailing "x"
-        }
-        
-        // Set turnover_rule_format based on calculation_base (single source of truth)
-        // Rollingan/Cashback uses turnover as base → min_rupiah format
-        // Deposit bonus uses deposit as base → multiplier format
-        updatedSub.turnover_rule_format = updatedSub.calculation_base === 'turnover' 
-          ? 'min_rupiah' 
-          : 'multiplier';
-        
-        return updatedSub;
+        return {
+          ...sub,
+          turnover_rule_format: sub.turnover_rule_format ?? 'min_rupiah',
+        };
       }) || [];
     }
-    
-    // ============================================
-    // FIX 3C: REFERRAL MULTI-TIER DETECTION
-    // Referral promos with different commission rates per downline tier
-    // Each tier should be a separate subcategory
-    // ============================================
-    const isReferralPromo = /referral|ref\s*bonus|ajak\s*teman|undang|invite|rekrut/i.test(parsed.promo_name || '') || 
-                            /referral/i.test(parsed.promo_type || '');
 
-    if (isReferralPromo) {
-      console.log('[Extractor] REFERRAL promo detected → checking multi-tier structure');
-      
-      // Check if there are multiple percentage values in the content (indicates multi-tier)
-      const commissionMatches = rawText.match(/(\d+)\s*%/g);
-      const uniqueCommissions = commissionMatches 
-        ? [...new Set(commissionMatches.map(m => parseInt(m)))].filter(v => v > 0 && v <= 100)
-        : [];
-      
-      console.log('[Extractor] Found commission percentages:', uniqueCommissions);
-      
-      // Check for downline tier patterns
-      const hasDownlineTiers = /(\d+)\s*(id|member|downline)/i.test(rawText);
-      
-      // If we have multiple unique commissions and downline tiers but only 1 subcategory
-      if (uniqueCommissions.length > 1 && hasDownlineTiers && parsed.subcategories?.length === 1) {
-        console.log('[Extractor] Multi-tier referral detected but only 1 subcategory → expanding tiers');
-        
-        // Extract tier data from raw text
-        const tierPattern = /(\d+)\s*(id|member|downline)[^%]*?(\d+)\s*%/gi;
-        const tiers: Array<{ downline: number; commission: number }> = [];
-        let match;
-        
-        while ((match = tierPattern.exec(rawText)) !== null) {
-          tiers.push({
-            downline: parseInt(match[1]),
-            commission: parseInt(match[3])
-          });
-        }
-        
-        // Also try reverse pattern: commission first, then downline
-        const reverseTierPattern = /(\d+)\s*%[^ID]*?(\d+)\s*(id|member|downline)/gi;
-        while ((match = reverseTierPattern.exec(rawText)) !== null) {
-          const tier = {
-            downline: parseInt(match[2]),
-            commission: parseInt(match[1])
-          };
-          // Only add if not already present
-          if (!tiers.some(t => t.downline === tier.downline && t.commission === tier.commission)) {
-            tiers.push(tier);
-          }
-        }
-        
-        // Sort by commission/downline
-        tiers.sort((a, b) => a.commission - b.commission);
-        
-        if (tiers.length > 1) {
-          console.log('[Extractor] Extracted referral tiers:', tiers);
-          
-          const baseSub = parsed.subcategories[0];
-          parsed.subcategories = tiers.map(tier => ({
-            ...baseSub,
-            sub_name: `Komisi ${tier.commission}%`,
-            calculation_base: 'win_loss' as const,  // Use correct type
-            calculation_method: 'percentage' as const,
-            calculation_value: tier.commission,
-            minimum_base: null,
-            turnover_rule: null,
-            payout_direction: 'belakang' as const,
-            confidence: {
-              ...baseSub.confidence,
-              calculation_value: 'derived' as ConfidenceLevel,
-              minimum_base: 'not_applicable' as ConfidenceLevel,
-              turnover_rule: 'not_applicable' as ConfidenceLevel
-            }
-          }));
-          
-          parsed.promo_mode = 'multi';
-          parsed.has_subcategories = true;
-          parsed.expected_subcategory_count = tiers.length;
-          
-          // Add tier requirements to terms_conditions
-          const tierTerms = tiers.map(t => `Tier ${t.commission}%: Minimal ${t.downline} ID aktif`);
-          parsed.terms_conditions = [
-            ...(parsed.terms_conditions || []),
-            ...tierTerms
-          ];
-        }
-      }
-      
-      // Force correct field values for all referral subcategories
+    // ============================================
+    // TAXONOMY ASSERTION: REFERRAL — field contract enforcement
+    // Source of truth: ARCHETYPE_RULES.REFERRAL.locked_fields
+    // Contract injection (REFERRAL_CONTRACT) instructs LLM to extract each tier
+    // as a separate subcategory. This assertion enforces minimum_base=null
+    // and payout_direction=belakang as post-extraction guard only.
+    // ============================================
+    const isReferralMechanic =
+      mechanicResult?.mechanic_type === 'referral_commission' ||
+      mechanicResult?.mechanic_type === 'referral_bonus';
+
+    if (isReferralMechanic) {
       parsed.subcategories = parsed.subcategories?.map((sub: any) => ({
         ...sub,
         calculation_base: sub.calculation_base || 'win_loss',
-        payout_direction: 'belakang',
+        payout_direction: 'belakang' as const,
         minimum_base: null,
         turnover_rule: null,
         confidence: {
           ...sub.confidence,
-          minimum_base: 'not_applicable',
-          turnover_rule: 'not_applicable'
-        }
+          minimum_base: 'not_applicable' as ConfidenceLevel,
+          turnover_rule: 'not_applicable' as ConfidenceLevel,
+        },
       })) || [];
     }
     
