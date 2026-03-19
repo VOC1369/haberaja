@@ -2642,7 +2642,7 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     body: JSON.stringify({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: enhancedPromptWithLocks },
+        { role: "system", content: finalPrompt },
         { role: "user", content: `Ekstrak informasi promo dari konten berikut:\n\n${normalizedContent}` }
       ],
       temperature: 0.1,
