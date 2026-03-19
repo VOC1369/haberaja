@@ -1,54 +1,41 @@
 /**
  * Mechanic Contract: ROLLINGAN (Turnover Commission)
  *
- * Pattern: Player accumulate turnover → earn commission % of total turnover.
- * Period: weekly or monthly. Distribution: on a specific day.
+ * Structure: 3-layer (HARD INVARIANT / SOFT EXPECTATION / ESCAPE HATCH)
+ *
+ * HARD INVARIANT  — field yang tidak boleh berbeda, apapun konteksnya.
+ * SOFT EXPECTATION — pola umum yang bisa berbeda per klien; extract dari promo.
+ * ESCAPE HATCH    — outlier yang tidak masuk field standar → special_conditions.
  */
 
 export const ROLLINGAN_CONTRACT = `
-=== KONTRAK MECHANIC: ROLLINGAN / KOMISI TURNOVER ===
+=== MECHANIC CONTRACT: ROLLINGAN / KOMISI TURNOVER ===
 
-ATURAN KERAS (WAJIB IKUT — TIDAK BOLEH DILANGGAR):
+[HARD INVARIANT — tidak bisa berbeda]:
+- turnover_enabled: false — rollingan adalah reward dari TO, tidak punya syarat TO tambahan setelah bonus cair
+- reward_type: bukan "deposit_bonus" — ini rolling commission, bukan bonus deposit
+- payout_direction: "belakang" — rollingan selalu dibayarkan setelah periode selesai, tidak pernah "depan"
+- JANGAN campur min_calculation (threshold minimum TO) dengan turnover_rule (multiplier WD — tidak berlaku di sini)
+  ❌ DILARANG: "Minimal TO X" → turnover_rule atau minimum_base
+  ✅ WAJIB: "Minimal TO X" → min_calculation: X
+- Kalau LLM menyimpang dari invariant ini, catat alasan di special_conditions dan set confidence: low
 
-1. calculation_basis WAJIB: "turnover"
-   ❌ JANGAN gunakan "deposit" atau "net_loss" untuk rollingan
-   ✅ Rollingan selalu dihitung dari TOTAL TURNOVER (total taruhan)
+[SOFT EXPECTATION — pola umum, bisa berbeda per klien]:
+- calculation_basis biasanya "turnover" — tapi bisa "net_loss" untuk cashback hybrid; baca dari promo
+- Rate biasanya 0.3%–1% — extract dari teks promo, jangan asumsi nilai default
+- Periode biasanya mingguan — bisa harian atau bulanan; extract dari "mingguan", "per minggu", "bulanan"
+- distribution_schedule = hari pembagian (contoh: "dibagikan setiap Senin" → "senin"); null jika tidak disebutkan
+- conversion_formula: format "total_turnover * rate%" atau "total_net_loss * rate%"
+  Contoh: "Rollingan 0.5%" → "total_turnover * 0.005"
+- max_bonus: null kecuali S&K eksplisit menyebut batas maksimum bonus
 
-2. conversion_formula WAJIB: format "total_turnover * rate%"
-   Contoh: "Rollingan 0.5% dari TO" → conversion_formula: "total_turnover * 0.005"
+[ESCAPE HATCH — untuk outlier yang tidak masuk field standar]:
+- Cap per provider atau per game type → taruh di special_conditions sebagai string deskriptif
+- Tier rollingan (rate berbeda per level turnover) → masing-masing tier sebagai subcategory terpisah
+- Rollingan dengan struktur cashback hybrid → beri catatan di special_conditions, set extraction_confidence rendah
+- Mechanic tidak bisa dipetakan bersih ke field standar → set extraction_confidence: 0.5 dan flag untuk human review
 
-3. Bedakan TIGA angka berbeda yang sering muncul:
-   a) min_calculation = threshold minimum TO untuk dapat bonus
-      Keyword: "minimal turnover", "min TO", "minimal taruhan", "syarat TO"
-      Contoh: "Minimal TO 500.000" → min_calculation: 500000
-   b) calculation_value = persentase komisi (reward)
-      Keyword: "0.5%", "0.8%", "1%", dsb
-      Contoh: "Rollingan 0.5%" → calculation_value: 0.5
-   c) turnover_rule = TIDAK BERLAKU untuk rollingan (turnover_enabled: false)
-      Rollingan sudah selesai setelah bonus cair — tidak ada WD requirement tambahan
-
-   ❌ DILARANG mengisi "Minimal TO X" ke minimum_base (bukan syarat deposit!)
-   ❌ DILARANG mengisi "Minimal TO X" ke turnover_rule (itu bukan multiplier WD!)
-   ✅ "Minimal TO X" → min_calculation: X
-
-4. turnover_enabled: false
-   Bonus rollingan TIDAK punya syarat TO setelah cair (bonus rollingan = reward, bukan bonus deposit)
-
-5. claim_frequency: extract dari teks
-   - "mingguan" / "per minggu" → "mingguan"
-   - "harian" → "harian"
-   - "bulanan" → "bulanan"
-   Default jika tidak disebutkan: "mingguan"
-
-6. distribution_schedule: hari pembagian
-   Contoh: "dibagikan setiap hari Senin" → distribution_schedule: "senin"
-   Jika tidak disebutkan → null
-
-7. payout_direction: "belakang" (rollingan selalu setelah periode selesai)
-
-8. max_bonus: null kecuali S&K eksplisit menyebut batas maksimum bonus
-
-CONTOH OUTPUT YANG BENAR:
+CONTOH OUTPUT YANG BENAR (patokan referensi — bukan template kaku):
 {
   "calculation_basis": "turnover",
   "conversion_formula": "total_turnover * 0.005",
@@ -61,7 +48,7 @@ CONTOH OUTPUT YANG BENAR:
   "max_bonus": null
 }
 
-=== END KONTRAK ROLLINGAN ===
+=== END CONTRACT: ROLLINGAN ===
 `;
 
 /**

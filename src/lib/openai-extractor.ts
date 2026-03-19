@@ -2685,10 +2685,10 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     }
     
     // ============================================
-    // TAXONOMY ASSERTION: ROLLINGAN — calculation_base lock
-    // Source of truth: ARCHETYPE_RULES.ROLLINGAN.locked_fields.calculation_basis = 'turnover'
-    // Contract injection (ROLLINGAN_CONTRACT) instructs the LLM to extract this correctly.
-    // This assertion is a post-extraction guard only — NOT a keyword decision.
+    // TAXONOMY ASSERTION: ROLLINGAN — evidence-overridable, invariant-bounded
+    // Source of truth: ROLLINGAN_CONTRACT hard invariants.
+    // This assertion does NOT force override — it flags suspicious values for human review.
+    // The contract (HARD INVARIANT) instructs the LLM; this is a warn-only guard.
     // ============================================
     const isRollinganMechanic =
       mechanicResult?.mechanic_type === 'rollingan_turnover' ||
@@ -2696,15 +2696,19 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
 
     if (isRollinganMechanic) {
       parsed.subcategories = parsed.subcategories?.map((sub: any) => {
-        if (sub.calculation_base !== 'turnover') {
-          console.warn(`[Extractor][ASSERTION] ROLLINGAN sub "${sub.sub_name}": calculation_base=${sub.calculation_base} → corrected to turnover`);
-          return {
-            ...sub,
-            calculation_base: 'turnover',
-            turnover_rule_format: 'min_rupiah',
-            confidence: { ...sub.confidence, calculation_base: 'derived' },
-          };
+        // Warn: turnover_rule suspiciously high — likely LLM misplaced min_calculation here
+        if (sub.turnover_rule && sub.turnover_rule > 10) {
+          console.warn(
+            `[Assertion][ROLLINGAN] sub "${sub.sub_name}": turnover_rule=${sub.turnover_rule} — suspiciously high, might be min_calculation misplaced. Flag for human review.`
+          );
         }
+        // Warn: calculation_base outside reasonable rollingan domain
+        if (sub.calculation_base && !['turnover', 'net_loss', 'payout'].includes(sub.calculation_base)) {
+          console.warn(
+            `[Assertion][ROLLINGAN] sub "${sub.sub_name}": calculation_base="${sub.calculation_base}" — unusual for rollingan mechanic. Flagging for review, not overriding.`
+          );
+        }
+        // Always set turnover_rule_format default — this is a safe structural default, not an override
         return {
           ...sub,
           turnover_rule_format: sub.turnover_rule_format ?? 'min_rupiah',
