@@ -82,7 +82,9 @@ export type ValueShape =
   | 'percent'       // Percentage (10%)
   | 'range'         // Range of values (5K - 20K)
   | 'tier_table'    // Tiered table (Level 1: X, Level 2: Y)
-  | 'catalog';      // Catalog of items to choose
+  | 'catalog'       // Catalog of items to choose
+  | 'ticket'        // Entitlement/tiket (deposit→ticket exchange, lucky spin)
+  | 'physical';     // Barang fisik (merchandise, hadiah fisik)
 
 // ============================================
 // PROMO INTENT INTERFACE
@@ -165,6 +167,8 @@ Pilih SATU yang paling akurat:
 - range: Rentang nilai (5K - 20K, pilih antara)
 - tier_table: Tabel bertingkat (Level 1: X, Level 2: Y)
 - catalog: Katalog item untuk dipilih
+- ticket: Entitlement/tiket (deposit → dapat N tiket, lucky spin exchange)
+- physical: Barang fisik (merchandise, kaos, hadiah fisik dikirim)
 
 ## OUTPUT FORMAT (JSON):
 {
@@ -478,9 +482,32 @@ export function detectObviousIntent(content: string): PromoIntent | null {
     };
   }
   
-  // ========== LUCKY SPIN / MINI GAME - DEFINITE pattern ==========
+  // ========== LUCKY SPIN / TICKET EXCHANGE — DEPOSIT→TIKET ==========
+  // Distinct from mini-game catalog spin: trigger=deposit, reward=ticket (not catalog)
+  // Signal: deposit + tiket + lucky spin keywords together
+  const hasDepositForTicket = hasDepositKeyword && /tiket|ticket/i.test(lower);
+  const hasLuckySpinContext = /lucky\s*spin|spin\s*gratis|tiket\s*spin/i.test(lower);
+  
+  if (hasDepositForTicket && hasLuckySpinContext) {
+    console.log('[Intent Reasoner] DETERMINISTIC: Lucky Spin (deposit→ticket exchange) detected');
+    return {
+      primary_action: 'deposit',
+      reward_nature: 'given',
+      value_determiner: 'system_calculate',
+      distribution_path: 'auto',
+      value_shape: 'ticket',
+      time_scope: 'ongoing',
+      intent_evidence: extractEvidence(lower, ['deposit', 'tiket', 'lucky spin', 'spin']),
+      confidence: 0.92,
+      reasoning: 'Deterministic: Lucky Spin ticket exchange — deposit triggers ticket reward (value_shape=ticket)',
+      reasoner_version: REASONER_VERSION,
+      processed_at: new Date().toISOString(),
+    };
+  }
+
+  // ========== LUCKY SPIN / MINI GAME - DEFINITE pattern (catalog/redeem spin) ==========
   if (/lucky\s*spin|mini\s*game|roda\s*keberuntungan|spin\s*gratis|putar\s*roda/i.test(lower)) {
-    console.log('[Intent Reasoner] DETERMINISTIC: Lucky Spin detected');
+    console.log('[Intent Reasoner] DETERMINISTIC: Lucky Spin (catalog/redeem) detected');
     return {
       primary_action: 'redeem',
       reward_nature: 'given',
