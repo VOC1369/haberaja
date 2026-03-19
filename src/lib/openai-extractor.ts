@@ -4278,13 +4278,21 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // ============================================
   // INVARIANT ASSERTION: Fail-Loud if impossible state
   // Build full fallback chain for calculation_basis before asserting.
+  //
+  // CRITICAL: lockedFields.calculation_basis uses "in" check, NOT ||
+  // Because null is a VALID locked value (means "no basis, hard lock").
+  // Using || would treat null as falsy and fall through to extracted data,
+  // causing mode=fixed + calculation_basis=turnover IMPOSSIBLE STATE.
   // ============================================
-  const calculationBasisForAssertion = 
-    lockedFields?.calculation_basis || 
-    taxonomyDecision.calculation_basis ||
-    extracted.subcategories?.[0]?.calculation_base ||
-    (extracted as any).calculation_basis ||
-    null;
+  const lockedCalcBasisPresent = lockedFields && 'calculation_basis' in lockedFields;
+  const calculationBasisForAssertion = lockedCalcBasisPresent
+    ? lockedFields!.calculation_basis  // null is intentional — hard lock
+    : (
+        taxonomyDecision.calculation_basis ||
+        extracted.subcategories?.[0]?.calculation_base ||
+        (extracted as any).calculation_basis ||
+        null
+      );
 
   // Guard: if Gate says formula but NO basis found anywhere, downgrade to fixed
   // This means Gate misfired (e.g. formula keyword without a real basis).
