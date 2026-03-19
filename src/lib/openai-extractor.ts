@@ -4250,7 +4250,26 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   
   // Update lockedFields with Gate decision (Gate overrides any previous mode)
   if (lockedFields) {
+    const prevMode = lockedFields.mode;
     lockedFields.mode = gateDecision.mode as any;
+    
+    // ============================================
+    // SYNC: If Gate downgrades mode to fixed, calculation_basis MUST be nulled.
+    // Without this, lockedFields could carry mode=fixed + calculation_basis=turnover
+    // which is an IMPOSSIBLE STATE that assertModeFromGate will throw on.
+    //
+    // This happens when: mechanic-router (Fix 1) correctly derived formula+turnover
+    // for rollingan, but taxonomy/gate overrides mode to fixed — the two are now
+    // inconsistent. Gate wins on mode; lockedFields.calculation_basis must follow.
+    // ============================================
+    if (gateDecision.mode === 'fixed' && prevMode === 'formula') {
+      console.warn(
+        '[mapExtractedToPromoFormData] Gate overrode mode formula→fixed — ' +
+        'nulling lockedFields.calculation_basis to prevent IMPOSSIBLE STATE.'
+      );
+      lockedFields.calculation_basis = null;
+    }
+    
     if (gateDecision.constraints.require_apk) {
       (lockedFields as any).require_apk = true;
     }
