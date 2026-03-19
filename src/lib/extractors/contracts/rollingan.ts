@@ -28,6 +28,9 @@ export const ROLLINGAN_CONTRACT = `
 - conversion_formula: format "total_turnover * rate%" atau "total_net_loss * rate%"
   Contoh: "Rollingan 0.5%" → "total_turnover * 0.005"
 - max_bonus: null kecuali S&K eksplisit menyebut batas maksimum bonus
+- max_bonus_unlimited: true jika promo menyebut frasa:
+    "tidak ada maksimal bonus" / "unlimited" / "tanpa batas maksimal"
+    ATAU jika tidak disebutkan batas maksimum sama sekali (default untuk rollingan)
 
 [ESCAPE HATCH — untuk outlier yang tidak masuk field standar]:
 - Cap per provider atau per game type → taruh di special_conditions sebagai string deskriptif
