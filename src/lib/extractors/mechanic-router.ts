@@ -318,11 +318,22 @@ function determineMode(intent: PromoIntent, mechanic: MechanicType): PromoMode {
   
   // ============================================
   // DELEGATE TO PRIMITIVE GATE — SINGLE SOURCE OF TRUTH
+  //
+  // ✅ FIX (Fix 1): Use intent.reward_nature directly — Intent Reasoner upstream
+  // already determined this with higher accuracy than keyword re-inference.
+  // Fallback to inferRewardNature() ONLY if intent.reward_nature is absent.
+  //
+  // ❌ VIOLATION PATTERN (never do this again):
+  //   const reward_nature_gate = inferRewardNature(evidence); // re-inference from raw text
+  // This causes "Reasoning Leakage" — downstream keyword scan overrides upstream LLM reasoning,
+  // incorrectly downgrading mechanics like Rollingan from "calculated" → "fixed".
   // ============================================
   const content = `${intent.primary_action} ${intent.reward_nature} ${intent.value_shape}`;
   const evidence = collectPrimitiveEvidence(content);
   const task_domain = inferTaskDomain(evidence, content);
-  const reward_nature_gate = inferRewardNature(evidence) as RewardNature;
+
+  // ✅ AUTHORITY ORDER: intent.reward_nature > inferRewardNature fallback
+  const reward_nature_gate = (intent.reward_nature ?? inferRewardNature(evidence)) as RewardNature;
   
   const primitive = { 
     task_type: 'action' as const,
@@ -336,6 +347,7 @@ function determineMode(intent: PromoIntent, mechanic: MechanicType): PromoMode {
   console.log('[mechanic-router] Mode from Gate:', {
     mechanic,
     task_domain,
+    reward_nature_source: intent.reward_nature ? 'intent (authoritative)' : 'inferred (fallback)',
     reward_nature: reward_nature_gate,
     mode: gateResult.mode
   });
