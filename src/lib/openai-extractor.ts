@@ -4194,6 +4194,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // Mode ONLY comes from this gate (or Taxonomy if high/medium confidence)
   // ============================================
   
+  // Capture mechanicResult in outer scope for closure access
+  const _capturedMechanicResult = mechanicResult;
+
   const getGateDecision = (): { 
     mode: CanonicalMode; 
     constraints: { require_apk?: boolean }; 
