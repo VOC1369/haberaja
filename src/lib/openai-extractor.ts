@@ -2702,25 +2702,19 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
         parsed.turnover_basis = null;
       }
 
-      // Fix: min_calculation fallback — extract dari raw text jika LLM miss
-      if (!parsed.min_calculation) {
-        const minToMatch = rawContent?.match(
-          /minimal\s+(?:turnover|to)\s+(?:rp\.?\s*)?([\d.,]+)/i
-        );
-        if (minToMatch) {
-          const raw = minToMatch[1].replace(/\./g, '').replace(',', '.');
-          const val = parseFloat(raw);
-          if (!isNaN(val) && val > 0) {
-            parsed.min_calculation = val;
-            console.log(`[Assertion][ROLLINGAN] min_calculation extracted from text: ${val}`);
-          }
+      // Extract min_calculation from raw text for fallback (used per-sub below)
+      let textMinCalculation: number | null = null;
+      const rawText: string = parsed.raw_content ?? '';
+      const minToMatch = rawText.match(
+        /minimal\s+(?:turnover|to)\s+(?:rp\.?\s*)?([\d.,]+)/i
+      );
+      if (minToMatch) {
+        const raw = minToMatch[1].replace(/\./g, '').replace(',', '.');
+        const val = parseFloat(raw);
+        if (!isNaN(val) && val > 0) {
+          textMinCalculation = val;
+          console.log(`[Assertion][ROLLINGAN] min_calculation extracted from raw_content: ${val}`);
         }
-      }
-
-      // Fix: max_bonus_unlimited structural default — rollingan tanpa cap eksplisit = unlimited
-      if (!parsed.max_bonus && !parsed.max_bonus_unlimited) {
-        parsed.max_bonus_unlimited = true;
-        console.log('[Assertion][ROLLINGAN] max_bonus_unlimited defaulted to true — no explicit cap found');
       }
 
       parsed.subcategories = parsed.subcategories?.map((sub: any) => {
@@ -2740,9 +2734,23 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
         if (sub.turnover_basis) {
           console.warn(`[Assertion][ROLLINGAN] sub "${sub.sub_name}": turnover_basis set tapi turnover_enabled=false — clearing`);
         }
-        // Also propagate min_calculation and max_bonus_unlimited to subcategory if missing
-        const subMinCalc = sub.min_calculation ?? parsed.min_calculation ?? null;
-        const subMaxUnlimited = sub.max_bonus_unlimited ?? parsed.max_bonus_unlimited ?? (!sub.max_bonus ? true : false);
+
+        // Fix: min_calculation fallback from raw text if LLM missed it
+        const subMinCalc = (sub.min_calculation != null && sub.min_calculation > 0)
+          ? sub.min_calculation
+          : (textMinCalculation ?? sub.min_calculation ?? null);
+        if (subMinCalc !== sub.min_calculation) {
+          console.log(`[Assertion][ROLLINGAN] sub "${sub.sub_name}": min_calculation set to ${subMinCalc} (fallback from text)`);
+        }
+
+        // Fix: max_bonus_unlimited structural default — no explicit cap = unlimited
+        const subMaxUnlimited = sub.max_bonus_unlimited != null
+          ? sub.max_bonus_unlimited
+          : (!sub.max_bonus ? true : false);
+        if (subMaxUnlimited && !sub.max_bonus_unlimited) {
+          console.log(`[Assertion][ROLLINGAN] sub "${sub.sub_name}": max_bonus_unlimited defaulted to true — no explicit cap`);
+        }
+
         return {
           ...sub,
           turnover_basis: null,
