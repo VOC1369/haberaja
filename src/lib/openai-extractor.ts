@@ -4220,6 +4220,25 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     }
     
     // ============================================
+    // MECHANIC ROUTER PRIORITY GUARD
+    // If mechanic_type is already confirmed by reasoning pipeline,
+    // do NOT let legacy primitive gate override it.
+    // Uses mechanicType + lockedFields from mapExtractedToPromoFormData scope.
+    // ============================================
+    const confirmedRouterMode = lockedFields?.mode as CanonicalMode | undefined;
+    if (mechanicType && mechanicType !== 'unknown' && confirmedRouterMode) {
+      console.log(
+        `[Gate] Skipping legacy override — mechanic already confirmed: ${mechanicType}, mode: ${confirmedRouterMode}`
+      );
+      return {
+        mode: confirmedRouterMode,
+        constraints: { require_apk: lockedFields?.require_apk === true },
+        confidence: 'high',
+        reasoning: `mechanic_router_priority: ${mechanicType}`
+      };
+    }
+
+    // ============================================
     // FALLBACK: Legacy Primitive Gate (UNKNOWN + low only)
     // ============================================
     console.log('[GATE] FALLBACK to legacy (taxonomy returned UNKNOWN + low)');
