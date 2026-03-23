@@ -268,6 +268,11 @@ Pola ekstraksi WAJIB:
 - "Tidak Berlaku Kelipatan" → [set kelipatan flag to false in terms]
 - "Reset harian" → voucher_valid_note: "Reset harian"
 
+⚠️ ATURAN max_claim / lucky_spin_max_per_day (KRITIS!):
+- null → jika TIDAK disebutkan batas maksimal klaim (default: tidak ada batas)
+- angka POSITIF → jika ada batas eksplisit ("Maksimal 10 Tiket", "Max 5 spin per hari")
+- ❌ JANGAN generate 0 — 0 bukan nilai valid, gunakan null jika tidak ada batas!
+
 ⚠️ WALAUPUN reward_type bukan uang (voucher/ticket/lucky_spin):
 - lucky_spin_max_per_day = BATAS MAKSIMAL CLAIM per hari (dari "Maksimal Claim X Tiket")
 - reward_quantity = JUMLAH per deposit/trigger (dari "dapet X tiket" atau "= X Tiket")

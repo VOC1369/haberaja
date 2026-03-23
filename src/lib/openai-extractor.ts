@@ -6043,7 +6043,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
         }
       }
       
-      return 0;
+      // No explicit max_claim found → null (not 0; 0 is not a valid business value)
+      return null;
     })(),
     dinamis_max_claim_unlimited: hasUnlimitedMaxBonus,
     // ✅ ONTOLOGY FIX: Read payout threshold from subcategory BEFORE it gets emptied

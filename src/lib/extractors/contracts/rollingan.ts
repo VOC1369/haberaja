@@ -27,10 +27,14 @@ export const ROLLINGAN_CONTRACT = `
 - distribution_schedule = hari pembagian (contoh: "dibagikan setiap Senin" → "senin"); null jika tidak disebutkan
 - conversion_formula: format "total_turnover * rate%" atau "total_net_loss * rate%"
   Contoh: "Rollingan 0.5%" → "total_turnover * 0.005"
-- max_bonus: null kecuali S&K eksplisit menyebut batas maksimum bonus
-- max_bonus_unlimited: true jika promo menyebut frasa:
-    "tidak ada maksimal bonus" / "unlimited" / "tanpa batas maksimal"
-    ATAU jika tidak disebutkan batas maksimum sama sekali (default untuk rollingan)
+- min_calculation: nilai minimum TO untuk dapat bonus
+  Contoh: "Minimal turnover Rp 500.000" → min_calculation: 500000
+  ⚠️ WAJIB diisi jika ada angka minimum disebutkan — JANGAN biarkan null jika ada angka!
+- max_bonus: null kecuali S&K eksplisit menyebut angka batas maksimum bonus
+- max_bonus_unlimited: DEFAULT true untuk rollingan
+  → true jika tidak disebutkan batas maksimum sama sekali (ini adalah DEFAULT)
+  → true jika ada frasa: "tidak ada maksimal bonus" / "unlimited" / "tanpa batas maksimal"
+  → false HANYA jika ada angka maksimal bonus yang eksplisit disebutkan (contoh: "maks bonus Rp 5.000.000")
 
 [ESCAPE HATCH — untuk outlier yang tidak masuk field standar]:
 - Cap per provider atau per game type → taruh di special_conditions sebagai string deskriptif
