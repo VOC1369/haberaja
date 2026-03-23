@@ -3315,7 +3315,14 @@ import type { PromoFormData, PromoSubCategory } from '@/components/VOCDashboard/
  * - Rollingan (Turnover-based) → calculation_base MUST be 'turnover'
  * - Deposit Bonus → calculation_base MUST be 'deposit'
  */
-function ensureCalculationBaseConsistency(data: PromoFormData): PromoFormData {
+function ensureCalculationBaseConsistency(data: PromoFormData, confirmedMechanic?: string): PromoFormData {
+  // Guard: if mechanic already confirmed from mechanic router, skip SemanticFix entirely.
+  // SemanticFix uses promo_type string matching which is unreliable when mechanic is confirmed upstream.
+  if (confirmedMechanic && confirmedMechanic !== 'unknown') {
+    console.log(`[SemanticFix] Skipped — mechanic already confirmed: ${confirmedMechanic}`);
+    return data;
+  }
+
   const lowerType = data.promo_type?.toLowerCase() || '';
   const result = { ...data };
   
@@ -6370,7 +6377,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // SEMANTIC CONSISTENCY ENFORCEMENT
   // Ensure calculation_base matches promo_type semantics
   // ============================================
-  const ensuredPromoData = ensureCalculationBaseConsistency(promoData);
+  const ensuredPromoData = ensureCalculationBaseConsistency(promoData, mechanicType);
 
   // ============================================
   // FIELD APPLICABILITY ENFORCEMENT (Final Layer)
