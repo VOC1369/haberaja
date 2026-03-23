@@ -4223,17 +4223,18 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     // MECHANIC ROUTER PRIORITY GUARD
     // If mechanic_type is already confirmed by reasoning pipeline,
     // do NOT let legacy primitive gate override it.
+    // Uses mechanicType + lockedFields from mapExtractedToPromoFormData scope.
     // ============================================
-    const confirmedMode = mechanicResult?.locked_fields?.mode as CanonicalMode | undefined;
-    if (mechanicResult?.mechanic_type && mechanicResult.mechanic_type !== 'unknown' && confirmedMode) {
+    const confirmedRouterMode = lockedFields?.mode as CanonicalMode | undefined;
+    if (mechanicType && mechanicType !== 'unknown' && confirmedRouterMode) {
       console.log(
-        `[Gate] Skipping legacy override — mechanic already confirmed: ${mechanicResult.mechanic_type}, mode: ${confirmedMode}`
+        `[Gate] Skipping legacy override — mechanic already confirmed: ${mechanicType}, mode: ${confirmedRouterMode}`
       );
       return {
-        mode: confirmedMode,
-        constraints: { require_apk: mechanicResult.locked_fields?.require_apk === true },
+        mode: confirmedRouterMode,
+        constraints: { require_apk: lockedFields?.require_apk === true },
         confidence: 'high',
-        reasoning: `mechanic_router_priority: ${mechanicResult.mechanic_type}`
+        reasoning: `mechanic_router_priority: ${mechanicType}`
       };
     }
 
