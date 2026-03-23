@@ -2717,6 +2717,19 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
         }
       }
 
+      // ── ROOT-LEVEL FALLBACK (promo tanpa subcategories) ──────────────────
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const parsedAny = parsed as any;
+      if (!parsedAny.min_calculation && textMinCalculation) {
+        parsedAny.min_calculation = textMinCalculation;
+        console.log(`[Assertion][ROLLINGAN] root min_calculation: ${textMinCalculation}`);
+      }
+      if (!parsedAny.max_bonus && !parsedAny.max_bonus_unlimited) {
+        parsedAny.max_bonus_unlimited = true;
+        console.log('[Assertion][ROLLINGAN] root max_bonus_unlimited: true');
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       parsed.subcategories = parsed.subcategories?.map((sub: any) => {
         // Warn: turnover_rule suspiciously high — likely LLM misplaced min_calculation here
         if (sub.turnover_rule && sub.turnover_rule > 10) {
