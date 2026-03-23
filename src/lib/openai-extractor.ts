@@ -2352,12 +2352,22 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
   }
 
   // ============================================
+  // STEP -2: PRE-PROCESSOR — strip noise sebelum apapun
+  // Deterministik, no LLM, <5ms. String in → string out.
+  // ============================================
+  const cleanedContent = preprocessPromoInput(content);
+  console.log('[PreProcessor] Input cleaned:', {
+    original_length: content.length,
+    cleaned_length: cleanedContent.length,
+    chars_removed: content.length - cleanedContent.length,
+  });
+
+  // ============================================
   // STEP -1: REJECT GATE (L1 rule-based → L2 LLM lightweight)
   // Discard garbage input BEFORE spending classifier tokens.
   // L1 = instant regex, L2 = gpt-4o-mini with 120-token cap.
   // ============================================
-  // runRejectGate is now a static import (top of file) — no dynamic import path issue
-  const rejectResult = await runRejectGate(content);
+  const rejectResult = await runRejectGate(cleanedContent);
   if (!rejectResult.valid && rejectResult.reason !== 'L2_ERROR_PASS') {
     const msg = rejectResult.reason === 'L1_NO_PROMO_SIGNAL'
       ? 'Input tidak mengandung sinyal promo yang cukup (butuh angka + kata kunci reward + mechanic)'
