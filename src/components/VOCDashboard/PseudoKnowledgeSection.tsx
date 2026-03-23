@@ -119,7 +119,14 @@ export function PseudoKnowledgeSection() {
   // Memoized mapped preview (single source of truth for badge + commit)
   const mappedPreview = useMemo<PromoFormData | null>(() => {
     if (!extractedPromo) return null;
-    return mapExtractedToPromoFormData(extractedPromo);
+    try {
+      return mapExtractedToPromoFormData(extractedPromo);
+    } catch (err) {
+      console.error('[PseudoKnowledgeSection] mapExtractedToPromoFormData failed — stale extraction data cleared:', err);
+      // Clear corrupted extraction state so the page doesn't hard-crash
+      setExtractedPromo(null);
+      return null;
+    }
   }, [extractedPromo]);
   
   // Confidence Gate state (LLM Classifier)
