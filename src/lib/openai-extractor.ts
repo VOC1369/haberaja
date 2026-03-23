@@ -4224,13 +4224,14 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     // If mechanic_type is already confirmed by reasoning pipeline,
     // do NOT let legacy primitive gate override it.
     // ============================================
-    if (mechanicResult?.mechanic_type && mechanicResult.mechanic_type !== 'unknown') {
+    const confirmedMode = mechanicResult?.locked_fields?.mode as CanonicalMode | undefined;
+    if (mechanicResult?.mechanic_type && mechanicResult.mechanic_type !== 'unknown' && confirmedMode) {
       console.log(
-        `[Gate] Skipping legacy override — mechanic already confirmed: ${mechanicResult.mechanic_type}, mode: ${mechanicResult.mode}`
+        `[Gate] Skipping legacy override — mechanic already confirmed: ${mechanicResult.mechanic_type}, mode: ${confirmedMode}`
       );
       return {
-        mode: mechanicResult.mode as CanonicalMode,
-        constraints: { require_apk: false },
+        mode: confirmedMode,
+        constraints: { require_apk: mechanicResult.locked_fields?.require_apk === true },
         confidence: 'high',
         reasoning: `mechanic_router_priority: ${mechanicResult.mechanic_type}`
       };
