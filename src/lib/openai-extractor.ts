@@ -25,6 +25,7 @@
  */
 
 import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
+import { runRejectGate } from './reject-gate';
 import { generateUUID } from './supabase-client';
 import { enforceFieldApplicability } from './extractors/field-applicability-map';
 import { getDefaultsFromKeywords } from './extractors/keyword-rules';
@@ -2355,7 +2356,7 @@ export async function extractPromoFromContent(content: string, sourceUrl?: strin
   // Discard garbage input BEFORE spending classifier tokens.
   // L1 = instant regex, L2 = gpt-4o-mini with 120-token cap.
   // ============================================
-  const { runRejectGate } = await import('./reject-gate');
+  // runRejectGate is now a static import (top of file) — no dynamic import path issue
   const rejectResult = await runRejectGate(content);
   if (!rejectResult.valid && rejectResult.reason !== 'L2_ERROR_PASS') {
     const msg = rejectResult.reason === 'L1_NO_PROMO_SIGNAL'
