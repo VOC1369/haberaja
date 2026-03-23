@@ -6377,7 +6377,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // SEMANTIC CONSISTENCY ENFORCEMENT
   // Ensure calculation_base matches promo_type semantics
   // ============================================
-  const ensuredPromoData = ensureCalculationBaseConsistency(promoData);
+  const ensuredPromoData = ensureCalculationBaseConsistency(promoData, mechanicType);
 
   // ============================================
   // FIELD APPLICABILITY ENFORCEMENT (Final Layer)
