@@ -25,15 +25,15 @@ export function preprocessPromoInput(raw: string): string {
   // 2. Strip "Tanggal akhir" line
   text = text.replace(/tanggal akhir\s*:\s*[^\n]*/gi, '');
 
-  // 3. Strip legal boilerplate — exact patterns only
-  text = text.replace(/[^\n]*keputusan[^\n]{0,20}bersifat mutlak[^\n]*/gi, '');
+  // 3. Strip legal boilerplate — anchor dari kata kunci yang selalu ada
+  text = text.replace(/[^\n]*bersifat mutlak[^\n]*/gi, '');
   text = text.replace(/[^\n]*tidak dapat diganggu gugat[^\n]*/gi, '');
   text = text.replace(/[^\n]*dapat berubah sewaktu-waktu tanpa pemberitahuan[^\n]*/gi, '');
   text = text.replace(/[^\n]*syarat[^\n]{0,30}dapat berubah[^\n]*/gi, '');
 
-  // 4. Strip fraud warning standar
-  text = text.replace(/[^\n]*jika ditemukan[^\n]{0,30}kecurangan[^\n]{0,50}berhak membatalkan[^\n]*/gi, '');
-  text = text.replace(/[^\n]*indikasi kecurangan dalam bentuk apapun[^\n]*/gi, '');
+  // 4. Strip fraud warning standar — relaxed distance untuk accommodate brand names
+  text = text.replace(/[^\n]*jika ditemukan[^\n]{0,150}berhak membatalkan[^\n]*/gi, '');
+  text = text.replace(/[^\n]*indikasi kecurangan[^\n]*/gi, '');
 
   // 5. Strip separator dekoratif
   text = text.replace(/^[-=*]{3,}$/gm, '');
@@ -53,7 +53,8 @@ export function preprocessPromoInput(raw: string): string {
   // 9. Collapse multiple blank lines
   text = text.replace(/\n{3,}/g, '\n\n');
 
-  // 10. Trim
+  // 10. Trim each line (remove leading whitespace artifacts), then trim overall
+  text = text.split('\n').map(line => line.trimStart()).join('\n');
   text = text.trim();
 
   return text;
