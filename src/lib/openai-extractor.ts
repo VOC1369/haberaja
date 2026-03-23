@@ -25,6 +25,7 @@
  */
 
 import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
+import { runRejectGate } from './reject-gate';
 import { generateUUID } from './supabase-client';
 import { enforceFieldApplicability } from './extractors/field-applicability-map';
 import { getDefaultsFromKeywords } from './extractors/keyword-rules';
