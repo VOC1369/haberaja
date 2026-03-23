@@ -2718,12 +2718,14 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
       }
 
       // ── ROOT-LEVEL FALLBACK (promo tanpa subcategories) ──────────────────
-      if (!parsed.min_calculation && textMinCalculation) {
-        parsed.min_calculation = textMinCalculation;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const parsedAny = parsed as any;
+      if (!parsedAny.min_calculation && textMinCalculation) {
+        parsedAny.min_calculation = textMinCalculation;
         console.log(`[Assertion][ROLLINGAN] root min_calculation: ${textMinCalculation}`);
       }
-      if (!parsed.max_bonus && !parsed.max_bonus_unlimited) {
-        parsed.max_bonus_unlimited = true;
+      if (!parsedAny.max_bonus && !parsedAny.max_bonus_unlimited) {
+        parsedAny.max_bonus_unlimited = true;
         console.log('[Assertion][ROLLINGAN] root max_bonus_unlimited: true');
       }
       // ─────────────────────────────────────────────────────────────────────
