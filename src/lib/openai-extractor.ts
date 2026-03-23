@@ -2702,6 +2702,27 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
         parsed.turnover_basis = null;
       }
 
+      // Fix: min_calculation fallback — extract dari raw text jika LLM miss
+      if (!parsed.min_calculation) {
+        const minToMatch = rawContent?.match(
+          /minimal\s+(?:turnover|to)\s+(?:rp\.?\s*)?([\d.,]+)/i
+        );
+        if (minToMatch) {
+          const raw = minToMatch[1].replace(/\./g, '').replace(',', '.');
+          const val = parseFloat(raw);
+          if (!isNaN(val) && val > 0) {
+            parsed.min_calculation = val;
+            console.log(`[Assertion][ROLLINGAN] min_calculation extracted from text: ${val}`);
+          }
+        }
+      }
+
+      // Fix: max_bonus_unlimited structural default — rollingan tanpa cap eksplisit = unlimited
+      if (!parsed.max_bonus && !parsed.max_bonus_unlimited) {
+        parsed.max_bonus_unlimited = true;
+        console.log('[Assertion][ROLLINGAN] max_bonus_unlimited defaulted to true — no explicit cap found');
+      }
+
       parsed.subcategories = parsed.subcategories?.map((sub: any) => {
         // Warn: turnover_rule suspiciously high — likely LLM misplaced min_calculation here
         if (sub.turnover_rule && sub.turnover_rule > 10) {
@@ -2719,11 +2740,15 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
         if (sub.turnover_basis) {
           console.warn(`[Assertion][ROLLINGAN] sub "${sub.sub_name}": turnover_basis set tapi turnover_enabled=false — clearing`);
         }
-        // Always set turnover_rule_format default — this is a safe structural default, not an override
+        // Also propagate min_calculation and max_bonus_unlimited to subcategory if missing
+        const subMinCalc = sub.min_calculation ?? parsed.min_calculation ?? null;
+        const subMaxUnlimited = sub.max_bonus_unlimited ?? parsed.max_bonus_unlimited ?? (!sub.max_bonus ? true : false);
         return {
           ...sub,
           turnover_basis: null,
           turnover_rule_format: sub.turnover_rule_format ?? 'min_rupiah',
+          min_calculation: subMinCalc,
+          max_bonus_unlimited: subMaxUnlimited,
         };
       }) || [];
     }
