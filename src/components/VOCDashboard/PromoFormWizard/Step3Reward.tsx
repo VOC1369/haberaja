@@ -1578,6 +1578,14 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   {REWARD_DISTRIBUTIONS.find(d => d.value === data.reward_distribution)?.helper || ''}
                 </p>
               )}
+
+              {/* Warning: hari_tertentu tanpa hari terpilih */}
+              {data.reward_distribution === 'hari_tertentu' && !data.distribution_day && (
+                <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-xs">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  <span>Wajib pilih hari pembagian di bawah — data tidak lengkap jika kosong.</span>
+                </div>
+              )}
               
               {/* Conditional untuk Hari Tertentu */}
               {(data.claim_frequency === 'hari_tertentu' || data.reward_distribution === 'hari_tertentu') && (
