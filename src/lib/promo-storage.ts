@@ -423,7 +423,7 @@ export const promoKB = {
 
     const { data, error } = await supabase
       .from(TABLE)
-      .insert(row)
+      .upsert(row, { onConflict: 'promo_id' })
       .select()
       .single();
 
