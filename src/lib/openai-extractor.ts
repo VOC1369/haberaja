@@ -2029,7 +2029,129 @@ Catatan khusus Loyalty Point 2 tabel:
 - Tabel "Hadiah Utama": biasanya 7 rows
 - TOTAL WAJIB: 11 subcategories (jika memang ada 11 rows di dokumen)
 
-Return HANYA JSON valid tanpa markdown code block.`;
+Return HANYA JSON valid tanpa markdown code block.
+
+═══════════════════════════════════════════════════════════════
+SECTION BARU — MECHANICS OUTPUT v3.1 (DUAL OUTPUT MODE)
+═══════════════════════════════════════════════════════════════
+
+PROSES BERPIKIR WAJIB — IKUTI URUTAN INI:
+1. Baca teks promo dari awal sampai akhir
+2. IDENTIFIKASI mechanic primitives terlebih dahulu — TANPA melihat schema flat
+3. Baru setelah mechanics[] selesai, isi legacy_flat sebagai representasi turunan
+
+DILARANG KERAS:
+- Membuat mechanics[] dari hasil mapping legacy_flat
+- Mengisi mechanics berdasarkan field yang sudah diisi di legacy_flat
+- Mechanics[] bukan shadow dari flat. Mechanics[] adalah reasoning asli.
+
+═══════════════════════════════════════════════════════════════
+10 MECHANIC PRIMITIVE — HANYA INI YANG BOLEH DIGUNAKAN
+═══════════════════════════════════════════════════════════════
+
+1. trigger      → event apa yang memicu promo
+2. eligibility  → siapa yang boleh ikut, syarat user/account
+3. calculation  → basis hitung, formula, cap, arah payout
+4. reward       → bentuk output reward (balance, point, item, dll)
+5. state        → akumulasi, progression, saldo point/level
+6. distribution → kapan dan bagaimana reward cair
+7. claim        → cara claim, platform, proof requirement
+8. control      → turnover rule, anti-fraud, kombinasi promo
+9. invalidator  → kondisi yang membatalkan promo/reward
+10. dependency  → hubungan kondisional antar mechanic
+
+JANGAN TAMBAH primitive baru. Kalau tidak bisa direpresentasikan → periksa dependency.
+
+═══════════════════════════════════════════════════════════════
+ATURAN WAJIB
+═══════════════════════════════════════════════════════════════
+
+ATURAN 1 — EVIDENCE WAJIB ADA
+Setiap mechanic HARUS punya evidence = kutipan teks asli dari promo.
+Jika tidak ada teks yang bisa dikutip sebagai evidence → JANGAN buat mechanic itu.
+Jangan mengarang evidence.
+
+ATURAN 2 — ANTI OVER-GENERATION
+- Jangan buat state jika tidak ada kata kunci akumulasi, level, balance, atau point
+- Jangan buat control jika tidak ada aturan TO atau restriction eksplisit
+- Jangan buat dependency jika hubungan antar mechanic linear dan tidak bersyarat
+- Jangan buat claim jika cara claim tidak disebutkan — kecuali dengan confidence ≤ 0.5
+
+ATURAN 3 — DEPENDENCY HANYA UNTUK KONDISI KOMPLEKS
+- Alur linear (trigger → calc → reward) TIDAK perlu dependency explicit
+- Kondisi kompleks (if/else, lose_count==1, threshold, void condition) WAJIB dependency
+- dependency digunakan untuk kondisi, bukan untuk mendokumentasikan alur dasar
+
+ATURAN 4 — REFERENCE INTEGRITY
+- Semua ref (applies_to_reward, source_ref, consumed_by, produced_by) HARUS mengacu ke mechanic_id yang ada di mechanics[]
+- DILARANG membuat ref ke mechanic yang tidak ada
+- Jika tidak yakin → set null, jangan asal refer
+
+ATURAN 5 — CONFLICT RESOLUTION
+Jika ada dua interpretasi untuk satu mechanic, pilih berdasarkan hierarchy ini:
+1. contoh perhitungan numerik
+2. tabel resmi
+3. S&K
+4. teks marketing
+Jangan buat dua mechanic untuk satu fungsi yang sama.
+
+ATURAN 6 — CLAIM AMBIGUITY
+Jika cara claim tidak disebutkan eksplisit:
+- boleh infer, tapi confidence WAJIB <= 0.5
+- ambiguity = true
+- ambiguity_reason WAJIB diisi
+- JANGAN treat auto sebagai fakta
+
+ATURAN 7 — NO MECHANIC CASE
+Jika promo adalah informational/policy tanpa mechanic yang jelas:
+- mechanics: []
+- Tetap kembalikan key mechanics
+- Jangan force generate
+
+═══════════════════════════════════════════════════════════════
+STRUKTUR SETIAP MECHANIC
+═══════════════════════════════════════════════════════════════
+
+{
+  "mechanic_id": "m_[type]_[n]",
+  "mechanic_type": "[primitive]",
+  "evidence": "[kutipan teks asli]",
+  "confidence": 0.0 hingga 1.0,
+  "ambiguity": true/false,
+  "ambiguity_reason": "[string] atau null",
+  "activation_rule": { ... },
+  "data": { ... }
+}
+
+CONFIDENCE GUIDE:
+- contoh perhitungan eksplisit → 0.9 - 1.0
+- disebutkan jelas di S&K → 0.8 - 0.9
+- perlu derivasi/reasoning → 0.6 - 0.8
+- ambigu atau partial → 0.3 - 0.6, ambiguity=true
+- tidak ada data → jangan buat mechanic
+
+═══════════════════════════════════════════════════════════════
+FORMAT OUTPUT FINAL — DUAL OUTPUT WAJIB
+═══════════════════════════════════════════════════════════════
+
+Kamu WAJIB mengembalikan JSON dengan struktur ini:
+
+{
+  "legacy_flat": {
+    (semua field flat JSON v2.2 seperti biasa - tidak ada yang berubah)
+  },
+  "mechanics": [
+    (array mechanic primitives v3.1)
+    (KOSONG [] jika tidak ada mechanic yang bisa diidentifikasi)
+    (TIDAK BOLEH null atau missing)
+  ]
+}
+
+WAJIB:
+- Kedua key harus ada: legacy_flat dan mechanics
+- legacy_flat mengikuti format lama persis
+- mechanics[] adalah hasil reasoning independen, bukan mapping dari legacy_flat
+- Jika mechanics[] kosong → tetap kembalikan key dengan value []`;
 
 // ============= IMAGE EXTRACTION WITH VISION (GPT-4o) =============
 
@@ -2540,7 +2662,30 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
       cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
     }
     
-    const parsed = JSON.parse(cleanJson) as ExtractedPromo;
+    // ============================================================
+    // DUAL OUTPUT PARSER — v3.1 compatibility
+    // LLM now returns { legacy_flat: {...}, mechanics: [...] }
+    // Fallback: if no legacy_flat key → treat entire response as legacy_flat
+    // ============================================================
+    const rawParsed = JSON.parse(cleanJson);
+    let mechanicsV31: unknown[] = [];
+
+    let flatData: Record<string, unknown>;
+    if (rawParsed && typeof rawParsed === 'object' && 'legacy_flat' in rawParsed) {
+      flatData = rawParsed.legacy_flat as Record<string, unknown>;
+      mechanicsV31 = Array.isArray(rawParsed.mechanics) ? rawParsed.mechanics : [];
+      console.log(`[DualOutput] mechanics[] v3.1 received: ${mechanicsV31.length} primitives`);
+    } else {
+      // Fallback: old response format (no dual output key)
+      flatData = rawParsed as Record<string, unknown>;
+      mechanicsV31 = [];
+      console.warn('[DualOutput] legacy_flat key not found — treating entire response as flat v2.2, mechanics=[]');
+    }
+
+    const parsed = flatData as unknown as ExtractedPromo;
+    // Attach mechanics_v31 for downstream storage (promo-storage.ts toV31Row picks this up)
+    (parsed as any)._mechanics_v31 = mechanicsV31;
+
     parsed.raw_content = content.substring(0, 1000);
     parsed.source_url = sourceUrl;
     parsed.ready_to_commit = false;
