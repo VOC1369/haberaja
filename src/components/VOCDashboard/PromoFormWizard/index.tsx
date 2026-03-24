@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { PromoFormData, PromoItem, initialPromoData, savePromoDraft, normalizePromoData } from "./types";
 import { generateUUID } from "@/lib/supabase-client";
+import { localDraftKB } from "@/lib/promo-storage";
 import { Step1Identity } from "./Step1Identity";
 
 const LOCAL_DRAFT_KEY = 'voc_promo_local_draft';
