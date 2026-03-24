@@ -677,9 +677,11 @@ export const promoKB = {
         }
       }
 
+      const { error } = await supabase
         .from(TABLE)
         .update(patch)
         .eq('id', id);
+
 
       if (error) {
         logSupabaseError('promoKB.update', error);
