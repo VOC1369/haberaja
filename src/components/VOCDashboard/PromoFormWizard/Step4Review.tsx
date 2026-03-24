@@ -1018,13 +1018,11 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
             (data.min_deposit || 0) > 0
         ];
       } else {
-        // Standard formula mode
+        // Standard formula mode — only canonical fields that survive Supabase round-trip
         step4Fields = [
           !!data.reward_mode,
-          !!data.calculation_base,
-          !!data.calculation_method,
-          data.calculation_value > 0,
-          !!data.dinamis_reward_type
+          !!data.calculation_base || !!data.calculation_basis,  // canonical field
+          !!(data.reward_amount || data.calculation_value > 0 || data.conversion_formula),  // at least one value
         ];
       }
     } else if (data.reward_mode === 'tier') {
