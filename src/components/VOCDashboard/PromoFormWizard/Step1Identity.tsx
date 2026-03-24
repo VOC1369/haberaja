@@ -138,17 +138,31 @@ export function Step1Identity({ data, onChange, isEditingFromReview, onSaveAndRe
           <div className="border-t border-border mb-6" />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Nama Website */}
+            {/* Client ID (kode unik website) */}
             <div className="space-y-2">
-              <Label htmlFor="client_id">Nama Website *</Label>
+              <Label htmlFor="client_id">Kode Website / Client ID *</Label>
               <Input
                 id="client_id"
-                placeholder="misal: WG77, CITRA77"
+                placeholder="misal: citra77, wg77 (huruf kecil, unik)"
                 value={data.client_id}
-                onChange={(e) => onChange({ client_id: e.target.value })}
+                onChange={(e) => onChange({ client_id: e.target.value.toLowerCase().replace(/\s+/g, '') })}
               />
               <p className="text-xs text-muted-foreground">
-                Website pemilik promo
+                ID unik sistem untuk website ini (auto-lowercase, tanpa spasi)
+              </p>
+            </div>
+
+            {/* Client Name (nama brand) */}
+            <div className="space-y-2">
+              <Label htmlFor="client_name">Nama Brand *</Label>
+              <Input
+                id="client_name"
+                placeholder="misal: CITRA77, WG77 (nama asli brand)"
+                value={(data as unknown as Record<string, unknown>).client_name as string || ''}
+                onChange={(e) => onChange({ client_name: e.target.value } as Partial<typeof data>)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Nama brand seperti yang tertera di website / teks promo
               </p>
             </div>
 
