@@ -51,7 +51,7 @@ import { classifyContent, type ProgramCategory } from "@/lib/extractors/category
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
 import { PromoItem, deletePromoDraft, duplicatePromo, normalizePromoData } from "./PromoFormWizard/types";
-import { promoKB } from "@/lib/promo-storage";
+import { promoKB, localDraftKB } from "@/lib/promo-storage";
 import { generateTermsList, formatNumber } from "./PromoFormWizard/Step4Review";
 import { inferRewardType, formatSubcategoryName, getRewardBadgeInfo } from "@/lib/reward-normalization";
 
