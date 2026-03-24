@@ -40,7 +40,7 @@ export const notificationBus = {
 // Drop-in toast API (compatible with sonner)
 // ============================================
 
-function emit(type: NotificationType, message: string, options?: { description?: string; duration?: number }) {
+function emit(type: NotificationType, message: string, options?: { description?: string; duration?: number; [key: string]: unknown }) {
   notificationBus.emit({
     type,
     title: message,
