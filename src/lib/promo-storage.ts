@@ -1190,7 +1190,6 @@ export const extractorSession = {
 };
 
 // ============================================
-// EXPORTS — v3.1 public API
+// EXPORTS — v3.1 public API (functions only, types declared inline above)
 // ============================================
-export type { PromoV31, MechanicNode, AdjudicationResult, CanonicalProjection, QueryHints, PromoMeta };
 export { toV31Row, fromV31Row, buildMechanicsFromFormData, buildCanonicalProjectionFromMechanics };
