@@ -983,13 +983,27 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-border" />
                             <DropdownMenuItem 
-                              onClick={() => setDeleteId(item.id)}
-                              className="cursor-pointer hover:bg-destructive/20 hover:text-destructive focus:bg-destructive/20 focus:text-destructive"
+                              onClick={() => handleToggleLock(item)}
+                              className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
+                            >
+                              <div className={`h-7 w-7 rounded-full flex items-center justify-center mr-3 ${item.is_locked ? 'bg-amber-500/20' : 'bg-muted'}`}>
+                                {item.is_locked
+                                  ? <Unlock className="h-4 w-4 text-amber-500" />
+                                  : <Lock className="h-4 w-4 text-muted-foreground" />
+                                }
+                              </div>
+                              <span>{item.is_locked ? 'Buka Kunci' : 'Kunci Promo'}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-border" />
+                            <DropdownMenuItem 
+                              onClick={() => !item.is_locked && setDeleteId(item.id)}
+                              disabled={item.is_locked}
+                              className={item.is_locked ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-destructive/20 hover:text-destructive focus:bg-destructive/20 focus:text-destructive'}
                             >
                               <div className="h-7 w-7 rounded-full bg-destructive/20 flex items-center justify-center mr-3">
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </div>
-                              <span>Delete Promo</span>
+                              <span>{item.is_locked ? 'Terkunci' : 'Delete Promo'}</span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
