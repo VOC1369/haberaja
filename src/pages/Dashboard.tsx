@@ -79,6 +79,7 @@ export type KnowledgeCategory = "general" | "promo" | "behavioral" | "pseudo";
 type ViewMode = "form" | "json" | "prompt" | "list";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("inputData");
   const [activeCategory, setActiveCategory] = useState("personaList");
   const [activeTicketCategory, setActiveTicketCategory] = useState<TicketCategory>("general");
@@ -90,6 +91,17 @@ const Dashboard = () => {
   const [isEditingFromSummary, setIsEditingFromSummary] = useState(false);
   const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Auth guard
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) navigate("/", { replace: true });
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) navigate("/", { replace: true });
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
   
   // Ref for main scrollable area - to reset scroll on navigation
   const mainRef = useRef<HTMLElement>(null);
