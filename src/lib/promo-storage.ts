@@ -243,7 +243,7 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     // Calculation
     calculation_basis:      (row.calculation_basis as string) || '',
     calculation_base:       (row.calculation_basis as string) || '',
-    payout_direction:       safe(row.payout_direction) as string | undefined,
+    payout_direction:       safe(row.payout_direction) as 'belakang' | 'depan' | undefined,
     min_calculation:        safe(row.min_calculation, null) as number | null,
     min_deposit:            safe(row.min_deposit, null) as number | null,
     max_bonus:              safe(row.max_bonus) as number | undefined,
