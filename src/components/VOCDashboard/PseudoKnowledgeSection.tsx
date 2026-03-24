@@ -557,7 +557,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         action: onNavigateToPromo ? (
           <button
             onClick={onNavigateToPromo}
-            className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-amber-500/50 bg-amber-500/20 px-3 text-xs font-semibold text-amber-400 hover:bg-amber-500/30 transition-colors"
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-button-hover/50 bg-button-hover/20 px-3 text-xs font-semibold text-button-hover hover:bg-button-hover/30 transition-colors"
           >
             Cek Promo →
           </button>
