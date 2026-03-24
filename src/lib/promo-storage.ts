@@ -84,9 +84,9 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
 
   return {
     id,
-    promo_id:               (p.promo_slug as string) || id,
+    promo_id:               (p.promo_id as string) || id,
     client_id:              (p.client_id as string) || DEFAULT_CLIENT_ID,
-    client_name:            (p.client_name as string) || null,
+    client_name:            (p.client_name as string) || (p.client_id as string) || DEFAULT_CLIENT_ID,
     promo_name:             p.promo_name as string,
     promo_slug:             (p.promo_slug as string) || null,
     schema_version:         '2.2',
