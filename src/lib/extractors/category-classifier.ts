@@ -521,7 +521,7 @@ export async function classifyContent(content: string): Promise<ClassificationRe
       classifier_runtime: 'client',
       content_length: content.length,
       latency_ms: latency,
-      tokens_used: data.usage?.total_tokens,
+      tokens_used: undefined,
       
       // Legacy (for backward compatibility)
       q1: legacyQ1,
