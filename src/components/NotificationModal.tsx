@@ -87,7 +87,7 @@ export function NotificationModal() {
       const item: QueueItem = { ...payload, id: ++idCounter };
       setQueue(prev => [...prev, item]);
     });
-    return unsub;
+    return () => { unsub(); };
   }, []);
 
   // Show next from queue when idle
