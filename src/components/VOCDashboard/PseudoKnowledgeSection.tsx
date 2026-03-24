@@ -549,20 +549,19 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     if (!mappedPreview) return;
     
     try {
-      // Force status='active' — user sudah review dan konfirmasi via "Gunakan Promo"
-      // Draft tidak boleh masuk Supabase (hanya localStorage via wizard)
-      const promoToCommit = { ...mappedPreview, status: 'active' as const };
-      const savedPromo = await promoKB.add(promoToCommit);
+      // Simpan ke localStorage sebagai draft — user masih harus edit & publish via wizard
+      const draftPromo = { ...mappedPreview, status: 'draft' as const };
+      const savedDraft = localDraftKB.save(draftPromo);
       
       shadcnToast({
-        title: "✅ Promo berhasil ditambahkan!",
-        description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`,
+        title: "✅ Promo disimpan sebagai draft!",
+        description: `"${savedDraft.promo_name}" siap diedit & dipublish dari Promo KB`,
         action: onNavigateToPromo ? (
           <button
             onClick={onNavigateToPromo}
             className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-button-hover/50 bg-button-hover/20 px-3 text-xs font-semibold text-button-hover hover:bg-button-hover/30 transition-colors"
           >
-            Cek Promo →
+            Buka Promo KB →
           </button>
         ) : undefined,
         duration: 6000,
@@ -570,8 +569,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       
       handleRestart();
     } catch (error) {
-      console.error('Error saving promo:', error);
-      toast.error("Gagal menyimpan promo", {
+      console.error('Error saving draft:', error);
+      toast.error("Gagal menyimpan draft", {
         description: error instanceof Error ? error.message : "Unknown error"
       });
     }
