@@ -125,7 +125,10 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     min_calculation:        (p.min_calculation as number) ?? null,
     min_deposit:            (p.min_deposit as number) ?? null,
     max_bonus:              (p.max_bonus as number) ?? null,
-    max_bonus_unlimited:    (p.max_bonus_unlimited as boolean) ?? false,
+    // Fix 1: max_bonus === null → max_bonus_unlimited = true (no cap = unlimited)
+    max_bonus_unlimited:    (p.max_bonus as number) === null || (p.max_bonus as number) === undefined
+                              ? true
+                              : ((p.max_bonus_unlimited as boolean) ?? false),
 
     // Turnover
     turnover_enabled:       (p.turnover_rule_enabled as boolean) ?? false,
@@ -168,9 +171,9 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     require_apk:            (p.require_apk as boolean) ?? false,
     one_account_rule:       (p.one_account_rule as boolean) ?? false,
 
-    // Validity
-    valid_from:             (p.valid_from as string) || null,
-    valid_until:            (p.valid_until as string) || null,
+    // Validity — Fix 2 & 3: empty string → null (Supabase date columns reject "")
+    valid_from:             ((p.valid_from as string) || null) || null,
+    valid_until:            ((p.valid_until as string) || null) || null,
     valid_until_unlimited:  (p.valid_until_unlimited as boolean) ?? false,
 
     // Risk
