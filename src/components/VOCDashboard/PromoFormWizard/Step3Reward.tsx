@@ -589,7 +589,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       inertUpdates.fixed_calculation_value_enabled = false;
                       inertUpdates.fixed_calculation_value = undefined;
                       // Transparency toast for auto-toggle
-                      toast("Auto-adjustment", {
+                      toast.info("Auto-adjustment", {
                         description: `Nilai Bonus dimatikan karena jenis reward "${value === 'uang_tunai' ? 'Uang Tunai' : 'Hadiah Fisik'}" tidak memerlukan kalkulasi.`
                       });
                     } else {
