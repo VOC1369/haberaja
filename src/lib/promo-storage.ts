@@ -32,7 +32,64 @@ const SESSION_KEY = 'pseudo_extractor_session';
  * Memetakan PromoFormData ke flat columns tabel promo_kb.
  * Field yang tidak ada di schema tabel disimpan ke extra_config.
  */
-function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string, unknown> {
+/**
+ * Auto-generate promo summary dari field yang ada.
+ * Dipanggil saat promo_summary kosong sebelum save ke Supabase.
+ */
+function generatePromoSummary(p: Record<string, unknown>): string {
+  const name = (p.promo_name as string) || '';
+  const mode = (p.reward_mode as string) || (p.mode as string) || '';
+  const rewardType = (p.reward_type as string) || '';
+  const calcBasis = (p.calculation_basis as string) || (p.calculation_base as string) || '';
+  const formula = (p.conversion_formula as string) || '';
+  const freq = (p.claim_frequency as string) || '';
+  const minCalc = (p.min_calculation as number) ?? null;
+  const maxBonus = (p.max_bonus as number) ?? null;
+  const rewardAmount = (p.reward_amount as number) ?? null;
+  const rewardUnit = (p.reward_unit as string) || '';
+
+  const parts: string[] = [];
+
+  // Reward description
+  if (rewardAmount && rewardUnit === 'percent') {
+    parts.push(`${name} memberikan bonus ${rewardAmount}%`);
+  } else if (rewardAmount) {
+    parts.push(`${name} memberikan bonus Rp ${rewardAmount.toLocaleString('id-ID')}`);
+  } else if (name) {
+    parts.push(name);
+  }
+
+  // Mode / basis
+  if (mode === 'formula' && calcBasis) {
+    parts.push(`dihitung dari ${calcBasis}`);
+  }
+
+  // Formula
+  if (formula) {
+    parts.push(`(${formula})`);
+  }
+
+  // Frequency
+  if (freq) {
+    parts.push(`dibagikan ${freq}`);
+  }
+
+  // Min calculation
+  if (minCalc) {
+    parts.push(`minimal ${calcBasis || 'transaksi'} Rp ${minCalc.toLocaleString('id-ID')}`);
+  }
+
+  // Max bonus
+  if (maxBonus) {
+    parts.push(`maksimal bonus Rp ${maxBonus.toLocaleString('id-ID')}`);
+  } else if (!maxBonus) {
+    parts.push('tanpa batas maksimal bonus');
+  }
+
+  return parts.join(', ') + '.';
+}
+
+function toFlatRow(promo: PromoFormData, id: string, _now: string): Record<string, unknown> {
   // Cast sekali ke p untuk akses aman tanpa TS error
   const p = promo as unknown as Record<string, unknown>;
 
@@ -62,7 +119,8 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     'archetype_payload', 'archetype_invariants',
     'has_subcategories', 'subcategories',
     'extraction_confidence', 'human_verified', 'penalty_type',
-    'created_by', 'created_at', 'updated_at', 'is_locked',
+    'created_by', 'is_locked',
+    // created_at & updated_at TIDAK dimasukkan — Supabase auto-fill via now()
   ]);
 
   // Kumpulkan field non-standard ke extra_config
@@ -72,27 +130,43 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     }
   });
 
-  const mergedExtra = {
-    ...(typeof p.extra_config === 'object' && p.extra_config !== null
-      ? (p.extra_config as Record<string, unknown>)
-      : {}),
-    ...extraConfigFields,
-  };
+  // Strip semua internal debug keys (berawalan _) dari extra_config
+  const rawExtra = (typeof p.extra_config === 'object' && p.extra_config !== null)
+    ? (p.extra_config as Record<string, unknown>)
+    : {};
+  const cleanedExtra: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(rawExtra)) {
+    if (!k.startsWith('_')) cleanedExtra[k] = v;
+  }
+  const mergedExtra: Record<string, unknown> = { ...cleanedExtra };
+  for (const [k, v] of Object.entries(extraConfigFields)) {
+    if (!k.startsWith('_')) mergedExtra[k] = v;
+  }
 
   // Tentukan mode dari reward_mode
   const mode = (p.reward_mode as string) || (p.mode as string) || null;
+
+  // valid_until: jika valid_until_unlimited = true atau string kosong → null
+  const validUntilRaw = (p.valid_until as string) || '';
+  const validUntil = (p.valid_until_unlimited as boolean) || !validUntilRaw ? null : validUntilRaw;
+
+  // promo_summary: auto-generate jika kosong
+  const promoSummary = (p.promo_summary as string) || generatePromoSummary(p);
+
+  // client_name: pakai field langsung, fallback ke client_id (bukan DEFAULT_CLIENT_ID)
+  const clientName = (p.client_name as string) || (p.client_id as string) || '';
 
   return {
     id,
     promo_id:               (p.promo_id as string) || id,
     client_id:              (p.client_id as string) || DEFAULT_CLIENT_ID,
-    client_name:            (p.client_name as string) || (p.client_id as string) || DEFAULT_CLIENT_ID,
+    client_name:            clientName || null,
     promo_name:             p.promo_name as string,
     promo_slug:             (p.promo_slug as string) || null,
     schema_version:         '2.2',
     status:                 (p.status as string) || 'draft',
     source_url:             (p.source_url as string) || null,
-    promo_summary:          (p.promo_summary as string) || null,
+    promo_summary:          promoSummary || null,
 
     // Taxonomy — NOT NULL di Supabase, fallback ke 'REWARD'
     category:               (p.category as string) || 'REWARD',
@@ -106,7 +180,7 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     reward_type:            (p.reward_type as string) || null,
     reward_unit:            (p.reward_unit as string) ?? null,
     reward_amount:          (p.reward_amount as number) ?? null,
-    // Bug 2 Fix: reward_is_percentage DERIVED from reward_unit — single source of truth
+    // reward_is_percentage DERIVED from reward_unit — single source of truth
     reward_is_percentage:   (p.reward_unit as string) === 'percent'
                               ? true
                               : ((p.reward_is_percentage as boolean) ?? false),
@@ -128,7 +202,7 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     min_calculation:        (p.min_calculation as number) ?? null,
     min_deposit:            (p.min_deposit as number) ?? null,
     max_bonus:              (p.max_bonus as number) ?? null,
-    // Bug 1 Fix: max_bonus === null → max_bonus_unlimited = true (no cap = unlimited)
+    // max_bonus === null → max_bonus_unlimited = true (no cap = unlimited)
     max_bonus_unlimited:    (p.max_bonus === null || p.max_bonus === undefined)
                               ? true
                               : ((p.max_bonus_unlimited as boolean) ?? false),
@@ -159,8 +233,8 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     distribution_mode:      (p.distribution_mode as string)
                             || (p.reward_distribution as string)
                             || null,
-    distribution_schedule:  (p.distribution_schedule as string) ?? null,
-    distribution_note:      (p.distribution_note as string) ?? null,
+    distribution_schedule:  (p.distribution_schedule as string) || null,
+    distribution_note:      (p.distribution_note as string) || null,
 
     // Game scope
     game_scope:             (p.game_restriction as string) || null,
@@ -174,16 +248,16 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     require_apk:            (p.require_apk as boolean) ?? false,
     one_account_rule:       (p.one_account_rule as boolean) ?? false,
 
-    // Validity — Fix 2 & 3: empty string → null (Supabase date columns reject "")
-    valid_from:             ((p.valid_from as string) || null) || null,
-    valid_until:            ((p.valid_until as string) || null) || null,
+    // Validity — empty string → null (Supabase date columns reject "")
+    valid_from:             (p.valid_from as string) || null,
+    valid_until:            validUntil,
     valid_until_unlimited:  (p.valid_until_unlimited as boolean) ?? false,
 
     // Risk
     promo_risk_level:       (p.promo_risk_level as string) || 'medium',
-    anti_fraud_notes:       (p.anti_fraud_notes as string) ?? null,
+    anti_fraud_notes:       (p.anti_fraud_notes as string) || null,
     custom_terms:           (p.custom_terms as string) || null,
-    special_conditions:     (p.special_requirements as string[]) || [],
+    special_conditions:     (p.special_requirements as string[]) || (p.special_conditions as string[]) || [],
 
     // Subcategories
     has_subcategories:      Array.isArray(p.subcategories) && (p.subcategories as unknown[]).length > 0,
@@ -198,10 +272,10 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     human_verified:         (p.human_verified as boolean) ?? false,
     is_locked:              (p.is_locked as boolean) ?? false,
 
-    // Audit
+    // Audit — created_at & updated_at DIHAPUS dari sini, Supabase auto-fill via now()
     created_by:             (p.created_by as string) || 'Admin',
 
-    // Escape hatch — semua field non-standard masuk di sini
+    // Escape hatch — semua field non-standard masuk di sini (key _ sudah distrip)
     extra_config:           Object.keys(mergedExtra).length > 0 ? mergedExtra : {},
   };
 }
