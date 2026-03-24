@@ -19,7 +19,7 @@
  * ✅ Ditentukan oleh sebab–akibat sistem
  */
 
-import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
+import { callAI, extractText } from '../ai-client';
 
 // ============================================
 // KEYWORD OVERRIDE VERSION (for session invalidation)
