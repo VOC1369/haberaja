@@ -157,45 +157,51 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
     }
   };
 
-  // Publish → Supabase (hapus draft lokal jika ada)
+  // Publish → Supabase ONLY (status = 'active')
+  // Aturan:
+  // - initialData ada → ini EDIT existing promo → selalu UPDATE via existingId
+  // - initialData tidak ada → promo BARU → CREATE di Supabase (tanpa existingId)
+  // - Draft lokal (localStorage) dihapus setelah publish berhasil
   const handlePublish = async () => {
     const generatedTerms = generateFullTermsString(formData);
     const dataToSave: PromoFormData = { 
       ...formData, 
-      status: 'active', 
+      status: 'active',  // WAJIB active — draft tidak boleh masuk Supabase
       custom_terms: generatedTerms,
       program_classification: programToClassification(selectedProgram),
     };
 
-    // Cek apakah editingId ini adalah record Supabase (edit promo existing)
-    // vs draft lokal (belum pernah ke Supabase)
-    const isLocalDraft = editingId
-      ? !!localStorage.getItem(`${LOCAL_DRAFT_KEY}_${editingId}`)
-      : true;
+    try {
+      let saved: PromoItem;
+      
+      if (initialData && editingId) {
+        // EDIT mode: selalu UPDATE record Supabase yang sudah ada
+        console.log('[Publish] UPDATE existing Supabase record:', editingId);
+        saved = await savePromoDraft(dataToSave, editingId);
+      } else {
+        // NEW promo: CREATE di Supabase (editingId mungkin ada dari localStorage draft, tapi abaikan)
+        console.log('[Publish] CREATE new Supabase record');
+        saved = await savePromoDraft(dataToSave, undefined);
+      }
 
-    let saved: PromoItem;
-    if (!isLocalDraft && editingId) {
-      // Update promo existing di Supabase
-      saved = await savePromoDraft(dataToSave, editingId);
-    } else {
-      // Promo baru → tambah ke Supabase (tanpa existingId)
-      saved = await savePromoDraft(dataToSave, undefined);
+      // Bersihkan draft lokal jika ada
+      if (editingId) {
+        localStorage.removeItem(`${LOCAL_DRAFT_KEY}_${editingId}`);
+      }
+
+      toast.success(`Promo "${formData.promo_name}" berhasil dipublish ke Knowledge Base!`);
+      console.log('[Publish] ✅ Saved to Supabase:', saved.id, '| status: active');
+      
+      // Reset form dan kembali ke list
+      setFormData(initialPromoData);
+      setEditingId(undefined);
+      setCurrentStep(1);
+      setSelectedProgram(null);
+      onSaveSuccess?.();
+    } catch (err) {
+      console.error('[Publish] ❌ Failed:', err);
+      toast.error(`Gagal publish promo. Cek koneksi dan coba lagi.`);
     }
-
-    // Hapus draft lokal jika ada
-    if (editingId) {
-      localStorage.removeItem(`${LOCAL_DRAFT_KEY}_${editingId}`);
-    }
-
-    toast.success(`Promo "${formData.promo_name}" berhasil dipublish ke Knowledge Base!`);
-    console.log('[Publish] Saved to Supabase:', saved.id);
-    
-    // Reset form dan kembali ke list
-    setFormData(initialPromoData);
-    setEditingId(undefined);
-    setCurrentStep(1);
-    setSelectedProgram(null);
-    onSaveSuccess?.();
   };
 
 

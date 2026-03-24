@@ -488,6 +488,18 @@ export const promoKB = {
    * Dipanggil saat tombol Publish ditekan di Step 5 Review
    */
   add: async (promo: PromoFormData): Promise<PromoItem> => {
+    // ============================================
+    // HARD GUARD: Draft TIDAK BOLEH masuk Supabase
+    // Draft hanya boleh disimpan via localStorage (handleSaveDraft di wizard)
+    // Jika ada code path yang memanggil add() dengan status='draft', lempar error
+    // ============================================
+    if (USE_SUPABASE && promo.status === 'draft') {
+      const errMsg = '[promoKB.add] BLOCKED: status=draft tidak boleh masuk Supabase. Gunakan localStorage untuk draft.';
+      console.error(errMsg);
+      console.trace('[promoKB.add] Stack trace untuk debug caller:');
+      throw new Error(errMsg);
+    }
+
     const now = new Date().toISOString();
     const promoWithId = promo as PromoFormData & { id?: string };
     const id = promoWithId.id || generateUUID();
@@ -533,7 +545,7 @@ export const promoKB = {
     }
 
     window.dispatchEvent(new CustomEvent('promo-storage-updated'));
-    console.log('[promoKB] Added promo:', data.id, data.promo_name);
+    console.log('[promoKB.add] ✅ Published to Supabase:', data.id, data.promo_name, '| status:', data.status);
 
     return fromFlatRow(data as Record<string, unknown>);
   },
