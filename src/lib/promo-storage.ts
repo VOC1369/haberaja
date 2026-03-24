@@ -240,7 +240,6 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     conversion_formula:     (row.conversion_formula as string) || '',
 
     // Calculation
-    calculation_basis:      (row.calculation_basis as string) || '',
     calculation_base:       (row.calculation_basis as string) || '',
     payout_direction:       safe(row.payout_direction) as 'belakang' | 'depan' | undefined,
     min_calculation:        safe(row.min_calculation, null) as number | null,
