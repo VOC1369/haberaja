@@ -749,6 +749,87 @@ export const promoKB = {
 };
 
 // ============================================
+// LOCAL DRAFT KB — hasil "Gunakan Promo" dari Pseudo KB
+// Disimpan di localStorage dengan prefix LOCAL_DRAFT_KEY
+// Diload bersamaan dengan Supabase data di PromoKnowledgeSection
+// ============================================
+
+const LOCAL_DRAFT_KEY = 'voc_promo_local_draft_';
+
+export const localDraftKB = {
+  /**
+   * Simpan extracted promo sebagai draft lokal (localStorage saja)
+   * Dipanggil saat user klik "Gunakan Promo" di Pseudo KB
+   */
+  save: (promo: PromoFormData): PromoItem => {
+    const id = (promo as PromoFormData & { id?: string }).id || generateUUID();
+    const now = new Date().toISOString();
+    const draft: PromoItem = {
+      ...promo,
+      id,
+      status: 'draft',
+      is_active: false,
+      version: 1,
+      created_at: now,
+      updated_at: now,
+      updated_by: 'Admin',
+    } as PromoItem;
+
+    try {
+      localStorage.setItem(`${LOCAL_DRAFT_KEY}${id}`, JSON.stringify(draft));
+      window.dispatchEvent(new CustomEvent('promo-storage-updated'));
+      console.log('[localDraftKB.save] Draft tersimpan lokal:', id, draft.promo_name);
+    } catch (e) {
+      console.error('[localDraftKB.save] Failed:', e);
+    }
+    return draft;
+  },
+
+  /**
+   * Baca semua draft lokal dari localStorage
+   */
+  getAll: (): PromoItem[] => {
+    const drafts: PromoItem[] = [];
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(LOCAL_DRAFT_KEY)) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            try {
+              drafts.push(JSON.parse(raw) as PromoItem);
+            } catch {
+              // skip corrupted
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[localDraftKB.getAll] Failed:', e);
+    }
+    // Sort newest first
+    return drafts.sort((a, b) =>
+      new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()
+    );
+  },
+
+  /**
+   * Hapus satu draft lokal berdasarkan id
+   */
+  delete: (id: string): void => {
+    localStorage.removeItem(`${LOCAL_DRAFT_KEY}${id}`);
+    window.dispatchEvent(new CustomEvent('promo-storage-updated'));
+  },
+
+  /**
+   * Cek apakah sebuah id adalah draft lokal
+   */
+  isLocal: (id: string): boolean => {
+    return localStorage.getItem(`${LOCAL_DRAFT_KEY}${id}`) !== null;
+  },
+};
+
+// ============================================
 // SESSION STORAGE (tetap di browser)
 // ============================================
 
