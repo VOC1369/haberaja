@@ -35,7 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/lib/notify";
-import { useToast } from "@/hooks/use-toast";
+
 import { 
   extractPromoFromContent, 
   extractPromoFromImage,
@@ -111,7 +111,6 @@ interface PseudoKnowledgeSectionProps {
 }
 
 export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSectionProps) {
-  const { toast: shadcnToast } = useToast();
   // Input state
   const [inputMode, setInputMode] = useState<InputMode>('url');
   const [currentInput, setCurrentInput] = useState('');
@@ -363,13 +362,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           // HYBRID MODE: Best of both worlds
           setInputMode('hybrid');
           toast.info("Mengekstrak dengan mode HYBRID (Image + Text)...", {
-            description: "Text = angka & syarat. Image = layout & konteks."
+            description: "Text = angka & syarat. Image = layout & konteks.",
+            duration: 30000
           });
           result = await extractPromoFromImage(imageBase64, currentInput.trim());
         } else {
           // IMAGE ONLY mode
           setInputMode('image');
-          toast.info("Mengekstrak dari image dengan VOC AI Knowledge...");
+          toast.info("Mengekstrak dari image dengan VOC AI Knowledge...", { duration: 30000 });
           result = await extractPromoFromImage(imageBase64);
         }
       } else if (currentInput.trim()) {
@@ -377,7 +377,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         setInputMode(detectedType);
         
         if (detectedType === 'url') {
-          toast.info("Mengambil konten dari URL...");
+          toast.info("Mengambil konten dari URL...", { duration: 30000 });
           try {
             const htmlContent = await fetchUrlContent(currentInput);
             if (!htmlContent || htmlContent.length < 500) {
@@ -393,7 +393,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         } else {
           // TEXT mode (includes both HTML and plain text)
           setInputMode('text');
-          toast.info("Mengekstrak dari konten teks...");
+          toast.info("Mengekstrak dari konten teks...", { duration: 30000 });
           result = await extractPromoFromContent(currentInput);
         }
       } else {
@@ -553,18 +553,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       const draftPromo = { ...mappedPreview, status: 'draft' as const };
       const savedDraft = localDraftKB.save(draftPromo);
       
-      shadcnToast({
-        title: "✅ Promo disimpan sebagai draft!",
+      toast.success("Promo disimpan sebagai draft!", {
         description: `"${savedDraft.promo_name}" siap diedit & dipublish dari Promo KB`,
-        action: onNavigateToPromo ? (
-          <button
-            onClick={onNavigateToPromo}
-            className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-button-hover/50 bg-button-hover/20 px-3 text-xs font-semibold text-button-hover hover:bg-button-hover/30 transition-colors"
-          >
-            Buka Promo KB →
-          </button>
-        ) : undefined,
-        duration: 6000,
       });
       
       handleRestart();

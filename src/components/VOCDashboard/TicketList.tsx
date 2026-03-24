@@ -29,7 +29,7 @@ import {
 import { FileText, DollarSign, Banknote, Gift, Search, Clock, CheckCircle, XCircle, Filter, User, Calendar, CreditCard, MessageSquare, Headphones } from "lucide-react";
 import { Ticket, TicketStatus, TicketCategory, statusLabels, categoryLabels } from "@/types/ticket";
 import { PromoItem, getPromoDrafts } from "./PromoFormWizard/types";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/notify";
 import { getChatTickets } from "@/lib/ticket-storage";
 
 // LocalStorage key for ticket status updates
@@ -117,7 +117,7 @@ function saveTicketStatus(ticketId: string, status: TicketStatus) {
 }
 
 export function TicketList({ category }: TicketListProps) {
-  const { toast } = useToast();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
   const [promoFilter, setPromoFilter] = useState<string>("all");
@@ -145,8 +145,7 @@ export function TicketList({ category }: TicketListProps) {
       });
     }
     
-    toast({
-      title: newStatus === "approved" ? "Ticket Disetujui" : "Ticket Ditolak",
+    toast.success(newStatus === "approved" ? "Ticket Disetujui" : "Ticket Ditolak", {
       description: `Status ticket berhasil diubah menjadi ${statusLabels[newStatus]}`,
     });
     
@@ -510,8 +509,7 @@ export function TicketList({ category }: TicketListProps) {
                           is_taken_over: true 
                         };
                         localStorage.setItem(TICKET_STATUS_KEY, JSON.stringify(statuses));
-                        toast({
-                          title: "Chat Diambil Alih",
+                        toast.success("Chat Diambil Alih", {
                           description: `Anda mengambil alih chat untuk ticket ${selectedTicket.ticket_number}`,
                         });
                         setIsDetailOpen(false);

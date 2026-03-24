@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useState, useMemo } from "react";
 import { cn, formatPromoType } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/notify";
 import { Progress } from "@/components/ui/progress";
 
 // Helper: format number with thousand separator
@@ -1252,7 +1252,7 @@ const CollapsibleSection = ({
 export function Step4Review({ data, onGoToStep }: Step4Props) {
   const [jsonOpen, setJsonOpen] = useState(false);
   const [jsonMode, setJsonMode] = useState<'canonical' | 'legacy'>('canonical');
-  const { toast } = useToast();
+  
   
   // Build PKB payload for JSON preview (legacy format)
   const pkbPayload = buildPKBPayload(data);
@@ -1313,10 +1313,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
     text += terms.map((t, i) => `${i + 1}. ${t}`).join('\n');
     
     navigator.clipboard.writeText(text);
-    toast({ 
-      title: "Berhasil disalin!", 
-      description: "Syarat & Ketentuan telah disalin ke clipboard" 
-    });
+    toast.success("Berhasil disalin!", { description: "Syarat & Ketentuan telah disalin ke clipboard" });
   };
 
   return (
@@ -2530,10 +2527,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           link.click();
                           document.body.removeChild(link);
                           URL.revokeObjectURL(url);
-                          toast({
-                            title: "Berhasil!",
-                            description: `${jsonMode === 'canonical' ? 'Canonical v2.1' : 'Legacy'} JSON telah didownload`
-                          });
+                          toast.success("Berhasil!", { description: `${jsonMode === 'canonical' ? 'Canonical v2.1' : 'Legacy'} JSON telah didownload` });
                         }}
                         className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
                       >
@@ -2559,10 +2553,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           link.click();
                           document.body.removeChild(link);
                           URL.revokeObjectURL(url);
-                          toast({
-                            title: "Berhasil!",
-                            description: "CSV telah didownload"
-                          });
+                          toast.success("Berhasil!", { description: "CSV telah didownload" });
                         }}
                         className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
                       >
@@ -2577,10 +2568,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         onClick={() => {
                           const jsonToCopy = jsonMode === 'canonical' ? canonicalPayload : pkbPayload;
                           navigator.clipboard.writeText(JSON.stringify(jsonToCopy, null, 2));
-                          toast({
-                            title: "Berhasil disalin!",
-                            description: `${jsonMode === 'canonical' ? 'Canonical' : 'Legacy'} JSON telah disalin ke clipboard`
-                          });
+                          toast.success("Berhasil disalin!", { description: `${jsonMode === 'canonical' ? 'Canonical' : 'Legacy'} JSON telah disalin ke clipboard` });
                         }}
                         className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
                       >
