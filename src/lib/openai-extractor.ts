@@ -2662,7 +2662,30 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
       cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
     }
     
-    const parsed = JSON.parse(cleanJson) as ExtractedPromo;
+    // ============================================================
+    // DUAL OUTPUT PARSER — v3.1 compatibility
+    // LLM now returns { legacy_flat: {...}, mechanics: [...] }
+    // Fallback: if no legacy_flat key → treat entire response as legacy_flat
+    // ============================================================
+    const rawParsed = JSON.parse(cleanJson);
+    let mechanicsV31: unknown[] = [];
+
+    let flatData: Record<string, unknown>;
+    if (rawParsed && typeof rawParsed === 'object' && 'legacy_flat' in rawParsed) {
+      flatData = rawParsed.legacy_flat as Record<string, unknown>;
+      mechanicsV31 = Array.isArray(rawParsed.mechanics) ? rawParsed.mechanics : [];
+      console.log(`[DualOutput] mechanics[] v3.1 received: ${mechanicsV31.length} primitives`);
+    } else {
+      // Fallback: old response format (no dual output key)
+      flatData = rawParsed as Record<string, unknown>;
+      mechanicsV31 = [];
+      console.warn('[DualOutput] legacy_flat key not found — treating entire response as flat v2.2, mechanics=[]');
+    }
+
+    const parsed = flatData as unknown as ExtractedPromo;
+    // Attach mechanics_v31 for downstream storage (promo-storage.ts toV31Row picks this up)
+    (parsed as any)._mechanics_v31 = mechanicsV31;
+
     parsed.raw_content = content.substring(0, 1000);
     parsed.source_url = sourceUrl;
     parsed.ready_to_commit = false;
