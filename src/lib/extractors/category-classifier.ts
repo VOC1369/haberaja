@@ -392,9 +392,6 @@ function assessQuality(
 // ============================================
 
 export async function classifyContent(content: string): Promise<ClassificationResult> {
-  // Use centralized DEV MODE API key
-  const apiKey = getOpenAIKey();
-
   console.log('[Classifier] Starting 3-GATE classification (PROMO SUPER CONTRACT)...');
   console.log('[Classifier] Prompt version:', CLASSIFIER_PROMPT_VERSION);
   console.log('[Classifier] Content length:', content.length);
