@@ -439,18 +439,23 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   };
 
   const getStatusBadge = (promo: PromoItem) => {
+    const base = "inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-0.5 text-xs font-medium rounded-full border-0";
     // Local draft dari Pseudo KB — belum di Supabase
     if (localDraftKB.isLocal(promo.id)) {
-      return <Badge className="bg-warning/20 text-warning border border-warning/30 rounded-full px-3 py-1">📋 Local Draft</Badge>;
+      return (
+        <Badge className="inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 py-0.5 text-xs font-medium rounded-full bg-warning/20 text-warning border border-warning/30">
+          <span>📋</span><span>Local Draft</span>
+        </Badge>
+      );
     }
 
     // Calculate status based on dates
     const now = new Date();
     const validFrom = promo.valid_from ? new Date(promo.valid_from) : null;
     const validUntil = promo.valid_until ? new Date(promo.valid_until) : null;
-    
+
     let displayStatus: 'active' | 'draft' | 'upcoming' | 'expired' = promo.status === 'draft' ? 'draft' : 'active';
-    
+
     if (promo.status !== 'draft') {
       if (validUntil && now > validUntil) {
         displayStatus = 'expired';
@@ -460,18 +465,18 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
         displayStatus = 'active';
       }
     }
-    
+
     switch (displayStatus) {
       case "active":
-        return <Badge className="bg-success/30 text-success border-0 rounded-full px-3 py-1">Active</Badge>;
+        return <Badge className={`${base} bg-success/30 text-success`}>Active</Badge>;
       case "upcoming":
-        return <Badge className="bg-button-hover/30 text-button-hover border-0 rounded-full px-3 py-1">Upcoming</Badge>;
+        return <Badge className={`${base} bg-button-hover/30 text-button-hover`}>Upcoming</Badge>;
       case "draft":
-        return <Badge className="bg-muted text-muted-foreground border-0 rounded-full px-3 py-1">Draft</Badge>;
+        return <Badge className={`${base} bg-muted text-muted-foreground`}>Draft</Badge>;
       case "expired":
-        return <Badge className="bg-declined/30 text-declined border-0 rounded-full px-3 py-1">Expired</Badge>;
+        return <Badge className={`${base} bg-declined/30 text-declined`}>Expired</Badge>;
       default:
-        return <Badge variant="outline" className="rounded-full px-3 py-1">{displayStatus}</Badge>;
+        return <Badge className={`${base} bg-muted text-muted-foreground`}>{displayStatus}</Badge>;
     }
   };
 
@@ -601,10 +606,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
         default: return null;
       }
     };
-    
+
     const badge = getBadgeContent();
     if (!badge) return <span className="text-muted-foreground">-</span>;
-    
+
     const handleOverride = async () => {
       if (selectedCategory === classification) {
         toast.error('Kategori tidak berubah');
@@ -614,7 +619,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
         toast.error('Alasan override wajib diisi');
         return;
       }
-      
+
       // Update in Supabase
       try {
         const success = await promoKB.update(promo.id, {
@@ -627,7 +632,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
             timestamp: new Date().toISOString(),
           },
         } as Partial<PromoItem>);
-        
+
         if (success) {
           loadPromos();
           toast.success('Kategori berhasil diubah');
@@ -641,17 +646,18 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
         toast.error('Gagal mengubah kategori');
       }
     };
-    
+
     const hasOverride = !!promo.classification_override;
-    
+
     return (
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Badge 
-            className={`${badge.className} cursor-pointer hover:opacity-80 transition-opacity`}
+          <Badge
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1 text-xs font-medium rounded-full cursor-pointer hover:opacity-80 transition-opacity ${badge.className}`}
           >
-            <badge.icon className="h-3 w-3 mr-1" /> {badge.text}
-            {hasOverride && <Edit2 className="h-3 w-3 ml-1 opacity-60" />}
+            <badge.icon className="h-3 w-3 shrink-0" />
+            <span>{badge.text}</span>
+            {hasOverride && <Edit2 className="h-3 w-3 shrink-0 opacity-60" />}
           </Badge>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
