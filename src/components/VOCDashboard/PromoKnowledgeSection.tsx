@@ -1264,7 +1264,13 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           <AlertDialogHeader>
             <AlertDialogTitle className="text-base">Hapus Semua Promo?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
-              Anda akan menghapus <strong>{items.length}</strong> promo entry. Tindakan ini tidak dapat dibatalkan dan semua data akan hilang permanen.
+              {(() => {
+                const locked = items.filter(i => i.is_locked).length;
+                const deletable = items.length - locked;
+                return locked > 0
+                  ? <>Anda akan menghapus <strong>{deletable}</strong> promo. <strong>{locked}</strong> promo terkunci akan dilewati dan tidak terhapus.</>
+                  : <>Anda akan menghapus <strong>{items.length}</strong> promo. Tindakan ini tidak dapat dibatalkan.</>;
+              })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1273,11 +1279,17 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm"
               onClick={async () => {
                 try {
-                  for (const item of items) {
+                  const deletable = items.filter(i => !i.is_locked);
+                  const skipped = items.filter(i => i.is_locked).length;
+                  for (const item of deletable) {
                     await deletePromoDraft(item.id);
                   }
-                  setItems([]);
-                  toast.success("Semua promo berhasil dihapus");
+                  setItems(items.filter(i => i.is_locked));
+                  if (skipped > 0) {
+                    toast.success(`${deletable.length} promo dihapus. ${skipped} promo terkunci dilewati.`);
+                  } else {
+                    toast.success("Semua promo berhasil dihapus");
+                  }
                 } catch (error) {
                   console.error('[PromoKnowledgeSection] Delete all failed:', error);
                   toast.error("Gagal menghapus semua promo");
