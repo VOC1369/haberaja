@@ -215,10 +215,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     setViewMode("form");
   };
 
-  const handleSaveSuccess = () => {
+  const handleSaveSuccess = async () => {
     setEditingPromo(undefined);
-    setViewMode("list");
-    loadPromos();
+    await loadPromos();   // Tunggu data fresh dari Supabase dulu
+    setViewMode("list");  // Baru switch ke list
   };
 
   const handleDelete = async () => {
