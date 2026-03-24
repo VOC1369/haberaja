@@ -2553,10 +2553,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           link.click();
                           document.body.removeChild(link);
                           URL.revokeObjectURL(url);
-                          toast({
-                            title: "Berhasil!",
-                            description: "CSV telah didownload"
-                          });
+                          toast.success("Berhasil!", { description: "CSV telah didownload" });
                         }}
                         className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
                       >
@@ -2571,10 +2568,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                         onClick={() => {
                           const jsonToCopy = jsonMode === 'canonical' ? canonicalPayload : pkbPayload;
                           navigator.clipboard.writeText(JSON.stringify(jsonToCopy, null, 2));
-                          toast({
-                            title: "Berhasil disalin!",
-                            description: `${jsonMode === 'canonical' ? 'Canonical' : 'Legacy'} JSON telah disalin ke clipboard`
-                          });
+                          toast.success("Berhasil disalin!", { description: `${jsonMode === 'canonical' ? 'Canonical' : 'Legacy'} JSON telah disalin ke clipboard` });
                         }}
                         className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
                       >
