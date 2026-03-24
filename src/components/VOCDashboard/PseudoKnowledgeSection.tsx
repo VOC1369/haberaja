@@ -551,8 +551,18 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     try {
       const savedPromo = await promoKB.add(mappedPreview);
       
-      toast.success("Promo berhasil ditambahkan!", {
-        description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`
+      shadcnToast({
+        title: "✅ Promo berhasil ditambahkan!",
+        description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`,
+        action: onNavigateToPromo ? (
+          <button
+            onClick={onNavigateToPromo}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-amber-500/50 bg-amber-500/20 px-3 text-xs font-semibold text-amber-400 hover:bg-amber-500/30 transition-colors"
+          >
+            Cek Promo →
+          </button>
+        ) : undefined,
+        duration: 6000,
       });
       
       handleRestart();
