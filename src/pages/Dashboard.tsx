@@ -400,7 +400,14 @@ const Dashboard = () => {
     }
 
     if (activeSection === "knowledgeBase") {
-      return <KnowledgeBaseSection activeCategory={activeKnowledgeCategory} forceResetKey={knowledgeResetKey} />;
+      return <KnowledgeBaseSection
+        activeCategory={activeKnowledgeCategory}
+        forceResetKey={knowledgeResetKey}
+        onNavigateToPromo={() => {
+          setActiveKnowledgeCategory("promo");
+          setKnowledgeResetKey(prev => prev + 1);
+        }}
+      />;
     }
     if (activeSection === "ticket") return <TicketList category={activeTicketCategory} />;
     if (activeSection === "adminRole") return <AdminRoleSection />;

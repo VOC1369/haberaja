@@ -105,7 +105,11 @@ const getBlacklistSummary = (data: ExtractedPromo): string => {
   return 'Tidak Aktif';
 };
 
-export function PseudoKnowledgeSection() {
+interface PseudoKnowledgeSectionProps {
+  onNavigateToPromo?: () => void;
+}
+
+export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSectionProps) {
   // Input state
   const [inputMode, setInputMode] = useState<InputMode>('url');
   const [currentInput, setCurrentInput] = useState('');
