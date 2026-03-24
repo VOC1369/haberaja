@@ -1289,9 +1289,9 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                   const deletable = items.filter(i => !i.is_locked);
                   const skipped = items.filter(i => i.is_locked).length;
                   for (const item of deletable) {
-                    await deletePromoDraft(item.id);
+                    await promoKB.delete(item.id); // Supabase delete
                   }
-                  setItems(items.filter(i => i.is_locked));
+                  await loadPromos(); // Reload 1:1 dari Supabase
                   if (skipped > 0) {
                     toast.success(`${deletable.length} promo dihapus. ${skipped} promo terkunci dilewati.`);
                   } else {
