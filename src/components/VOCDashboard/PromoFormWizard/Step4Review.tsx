@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useState, useMemo } from "react";
 import { cn, formatPromoType } from "@/lib/utils";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/notify";
 import { Progress } from "@/components/ui/progress";
 
 // Helper: format number with thousand separator

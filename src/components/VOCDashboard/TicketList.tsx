@@ -29,7 +29,7 @@ import {
 import { FileText, DollarSign, Banknote, Gift, Search, Clock, CheckCircle, XCircle, Filter, User, Calendar, CreditCard, MessageSquare, Headphones } from "lucide-react";
 import { Ticket, TicketStatus, TicketCategory, statusLabels, categoryLabels } from "@/types/ticket";
 import { PromoItem, getPromoDrafts } from "./PromoFormWizard/types";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/lib/notify";
 import { getChatTickets } from "@/lib/ticket-storage";
 
 // LocalStorage key for ticket status updates

@@ -35,7 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/lib/notify";
-import { useToast } from "@/hooks/use-toast";
+
 import { 
   extractPromoFromContent, 
   extractPromoFromImage,
