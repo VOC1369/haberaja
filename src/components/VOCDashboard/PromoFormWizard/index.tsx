@@ -205,7 +205,12 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
       onSaveSuccess?.();
     } catch (err) {
       console.error('[Publish] ❌ Failed:', err);
-      toast.error(`Gagal publish promo. Cek koneksi dan coba lagi.`);
+      const errMsg = err instanceof Error ? err.message : '';
+      if (errMsg === 'DUPLICATE_PROMO') {
+        toast.error(`Promo "${formData.promo_name}" sudah ada di Knowledge Base! Gunakan Edit untuk mengubahnya.`, { duration: 5000 });
+      } else {
+        toast.error(`Gagal publish promo. Cek koneksi dan coba lagi.`);
+      }
     }
   };
 

@@ -429,6 +429,10 @@ export const promoKB = {
 
     if (error) {
       logSupabaseError('promoKB.add', error);
+      // Duplicate constraint: promo dengan nama yang sama sudah ada di client ini
+      if (error.code === '23505' && error.message?.includes('promo_kb_client_promo_unique')) {
+        throw new Error('DUPLICATE_PROMO');
+      }
       throw new Error(`Failed to add promo to database: ${error.message}`);
     }
 
