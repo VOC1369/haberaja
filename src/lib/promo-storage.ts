@@ -210,7 +210,10 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const safe = (v: unknown, fallback: unknown = undefined) => v ?? fallback;
 
-  const promo: PromoItem = {
+  // Build partial object then cast — PromoItem extends PromoFormData which has 100+ fields.
+  // Fields not listed here will come from `extra` (extra_config spread) or normalizeToStandard.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const promo = {
     // Identity
     id:                     row.id as string,
     client_id:              row.client_id as string,
