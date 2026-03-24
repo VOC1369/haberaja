@@ -251,7 +251,6 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     turnover_rule_enabled:  (row.turnover_enabled as boolean) ?? false,
     turnover_multiplier:    safe(row.turnover_multiplier) as number | undefined,
     turnover_basis:         safe(row.turnover_basis) as 'bonus_only' | 'deposit_only' | 'deposit_plus_bonus' | undefined,
-    turnover_basis_extra:   safe(row.turnover_basis_extra) as string | undefined,
     min_withdraw_after_bonus: safe(row.min_withdraw_after_bonus) as number | undefined,
     turnover_rule:          '',
     turnover_rule_custom:   '',
