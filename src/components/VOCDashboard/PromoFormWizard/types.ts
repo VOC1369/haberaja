@@ -1534,7 +1534,37 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     ? data.extraction_confidence 
     : (data.classification_confidence === 'high' ? 0.9 : data.classification_confidence === 'medium' ? 0.7 : 0.5);
   canonical.human_verified = data.human_verified || false;
-  
+
+  // ===============================
+  // AUTO-GENERATE promo_summary JIKA KOSONG
+  // ===============================
+  if (!canonical.promo_summary) {
+    const parts: string[] = [];
+    if (canonical.reward_amount && canonical.reward_unit === 'percent') {
+      parts.push(`Bonus ${canonical.reward_amount}%`);
+    }
+    if (canonical.calculation_basis) {
+      parts.push(`dari ${canonical.calculation_basis}`);
+    }
+    if (canonical.conversion_formula) {
+      parts.push(`(${canonical.conversion_formula})`);
+    }
+    if (canonical.claim_frequency) {
+      parts.push(`dibagikan ${canonical.claim_frequency}`);
+    }
+    if (canonical.min_calculation) {
+      parts.push(`minimal Rp ${Number(canonical.min_calculation).toLocaleString('id-ID')}`);
+    }
+    if (canonical.max_bonus_unlimited) {
+      parts.push('tanpa batas maksimal bonus');
+    } else if (canonical.max_bonus) {
+      parts.push(`maksimal bonus Rp ${Number(canonical.max_bonus).toLocaleString('id-ID')}`);
+    }
+    if (parts.length > 0) {
+      canonical.promo_summary = parts.join(', ') + '.';
+    }
+  }
+
   // ===============================
   // CANONICAL GUARD VALIDATION
   // Run validation and log warnings
