@@ -2970,7 +2970,18 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     <Label className={isEligibilityMode ? 'text-muted-foreground' : ''}>Jenis Perhitungan</Label>
                     <SelectWithAddNew
                       value={data.calculation_method}
-                      onValueChange={(value) => onChange({ calculation_method: value })}
+                      onValueChange={(value) => {
+                        // Bug 2 Fix UI: calculation_method=percentage → auto set reward_unit=percent
+                        const updates: Partial<PromoFormData> = { calculation_method: value };
+                        if (value === 'percentage') {
+                          updates.reward_unit = 'percent';
+                          updates.reward_is_percentage = true;
+                        } else if (value === 'fixed') {
+                          updates.reward_unit = 'fixed';
+                          updates.reward_is_percentage = false;
+                        }
+                        onChange(updates);
+                      }}
                       options={calcMethodOptions}
                       onAddOption={(option) => setCalcMethodOptions([...calcMethodOptions, option])}
                       onDeleteOption={handleDeleteCalcMethod}
