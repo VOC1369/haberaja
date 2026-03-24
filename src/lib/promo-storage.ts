@@ -207,74 +207,77 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     ? row.extra_config as Record<string, unknown>
     : {};
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const safe = (v: unknown, fallback: unknown = undefined) => v ?? fallback;
+
   const promo: PromoItem = {
     // Identity
     id:                     row.id as string,
     client_id:              row.client_id as string,
-    client_name:            row.client_name as string ?? undefined,
+    client_name:            safe(row.client_name) as string | undefined,
     promo_name:             row.promo_name as string,
-    promo_slug:             row.promo_slug as string ?? undefined,
-    source_url:             row.source_url as string ?? undefined,
-    promo_summary:          row.promo_summary as string ?? undefined,
-    schema_version:         row.schema_version as string ?? '2.2',
-    status:                 (row.status as 'active' | 'paused' | 'draft' | 'expired') || 'draft',
+    promo_slug:             safe(row.promo_slug) as string | undefined,
+    source_url:             safe(row.source_url) as string | undefined,
+    promo_summary:          safe(row.promo_summary) as string | undefined,
+    schema_version:         '2.1' as '2.1',
+    status:                 ((row.status as string) || 'draft') as 'active' | 'paused' | 'draft' | 'expired',
     is_active:              false,
     version:                1,
 
     // Taxonomy
-    category:               row.category as 'REWARD' | 'EVENT' | '' ?? '',
-    promo_type:             row.promo_slug as string ?? '',
-    reward_mode:            (row.mode as 'fixed' | 'tier' | 'formula') ?? 'fixed',
-    intent_category:        row.intent_category as string ?? '',
-    target_segment:         row.target_segment as string ?? '',
-    trigger_event:          row.trigger_event as string ?? '',
+    category:               ((row.category as string) || '') as 'REWARD' | 'EVENT' | '',
+    promo_type:             (row.promo_slug as string) || '',
+    reward_mode:            ((row.mode as string) || 'fixed') as 'fixed' | 'tier' | 'formula',
+    intent_category:        (row.intent_category as string) || '',
+    target_segment:         (row.target_segment as string) || '',
+    trigger_event:          (row.trigger_event as string) || '',
 
     // Reward
-    reward_type:            row.reward_type as string ?? '',
-    reward_unit:            row.reward_unit as string ?? undefined,
-    reward_amount:          row.reward_amount as number ?? null,
-    reward_is_percentage:   row.reward_is_percentage as boolean ?? false,
-    reward_item_description:row.reward_item_description as string ?? undefined,
-    conversion_formula:     row.conversion_formula as string ?? '',
+    reward_type:            (row.reward_type as string) || '',
+    reward_unit:            safe(row.reward_unit) as string | undefined,
+    reward_amount:          safe(row.reward_amount, null) as number | null,
+    reward_is_percentage:   (row.reward_is_percentage as boolean) ?? false,
+    reward_item_description:safe(row.reward_item_description) as string | undefined,
+    conversion_formula:     (row.conversion_formula as string) || '',
 
     // Calculation
-    calculation_basis:      row.calculation_basis as string ?? '',
-    calculation_base:       row.calculation_basis as string ?? '',
-    payout_direction:       row.payout_direction as string ?? undefined,
-    min_calculation:        row.min_calculation as number ?? null,
-    min_deposit:            row.min_deposit as number ?? null,
-    max_bonus:              row.max_bonus as number ?? undefined,
-    max_bonus_unlimited:    row.max_bonus_unlimited as boolean ?? false,
+    calculation_basis:      (row.calculation_basis as string) || '',
+    calculation_base:       (row.calculation_basis as string) || '',
+    payout_direction:       safe(row.payout_direction) as string | undefined,
+    min_calculation:        safe(row.min_calculation, null) as number | null,
+    min_deposit:            safe(row.min_deposit, null) as number | null,
+    max_bonus:              safe(row.max_bonus) as number | undefined,
+    max_bonus_unlimited:    (row.max_bonus_unlimited as boolean) ?? false,
 
     // Turnover
-    turnover_rule_enabled:  row.turnover_enabled as boolean ?? false,
-    turnover_multiplier:    row.turnover_multiplier as number ?? undefined,
-    turnover_basis:         row.turnover_basis as string ?? undefined,
-    turnover_basis_extra:   row.turnover_basis_extra as string ?? undefined,
-    min_withdraw_after_bonus: row.min_withdraw_after_bonus as number ?? undefined,
+    turnover_rule_enabled:  (row.turnover_enabled as boolean) ?? false,
+    turnover_multiplier:    safe(row.turnover_multiplier) as number | undefined,
+    turnover_basis:         safe(row.turnover_basis) as string | undefined,
+    turnover_basis_extra:   safe(row.turnover_basis_extra) as string | undefined,
+    min_withdraw_after_bonus: safe(row.min_withdraw_after_bonus) as number | undefined,
     turnover_rule:          '',
     turnover_rule_custom:   '',
 
     // Claim
-    claim_frequency:        row.claim_frequency as string ?? '',
-    claim_method:           row.claim_method as string ?? '',
-    claim_deadline_days:    row.claim_deadline_days as number ?? undefined,
-    claim_platform:         row.claim_platform as string ?? undefined,
-    claim_url:              row.claim_url as string ?? undefined,
-    max_claim:              row.max_claim as number ?? null,
-    max_claim_unlimited:    row.max_claim_unlimited as boolean ?? false,
+    claim_frequency:        (row.claim_frequency as string) || '',
+    claim_method:           (row.claim_method as string) || '',
+    claim_deadline_days:    safe(row.claim_deadline_days) as number | undefined,
+    claim_platform:         safe(row.claim_platform) as string | undefined,
+    claim_url:              safe(row.claim_url) as string | undefined,
+    max_claim:              safe(row.max_claim, null) as number | null,
+    max_claim_unlimited:    (row.max_claim_unlimited as boolean) ?? false,
 
     // Proof
-    proof_required:         row.proof_required as boolean ?? false,
-    proof_type:             row.proof_type as string ?? 'none',
-    proof_destination:      row.proof_destination as string ?? 'none',
-    penalty_type:           row.penalty_type as string ?? undefined,
+    proof_required:         (row.proof_required as boolean) ?? false,
+    proof_type:             ((row.proof_type as string) || 'none') as 'none' | 'screenshot' | 'social_post' | 'bill_share',
+    proof_destination:      ((row.proof_destination as string) || 'none') as 'none' | 'livechat' | 'whatsapp' | 'telegram' | 'facebook',
+    penalty_type:           safe(row.penalty_type) as 'bonus_cancel' | 'full_balance_void' | undefined,
 
     // Distribution
-    distribution_mode:      row.distribution_mode as string ?? undefined,
-    distribution_schedule:  row.distribution_schedule as string ?? undefined,
-    distribution_note:      row.distribution_note as string ?? undefined,
-    reward_distribution:    row.distribution_mode as string ?? '',
+    distribution_mode:      safe(row.distribution_mode) as string | undefined,
+    distribution_schedule:  safe(row.distribution_schedule) as string | undefined,
+    distribution_note:      safe(row.distribution_note) as string | undefined,
+    reward_distribution:    (row.distribution_mode as string) || '',
     distribution_day:       '',
     distribution_time:      '',
     distribution_date_from: '',
@@ -288,10 +291,11 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     calculation_period_note:  '',
 
     // Game scope
-    game_restriction:       row.game_scope as string ?? '',
-    game_types:             (row.game_types as string[]) || [],
-    game_providers:         (row.game_providers as string[]) || [],
-    game_exclusions:        (row.game_exclusions as unknown[]) || [],
+    game_restriction:       (row.game_scope as string) || '',
+    game_types:             ((row.game_types as unknown[]) || []) as string[],
+    game_providers:         ((row.game_providers as unknown[]) || []) as string[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    game_exclusions:        ((row.game_exclusions as unknown[]) || []) as any[],
     game_names:             [],
     game_blacklist_enabled: false,
     game_types_blacklist:   [],
@@ -300,30 +304,32 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     game_exclusion_rules:   [],
 
     // Access
-    platform_access:        row.platform_access as string ?? 'semua',
-    geo_restriction:        row.geo_restriction as string ?? 'indonesia',
-    require_apk:            row.require_apk as boolean ?? false,
-    one_account_rule:       row.one_account_rule as boolean ?? false,
+    platform_access:        (row.platform_access as string) || 'semua',
+    geo_restriction:        (row.geo_restriction as string) || 'indonesia',
+    require_apk:            (row.require_apk as boolean) ?? false,
+    one_account_rule:       (row.one_account_rule as boolean) ?? false,
 
     // Validity
-    valid_from:             row.valid_from as string ?? '',
-    valid_until:            row.valid_until as string ?? '',
-    valid_until_unlimited:  row.valid_until_unlimited as boolean ?? false,
+    valid_from:             (row.valid_from as string) || '',
+    valid_until:            (row.valid_until as string) || '',
+    valid_until_unlimited:  (row.valid_until_unlimited as boolean) ?? false,
 
     // Risk
-    promo_risk_level:       (row.promo_risk_level as 'no' | 'low' | 'medium' | 'high') ?? 'medium',
-    anti_fraud_notes:       row.anti_fraud_notes as string ?? undefined,
-    custom_terms:           row.custom_terms as string ?? '',
-    special_requirements:   (row.special_conditions as string[]) || [],
+    promo_risk_level:       ((row.promo_risk_level as string) || 'medium') as 'no' | 'low' | 'medium' | 'high',
+    anti_fraud_notes:       safe(row.anti_fraud_notes) as string | undefined,
+    custom_terms:           (row.custom_terms as string) || '',
+    special_requirements:   ((row.special_conditions as unknown[]) || []) as string[],
 
     // Subcategories
-    has_subcategories:      row.has_subcategories as boolean ?? false,
-    subcategories:          (row.subcategories as unknown[]) || [],
+    has_subcategories:      (row.has_subcategories as boolean) ?? false,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    subcategories:          ((row.subcategories as unknown[]) || []) as any[],
 
     // Tiers
-    tier_archetype:         (row.tier_archetype as 'level' | 'point_store' | 'referral' | 'formula') ?? undefined,
-    tier_count:             row.tier_count as number ?? 0,
-    tiers:                  (row.tiers as unknown[]) || [],
+    tier_archetype:         safe(row.tier_archetype) as 'level' | 'point_store' | 'referral' | 'formula' | undefined,
+    tier_count:             (row.tier_count as number) ?? 0,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tiers:                  ((row.tiers as unknown[]) || []) as any[],
     fast_exp_missions:      [],
     level_up_rewards:       [],
     promo_unit:             'lp',
@@ -343,13 +349,13 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     archetype_invariants:   (row.archetype_invariants as Record<string, unknown>) || {},
 
     // Extraction meta
-    extraction_confidence:  row.extraction_confidence as number ?? 0.9,
-    human_verified:         row.human_verified as boolean ?? false,
-    created_by:             row.created_by as string ?? 'Admin',
+    extraction_confidence:  (row.extraction_confidence as number) ?? 0.9,
+    human_verified:         (row.human_verified as boolean) ?? false,
+    created_by:             (row.created_by as string) || 'Admin',
 
     // Audit timestamps
-    created_at:             row.created_at as string ?? new Date().toISOString(),
-    updated_at:             row.updated_at as string ?? new Date().toISOString(),
+    created_at:             (row.created_at as string) || new Date().toISOString(),
+    updated_at:             (row.updated_at as string) || new Date().toISOString(),
     updated_by:             'Admin',
 
     // Admin Fee
@@ -360,7 +366,7 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     fixed_reward_type:      '',
     fixed_calculation_base: '',
     fixed_calculation_method: '',
-    fixed_payout_direction: 'after',
+    fixed_payout_direction: 'after' as 'before' | 'after',
     fixed_admin_fee_enabled: false,
     fixed_max_claim_enabled: false,
     fixed_max_claim_unlimited: false,
@@ -375,7 +381,6 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     dinamis_max_claim_unlimited: false,
     min_reward_claim:       null,
     min_reward_claim_enabled: false,
-    calculation_base:       row.calculation_basis as string ?? '',
     calculation_method:     '',
     calculation_value:      null,
     min_calculation_enabled: false,
