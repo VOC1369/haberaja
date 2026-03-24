@@ -350,6 +350,7 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     // Extraction meta
     extraction_confidence:  (row.extraction_confidence as number) ?? 0.9,
     human_verified:         (row.human_verified as boolean) ?? false,
+    is_locked:              (row.is_locked as boolean) ?? false,
     created_by:             (row.created_by as string) || 'Admin',
 
     // Audit timestamps
