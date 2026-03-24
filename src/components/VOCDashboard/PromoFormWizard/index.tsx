@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { PromoFormData, PromoItem, initialPromoData, savePromoDraft, normalizePromoData } from "./types";
+import { generateUUID } from "@/lib/supabase-client";
+
+const LOCAL_DRAFT_KEY = 'voc_promo_local_draft';
 import { Step1Identity } from "./Step1Identity";
 import { Step2Access } from "./Step2Access";
 import { StepProgramClassification, type ProgramType } from "./StepProgramClassification";
@@ -132,6 +135,7 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
     return result;
   };
 
+  // Draft → localStorage ONLY (tidak masuk Supabase)
   const handleSaveDraft = async () => {
     const generatedTerms = generateFullTermsString(formData);
     const dataToSave: PromoFormData = { 
@@ -140,12 +144,20 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
       custom_terms: generatedTerms,
       program_classification: programToClassification(selectedProgram),
     };
-    const saved = await savePromoDraft(dataToSave, editingId);
-    setEditingId(saved.id);
-    toast.success(`Draft "${formData.promo_name || 'Untitled'}" tersimpan!`);
-    console.log("Saved draft:", saved);
+    // Generate/reuse local draft id
+    const draftId = editingId || generateUUID();
+    const draft = { ...dataToSave, id: draftId, updated_at: new Date().toISOString() };
+    try {
+      localStorage.setItem(`${LOCAL_DRAFT_KEY}_${draftId}`, JSON.stringify(draft));
+      setEditingId(draftId);
+      toast.success(`Draft "${formData.promo_name || 'Untitled'}" tersimpan lokal (belum ke server)`);
+      console.log('[Draft] Saved to localStorage only:', draftId);
+    } catch {
+      toast.error('Gagal menyimpan draft lokal');
+    }
   };
 
+  // Publish → Supabase (hapus draft lokal jika ada)
   const handlePublish = async () => {
     const generatedTerms = generateFullTermsString(formData);
     const dataToSave: PromoFormData = { 
@@ -154,17 +166,38 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
       custom_terms: generatedTerms,
       program_classification: programToClassification(selectedProgram),
     };
-    const saved = await savePromoDraft(dataToSave, editingId);
-    toast.success(`Promo "${formData.promo_name}" berhasil dipublish!`);
-    console.log("Published promo:", saved);
+
+    // Cek apakah editingId ini adalah record Supabase (edit promo existing)
+    // vs draft lokal (belum pernah ke Supabase)
+    const isLocalDraft = editingId
+      ? !!localStorage.getItem(`${LOCAL_DRAFT_KEY}_${editingId}`)
+      : true;
+
+    let saved: PromoItem;
+    if (!isLocalDraft && editingId) {
+      // Update promo existing di Supabase
+      saved = await savePromoDraft(dataToSave, editingId);
+    } else {
+      // Promo baru → tambah ke Supabase (tanpa existingId)
+      saved = await savePromoDraft(dataToSave, undefined);
+    }
+
+    // Hapus draft lokal jika ada
+    if (editingId) {
+      localStorage.removeItem(`${LOCAL_DRAFT_KEY}_${editingId}`);
+    }
+
+    toast.success(`Promo "${formData.promo_name}" berhasil dipublish ke Knowledge Base!`);
+    console.log('[Publish] Saved to Supabase:', saved.id);
     
-    // Reset form and go back
+    // Reset form dan kembali ke list
     setFormData(initialPromoData);
     setEditingId(undefined);
     setCurrentStep(1);
     setSelectedProgram(null);
     onSaveSuccess?.();
   };
+
 
   const progress = (currentStep / 5) * 100;
   const canProceedFromStep3 = selectedProgram !== null;
