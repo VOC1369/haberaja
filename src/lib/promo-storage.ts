@@ -73,129 +73,126 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
   });
 
   const mergedExtra = {
-    ...(typeof promo.extra_config === 'object' && promo.extra_config !== null
-      ? (promo.extra_config as Record<string, unknown>)
+    ...(typeof p.extra_config === 'object' && p.extra_config !== null
+      ? (p.extra_config as Record<string, unknown>)
       : {}),
     ...extraConfigFields,
   };
 
   // Tentukan mode dari reward_mode
-  const mode = (promo as PromoFormData & { reward_mode?: string }).reward_mode
-    || (promo as Record<string, unknown>).mode as string
-    || null;
+  const mode = (p.reward_mode as string) || (p.mode as string) || null;
 
   return {
     id,
-    promo_id:               promo.promo_slug || id,
-    client_id:              promo.client_id || DEFAULT_CLIENT_ID,
-    client_name:            promo.client_name || null,
-    promo_name:             promo.promo_name,
-    promo_slug:             promo.promo_slug || null,
+    promo_id:               (p.promo_slug as string) || id,
+    client_id:              (p.client_id as string) || DEFAULT_CLIENT_ID,
+    client_name:            (p.client_name as string) || null,
+    promo_name:             p.promo_name as string,
+    promo_slug:             (p.promo_slug as string) || null,
     schema_version:         '2.2',
-    status:                 promo.status || 'draft',
-    source_url:             promo.source_url || null,
-    promo_summary:          promo.promo_summary || null,
+    status:                 (p.status as string) || 'draft',
+    source_url:             (p.source_url as string) || null,
+    promo_summary:          (p.promo_summary as string) || null,
 
     // Taxonomy
-    category:               promo.category || null,
+    category:               (p.category as string) || null,
     mode,
-    intent_category:        promo.intent_category || null,
-    target_segment:         promo.target_segment || null,
-    trigger_event:          promo.trigger_event || null,
-    trigger_min_value:      (promo as Record<string, unknown>).trigger_min_value as number ?? null,
+    intent_category:        (p.intent_category as string) || null,
+    target_segment:         (p.target_segment as string) || null,
+    trigger_event:          (p.trigger_event as string) || null,
+    trigger_min_value:      (p.trigger_min_value as number) ?? null,
 
     // Reward Core
-    reward_type:            promo.reward_type || null,
-    reward_unit:            (promo as Record<string, unknown>).reward_unit as string ?? null,
-    reward_amount:          promo.reward_amount ?? null,
-    reward_is_percentage:   (promo as Record<string, unknown>).reward_is_percentage as boolean ?? false,
-    reward_item_description:(promo as Record<string, unknown>).reward_item_description as string ?? null,
+    reward_type:            (p.reward_type as string) || null,
+    reward_unit:            (p.reward_unit as string) ?? null,
+    reward_amount:          (p.reward_amount as number) ?? null,
+    reward_is_percentage:   (p.reward_is_percentage as boolean) ?? false,
+    reward_item_description:(p.reward_item_description as string) ?? null,
 
     // Calculation
-    calculation_basis:      (promo as Record<string, unknown>).calculation_basis as string
-                            || (promo as Record<string, unknown>).calculation_base as string
+    calculation_basis:      (p.calculation_basis as string)
+                            || (p.calculation_base as string)
                             || null,
-    payout_direction:       (promo as Record<string, unknown>).payout_direction as string ?? null,
-    conversion_formula:     promo.conversion_formula || null,
+    payout_direction:       (p.payout_direction as string) ?? null,
+    conversion_formula:     (p.conversion_formula as string) || null,
 
     // Tiers
-    tier_archetype:         promo.tier_archetype || null,
-    tier_count:             Array.isArray(promo.tiers) ? promo.tiers.length : 0,
-    tiers:                  promo.tiers || [],
+    tier_archetype:         (p.tier_archetype as string) || null,
+    tier_count:             Array.isArray(p.tiers) ? (p.tiers as unknown[]).length : 0,
+    tiers:                  (p.tiers as unknown[]) || [],
 
     // Calculation limits
-    min_calculation:        promo.min_calculation ?? null,
-    min_deposit:            promo.min_deposit ?? null,
-    max_bonus:              (promo as Record<string, unknown>).max_bonus as number ?? null,
-    max_bonus_unlimited:    (promo as Record<string, unknown>).max_bonus_unlimited as boolean ?? false,
+    min_calculation:        (p.min_calculation as number) ?? null,
+    min_deposit:            (p.min_deposit as number) ?? null,
+    max_bonus:              (p.max_bonus as number) ?? null,
+    max_bonus_unlimited:    (p.max_bonus_unlimited as boolean) ?? false,
 
     // Turnover
-    turnover_enabled:       promo.turnover_rule_enabled ?? false,
-    turnover_multiplier:    (promo as Record<string, unknown>).turnover_multiplier as number ?? null,
-    turnover_basis:         (promo as Record<string, unknown>).turnover_basis as string ?? null,
-    turnover_basis_extra:   (promo as Record<string, unknown>).turnover_basis_extra as string ?? null,
-    min_withdraw_after_bonus:(promo as Record<string, unknown>).min_withdraw_after_bonus as number ?? null,
+    turnover_enabled:       (p.turnover_rule_enabled as boolean) ?? false,
+    turnover_multiplier:    (p.turnover_multiplier as number) ?? null,
+    turnover_basis:         (p.turnover_basis as string) ?? null,
+    turnover_basis_extra:   (p.turnover_basis_extra as string) ?? null,
+    min_withdraw_after_bonus:(p.min_withdraw_after_bonus as number) ?? null,
 
     // Claim
-    claim_frequency:        promo.claim_frequency || null,
-    claim_method:           promo.claim_method || null,
-    claim_deadline_days:    (promo as Record<string, unknown>).claim_deadline_days as number ?? null,
-    claim_platform:         (promo as Record<string, unknown>).claim_platform as string ?? null,
-    claim_url:              (promo as Record<string, unknown>).claim_url as string ?? null,
-    max_claim:              promo.max_claim ?? null,
-    max_claim_unlimited:    (promo as Record<string, unknown>).max_claim_unlimited as boolean ?? false,
+    claim_frequency:        (p.claim_frequency as string) || null,
+    claim_method:           (p.claim_method as string) || null,
+    claim_deadline_days:    (p.claim_deadline_days as number) ?? null,
+    claim_platform:         (p.claim_platform as string) ?? null,
+    claim_url:              (p.claim_url as string) ?? null,
+    max_claim:              (p.max_claim as number) ?? null,
+    max_claim_unlimited:    (p.max_claim_unlimited as boolean) ?? false,
 
     // Proof
-    proof_required:         (promo as Record<string, unknown>).proof_required as boolean ?? false,
-    proof_type:             (promo as Record<string, unknown>).proof_type as string ?? 'none',
-    proof_destination:      (promo as Record<string, unknown>).proof_destination as string ?? 'none',
-    penalty_type:           (promo as Record<string, unknown>).penalty_type as string ?? null,
+    proof_required:         (p.proof_required as boolean) ?? false,
+    proof_type:             (p.proof_type as string) ?? 'none',
+    proof_destination:      (p.proof_destination as string) ?? 'none',
+    penalty_type:           (p.penalty_type as string) ?? null,
 
     // Distribution
-    distribution_mode:      (promo as Record<string, unknown>).distribution_mode as string
-                            || promo.reward_distribution
+    distribution_mode:      (p.distribution_mode as string)
+                            || (p.reward_distribution as string)
                             || null,
-    distribution_schedule:  (promo as Record<string, unknown>).distribution_schedule as string ?? null,
-    distribution_note:      (promo as Record<string, unknown>).distribution_note as string ?? null,
+    distribution_schedule:  (p.distribution_schedule as string) ?? null,
+    distribution_note:      (p.distribution_note as string) ?? null,
 
     // Game scope
-    game_scope:             promo.game_restriction || null,
-    game_types:             promo.game_types || [],
-    game_providers:         promo.game_providers || [],
-    game_exclusions:        (promo as Record<string, unknown>).game_exclusions as unknown[] ?? [],
+    game_scope:             (p.game_restriction as string) || null,
+    game_types:             (p.game_types as string[]) || [],
+    game_providers:         (p.game_providers as string[]) || [],
+    game_exclusions:        (p.game_exclusions as unknown[]) ?? [],
 
     // Access
-    platform_access:        promo.platform_access || 'semua',
-    geo_restriction:        promo.geo_restriction || 'indonesia',
-    require_apk:            promo.require_apk ?? false,
-    one_account_rule:       (promo as Record<string, unknown>).one_account_rule as boolean ?? false,
+    platform_access:        (p.platform_access as string) || 'semua',
+    geo_restriction:        (p.geo_restriction as string) || 'indonesia',
+    require_apk:            (p.require_apk as boolean) ?? false,
+    one_account_rule:       (p.one_account_rule as boolean) ?? false,
 
     // Validity
-    valid_from:             promo.valid_from || null,
-    valid_until:            promo.valid_until || null,
-    valid_until_unlimited:  promo.valid_until_unlimited ?? false,
+    valid_from:             (p.valid_from as string) || null,
+    valid_until:            (p.valid_until as string) || null,
+    valid_until_unlimited:  (p.valid_until_unlimited as boolean) ?? false,
 
     // Risk
-    promo_risk_level:       promo.promo_risk_level || 'medium',
-    anti_fraud_notes:       (promo as Record<string, unknown>).anti_fraud_notes as string ?? null,
-    custom_terms:           promo.custom_terms || null,
-    special_conditions:     promo.special_requirements || [],
+    promo_risk_level:       (p.promo_risk_level as string) || 'medium',
+    anti_fraud_notes:       (p.anti_fraud_notes as string) ?? null,
+    custom_terms:           (p.custom_terms as string) || null,
+    special_conditions:     (p.special_requirements as string[]) || [],
 
     // Subcategories
-    has_subcategories:      Array.isArray((promo as Record<string, unknown>).subcategories)
-                            && ((promo as Record<string, unknown>).subcategories as unknown[]).length > 0,
-    subcategories:          (promo as Record<string, unknown>).subcategories || [],
+    has_subcategories:      Array.isArray(p.subcategories) && (p.subcategories as unknown[]).length > 0,
+    subcategories:          (p.subcategories as unknown[]) || [],
 
     // Archetype
-    archetype_payload:      (promo as Record<string, unknown>).archetype_payload || {},
-    archetype_invariants:   (promo as Record<string, unknown>).archetype_invariants || {},
+    archetype_payload:      (p.archetype_payload as Record<string, unknown>) || {},
+    archetype_invariants:   (p.archetype_invariants as Record<string, unknown>) || {},
 
     // Extraction meta
-    extraction_confidence:  (promo as Record<string, unknown>).extraction_confidence as number ?? 0.9,
-    human_verified:         (promo as Record<string, unknown>).human_verified as boolean ?? false,
+    extraction_confidence:  (p.extraction_confidence as number) ?? 0.9,
+    human_verified:         (p.human_verified as boolean) ?? false,
 
     // Audit
-    created_by:             promo.created_by || 'Admin',
+    created_by:             (p.created_by as string) || 'Admin',
 
     // Escape hatch — semua field non-standard masuk di sini
     extra_config:           Object.keys(mergedExtra).length > 0 ? mergedExtra : {},
