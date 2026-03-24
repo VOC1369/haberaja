@@ -224,6 +224,12 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const handleDelete = async () => {
     if (deleteId) {
       try {
+        const promo = items.find(i => i.id === deleteId);
+        if (promo?.is_locked) {
+          toast.error(`"${promo.promo_name}" terkunci — buka kunci dulu sebelum menghapus`);
+          setDeleteId(null);
+          return;
+        }
         const success = await deletePromoDraft(deleteId);
         if (success) {
           setItems(items.filter(item => item.id !== deleteId));
