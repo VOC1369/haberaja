@@ -62,7 +62,7 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     'archetype_payload', 'archetype_invariants',
     'has_subcategories', 'subcategories',
     'extraction_confidence', 'human_verified', 'penalty_type',
-    'created_by', 'created_at', 'updated_at',
+    'created_by', 'created_at', 'updated_at', 'is_locked',
   ]);
 
   // Kumpulkan field non-standard ke extra_config
