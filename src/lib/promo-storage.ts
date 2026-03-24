@@ -395,9 +395,10 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
 
     // Spread extra_config fields back
     ...extra,
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any as PromoItem;
 
-  return normalizeToStandard(promo);
+  return normalizeToStandard(promo) as PromoItem;
 }
 
 // ============================================
