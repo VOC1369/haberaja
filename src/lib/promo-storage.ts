@@ -21,7 +21,7 @@ import { validateWriteIntent, type WriteIntent } from '@/lib/promo-write-contrac
 // ============================================
 // PRE-SUPABASE MODE CONFIGURATION
 // ============================================
-const USE_SUPABASE = false; // Set to true when Supabase table is ready
+const USE_SUPABASE = true; // Supabase is live
 const STORAGE_KEY = 'voc_promo_kb';
 const SESSION_KEY = 'pseudo_extractor_session';
 
