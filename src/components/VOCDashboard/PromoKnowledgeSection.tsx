@@ -237,10 +237,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           setDeleteId(null);
           return;
         }
-        const success = await deletePromoDraft(deleteId);
+        const success = await promoKB.delete(deleteId);
         if (success) {
-          setItems(items.filter(item => item.id !== deleteId));
           toast.success("Promo berhasil dihapus");
+          await loadPromos(); // Reload dari Supabase — 1:1
         } else {
           toast.error("Gagal menghapus promo");
         }
@@ -257,7 +257,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     const newLockState = !promo.is_locked;
     try {
       await promoKB.update(promo.id, { is_locked: newLockState } as Partial<PromoItem>);
-      setItems(prev => prev.map(i => i.id === promo.id ? { ...i, is_locked: newLockState } : i));
+      await loadPromos(); // Reload untuk sinkron dengan Supabase
       toast.success(newLockState
         ? `"${promo.promo_name}" dikunci — tidak bisa dihapus`
         : `"${promo.promo_name}" kunci dibuka`
