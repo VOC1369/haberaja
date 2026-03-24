@@ -24,7 +24,8 @@
  * 4. 7 confidence levels: explicit, explicit_from_terms, derived, unknown, ambiguous, missing, not_applicable
  */
 
-import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
+
+import { callAI, extractText } from './ai-client';
 import { runRejectGate } from './reject-gate';
 import { preprocessPromoInput } from './promo-preprocessor';
 import { generateUUID } from './supabase-client';
