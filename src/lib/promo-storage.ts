@@ -120,7 +120,9 @@ function toFlatRow(promo: PromoFormData, id: string, _now: string): Record<strin
     'has_subcategories', 'subcategories',
     'extraction_confidence', 'human_verified', 'penalty_type',
     'created_by', 'is_locked',
-    // created_at & updated_at TIDAK dimasukkan — Supabase auto-fill via now()
+    // created_at & updated_at masuk knownFields agar tidak bocor ke extra_config,
+    // tapi TIDAK di-include di return object — Supabase auto-fill via now()
+    'created_at', 'updated_at', 'updated_by',
   ]);
 
   // Kumpulkan field non-standard ke extra_config
