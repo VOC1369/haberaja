@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { CategoryNav } from "@/components/VOCDashboard/CategoryNav";
 import { subCategories } from "@/components/VOCDashboard/SubCategoryTabs";
 import { ticketSubCategories } from "@/components/VOCDashboard/TicketSubCategories";
