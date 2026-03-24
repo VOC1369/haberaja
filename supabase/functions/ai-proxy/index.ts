@@ -40,7 +40,32 @@ serve(async (req) => {
       },
       body: JSON.stringify(body),
     });
-    if (!response.ok) throw new Error(`Anthropic error: ${response.status}`);
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      const errorType = errorBody?.error?.type ?? "";
+
+      // Credit habis
+      if (
+        response.status === 429 &&
+        (errorType === "credit_balance_exceeded" || errorType === "rate_limit_error")
+      ) {
+        return new Response(
+          JSON.stringify({ error: "CREDIT_EXHAUSTED", message: "Kredit Anthropic habis. Silakan top-up di console.anthropic.com." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      // Rate limit biasa
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "RATE_LIMITED", message: "Terlalu banyak request. Coba lagi sebentar." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      throw new Error(`Anthropic error: ${response.status} ${JSON.stringify(errorBody)}`);
+    }
+
     const data = await response.json();
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
