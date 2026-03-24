@@ -601,10 +601,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
         default: return null;
       }
     };
-    
+
     const badge = getBadgeContent();
     if (!badge) return <span className="text-muted-foreground">-</span>;
-    
+
     const handleOverride = async () => {
       if (selectedCategory === classification) {
         toast.error('Kategori tidak berubah');
@@ -614,7 +614,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
         toast.error('Alasan override wajib diisi');
         return;
       }
-      
+
       // Update in Supabase
       try {
         const success = await promoKB.update(promo.id, {
@@ -627,7 +627,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
             timestamp: new Date().toISOString(),
           },
         } as Partial<PromoItem>);
-        
+
         if (success) {
           loadPromos();
           toast.success('Kategori berhasil diubah');
@@ -641,17 +641,18 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
         toast.error('Gagal mengubah kategori');
       }
     };
-    
+
     const hasOverride = !!promo.classification_override;
-    
+
     return (
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
-          <Badge 
-            className={`${badge.className} cursor-pointer hover:opacity-80 transition-opacity`}
+          <Badge
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap px-2.5 py-1 text-xs font-medium rounded-full cursor-pointer hover:opacity-80 transition-opacity ${badge.className}`}
           >
-            <badge.icon className="h-3 w-3 mr-1" /> {badge.text}
-            {hasOverride && <Edit2 className="h-3 w-3 ml-1 opacity-60" />}
+            <badge.icon className="h-3 w-3 shrink-0" />
+            <span>{badge.text}</span>
+            {hasOverride && <Edit2 className="h-3 w-3 shrink-0 opacity-60" />}
           </Badge>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
