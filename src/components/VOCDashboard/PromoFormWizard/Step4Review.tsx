@@ -1252,7 +1252,7 @@ const CollapsibleSection = ({
 export function Step4Review({ data, onGoToStep }: Step4Props) {
   const [jsonOpen, setJsonOpen] = useState(false);
   const [jsonMode, setJsonMode] = useState<'canonical' | 'legacy'>('canonical');
-  const { toast } = useToast();
+  
   
   // Build PKB payload for JSON preview (legacy format)
   const pkbPayload = buildPKBPayload(data);

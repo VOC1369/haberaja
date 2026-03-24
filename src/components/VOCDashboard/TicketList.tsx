@@ -117,7 +117,7 @@ function saveTicketStatus(ticketId: string, status: TicketStatus) {
 }
 
 export function TicketList({ category }: TicketListProps) {
-  const { toast } = useToast();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
   const [promoFilter, setPromoFilter] = useState<string>("all");
