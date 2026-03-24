@@ -69,6 +69,7 @@ export type Database = {
           require_apk: boolean | null
           reward_amount: number | null
           reward_is_percentage: boolean | null
+          reward_item_description: string | null
           reward_type: string | null
           reward_unit: string | null
           schema_version: string
@@ -145,6 +146,7 @@ export type Database = {
           require_apk?: boolean | null
           reward_amount?: number | null
           reward_is_percentage?: boolean | null
+          reward_item_description?: string | null
           reward_type?: string | null
           reward_unit?: string | null
           schema_version?: string
@@ -221,6 +223,7 @@ export type Database = {
           require_apk?: boolean | null
           reward_amount?: number | null
           reward_is_percentage?: boolean | null
+          reward_item_description?: string | null
           reward_type?: string | null
           reward_unit?: string | null
           schema_version?: string
