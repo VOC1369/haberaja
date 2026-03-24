@@ -4984,6 +4984,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     // Step 1 - Identitas (with exact enum value mappings)
     // ✅ Apply keyword-based overrides for promo_type, trigger_event
     client_id: extracted.client_id || '',  // Auto-detected from content
+    client_name: extracted.client_id || '', // Nama Brand = client_id jika tidak ada sumber lain
     promo_name: extracted.promo_name || 'Promo Baru',
     promo_type: (() => {
       // Priority 1: Keyword-based override (Birthday, Lucky Spin, etc.)
