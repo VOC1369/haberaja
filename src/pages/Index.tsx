@@ -96,9 +96,10 @@ const Index = () => {
               <Button
                 type="submit"
                 size="lg"
+                disabled={loading}
                 className="w-full text-lg shadow-lg hover:shadow-xl transition-all bg-button-hover text-button-hover-foreground hover:bg-button-hover/90"
               >
-                Login
+                {loading ? "Logging in..." : "Login"}
               </Button>
             </form>
           </Card>
