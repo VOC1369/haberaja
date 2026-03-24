@@ -1,16 +1,16 @@
 /**
- * REJECT GATE v1.0
+ * REJECT GATE v2.0 — Anthropic via ai-proxy
  *
  * Two-level input filter that runs BEFORE the Q1-Q4 classifier and extractor.
  * Purpose: discard garbage input before spending LLM tokens.
  *
  * Flow:
- *   Input → L1 (rule-based) → L2 (LLM lightweight) → Q1-Q4 Classifier → Extractor
+ *   Input → L1 (rule-based) → L2 (LLM lightweight via Anthropic) → Q1-Q4 Classifier → Extractor
  *
- * @version 1.0
+ * @version 2.0
  */
 
-import { getOpenAIKey } from './config/openai.dev';
+import { callAI, extractJSON } from './ai-client';
 
 // ============================================================================
 // TYPES
