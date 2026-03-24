@@ -2139,32 +2139,24 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     }
   });
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${getOpenAIKey()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-4o", // WAJIB gpt-4o untuk vision capability
-      messages: [
-        {
-          role: "user",
-          content: contentParts
-        }
-      ],
-      temperature: 0.1,
-      max_tokens: 4096,
-    }),
+  // Image extraction via Anthropic — vision not supported by current proxy
+  // Fallback: use extractText from content parts as text-only extraction
+  // Note: Claude vision support can be added to ai-proxy if needed
+  const textOnlyContent = contentParts
+    .filter((p: any) => p.type === 'text')
+    .map((p: any) => p.text)
+    .join('\n\n');
+
+  const aiResponse = await callAI({
+    type: 'extract',
+    system: textOnlyContent,
+    messages: [
+      { role: 'user', content: 'Ekstrak informasi promo dari screenshot/konten yang diberikan.' },
+    ],
+    temperature: 0.1,
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error?.message || `API Error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const resultText = data.choices?.[0]?.message?.content || "";
+  const resultText = extractText(aiResponse);
 
   // Parse JSON dari response
   try {
