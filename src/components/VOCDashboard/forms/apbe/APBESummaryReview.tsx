@@ -22,7 +22,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { validateAPBEConfig, ValidationResult, getValidationSummary } from "@/lib/apbe-validation";
 import { validatePersonaJSON, PersonaValidationResult, BlockStatus } from "@/lib/apbe-persona-validator";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { Edit2, CheckCircle2, AlertCircle, FileJson, Sparkles, List, Check, ArrowLeft, ChevronDown, ClipboardCheck, AlertTriangle, Info, XCircle, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 

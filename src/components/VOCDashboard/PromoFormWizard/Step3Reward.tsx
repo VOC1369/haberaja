@@ -30,7 +30,7 @@ import { Plus, X, ChevronDown, Settings, Zap, Trophy, Star, Target, Trash2, Cale
 import { GameWhitelistBlacklist } from "./GameWhitelistBlacklist";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, formatNumberWithSeparator } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import {
   PromoFormData,
   PromoSubCategory,

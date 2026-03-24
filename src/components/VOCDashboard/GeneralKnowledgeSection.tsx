@@ -39,7 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FileJson, Download, FileText, Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import {
   GeneralKnowledgeItem,
   getGeneralKnowledge,

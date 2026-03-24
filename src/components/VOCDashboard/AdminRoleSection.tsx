@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CheckCircle2, Circle, MoreHorizontal, Plus, Trash2, Power, Users } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { getAdminList, saveAdminList, AdminUser } from "@/lib/admin-storage";
 
 interface Admin {

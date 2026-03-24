@@ -11,7 +11,7 @@ import { Settings, Save, Sparkles, Loader2 } from "lucide-react";
 import { generateEscalationMessage } from "@/lib/apbe-interaction-generator";
 import { Slider } from "@/components/ui/slider";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 
 interface OperationalSOPFormProps {
   form: UseFormReturn<APBEConfig>;

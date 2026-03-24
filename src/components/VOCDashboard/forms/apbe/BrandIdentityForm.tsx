@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, Save, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { getDefaultsForArchetype, ARCHETYPE_RULESET } from "@/lib/apbe-archetype-ruleset";
 
 interface BrandIdentityFormProps {

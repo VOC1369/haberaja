@@ -35,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FileText, Plus, Pencil, Trash2, Eye, MoreHorizontal, Copy, ChevronRight, ChevronDown, Infinity } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { PromoItem, getPromoDrafts, deletePromoDraft, savePromoDraft } from "./PromoFormWizard/types";
 import { inferRewardType, formatSubcategoryName, getRewardBadgeInfo } from "@/lib/reward-normalization";
 

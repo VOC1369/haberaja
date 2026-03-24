@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { ShieldAlert, Plus, X, Save, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { processWordsToAdd, cleanDictionary } from "@/lib/apbe-dictionary-preprocessor";
 
 // Format number with thousand separator (dot)

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { ChevronLeft, ChevronRight, Save } from "lucide-react";
 import { PromoFormData, PromoItem, initialPromoData, savePromoDraft, normalizePromoData } from "./types";
 import { generateUUID } from "@/lib/supabase-client";

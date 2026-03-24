@@ -12,7 +12,7 @@
  */
 
 import { useRef, useCallback } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { APBEConfig } from "@/types/apbe-config";
 import { validatePersonaJSON, PersonaValidationResult } from "@/lib/apbe-persona-validator";
 

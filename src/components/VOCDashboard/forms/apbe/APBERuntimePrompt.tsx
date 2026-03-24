@@ -7,7 +7,7 @@ import { APBEConfig } from "@/types/apbe-config";
 import { compileRuntimePrompt, downloadPrompt } from "@/lib/apbe-prompt-template";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { Copy, Download, Check, ArrowLeft, Sparkles } from "lucide-react";
 
 interface ValidationIssue {

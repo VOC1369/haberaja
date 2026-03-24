@@ -19,7 +19,7 @@ import {
   calculatePriorityV6,  // V6.1: Use new priority formula
   derivedReactionFromMode
 } from "./types";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 
 // V5.2.1: Helper to derive scenario from behavior_category
 function deriveScenarioFromCategory(category: string): string {
