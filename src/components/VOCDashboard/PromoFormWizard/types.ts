@@ -1353,9 +1353,16 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     return data.reward_amount ?? data.dinamis_reward_amount ?? null;
   })();
   canonical.reward_unit = data.reward_unit || (data.calculation_method === 'percentage' ? 'percent' : 'fixed');
-  canonical.reward_is_percentage = data.calculation_method === 'percentage';
+  // Bug 2 Fix: reward_is_percentage DERIVED from reward_unit (single source of truth)
+  // reward_unit='percent' → always true, regardless of calculation_method
+  canonical.reward_is_percentage = canonical.reward_unit === 'percent'
+    ? true
+    : data.calculation_method === 'percentage';
   canonical.max_bonus = data.max_bonus ?? data.max_claim ?? data.dinamis_max_claim ?? null;
-  canonical.max_bonus_unlimited = data.max_bonus_unlimited ?? data.dinamis_max_claim_unlimited ?? data.fixed_max_claim_unlimited ?? false;
+  // Bug 1 Fix: max_bonus === null → max_bonus_unlimited = true (no cap = unlimited)
+  canonical.max_bonus_unlimited = (canonical.max_bonus === null || canonical.max_bonus === undefined)
+    ? true
+    : (data.max_bonus_unlimited ?? data.dinamis_max_claim_unlimited ?? data.fixed_max_claim_unlimited ?? false);
   
   // ===============================
   // CALCULATION

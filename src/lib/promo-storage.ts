@@ -106,7 +106,10 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     reward_type:            (p.reward_type as string) || null,
     reward_unit:            (p.reward_unit as string) ?? null,
     reward_amount:          (p.reward_amount as number) ?? null,
-    reward_is_percentage:   (p.reward_is_percentage as boolean) ?? false,
+    // Bug 2 Fix: reward_is_percentage DERIVED from reward_unit — single source of truth
+    reward_is_percentage:   (p.reward_unit as string) === 'percent'
+                              ? true
+                              : ((p.reward_is_percentage as boolean) ?? false),
     reward_item_description:(p.reward_item_description as string) ?? null,
 
     // Calculation
@@ -125,8 +128,8 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     min_calculation:        (p.min_calculation as number) ?? null,
     min_deposit:            (p.min_deposit as number) ?? null,
     max_bonus:              (p.max_bonus as number) ?? null,
-    // Fix 1: max_bonus === null → max_bonus_unlimited = true (no cap = unlimited)
-    max_bonus_unlimited:    (p.max_bonus as number) === null || (p.max_bonus as number) === undefined
+    // Bug 1 Fix: max_bonus === null → max_bonus_unlimited = true (no cap = unlimited)
+    max_bonus_unlimited:    (p.max_bonus === null || p.max_bonus === undefined)
                               ? true
                               : ((p.max_bonus_unlimited as boolean) ?? false),
 
