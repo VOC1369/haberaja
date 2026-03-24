@@ -30,12 +30,63 @@ const SESSION_KEY = 'pseudo_extractor_session';
 // ============================================
 
 /**
- * Memetakan PromoFormData ke flat columns tabel promo_kb.
- * Field yang tidak ada di schema tabel disimpan ke extra_config.
+ * toFlatRow — Thin wrapper over buildCanonicalPayload()
+ *
+ * ARSITEKTUR: Semua business logic ada di buildCanonicalPayload() (SSoT).
+ * toFlatRow HANYA melakukan 4 sanitasi Supabase-specific setelah itu:
+ *   1. valid_from   : "" → null  (Supabase date column tidak menerima "")
+ *   2. valid_until  : "" atau unlimited → null
+ *   3. extra_config : strip key berawalan _ (safety net)
+ *   4. created_by   : default "Admin" jika kosong
+ * Plus field operasional DB yang tidak masuk CANONICAL_EXPORT_WHITELIST.
  */
-/**
- * Auto-generate promo summary dari field yang ada.
- * Dipanggil saat promo_summary kosong sebelum save ke Supabase.
+function toFlatRow(promo: PromoFormData, id: string, _now: string): Record<string, unknown> {
+  const p = promo as unknown as Record<string, unknown>;
+
+  // Build via canonical SSoT — semua logic (sanitizeByMode, reward_amount
+  // formula mode, game_exclusions aggregation, dll) ada di sini.
+  const canonical = buildCanonicalPayload(promo, (p.promo_id as string) || id) as unknown as Record<string, unknown>;
+
+  // ================================================================
+  // SUPABASE-SPECIFIC SANITIZATIONS (4 rules only)
+  // ================================================================
+
+  // 1. valid_from: "" → null
+  if (!canonical.valid_from) canonical.valid_from = null;
+
+  // 2. valid_until: "" atau unlimited → null
+  if (!canonical.valid_until || canonical.valid_until_unlimited === true) {
+    canonical.valid_until = null;
+  }
+
+  // 3. extra_config: strip key berawalan _ (safety net)
+  const rawExtra = (canonical.extra_config && typeof canonical.extra_config === 'object')
+    ? (canonical.extra_config as Record<string, unknown>)
+    : {};
+  const cleanExtra: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(rawExtra)) {
+    if (!k.startsWith('_')) cleanExtra[k] = v;
+  }
+  canonical.extra_config = cleanExtra;
+
+  // 4. created_by: default "Admin" jika kosong
+  if (!canonical.created_by) canonical.created_by = 'Admin';
+
+  // Row identity (primary key Supabase)
+  canonical.id = id;
+
+  // ================================================================
+  // DB OPERATIONAL FIELDS (tidak masuk CANONICAL_EXPORT_WHITELIST)
+  // ================================================================
+  canonical.is_locked = (p.is_locked as boolean) ?? false;
+  if ((p.reward_item_description as string) != null) {
+    canonical.reward_item_description = p.reward_item_description;
+  }
+
+  return canonical;
+}
+
+
  */
 function generatePromoSummary(p: Record<string, unknown>): string {
   const name = (p.promo_name as string) || '';
