@@ -51,7 +51,7 @@ import { classifyContent, type ProgramCategory } from "@/lib/extractors/category
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
 import { PromoItem, deletePromoDraft, duplicatePromo, normalizePromoData } from "./PromoFormWizard/types";
-import { promoKB } from "@/lib/promo-storage";
+import { promoKB, localDraftKB } from "@/lib/promo-storage";
 import { generateTermsList, formatNumber } from "./PromoFormWizard/Step4Review";
 import { inferRewardType, formatSubcategoryName, getRewardBadgeInfo } from "@/lib/reward-normalization";
 
@@ -164,21 +164,26 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     });
   };
 
-  // Load promos from Supabase
+  // Load promos: gabungkan Supabase data + localStorage drafts dari Pseudo KB
   const loadPromos = async () => {
     try {
-      const promos = await promoKB.getAll();
-      // Normalize all promos before setting state — safe per-item
-      const normalized = promos.map(p => {
+      // 1. Load dari Supabase
+      const supabasePromos = await promoKB.getAll();
+      // 2. Load localStorage drafts (dari "Gunakan Promo" di Pseudo KB)
+      const localDrafts = localDraftKB.getAll();
+      // 3. Gabungkan: local drafts di atas (lebih baru), lalu Supabase
+      const all = [...localDrafts, ...supabasePromos];
+      // 4. Normalize tiap item
+      const normalized = all.map(p => {
         try {
           return normalizePromoData(p) as PromoItem;
         } catch (err) {
           console.error('[loadPromos] normalizePromoData failed:', p?.id, err);
-          return p as PromoItem; // return raw if normalize fails
+          return p as PromoItem;
         }
       });
       setItems(normalized);
-      console.log('[PromoKnowledgeSection] Loaded promos from Supabase:', normalized.length);
+      console.log('[PromoKnowledgeSection] Loaded:', localDrafts.length, 'local drafts +', supabasePromos.length, 'Supabase promos');
     } catch (error) {
       console.error('[PromoKnowledgeSection] Failed to load promos:', error);
       setItems([]);
@@ -237,12 +242,19 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           setDeleteId(null);
           return;
         }
-        const success = await promoKB.delete(deleteId);
-        if (success) {
-          toast.success("Promo berhasil dihapus");
-          await loadPromos(); // Reload dari Supabase — 1:1
+        // Cek apakah ini local draft atau Supabase record
+        if (localDraftKB.isLocal(deleteId)) {
+          localDraftKB.delete(deleteId);
+          toast.success("Draft lokal berhasil dihapus");
+          await loadPromos();
         } else {
-          toast.error("Gagal menghapus promo");
+          const success = await promoKB.delete(deleteId);
+          if (success) {
+            toast.success("Promo berhasil dihapus");
+            await loadPromos();
+          } else {
+            toast.error("Gagal menghapus promo");
+          }
         }
       } catch (error) {
         console.error('[PromoKnowledgeSection] Delete failed:', error);
@@ -427,6 +439,11 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   };
 
   const getStatusBadge = (promo: PromoItem) => {
+    // Local draft dari Pseudo KB — belum di Supabase
+    if (localDraftKB.isLocal(promo.id)) {
+      return <Badge className="bg-warning/20 text-warning border border-warning/30 rounded-full px-3 py-1">📋 Local Draft</Badge>;
+    }
+
     // Calculate status based on dates
     const now = new Date();
     const validFrom = promo.valid_from ? new Date(promo.valid_from) : null;
