@@ -236,7 +236,6 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     reward_type:            (row.reward_type as string) || '',
     reward_unit:            safe(row.reward_unit) as string | undefined,
     reward_amount:          safe(row.reward_amount, null) as number | null,
-    reward_is_percentage:   (row.reward_is_percentage as boolean) ?? false,
     reward_item_description:safe(row.reward_item_description) as string | undefined,
     conversion_formula:     (row.conversion_formula as string) || '',
 
