@@ -168,8 +168,15 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const loadPromos = async () => {
     try {
       const promos = await promoKB.getAll();
-      // Normalize all promos before setting state
-      const normalized = promos.map(p => normalizePromoData(p) as PromoItem);
+      // Normalize all promos before setting state — safe per-item
+      const normalized = promos.map(p => {
+        try {
+          return normalizePromoData(p) as PromoItem;
+        } catch (err) {
+          console.error('[loadPromos] normalizePromoData failed:', p?.id, err);
+          return p as PromoItem; // return raw if normalize fails
+        }
+      });
       setItems(normalized);
       console.log('[PromoKnowledgeSection] Loaded promos from Supabase:', normalized.length);
     } catch (error) {

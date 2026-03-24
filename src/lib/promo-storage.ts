@@ -433,7 +433,14 @@ export const promoKB = {
         return [];
       }
 
-      return (data || []).map(row => fromFlatRow(row as Record<string, unknown>));
+      return (data || []).map(row => {
+        try {
+          return fromFlatRow(row as Record<string, unknown>);
+        } catch (err) {
+          console.error('[promoKB.getAll] fromFlatRow failed for row:', (row as any)?.id, err);
+          return null;
+        }
+      }).filter(Boolean) as PromoItem[];
     } catch (error) {
       logSupabaseError('promoKB.getAll', error);
       return [];
