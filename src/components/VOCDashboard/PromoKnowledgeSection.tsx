@@ -242,12 +242,19 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           setDeleteId(null);
           return;
         }
-        const success = await promoKB.delete(deleteId);
-        if (success) {
-          toast.success("Promo berhasil dihapus");
-          await loadPromos(); // Reload dari Supabase — 1:1
+        // Cek apakah ini local draft atau Supabase record
+        if (localDraftKB.isLocal(deleteId)) {
+          localDraftKB.delete(deleteId);
+          toast.success("Draft lokal berhasil dihapus");
+          await loadPromos();
         } else {
-          toast.error("Gagal menghapus promo");
+          const success = await promoKB.delete(deleteId);
+          if (success) {
+            toast.success("Promo berhasil dihapus");
+            await loadPromos();
+          } else {
+            toast.error("Gagal menghapus promo");
+          }
         }
       } catch (error) {
         console.error('[PromoKnowledgeSection] Delete failed:', error);
