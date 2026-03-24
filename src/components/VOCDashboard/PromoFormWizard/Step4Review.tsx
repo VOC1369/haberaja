@@ -1258,11 +1258,22 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
   // Build PKB payload for JSON preview (legacy format)
   const pkbPayload = buildPKBPayload(data);
   
-  // Build Canonical payload for JSON preview (v2.1-FINAL format)
-  const canonicalPayload = useMemo(() => buildCanonicalPayload(data), [data]);
   
-  // Validate canonical payload (non-blocking)
-  const canonicalValidation = useMemo(() => validateCanonicalPromo(canonicalPayload), [canonicalPayload]);
+  // Build v3.1 payload for JSON preview (mechanics[] format)
+  const canonicalPayload = useMemo(() => {
+    try {
+      return toV31Row(data, (data as unknown as Record<string, unknown>).promo_id as string || 'preview', 'preview');
+    } catch {
+      return { schema_version: '3.1', promo_name: data.promo_name, mechanics: buildMechanicsFromFormData(data) };
+    }
+  }, [data]);
+  
+  // Validate canonical payload (non-blocking, using mechanics count as proxy)
+  const canonicalValidation = useMemo(() => {
+    const mechanics = (canonicalPayload as Record<string, unknown>).mechanics as unknown[];
+    const hasCriticalMechanics = Array.isArray(mechanics) && mechanics.length >= 3;
+    return { valid: hasCriticalMechanics, errors: hasCriticalMechanics ? [] : ['mechanics[] incomplete'], warnings: [] };
+  }, [canonicalPayload]);
 
   const isStep1Complete = data.client_id && data.promo_name && data.promo_type;
   
