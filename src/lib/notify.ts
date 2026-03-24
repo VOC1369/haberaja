@@ -50,20 +50,20 @@ function emit(type: NotificationType, message: string, options?: { description?:
 }
 
 export const toast = {
-  success: (message: string, options?: { description?: string; duration?: number }) =>
+  success: (message: string, options?: { description?: string; duration?: number; [key: string]: unknown }) =>
     emit('success', message, options),
 
-  error: (message: string, options?: { description?: string; duration?: number }) =>
+  error: (message: string, options?: { description?: string; duration?: number; [key: string]: unknown }) =>
     emit('error', message, options),
 
-  warning: (message: string, options?: { description?: string; duration?: number }) =>
+  warning: (message: string, options?: { description?: string; duration?: number; [key: string]: unknown }) =>
     emit('warning', message, options),
 
-  info: (message: string, options?: { description?: string; duration?: number }) =>
+  info: (message: string, options?: { description?: string; duration?: number; [key: string]: unknown }) =>
     emit('info', message, options),
 
   // Alias — some code calls toast() directly
-  message: (message: string, options?: { description?: string; duration?: number }) =>
+  message: (message: string, options?: { description?: string; duration?: number; [key: string]: unknown }) =>
     emit('info', message, options),
 };
 
