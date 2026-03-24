@@ -1,5 +1,6 @@
 import { PromoFormData, GAME_RESTRICTIONS, GAME_PROVIDERS, GAME_NAMES, CONTACT_CHANNELS, GEO_RESTRICTIONS, PLATFORM_ACCESS, CALCULATION_BASES, CALCULATION_METHODS, CLAIM_FREQUENCIES, REWARD_DISTRIBUTIONS, DINAMIS_REWARD_TYPES, REWARD_TYPES, PROMO_RISK_LEVELS, buildPKBPayload, buildCanonicalPayload, TIER_ARCHETYPE_OPTIONS, LP_EARN_BASIS_OPTIONS } from "./types";
 import { validateCanonicalPromo } from "@/lib/canonical-promo-schema";
+import { toV31Row, buildMechanicsFromFormData } from "@/lib/promo-storage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -1257,11 +1258,22 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
   // Build PKB payload for JSON preview (legacy format)
   const pkbPayload = buildPKBPayload(data);
   
-  // Build Canonical payload for JSON preview (v2.1-FINAL format)
-  const canonicalPayload = useMemo(() => buildCanonicalPayload(data), [data]);
   
-  // Validate canonical payload (non-blocking)
-  const canonicalValidation = useMemo(() => validateCanonicalPromo(canonicalPayload), [canonicalPayload]);
+  // Build v3.1 payload for JSON preview (mechanics[] format)
+  const canonicalPayload = useMemo(() => {
+    try {
+      return toV31Row(data, (data as unknown as Record<string, unknown>).promo_id as string || 'preview', 'preview');
+    } catch {
+      return { schema_version: '3.1', promo_name: data.promo_name, mechanics: buildMechanicsFromFormData(data) };
+    }
+  }, [data]);
+  
+  // Validate canonical payload (non-blocking, using mechanics count as proxy)
+  const canonicalValidation = useMemo(() => {
+    const mechanics = (canonicalPayload as Record<string, unknown>).mechanics as unknown[];
+    const hasCriticalMechanics = Array.isArray(mechanics) && mechanics.length >= 3;
+    return { valid: hasCriticalMechanics, errors: hasCriticalMechanics ? [] : ['mechanics[] incomplete'], warnings: [] };
+  }, [canonicalPayload]);
 
   const isStep1Complete = data.client_id && data.promo_name && data.promo_type;
   
@@ -2521,7 +2533,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           const url = URL.createObjectURL(blob);
                           const link = document.createElement('a');
                           link.href = url;
-                          const modeLabel = jsonMode === 'canonical' ? 'canonical_v2.1' : 'legacy';
+                          const modeLabel = jsonMode === 'canonical' ? 'v3.1_mechanics' : 'legacy';
                           link.download = `promo_${modeLabel}_${data.promo_name?.replace(/\s+/g, '_') || 'export'}.json`;
                           document.body.appendChild(link);
                           link.click();
@@ -2627,7 +2639,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           </Badge>
                           {jsonMode === 'canonical' && (
                             <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
-                              schema_version: "2.1"
+                              schema_version: "3.1"
                             </Badge>
                           )}
                         </div>
