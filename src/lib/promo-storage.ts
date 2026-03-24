@@ -421,6 +421,15 @@ export const promoKB = {
     row.created_at = now;
     row.updated_at = now;
 
+    // Inject created_by dari Supabase Auth session
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userEmail = sessionData?.session?.user?.email;
+      if (userEmail) row.created_by = userEmail;
+    } catch (_) {
+      // fallback 'Admin' sudah di-set oleh toFlatRow
+    }
+
     const { data, error } = await supabase
       .from(TABLE)
       .upsert(row, { onConflict: 'promo_id' })
