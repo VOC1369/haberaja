@@ -10,6 +10,7 @@
  */
 
 import type { PromoFormData, PromoItem } from '@/components/VOCDashboard/PromoFormWizard/types';
+import { buildCanonicalPayload } from '@/components/VOCDashboard/PromoFormWizard/types';
 import type { ExtractedPromo } from '@/lib/openai-extractor';
 import { supabase, DEFAULT_CLIENT_ID, generateUUID, logSupabaseError } from '@/lib/supabase-client';
 import { KEYWORD_OVERRIDE_VERSION } from '@/lib/extractors/category-classifier';
@@ -29,258 +30,63 @@ const SESSION_KEY = 'pseudo_extractor_session';
 // ============================================
 
 /**
- * Memetakan PromoFormData ke flat columns tabel promo_kb.
- * Field yang tidak ada di schema tabel disimpan ke extra_config.
+ * toFlatRow — Thin wrapper over buildCanonicalPayload()
+ *
+ * ARSITEKTUR: Semua business logic ada di buildCanonicalPayload() (SSoT).
+ * toFlatRow HANYA melakukan 4 sanitasi Supabase-specific setelah itu:
+ *   1. valid_from   : "" → null  (Supabase date column tidak menerima "")
+ *   2. valid_until  : "" atau unlimited → null
+ *   3. extra_config : strip key berawalan _ (safety net)
+ *   4. created_by   : default "Admin" jika kosong
+ * Plus field operasional DB yang tidak masuk CANONICAL_EXPORT_WHITELIST.
  */
-/**
- * Auto-generate promo summary dari field yang ada.
- * Dipanggil saat promo_summary kosong sebelum save ke Supabase.
- */
-function generatePromoSummary(p: Record<string, unknown>): string {
-  const name = (p.promo_name as string) || '';
-  const mode = (p.reward_mode as string) || (p.mode as string) || '';
-  const rewardType = (p.reward_type as string) || '';
-  const calcBasis = (p.calculation_basis as string) || (p.calculation_base as string) || '';
-  const formula = (p.conversion_formula as string) || '';
-  const freq = (p.claim_frequency as string) || '';
-  const minCalc = (p.min_calculation as number) ?? null;
-  const maxBonus = (p.max_bonus as number) ?? null;
-  const rewardAmount = (p.reward_amount as number) ?? null;
-  const rewardUnit = (p.reward_unit as string) || '';
-
-  const parts: string[] = [];
-
-  // Reward description
-  if (rewardAmount && rewardUnit === 'percent') {
-    parts.push(`${name} memberikan bonus ${rewardAmount}%`);
-  } else if (rewardAmount) {
-    parts.push(`${name} memberikan bonus Rp ${rewardAmount.toLocaleString('id-ID')}`);
-  } else if (name) {
-    parts.push(name);
-  }
-
-  // Mode / basis
-  if (mode === 'formula' && calcBasis) {
-    parts.push(`dihitung dari ${calcBasis}`);
-  }
-
-  // Formula
-  if (formula) {
-    parts.push(`(${formula})`);
-  }
-
-  // Frequency
-  if (freq) {
-    parts.push(`dibagikan ${freq}`);
-  }
-
-  // Min calculation
-  if (minCalc) {
-    parts.push(`minimal ${calcBasis || 'transaksi'} Rp ${minCalc.toLocaleString('id-ID')}`);
-  }
-
-  // Max bonus
-  if (maxBonus) {
-    parts.push(`maksimal bonus Rp ${maxBonus.toLocaleString('id-ID')}`);
-  } else if (!maxBonus) {
-    parts.push('tanpa batas maksimal bonus');
-  }
-
-  return parts.join(', ') + '.';
-}
-
 function toFlatRow(promo: PromoFormData, id: string, _now: string): Record<string, unknown> {
-  // Cast sekali ke p untuk akses aman tanpa TS error
   const p = promo as unknown as Record<string, unknown>;
 
-  // Field-field yang masuk ke extra_config (tidak ada kolom flat-nya)
-  const extraConfigFields: Record<string, unknown> = {};
+  // Build via canonical SSoT — semua logic (sanitizeByMode, reward_amount
+  // formula mode, game_exclusions aggregation, dll) ada di sini.
+  const canonical = buildCanonicalPayload(promo, (p.promo_id as string) || id) as unknown as Record<string, unknown>;
 
-  const knownFields = new Set([
-    'promo_id', 'client_id', 'client_name', 'promo_name', 'promo_slug',
-    'schema_version', 'status', 'source_url', 'promo_summary',
-    'category', 'mode', 'intent_category', 'target_segment',
-    'trigger_event', 'trigger_min_value',
-    'reward_type', 'reward_unit', 'reward_amount', 'reward_is_percentage',
-    'reward_item_description', 'calculation_basis', 'payout_direction',
-    'conversion_formula', 'tier_archetype', 'tier_count', 'tiers',
-    'min_calculation', 'min_deposit', 'max_bonus', 'max_bonus_unlimited',
-    'turnover_enabled', 'turnover_multiplier', 'turnover_basis', 'turnover_basis_extra',
-    'min_withdraw_after_bonus', 'claim_frequency', 'claim_method',
-    'claim_deadline_days', 'claim_platform', 'claim_url',
-    'proof_required', 'proof_type', 'proof_destination',
-    'max_claim', 'max_claim_unlimited',
-    'distribution_mode', 'distribution_schedule', 'distribution_note',
-    'game_scope', 'game_types', 'game_providers', 'game_exclusions',
-    'platform_access', 'geo_restriction', 'require_apk',
-    'valid_from', 'valid_until', 'valid_until_unlimited',
-    'one_account_rule', 'promo_risk_level', 'anti_fraud_notes',
-    'custom_terms', 'special_conditions', 'extra_config',
-    'archetype_payload', 'archetype_invariants',
-    'has_subcategories', 'subcategories',
-    'extraction_confidence', 'human_verified', 'penalty_type',
-    'created_by', 'is_locked',
-    // created_at & updated_at masuk knownFields agar tidak bocor ke extra_config,
-    // tapi TIDAK di-include di return object — Supabase auto-fill via now()
-    'created_at', 'updated_at', 'updated_by',
-  ]);
+  // ================================================================
+  // SUPABASE-SPECIFIC SANITIZATIONS (4 rules only)
+  // ================================================================
 
-  // Kumpulkan field non-standard ke extra_config
-  Object.entries(promo).forEach(([key, val]) => {
-    if (!knownFields.has(key) && val !== undefined && val !== null) {
-      extraConfigFields[key] = val;
-    }
-  });
+  // 1. valid_from: "" → null
+  if (!canonical.valid_from) canonical.valid_from = null;
 
-  // Strip semua internal debug keys (berawalan _) dari extra_config
-  const rawExtra = (typeof p.extra_config === 'object' && p.extra_config !== null)
-    ? (p.extra_config as Record<string, unknown>)
+  // 2. valid_until: "" atau unlimited → null
+  if (!canonical.valid_until || canonical.valid_until_unlimited === true) {
+    canonical.valid_until = null;
+  }
+
+  // 3. extra_config: strip key berawalan _ (safety net)
+  const rawExtra = (canonical.extra_config && typeof canonical.extra_config === 'object')
+    ? (canonical.extra_config as Record<string, unknown>)
     : {};
-  const cleanedExtra: Record<string, unknown> = {};
+  const cleanExtra: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(rawExtra)) {
-    if (!k.startsWith('_')) cleanedExtra[k] = v;
+    if (!k.startsWith('_')) cleanExtra[k] = v;
   }
-  const mergedExtra: Record<string, unknown> = { ...cleanedExtra };
-  for (const [k, v] of Object.entries(extraConfigFields)) {
-    if (!k.startsWith('_')) mergedExtra[k] = v;
+  canonical.extra_config = cleanExtra;
+
+  // 4. created_by: default "Admin" jika kosong
+  if (!canonical.created_by) canonical.created_by = 'Admin';
+
+  // Row identity (primary key Supabase)
+  canonical.id = id;
+
+  // ================================================================
+  // DB OPERATIONAL FIELDS (tidak masuk CANONICAL_EXPORT_WHITELIST)
+  // ================================================================
+  canonical.is_locked = (p.is_locked as boolean) ?? false;
+  if ((p.reward_item_description as string) != null) {
+    canonical.reward_item_description = p.reward_item_description;
   }
 
-  // Tentukan mode dari reward_mode
-  const mode = (p.reward_mode as string) || (p.mode as string) || null;
-
-  // valid_until: jika valid_until_unlimited = true atau string kosong → null
-  const validUntilRaw = (p.valid_until as string) || '';
-  const validUntil = (p.valid_until_unlimited as boolean) || !validUntilRaw ? null : validUntilRaw;
-
-  // promo_summary: auto-generate jika kosong
-  const promoSummary = (p.promo_summary as string) || generatePromoSummary(p);
-
-  // client_name: pakai field langsung, fallback ke client_id (bukan DEFAULT_CLIENT_ID)
-  const clientName = (p.client_name as string) || (p.client_id as string) || '';
-
-  return {
-    id,
-    promo_id:               (p.promo_id as string) || id,
-    client_id:              (p.client_id as string) || DEFAULT_CLIENT_ID,
-    client_name:            clientName || null,
-    promo_name:             p.promo_name as string,
-    promo_slug:             (p.promo_slug as string) || null,
-    schema_version:         '2.2',
-    status:                 (p.status as string) || 'draft',
-    source_url:             (p.source_url as string) || null,
-    promo_summary:          promoSummary || null,
-
-    // Taxonomy — NOT NULL di Supabase, fallback ke 'REWARD'
-    category:               (p.category as string) || 'REWARD',
-    mode,
-    intent_category:        (p.intent_category as string) || null,
-    target_segment:         (p.target_segment as string) || null,
-    trigger_event:          (p.trigger_event as string) || null,
-    trigger_min_value:      (p.trigger_min_value as number) ?? null,
-
-    // Reward Core
-    reward_type:            (p.reward_type as string) || null,
-    reward_unit:            (p.reward_unit as string) ?? null,
-    reward_amount:          (p.reward_amount as number) ?? null,
-    // reward_is_percentage DERIVED from reward_unit — single source of truth
-    reward_is_percentage:   (p.reward_unit as string) === 'percent'
-                              ? true
-                              : ((p.reward_is_percentage as boolean) ?? false),
-    reward_item_description:(p.reward_item_description as string) ?? null,
-
-    // Calculation
-    calculation_basis:      (p.calculation_basis as string)
-                            || (p.calculation_base as string)
-                            || null,
-    payout_direction:       (p.payout_direction as string) ?? null,
-    conversion_formula:     (p.conversion_formula as string) || null,
-
-    // Tiers
-    tier_archetype:         (p.tier_archetype as string) || null,
-    tier_count:             Array.isArray(p.tiers) ? (p.tiers as unknown[]).length : 0,
-    tiers:                  (p.tiers as unknown[]) || [],
-
-    // Calculation limits
-    min_calculation:        (p.min_calculation as number) ?? null,
-    min_deposit:            (p.min_deposit as number) ?? null,
-    max_bonus:              (p.max_bonus as number) ?? null,
-    // max_bonus === null → max_bonus_unlimited = true (no cap = unlimited)
-    max_bonus_unlimited:    (p.max_bonus === null || p.max_bonus === undefined)
-                              ? true
-                              : ((p.max_bonus_unlimited as boolean) ?? false),
-
-    // Turnover
-    turnover_enabled:       (p.turnover_rule_enabled as boolean) ?? false,
-    turnover_multiplier:    (p.turnover_multiplier as number) ?? null,
-    turnover_basis:         (p.turnover_basis as string) ?? null,
-    turnover_basis_extra:   (p.turnover_basis_extra as string) ?? null,
-    min_withdraw_after_bonus:(p.min_withdraw_after_bonus as number) ?? null,
-
-    // Claim
-    claim_frequency:        (p.claim_frequency as string) || null,
-    claim_method:           (p.claim_method as string) || null,
-    claim_deadline_days:    (p.claim_deadline_days as number) ?? null,
-    claim_platform:         (p.claim_platform as string) ?? null,
-    claim_url:              (p.claim_url as string) ?? null,
-    max_claim:              (p.max_claim as number) ?? null,
-    max_claim_unlimited:    (p.max_claim_unlimited as boolean) ?? false,
-
-    // Proof
-    proof_required:         (p.proof_required as boolean) ?? false,
-    proof_type:             (p.proof_type as string) ?? 'none',
-    proof_destination:      (p.proof_destination as string) ?? 'none',
-    penalty_type:           (p.penalty_type as string) ?? null,
-
-    // Distribution
-    distribution_mode:      (p.distribution_mode as string)
-                            || (p.reward_distribution as string)
-                            || null,
-    distribution_schedule:  (p.distribution_schedule as string) || null,
-    distribution_note:      (p.distribution_note as string) || null,
-
-    // Game scope
-    game_scope:             (p.game_restriction as string) || null,
-    game_types:             (p.game_types as string[]) || [],
-    game_providers:         (p.game_providers as string[]) || [],
-    game_exclusions:        (p.game_exclusions as unknown[]) ?? [],
-
-    // Access
-    platform_access:        (p.platform_access as string) || 'semua',
-    geo_restriction:        (p.geo_restriction as string) || 'indonesia',
-    require_apk:            (p.require_apk as boolean) ?? false,
-    one_account_rule:       (p.one_account_rule as boolean) ?? false,
-
-    // Validity — empty string → null (Supabase date columns reject "")
-    valid_from:             (p.valid_from as string) || null,
-    valid_until:            validUntil,
-    valid_until_unlimited:  (p.valid_until_unlimited as boolean) ?? false,
-
-    // Risk
-    promo_risk_level:       (p.promo_risk_level as string) || 'medium',
-    anti_fraud_notes:       (p.anti_fraud_notes as string) || null,
-    custom_terms:           (p.custom_terms as string) || null,
-    special_conditions:     (p.special_requirements as string[]) || (p.special_conditions as string[]) || [],
-
-    // Subcategories
-    has_subcategories:      Array.isArray(p.subcategories) && (p.subcategories as unknown[]).length > 0,
-    subcategories:          (p.subcategories as unknown[]) || [],
-
-    // Archetype
-    archetype_payload:      (p.archetype_payload as Record<string, unknown>) || {},
-    archetype_invariants:   (p.archetype_invariants as Record<string, unknown>) || {},
-
-    // Extraction meta
-    extraction_confidence:  (p.extraction_confidence as number) ?? 0.9,
-    human_verified:         (p.human_verified as boolean) ?? false,
-    is_locked:              (p.is_locked as boolean) ?? false,
-
-    // Audit — created_at & updated_at DIHAPUS dari sini, Supabase auto-fill via now()
-    created_by:             (p.created_by as string) || 'Admin',
-
-    // Escape hatch — semua field non-standard masuk di sini (key _ sudah distrip)
-    extra_config:           Object.keys(mergedExtra).length > 0 ? mergedExtra : {},
-  };
+  return canonical;
 }
+
+
 
 /**
  * Memetakan flat row dari promo_kb kembali ke PromoItem.
