@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Crown, Plus, Trash2, Save } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 
 interface VIPLogicFormProps {
   form: UseFormReturn<APBEConfig>;

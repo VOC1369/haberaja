@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Bot, X, Plus, Sparkles, Save } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 
 interface AgentPersonaFormProps {
   form: UseFormReturn<APBEConfig>;

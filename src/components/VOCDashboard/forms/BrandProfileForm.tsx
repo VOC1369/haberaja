@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Save } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 
 interface BrandProfileFormProps {
   form: UseFormReturn<VOCConfig>;

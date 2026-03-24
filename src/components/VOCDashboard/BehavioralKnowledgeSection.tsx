@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { BehavioralWizard } from "./BehavioralWizard";
 import { BehavioralRuleItem, getBehavioralRules, deleteBehavioralRule, saveBehavioralRules, seedDefaultBehavioralRules } from "./BehavioralWizard/types";
 import { buildBehavioralKBContext } from "@/lib/livechat-engine";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 
 interface BehavioralKnowledgeSectionProps {
   onBack?: () => void;

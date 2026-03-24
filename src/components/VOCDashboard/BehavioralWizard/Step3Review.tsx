@@ -22,7 +22,7 @@ import {
   calculatePriority,
   validateBehavioralRule
 } from "./types";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 
 interface Step3Props {
   data: WizardFormData;

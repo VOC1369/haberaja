@@ -16,7 +16,7 @@ import { APIDataSection } from "@/components/VOCDashboard/APIDataSection";
 import { LegalSupportSection } from "@/components/VOCDashboard/LegalSupportSection";
 import { LivechatTestConsole } from "@/components/VOCDashboard/LivechatTestConsole";
 import { TicketCategory } from "@/types/ticket";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { ArrowLeft, ArrowRight, Search } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";

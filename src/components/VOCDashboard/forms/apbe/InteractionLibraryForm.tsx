@@ -9,7 +9,7 @@ import { BookOpen, Sun, Cloud, Sunset, Moon, Plus, X, Save, Lock, Unlock, Rotate
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useState, useCallback, useMemo } from "react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { validateTemplate, ValidationResult } from "@/lib/apbe-interaction-validator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 

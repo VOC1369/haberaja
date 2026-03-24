@@ -18,7 +18,7 @@ import {
 } from "./types";
 import { SelectWithAddNew, SelectOption } from "./SelectWithAddNew";
 import { applyPromoTypeDefaults } from "@/lib/promo-type-defaults";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 
 interface Step1Props {
   data: PromoFormData;

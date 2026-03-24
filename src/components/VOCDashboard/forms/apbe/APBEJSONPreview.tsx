@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { APBEConfig } from "@/types/apbe-config";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { Copy, Download, Check, ArrowLeft } from "lucide-react";
 interface APBEJSONPreviewProps {
   config: APBEConfig;

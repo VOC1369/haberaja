@@ -30,7 +30,7 @@ import { Plus, X, ChevronDown, Settings, Zap, Trophy, Star, Target, Trash2, Cale
 import { GameWhitelistBlacklist } from "./GameWhitelistBlacklist";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn, formatNumberWithSeparator } from "@/lib/utils";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import {
   PromoFormData,
   PromoSubCategory,
@@ -589,7 +589,7 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                       inertUpdates.fixed_calculation_value_enabled = false;
                       inertUpdates.fixed_calculation_value = undefined;
                       // Transparency toast for auto-toggle
-                      toast("Auto-adjustment", {
+                      toast.info("Auto-adjustment", {
                         description: `Nilai Bonus dimatikan karena jenis reward "${value === 'uang_tunai' ? 'Uang Tunai' : 'Hadiah Fisik'}" tidak memerlukan kalkulasi.`
                       });
                     } else {

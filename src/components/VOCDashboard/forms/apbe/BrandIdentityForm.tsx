@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, Save, Sparkles } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/lib/notify";
 import { getDefaultsForArchetype, ARCHETYPE_RULESET } from "@/lib/apbe-archetype-ruleset";
 
 interface BrandIdentityFormProps {
@@ -204,7 +204,6 @@ export function BrandIdentityForm({
                 `Nilai default disesuaikan dengan archetype "${rule.label}"`,
                 {
                   description: `Tone: ${defaults.tone}, Humor: ${defaults.humor_usage}`,
-                  icon: <Sparkles className="h-4 w-4" />,
                 }
               );
             } else if (autoUpdated.length > 0) {
@@ -213,7 +212,6 @@ export function BrandIdentityForm({
                 `Archetype "${rule.label}" diterapkan`,
                 {
                   description: `Auto-update: ${autoUpdated.join(", ")}. Dipertahankan: ${preserved.join(", ")}`,
-                  icon: <Sparkles className="h-4 w-4" />,
                 }
               );
             } else {
