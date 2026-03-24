@@ -57,7 +57,7 @@ import {
   type QAnswer,
   type QualityFlag,
 } from "@/lib/openai-extractor";
-import { localDraftKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
+import { promoKB, localDraftKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
 import { formatPromoType, getPromoSubTypeDisplay } from "@/lib/utils";
 import { ClassificationOverride } from "./ClassificationOverride";
