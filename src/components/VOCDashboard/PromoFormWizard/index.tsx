@@ -159,9 +159,9 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
 
   // Publish → Supabase ONLY (status = 'active')
   // Aturan:
-  // - initialData ada → ini EDIT existing promo → selalu UPDATE via existingId
-  // - initialData tidak ada → promo BARU → CREATE di Supabase (tanpa existingId)
-  // - Draft lokal (localStorage) dihapus setelah publish berhasil
+  // - initialData ada && BUKAN local draft → EDIT existing Supabase record → UPDATE via existingId
+  // - Local draft (dari Pseudo KB) → CREATE baru di Supabase, hapus localStorage draft
+  // - initialData tidak ada → promo BARU → CREATE di Supabase
   const handlePublish = async () => {
     const generatedTerms = generateFullTermsString(formData);
     const dataToSave: PromoFormData = { 
@@ -174,19 +174,23 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
     try {
       let saved: PromoItem;
       
-      if (initialData && editingId) {
-        // EDIT mode: selalu UPDATE record Supabase yang sudah ada
+      // Cek apakah ini edit dari Supabase (bukan local draft)
+      const isSupabaseRecord = initialData && editingId && !localDraftKB.isLocal(editingId);
+      
+      if (isSupabaseRecord) {
+        // EDIT mode: UPDATE record Supabase yang sudah ada
         console.log('[Publish] UPDATE existing Supabase record:', editingId);
         saved = await savePromoDraft(dataToSave, editingId);
       } else {
-        // NEW promo: CREATE di Supabase (editingId mungkin ada dari localStorage draft, tapi abaikan)
+        // NEW atau local draft → CREATE baru di Supabase (tanpa existingId)
         console.log('[Publish] CREATE new Supabase record');
         saved = await savePromoDraft(dataToSave, undefined);
       }
 
-      // Bersihkan draft lokal jika ada
-      if (editingId) {
-        localStorage.removeItem(`${LOCAL_DRAFT_KEY}_${editingId}`);
+      // Hapus local draft jika ada (setelah berhasil publish ke Supabase)
+      if (editingId && localDraftKB.isLocal(editingId)) {
+        localDraftKB.delete(editingId);
+        console.log('[Publish] Local draft dihapus:', editingId);
       }
 
       toast.success(`Promo "${formData.promo_name}" berhasil dipublish ke Knowledge Base!`);
