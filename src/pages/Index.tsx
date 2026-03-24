@@ -22,7 +22,7 @@ const Index = () => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      toast({ title: "Login gagal", description: error.message, variant: "destructive" });
+      toast.error("Login gagal", { description: error.message });
       return;
     }
     navigate("/dashboard");

@@ -42,23 +42,13 @@ export async function callAI({ type, messages, system = undefined, temperature =
 
     if (response.status === 402 || body?.error === "CREDIT_EXHAUSTED") {
       const msg = body?.message ?? "Kredit Anthropic habis. Silakan top-up di console.anthropic.com.";
-      toast({
-        title: "💳 Kredit LLM Habis",
-        description: msg,
-        variant: "destructive",
-        duration: 8000,
-      });
+      toast.error("💳 Kredit LLM Habis", { description: msg });
       throw new AICreditsExhaustedError(msg);
     }
 
     if (response.status === 429 || body?.error === "RATE_LIMITED") {
       const msg = body?.message ?? "Terlalu banyak request. Coba lagi sebentar.";
-      toast({
-        title: "⏳ Rate Limit Tercapai",
-        description: msg,
-        variant: "destructive",
-        duration: 5000,
-      });
+      toast.error("⏳ Rate Limit Tercapai", { description: msg });
       throw new AIRateLimitError(msg);
     }
 

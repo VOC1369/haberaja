@@ -145,8 +145,7 @@ export function TicketList({ category }: TicketListProps) {
       });
     }
     
-    toast({
-      title: newStatus === "approved" ? "Ticket Disetujui" : "Ticket Ditolak",
+    toast.success(newStatus === "approved" ? "Ticket Disetujui" : "Ticket Ditolak", {
       description: `Status ticket berhasil diubah menjadi ${statusLabels[newStatus]}`,
     });
     
@@ -510,8 +509,7 @@ export function TicketList({ category }: TicketListProps) {
                           is_taken_over: true 
                         };
                         localStorage.setItem(TICKET_STATUS_KEY, JSON.stringify(statuses));
-                        toast({
-                          title: "Chat Diambil Alih",
+                        toast.success("Chat Diambil Alih", {
                           description: `Anda mengambil alih chat untuk ticket ${selectedTicket.ticket_number}`,
                         });
                         setIsDetailOpen(false);

@@ -111,7 +111,6 @@ interface PseudoKnowledgeSectionProps {
 }
 
 export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSectionProps) {
-  const { toast: shadcnToast } = useToast();
   // Input state
   const [inputMode, setInputMode] = useState<InputMode>('url');
   const [currentInput, setCurrentInput] = useState('');
@@ -553,18 +552,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       const draftPromo = { ...mappedPreview, status: 'draft' as const };
       const savedDraft = localDraftKB.save(draftPromo);
       
-      shadcnToast({
-        title: "✅ Promo disimpan sebagai draft!",
+      toast.success("Promo disimpan sebagai draft!", {
         description: `"${savedDraft.promo_name}" siap diedit & dipublish dari Promo KB`,
-        action: onNavigateToPromo ? (
-          <button
-            onClick={onNavigateToPromo}
-            className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-button-hover/50 bg-button-hover/20 px-3 text-xs font-semibold text-button-hover hover:bg-button-hover/30 transition-colors"
-          >
-            Buka Promo KB →
-          </button>
-        ) : undefined,
-        duration: 6000,
       });
       
       handleRestart();
