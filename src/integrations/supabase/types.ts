@@ -46,6 +46,7 @@ export type Database = {
           human_verified: boolean | null
           id: string
           intent_category: string | null
+          is_locked: boolean
           max_bonus: number | null
           max_bonus_unlimited: boolean | null
           max_claim: number | null
@@ -123,6 +124,7 @@ export type Database = {
           human_verified?: boolean | null
           id?: string
           intent_category?: string | null
+          is_locked?: boolean
           max_bonus?: number | null
           max_bonus_unlimited?: boolean | null
           max_claim?: number | null
@@ -200,6 +202,7 @@ export type Database = {
           human_verified?: boolean | null
           id?: string
           intent_category?: string | null
+          is_locked?: boolean
           max_bonus?: number | null
           max_bonus_unlimited?: boolean | null
           max_claim?: number | null
