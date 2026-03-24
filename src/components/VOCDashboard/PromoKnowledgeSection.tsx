@@ -246,6 +246,20 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     }
   };
 
+  const handleToggleLock = async (promo: PromoItem) => {
+    const newLockState = !promo.is_locked;
+    try {
+      await promoKB.update(promo.id, { is_locked: newLockState } as Partial<PromoItem>);
+      setItems(prev => prev.map(i => i.id === promo.id ? { ...i, is_locked: newLockState } : i));
+      toast.success(newLockState
+        ? `"${promo.promo_name}" dikunci — tidak bisa dihapus`
+        : `"${promo.promo_name}" kunci dibuka`
+      );
+    } catch {
+      toast.error("Gagal mengubah status kunci");
+    }
+  };
+
   const handleDuplicate = async (promo: PromoItem) => {
     try {
       const newPromo = await duplicatePromo(promo);
