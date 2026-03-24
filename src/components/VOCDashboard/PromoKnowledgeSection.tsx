@@ -905,7 +905,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             </span>
                           )}
-                          <span className="text-sm font-medium text-foreground">{item.promo_name?.toUpperCase() || "UNTITLED PROMO"}</span>
+                           <span className="text-sm font-medium text-foreground">{item.promo_name?.toUpperCase() || "UNTITLED PROMO"}</span>
+                          {item.is_locked && (
+                            <Lock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                          )}
                           {hasSubcategories && (
                             <Badge className="bg-purple-500/20 text-purple-400 border-0 rounded-full h-7 w-7 p-0 flex items-center justify-center text-xs">
                               {item.subcategories!.length}
