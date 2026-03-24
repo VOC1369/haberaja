@@ -439,6 +439,11 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   };
 
   const getStatusBadge = (promo: PromoItem) => {
+    // Local draft dari Pseudo KB — belum di Supabase
+    if (localDraftKB.isLocal(promo.id)) {
+      return <Badge className="bg-warning/20 text-warning border border-warning/30 rounded-full px-3 py-1">📋 Local Draft</Badge>;
+    }
+
     // Calculate status based on dates
     const now = new Date();
     const validFrom = promo.valid_from ? new Date(promo.valid_from) : null;
