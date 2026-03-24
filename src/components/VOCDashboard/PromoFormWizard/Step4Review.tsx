@@ -1313,10 +1313,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
     text += terms.map((t, i) => `${i + 1}. ${t}`).join('\n');
     
     navigator.clipboard.writeText(text);
-    toast({ 
-      title: "Berhasil disalin!", 
-      description: "Syarat & Ketentuan telah disalin ke clipboard" 
-    });
+    toast.success("Berhasil disalin!", { description: "Syarat & Ketentuan telah disalin ke clipboard" });
   };
 
   return (
@@ -2530,10 +2527,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           link.click();
                           document.body.removeChild(link);
                           URL.revokeObjectURL(url);
-                          toast({
-                            title: "Berhasil!",
-                            description: `${jsonMode === 'canonical' ? 'Canonical v2.1' : 'Legacy'} JSON telah didownload`
-                          });
+                          toast.success("Berhasil!", { description: `${jsonMode === 'canonical' ? 'Canonical v2.1' : 'Legacy'} JSON telah didownload` });
                         }}
                         className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
                       >
