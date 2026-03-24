@@ -19,7 +19,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 // Default client ID for single-brand mode (1 brand per client)
-export const DEFAULT_CLIENT_ID = 'local_dev';
+export const DEFAULT_CLIENT_ID = 'Liveboard';
 
 // Schema version for migrations
 export const CURRENT_SCHEMA_VERSION = '1.2.0';
