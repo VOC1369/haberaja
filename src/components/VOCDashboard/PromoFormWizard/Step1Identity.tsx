@@ -158,8 +158,8 @@ export function Step1Identity({ data, onChange, isEditingFromReview, onSaveAndRe
               <Input
                 id="client_name"
                 placeholder="misal: CITRA77, WG77 (nama asli brand)"
-                value={(data as unknown as Record<string, unknown>).client_name as string || ''}
-                onChange={(e) => onChange({ client_name: e.target.value } as Partial<typeof data>)}
+                value={data.client_name ?? ''}
+                onChange={(e) => onChange({ client_name: e.target.value })}
               />
               <p className="text-xs text-muted-foreground">
                 Nama brand seperti yang tertera di website / teks promo
