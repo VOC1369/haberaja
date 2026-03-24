@@ -668,10 +668,20 @@ export const promoKB = {
         }
       }
 
+      // DATE FIELDS: Supabase kolom bertipe `date` tidak menerima empty string ""
+      // Wajib di-convert ke null agar tidak crash
+      const DATE_FIELDS = ['valid_from', 'valid_until'];
+      for (const f of DATE_FIELDS) {
+        if (f in patch && (patch[f] === '' || patch[f] === undefined)) {
+          patch[f] = null;
+        }
+      }
+
       const { error } = await supabase
         .from(TABLE)
         .update(patch)
         .eq('id', id);
+
 
       if (error) {
         logSupabaseError('promoKB.update', error);
