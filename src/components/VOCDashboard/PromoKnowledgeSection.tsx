@@ -46,7 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2, Zap, Trophy, Cog, RefreshCw, FileJson } from "lucide-react";
+import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2, Zap, Trophy, Cog, RefreshCw, FileJson, Lock, Unlock } from "lucide-react";
 import { classifyContent, type ProgramCategory } from "@/lib/extractors/category-classifier";
 import { toast } from "sonner";
 import { PromoFormWizard } from "./PromoFormWizard";
@@ -224,6 +224,12 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const handleDelete = async () => {
     if (deleteId) {
       try {
+        const promo = items.find(i => i.id === deleteId);
+        if (promo?.is_locked) {
+          toast.error(`"${promo.promo_name}" terkunci — buka kunci dulu sebelum menghapus`);
+          setDeleteId(null);
+          return;
+        }
         const success = await deletePromoDraft(deleteId);
         if (success) {
           setItems(items.filter(item => item.id !== deleteId));
@@ -237,6 +243,20 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
       } finally {
         setDeleteId(null);
       }
+    }
+  };
+
+  const handleToggleLock = async (promo: PromoItem) => {
+    const newLockState = !promo.is_locked;
+    try {
+      await promoKB.update(promo.id, { is_locked: newLockState } as Partial<PromoItem>);
+      setItems(prev => prev.map(i => i.id === promo.id ? { ...i, is_locked: newLockState } : i));
+      toast.success(newLockState
+        ? `"${promo.promo_name}" dikunci — tidak bisa dihapus`
+        : `"${promo.promo_name}" kunci dibuka`
+      );
+    } catch {
+      toast.error("Gagal mengubah status kunci");
     }
   };
 
@@ -885,7 +905,10 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                             </span>
                           )}
-                          <span className="text-sm font-medium text-foreground">{item.promo_name?.toUpperCase() || "UNTITLED PROMO"}</span>
+                           <span className="text-sm font-medium text-foreground">{item.promo_name?.toUpperCase() || "UNTITLED PROMO"}</span>
+                          {item.is_locked && (
+                            <Lock className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                          )}
                           {hasSubcategories && (
                             <Badge className="bg-purple-500/20 text-purple-400 border-0 rounded-full h-7 w-7 p-0 flex items-center justify-center text-xs">
                               {item.subcategories!.length}
@@ -960,13 +983,27 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-border" />
                             <DropdownMenuItem 
-                              onClick={() => setDeleteId(item.id)}
-                              className="cursor-pointer hover:bg-destructive/20 hover:text-destructive focus:bg-destructive/20 focus:text-destructive"
+                              onClick={() => handleToggleLock(item)}
+                              className="cursor-pointer hover:bg-button-hover hover:text-button-hover-foreground"
+                            >
+                              <div className={`h-7 w-7 rounded-full flex items-center justify-center mr-3 ${item.is_locked ? 'bg-amber-500/20' : 'bg-muted'}`}>
+                                {item.is_locked
+                                  ? <Unlock className="h-4 w-4 text-amber-500" />
+                                  : <Lock className="h-4 w-4 text-muted-foreground" />
+                                }
+                              </div>
+                              <span>{item.is_locked ? 'Buka Kunci' : 'Kunci Promo'}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-border" />
+                            <DropdownMenuItem 
+                              onClick={() => !item.is_locked && setDeleteId(item.id)}
+                              disabled={item.is_locked}
+                              className={item.is_locked ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-destructive/20 hover:text-destructive focus:bg-destructive/20 focus:text-destructive'}
                             >
                               <div className="h-7 w-7 rounded-full bg-destructive/20 flex items-center justify-center mr-3">
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </div>
-                              <span>Delete Promo</span>
+                              <span>{item.is_locked ? 'Terkunci' : 'Delete Promo'}</span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -1227,7 +1264,13 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           <AlertDialogHeader>
             <AlertDialogTitle className="text-base">Hapus Semua Promo?</AlertDialogTitle>
             <AlertDialogDescription className="text-sm">
-              Anda akan menghapus <strong>{items.length}</strong> promo entry. Tindakan ini tidak dapat dibatalkan dan semua data akan hilang permanen.
+              {(() => {
+                const locked = items.filter(i => i.is_locked).length;
+                const deletable = items.length - locked;
+                return locked > 0
+                  ? <>Anda akan menghapus <strong>{deletable}</strong> promo. <strong>{locked}</strong> promo terkunci akan dilewati dan tidak terhapus.</>
+                  : <>Anda akan menghapus <strong>{items.length}</strong> promo. Tindakan ini tidak dapat dibatalkan.</>;
+              })()}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1236,11 +1279,17 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm"
               onClick={async () => {
                 try {
-                  for (const item of items) {
+                  const deletable = items.filter(i => !i.is_locked);
+                  const skipped = items.filter(i => i.is_locked).length;
+                  for (const item of deletable) {
                     await deletePromoDraft(item.id);
                   }
-                  setItems([]);
-                  toast.success("Semua promo berhasil dihapus");
+                  setItems(items.filter(i => i.is_locked));
+                  if (skipped > 0) {
+                    toast.success(`${deletable.length} promo dihapus. ${skipped} promo terkunci dilewati.`);
+                  } else {
+                    toast.success("Semua promo berhasil dihapus");
+                  }
                 } catch (error) {
                   console.error('[PromoKnowledgeSection] Delete all failed:', error);
                   toast.error("Gagal menghapus semua promo");
