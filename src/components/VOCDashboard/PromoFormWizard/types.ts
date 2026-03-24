@@ -835,6 +835,7 @@ export interface PromoItem extends PromoFormData {
   id: string;
   version: number;
   is_active: boolean;
+  is_locked?: boolean;
   created_at: string;
   updated_at: string;
   updated_by?: string;
