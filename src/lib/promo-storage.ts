@@ -33,6 +33,9 @@ const SESSION_KEY = 'pseudo_extractor_session';
  * Field yang tidak ada di schema tabel disimpan ke extra_config.
  */
 function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string, unknown> {
+  // Cast sekali ke p untuk akses aman tanpa TS error
+  const p = promo as unknown as Record<string, unknown>;
+
   // Field-field yang masuk ke extra_config (tidak ada kolom flat-nya)
   const extraConfigFields: Record<string, unknown> = {};
 
