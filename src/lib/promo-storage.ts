@@ -323,7 +323,6 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
 
     // Tiers
     tier_archetype:         safe(row.tier_archetype) as 'level' | 'point_store' | 'referral' | 'formula' | undefined,
-    tier_count:             (row.tier_count as number) ?? 0,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tiers:                  ((row.tiers as unknown[]) || []) as any[],
     fast_exp_missions:      [],
