@@ -190,6 +190,7 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     // Extraction meta
     extraction_confidence:  (p.extraction_confidence as number) ?? 0.9,
     human_verified:         (p.human_verified as boolean) ?? false,
+    is_locked:              (p.is_locked as boolean) ?? false,
 
     // Audit
     created_by:             (p.created_by as string) || 'Admin',
