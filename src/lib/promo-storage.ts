@@ -575,16 +575,102 @@ export const promoKB = {
 
     try {
       const now = new Date().toISOString();
-      // Build partial flat update — hanya field yang diupdate
-      const partialRow = toFlatRow(updates as PromoFormData, id, now);
-      // Hapus field yang tidak boleh di-overwrite saat partial update
-      delete partialRow.id;
-      delete partialRow.created_at;
-      partialRow.updated_at = now;
+
+      // CRITICAL: For partial updates, we MUST NOT run through toFlatRow()
+      // because toFlatRow fills in ALL field defaults (e.g. status → 'draft')
+      // which would overwrite existing data in Supabase.
+      //
+      // Instead: build a lean patch object with ONLY the fields present in `updates`.
+      const u = updates as Record<string, unknown>;
+      const patch: Record<string, unknown> = { updated_at: now };
+
+      // Map PromoFormData field names → flat column names (only if present in updates)
+      const directMap: Array<[string, string]> = [
+        ['status', 'status'],
+        ['is_locked', 'is_locked'],
+        ['promo_name', 'promo_name'],
+        ['promo_slug', 'promo_slug'],
+        ['client_id', 'client_id'],
+        ['client_name', 'client_name'],
+        ['source_url', 'source_url'],
+        ['promo_summary', 'promo_summary'],
+        ['category', 'category'],
+        ['reward_mode', 'mode'],
+        ['intent_category', 'intent_category'],
+        ['target_segment', 'target_segment'],
+        ['trigger_event', 'trigger_event'],
+        ['trigger_min_value', 'trigger_min_value'],
+        ['reward_type', 'reward_type'],
+        ['reward_unit', 'reward_unit'],
+        ['reward_amount', 'reward_amount'],
+        ['reward_is_percentage', 'reward_is_percentage'],
+        ['reward_item_description', 'reward_item_description'],
+        ['calculation_base', 'calculation_basis'],
+        ['calculation_basis', 'calculation_basis'],
+        ['payout_direction', 'payout_direction'],
+        ['conversion_formula', 'conversion_formula'],
+        ['tier_archetype', 'tier_archetype'],
+        ['tiers', 'tiers'],
+        ['min_calculation', 'min_calculation'],
+        ['min_deposit', 'min_deposit'],
+        ['max_bonus', 'max_bonus'],
+        ['max_bonus_unlimited', 'max_bonus_unlimited'],
+        ['turnover_rule_enabled', 'turnover_enabled'],
+        ['turnover_enabled', 'turnover_enabled'],
+        ['turnover_multiplier', 'turnover_multiplier'],
+        ['turnover_basis', 'turnover_basis'],
+        ['turnover_basis_extra', 'turnover_basis_extra'],
+        ['min_withdraw_after_bonus', 'min_withdraw_after_bonus'],
+        ['claim_frequency', 'claim_frequency'],
+        ['claim_method', 'claim_method'],
+        ['claim_deadline_days', 'claim_deadline_days'],
+        ['claim_platform', 'claim_platform'],
+        ['claim_url', 'claim_url'],
+        ['max_claim', 'max_claim'],
+        ['max_claim_unlimited', 'max_claim_unlimited'],
+        ['proof_required', 'proof_required'],
+        ['proof_type', 'proof_type'],
+        ['proof_destination', 'proof_destination'],
+        ['penalty_type', 'penalty_type'],
+        ['distribution_mode', 'distribution_mode'],
+        ['reward_distribution', 'distribution_mode'],
+        ['distribution_schedule', 'distribution_schedule'],
+        ['distribution_note', 'distribution_note'],
+        ['game_restriction', 'game_scope'],
+        ['game_scope', 'game_scope'],
+        ['game_types', 'game_types'],
+        ['game_providers', 'game_providers'],
+        ['game_exclusions', 'game_exclusions'],
+        ['platform_access', 'platform_access'],
+        ['geo_restriction', 'geo_restriction'],
+        ['require_apk', 'require_apk'],
+        ['one_account_rule', 'one_account_rule'],
+        ['valid_from', 'valid_from'],
+        ['valid_until', 'valid_until'],
+        ['valid_until_unlimited', 'valid_until_unlimited'],
+        ['promo_risk_level', 'promo_risk_level'],
+        ['anti_fraud_notes', 'anti_fraud_notes'],
+        ['custom_terms', 'custom_terms'],
+        ['special_requirements', 'special_conditions'],
+        ['special_conditions', 'special_conditions'],
+        ['has_subcategories', 'has_subcategories'],
+        ['subcategories', 'subcategories'],
+        ['archetype_payload', 'archetype_payload'],
+        ['archetype_invariants', 'archetype_invariants'],
+        ['extraction_confidence', 'extraction_confidence'],
+        ['human_verified', 'human_verified'],
+        ['created_by', 'created_by'],
+      ];
+
+      for (const [src, dest] of directMap) {
+        if (src in u) {
+          patch[dest] = u[src];
+        }
+      }
 
       const { error } = await supabase
         .from(TABLE)
-        .update(partialRow)
+        .update(patch)
         .eq('id', id);
 
       if (error) {
@@ -593,7 +679,7 @@ export const promoKB = {
       }
 
       window.dispatchEvent(new CustomEvent('promo-storage-updated'));
-      console.log('[promoKB] Updated promo:', id);
+      console.log('[promoKB] Updated promo:', id, '| fields:', Object.keys(patch).join(', '));
       return true;
     } catch (error) {
       logSupabaseError('promoKB.update', error);
