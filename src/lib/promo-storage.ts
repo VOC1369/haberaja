@@ -262,7 +262,6 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     claim_platform:         safe(row.claim_platform) as 'auto' | 'form' | 'livechat' | 'whatsapp' | 'telegram' | 'apk' | undefined,
     claim_url:              safe(row.claim_url) as string | undefined,
     max_claim:              safe(row.max_claim, null) as number | null,
-    max_claim_unlimited:    (row.max_claim_unlimited as boolean) ?? false,
 
     // Proof
     proof_required:         (row.proof_required as boolean) ?? false,
