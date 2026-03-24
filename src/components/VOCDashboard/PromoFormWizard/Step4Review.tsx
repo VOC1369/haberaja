@@ -2533,7 +2533,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           const url = URL.createObjectURL(blob);
                           const link = document.createElement('a');
                           link.href = url;
-                          const modeLabel = jsonMode === 'canonical' ? 'canonical_v2.1' : 'legacy';
+                          const modeLabel = jsonMode === 'canonical' ? 'v3.1_mechanics' : 'legacy';
                           link.download = `promo_${modeLabel}_${data.promo_name?.replace(/\s+/g, '_') || 'export'}.json`;
                           document.body.appendChild(link);
                           link.click();
