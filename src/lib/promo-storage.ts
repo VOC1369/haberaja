@@ -125,7 +125,10 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     min_calculation:        (p.min_calculation as number) ?? null,
     min_deposit:            (p.min_deposit as number) ?? null,
     max_bonus:              (p.max_bonus as number) ?? null,
-    max_bonus_unlimited:    (p.max_bonus_unlimited as boolean) ?? false,
+    // Fix 1: max_bonus === null → max_bonus_unlimited = true (no cap = unlimited)
+    max_bonus_unlimited:    (p.max_bonus as number) === null || (p.max_bonus as number) === undefined
+                              ? true
+                              : ((p.max_bonus_unlimited as boolean) ?? false),
 
     // Turnover
     turnover_enabled:       (p.turnover_rule_enabled as boolean) ?? false,
