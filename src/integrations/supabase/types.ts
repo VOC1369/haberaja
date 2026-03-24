@@ -16,238 +16,76 @@ export type Database = {
     Tables: {
       promo_kb: {
         Row: {
-          anti_fraud_notes: string | null
-          archetype_invariants: Json | null
-          archetype_payload: Json | null
-          calculation_basis: string | null
-          category: string
-          claim_deadline_days: number | null
-          claim_frequency: string | null
-          claim_method: string | null
-          claim_platform: string | null
-          claim_url: string | null
+          adjudication: Json
+          canonical_projection: Json
           client_id: string
           client_name: string | null
-          conversion_formula: string | null
-          created_at: string | null
-          created_by: string | null
-          custom_terms: string | null
-          distribution_mode: string | null
-          distribution_note: string | null
-          distribution_schedule: string | null
-          extra_config: Json | null
-          extraction_confidence: number | null
-          game_exclusions: Json | null
-          game_providers: Json | null
-          game_scope: string | null
-          game_types: Json | null
-          geo_restriction: string | null
-          has_subcategories: boolean | null
-          human_verified: boolean | null
+          created_at: string
+          geo_restriction: string
           id: string
-          intent_category: string | null
-          is_locked: boolean
-          max_bonus: number | null
-          max_bonus_unlimited: boolean | null
-          max_claim: number | null
-          max_claim_unlimited: boolean | null
-          min_calculation: number | null
-          min_deposit: number | null
-          min_withdraw_after_bonus: number | null
-          mode: string | null
-          one_account_rule: boolean | null
-          payout_direction: string | null
-          penalty_type: string | null
-          platform_access: string | null
+          mechanics: Json
+          meta: Json
+          platform_access: string
           promo_id: string
           promo_name: string
-          promo_risk_level: string | null
+          promo_risk_level: string
           promo_slug: string | null
-          promo_summary: string | null
-          proof_destination: string | null
-          proof_required: boolean | null
-          proof_type: string | null
-          require_apk: boolean | null
-          reward_amount: number | null
-          reward_is_percentage: boolean | null
-          reward_item_description: string | null
-          reward_type: string | null
-          reward_unit: string | null
-          schema_version: string
+          query_hints: Json
+          source_text_hash: string | null
           source_url: string | null
-          special_conditions: Json | null
           status: string
-          subcategories: Json | null
-          target_segment: string | null
-          tier_archetype: string | null
-          tier_count: number | null
-          tiers: Json | null
-          trigger_event: string | null
-          trigger_min_value: number | null
-          turnover_basis: string | null
-          turnover_basis_extra: string | null
-          turnover_enabled: boolean | null
-          turnover_multiplier: number | null
-          updated_at: string | null
+          updated_at: string
           valid_from: string | null
           valid_until: string | null
-          valid_until_unlimited: boolean | null
+          valid_until_unlimited: boolean
         }
         Insert: {
-          anti_fraud_notes?: string | null
-          archetype_invariants?: Json | null
-          archetype_payload?: Json | null
-          calculation_basis?: string | null
-          category: string
-          claim_deadline_days?: number | null
-          claim_frequency?: string | null
-          claim_method?: string | null
-          claim_platform?: string | null
-          claim_url?: string | null
+          adjudication?: Json
+          canonical_projection?: Json
           client_id: string
           client_name?: string | null
-          conversion_formula?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          custom_terms?: string | null
-          distribution_mode?: string | null
-          distribution_note?: string | null
-          distribution_schedule?: string | null
-          extra_config?: Json | null
-          extraction_confidence?: number | null
-          game_exclusions?: Json | null
-          game_providers?: Json | null
-          game_scope?: string | null
-          game_types?: Json | null
-          geo_restriction?: string | null
-          has_subcategories?: boolean | null
-          human_verified?: boolean | null
+          created_at?: string
+          geo_restriction?: string
           id?: string
-          intent_category?: string | null
-          is_locked?: boolean
-          max_bonus?: number | null
-          max_bonus_unlimited?: boolean | null
-          max_claim?: number | null
-          max_claim_unlimited?: boolean | null
-          min_calculation?: number | null
-          min_deposit?: number | null
-          min_withdraw_after_bonus?: number | null
-          mode?: string | null
-          one_account_rule?: boolean | null
-          payout_direction?: string | null
-          penalty_type?: string | null
-          platform_access?: string | null
+          mechanics?: Json
+          meta?: Json
+          platform_access?: string
           promo_id: string
           promo_name: string
-          promo_risk_level?: string | null
+          promo_risk_level?: string
           promo_slug?: string | null
-          promo_summary?: string | null
-          proof_destination?: string | null
-          proof_required?: boolean | null
-          proof_type?: string | null
-          require_apk?: boolean | null
-          reward_amount?: number | null
-          reward_is_percentage?: boolean | null
-          reward_item_description?: string | null
-          reward_type?: string | null
-          reward_unit?: string | null
-          schema_version?: string
+          query_hints?: Json
+          source_text_hash?: string | null
           source_url?: string | null
-          special_conditions?: Json | null
           status?: string
-          subcategories?: Json | null
-          target_segment?: string | null
-          tier_archetype?: string | null
-          tier_count?: number | null
-          tiers?: Json | null
-          trigger_event?: string | null
-          trigger_min_value?: number | null
-          turnover_basis?: string | null
-          turnover_basis_extra?: string | null
-          turnover_enabled?: boolean | null
-          turnover_multiplier?: number | null
-          updated_at?: string | null
+          updated_at?: string
           valid_from?: string | null
           valid_until?: string | null
-          valid_until_unlimited?: boolean | null
+          valid_until_unlimited?: boolean
         }
         Update: {
-          anti_fraud_notes?: string | null
-          archetype_invariants?: Json | null
-          archetype_payload?: Json | null
-          calculation_basis?: string | null
-          category?: string
-          claim_deadline_days?: number | null
-          claim_frequency?: string | null
-          claim_method?: string | null
-          claim_platform?: string | null
-          claim_url?: string | null
+          adjudication?: Json
+          canonical_projection?: Json
           client_id?: string
           client_name?: string | null
-          conversion_formula?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          custom_terms?: string | null
-          distribution_mode?: string | null
-          distribution_note?: string | null
-          distribution_schedule?: string | null
-          extra_config?: Json | null
-          extraction_confidence?: number | null
-          game_exclusions?: Json | null
-          game_providers?: Json | null
-          game_scope?: string | null
-          game_types?: Json | null
-          geo_restriction?: string | null
-          has_subcategories?: boolean | null
-          human_verified?: boolean | null
+          created_at?: string
+          geo_restriction?: string
           id?: string
-          intent_category?: string | null
-          is_locked?: boolean
-          max_bonus?: number | null
-          max_bonus_unlimited?: boolean | null
-          max_claim?: number | null
-          max_claim_unlimited?: boolean | null
-          min_calculation?: number | null
-          min_deposit?: number | null
-          min_withdraw_after_bonus?: number | null
-          mode?: string | null
-          one_account_rule?: boolean | null
-          payout_direction?: string | null
-          penalty_type?: string | null
-          platform_access?: string | null
+          mechanics?: Json
+          meta?: Json
+          platform_access?: string
           promo_id?: string
           promo_name?: string
-          promo_risk_level?: string | null
+          promo_risk_level?: string
           promo_slug?: string | null
-          promo_summary?: string | null
-          proof_destination?: string | null
-          proof_required?: boolean | null
-          proof_type?: string | null
-          require_apk?: boolean | null
-          reward_amount?: number | null
-          reward_is_percentage?: boolean | null
-          reward_item_description?: string | null
-          reward_type?: string | null
-          reward_unit?: string | null
-          schema_version?: string
+          query_hints?: Json
+          source_text_hash?: string | null
           source_url?: string | null
-          special_conditions?: Json | null
           status?: string
-          subcategories?: Json | null
-          target_segment?: string | null
-          tier_archetype?: string | null
-          tier_count?: number | null
-          tiers?: Json | null
-          trigger_event?: string | null
-          trigger_min_value?: number | null
-          turnover_basis?: string | null
-          turnover_basis_extra?: string | null
-          turnover_enabled?: boolean | null
-          turnover_multiplier?: number | null
-          updated_at?: string | null
+          updated_at?: string
           valid_from?: string | null
           valid_until?: string | null
-          valid_until_unlimited?: boolean | null
+          valid_until_unlimited?: boolean
         }
         Relationships: []
       }
