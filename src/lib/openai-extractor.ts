@@ -2520,33 +2520,18 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
   const finalPrompt = `${enhancedPromptWithLocks}${contractInjection}`;
 
   // ============================================
-  // STEP 1: AI Extraction - NOW RECEIVES CLEAN HTML + LOCKED FIELDS CONTEXT
-  // AI will see tables with ALL cells filled (no "-" for rowspan)
+  // STEP 1: AI Extraction via Anthropic proxy
   // ============================================
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${getOpenAIKey()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: finalPrompt },
-        { role: "user", content: `Ekstrak informasi promo dari konten berikut:\n\n${normalizedContent}` }
-      ],
-      temperature: 0.1,
-      max_tokens: 4000,
-    }),
+  const aiResponse = await callAI({
+    type: 'extract',
+    system: finalPrompt,
+    messages: [
+      { role: 'user', content: `Ekstrak informasi promo dari konten berikut:\n\n${normalizedContent}` },
+    ],
+    temperature: 0.1,
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error?.message || `API Error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const resultText = data.choices?.[0]?.message?.content || "";
+  const resultText = extractText(aiResponse);
 
   // Parse JSON dari response
   try {
