@@ -284,60 +284,6 @@ export type Database = {
         }
         Relationships: []
       }
-      promo_kb_pseudo: {
-        Row: {
-          canonical_json: Json
-          cleaned_input: string | null
-          client_id: string
-          contract_used: string | null
-          created_at: string | null
-          extraction_confidence: number | null
-          id: string
-          mechanic_type: string | null
-          promo_id: string
-          raw_input: string | null
-          review_notes: string | null
-          review_status: string | null
-          reviewed_at: string | null
-          reviewed_by: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          canonical_json: Json
-          cleaned_input?: string | null
-          client_id: string
-          contract_used?: string | null
-          created_at?: string | null
-          extraction_confidence?: number | null
-          id?: string
-          mechanic_type?: string | null
-          promo_id?: string
-          raw_input?: string | null
-          review_notes?: string | null
-          review_status?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          canonical_json?: Json
-          cleaned_input?: string | null
-          client_id?: string
-          contract_used?: string | null
-          created_at?: string | null
-          extraction_confidence?: number | null
-          id?: string
-          mechanic_type?: string | null
-          promo_id?: string
-          raw_input?: string | null
-          review_notes?: string | null
-          review_status?: string | null
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
