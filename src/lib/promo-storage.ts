@@ -10,6 +10,7 @@
  */
 
 import type { PromoFormData, PromoItem } from '@/components/VOCDashboard/PromoFormWizard/types';
+import { buildCanonicalPayload } from '@/components/VOCDashboard/PromoFormWizard/types';
 import type { ExtractedPromo } from '@/lib/openai-extractor';
 import { supabase, DEFAULT_CLIENT_ID, generateUUID, logSupabaseError } from '@/lib/supabase-client';
 import { KEYWORD_OVERRIDE_VERSION } from '@/lib/extractors/category-classifier';
