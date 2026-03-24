@@ -164,21 +164,26 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     });
   };
 
-  // Load promos from Supabase
+  // Load promos: gabungkan Supabase data + localStorage drafts dari Pseudo KB
   const loadPromos = async () => {
     try {
-      const promos = await promoKB.getAll();
-      // Normalize all promos before setting state — safe per-item
-      const normalized = promos.map(p => {
+      // 1. Load dari Supabase
+      const supabasePromos = await promoKB.getAll();
+      // 2. Load localStorage drafts (dari "Gunakan Promo" di Pseudo KB)
+      const localDrafts = localDraftKB.getAll();
+      // 3. Gabungkan: local drafts di atas (lebih baru), lalu Supabase
+      const all = [...localDrafts, ...supabasePromos];
+      // 4. Normalize tiap item
+      const normalized = all.map(p => {
         try {
           return normalizePromoData(p) as PromoItem;
         } catch (err) {
           console.error('[loadPromos] normalizePromoData failed:', p?.id, err);
-          return p as PromoItem; // return raw if normalize fails
+          return p as PromoItem;
         }
       });
       setItems(normalized);
-      console.log('[PromoKnowledgeSection] Loaded promos from Supabase:', normalized.length);
+      console.log('[PromoKnowledgeSection] Loaded:', localDrafts.length, 'local drafts +', supabasePromos.length, 'Supabase promos');
     } catch (error) {
       console.error('[PromoKnowledgeSection] Failed to load promos:', error);
       setItems([]);
