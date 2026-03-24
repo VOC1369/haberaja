@@ -252,7 +252,7 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     // Turnover
     turnover_rule_enabled:  (row.turnover_enabled as boolean) ?? false,
     turnover_multiplier:    safe(row.turnover_multiplier) as number | undefined,
-    turnover_basis:         safe(row.turnover_basis) as string | undefined,
+    turnover_basis:         safe(row.turnover_basis) as 'bonus_only' | 'deposit_only' | 'deposit_plus_bonus' | undefined,
     turnover_basis_extra:   safe(row.turnover_basis_extra) as string | undefined,
     min_withdraw_after_bonus: safe(row.min_withdraw_after_bonus) as number | undefined,
     turnover_rule:          '',
@@ -260,9 +260,9 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
 
     // Claim
     claim_frequency:        (row.claim_frequency as string) || '',
-    claim_method:           (row.claim_method as string) || '',
+    claim_method:           ((row.claim_method as string) || '') as '' | 'auto' | 'manual' | 'cs_request',
     claim_deadline_days:    safe(row.claim_deadline_days) as number | undefined,
-    claim_platform:         safe(row.claim_platform) as string | undefined,
+    claim_platform:         safe(row.claim_platform) as 'auto' | 'form' | 'livechat' | 'whatsapp' | 'telegram' | 'apk' | undefined,
     claim_url:              safe(row.claim_url) as string | undefined,
     max_claim:              safe(row.max_claim, null) as number | null,
     max_claim_unlimited:    (row.max_claim_unlimited as boolean) ?? false,
