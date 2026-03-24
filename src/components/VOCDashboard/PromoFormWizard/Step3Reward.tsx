@@ -2975,10 +2975,8 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                         const updates: Partial<PromoFormData> = { calculation_method: value };
                         if (value === 'percentage') {
                           updates.reward_unit = 'percent';
-                          updates.reward_is_percentage = true;
                         } else if (value === 'fixed') {
                           updates.reward_unit = 'fixed';
-                          updates.reward_is_percentage = false;
                         }
                         onChange(updates);
                       }}
