@@ -1021,7 +1021,7 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
         // Standard formula mode — only canonical fields that survive Supabase round-trip
         step4Fields = [
           !!data.reward_mode,
-          !!data.calculation_base || !!data.calculation_basis,  // canonical field
+          !!data.calculation_base,  // canonical field
           !!(data.reward_amount || data.calculation_value > 0 || data.conversion_formula),  // at least one value
         ];
       }
