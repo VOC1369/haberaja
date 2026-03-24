@@ -111,6 +111,7 @@ interface PseudoKnowledgeSectionProps {
 }
 
 export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSectionProps) {
+  const { toast: shadcnToast } = useToast();
   // Input state
   const [inputMode, setInputMode] = useState<InputMode>('url');
   const [currentInput, setCurrentInput] = useState('');
