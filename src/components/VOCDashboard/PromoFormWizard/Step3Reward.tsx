@@ -2355,8 +2355,9 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </Label>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Unlimited</span>
+                    {/* Bug 1 Fix UI: auto-checked when no value entered */}
                     <Switch
-                      checked={data.dinamis_max_claim_unlimited ?? false}
+                      checked={data.dinamis_max_claim_unlimited ?? (!data.dinamis_max_claim)}
                       onCheckedChange={(checked) => onChange({ 
                         dinamis_max_claim_unlimited: checked,
                         dinamis_max_claim: checked ? null : data.dinamis_max_claim
@@ -2366,11 +2367,18 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                 </div>
                 <Input
                   type="text"
-                  value={data.dinamis_max_claim_unlimited ? '' : (data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : '')}
-                  onChange={(e) => onChange({ dinamis_max_claim: Number(e.target.value.replace(/\D/g, '')) })}
-                  placeholder={data.dinamis_max_claim_unlimited ? "Unlimited / Tanpa Batas" : (UNIT_BASED_REWARDS.includes(data.dinamis_reward_type || '') ? "Contoh: 10 unit/hari" : "Contoh: 100.000")}
-                  disabled={data.dinamis_max_claim_unlimited}
-                  className={cn(data.dinamis_max_claim_unlimited && "opacity-50")}
+                  value={(data.dinamis_max_claim_unlimited ?? (!data.dinamis_max_claim)) ? '' : (data.dinamis_max_claim ? data.dinamis_max_claim.toLocaleString('id-ID') : '')}
+                  onChange={(e) => {
+                    const val = Number(e.target.value.replace(/\D/g, ''));
+                    // Bug 1 Fix UI: if user clears value → auto-set unlimited=true
+                    onChange({ 
+                      dinamis_max_claim: val || null,
+                      dinamis_max_claim_unlimited: !val,
+                    });
+                  }}
+                  placeholder={(data.dinamis_max_claim_unlimited ?? (!data.dinamis_max_claim)) ? "Unlimited / Tanpa Batas" : (UNIT_BASED_REWARDS.includes(data.dinamis_reward_type || '') ? "Contoh: 10 unit/hari" : "Contoh: 100.000")}
+                  disabled={data.dinamis_max_claim_unlimited ?? (!data.dinamis_max_claim)}
+                  className={cn((data.dinamis_max_claim_unlimited ?? (!data.dinamis_max_claim)) && "opacity-50")}
                 />
               </div>
             </div>
@@ -2962,7 +2970,16 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                     <Label className={isEligibilityMode ? 'text-muted-foreground' : ''}>Jenis Perhitungan</Label>
                     <SelectWithAddNew
                       value={data.calculation_method}
-                      onValueChange={(value) => onChange({ calculation_method: value })}
+                      onValueChange={(value) => {
+                        // Bug 2 Fix UI: calculation_method=percentage → auto set reward_unit=percent
+                        const updates: Partial<PromoFormData> = { calculation_method: value };
+                        if (value === 'percentage') {
+                          updates.reward_unit = 'percent';
+                        } else if (value === 'fixed') {
+                          updates.reward_unit = 'fixed';
+                        }
+                        onChange(updates);
+                      }}
                       options={calcMethodOptions}
                       onAddOption={(option) => setCalcMethodOptions([...calcMethodOptions, option])}
                       onDeleteOption={handleDeleteCalcMethod}
