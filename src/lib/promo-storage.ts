@@ -171,9 +171,9 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     require_apk:            (p.require_apk as boolean) ?? false,
     one_account_rule:       (p.one_account_rule as boolean) ?? false,
 
-    // Validity
-    valid_from:             (p.valid_from as string) || null,
-    valid_until:            (p.valid_until as string) || null,
+    // Validity — Fix 2 & 3: empty string → null (Supabase date columns reject "")
+    valid_from:             ((p.valid_from as string) || null) || null,
+    valid_until:            ((p.valid_until as string) || null) || null,
     valid_until_unlimited:  (p.valid_until_unlimited as boolean) ?? false,
 
     // Risk
