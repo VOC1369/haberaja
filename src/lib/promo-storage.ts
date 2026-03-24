@@ -427,7 +427,6 @@ export const promoKB = {
       const { data, error } = await supabase
         .from(TABLE)
         .select('*')
-        .eq('client_id', DEFAULT_CLIENT_ID)
         .order('created_at', { ascending: false });
 
       if (error) {
