@@ -484,7 +484,18 @@ function toV31Row(
 ): Record<string, unknown> {
   const p = promo as unknown as Record<string, unknown>;
 
-  const mechanics = buildMechanicsFromFormData(promo);
+  // Priority: gunakan _mechanics_v31 dari LLM jika valid dan non-empty
+  // Fallback: derive dari form data via buildMechanicsFromFormData()
+  const llmMechanics = (p._mechanics_v31 as MechanicNode[]) || [];
+  const mechanics = llmMechanics.length > 0
+    ? llmMechanics
+    : buildMechanicsFromFormData(promo);
+
+  if (llmMechanics.length > 0) {
+    console.log(`[toV31Row] Using LLM mechanics: ${llmMechanics.length} primitives`);
+  } else {
+    console.warn('[toV31Row] _mechanics_v31 empty — fallback to buildMechanicsFromFormData()');
+  }
   const adjudication = defaultAdjudication();
   adjudication.status = 'resolved'; // Form data = already human-reviewed
 
