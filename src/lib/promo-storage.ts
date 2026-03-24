@@ -94,8 +94,8 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     source_url:             (p.source_url as string) || null,
     promo_summary:          (p.promo_summary as string) || null,
 
-    // Taxonomy
-    category:               (p.category as string) || null,
+    // Taxonomy — NOT NULL di Supabase, fallback ke 'REWARD'
+    category:               (p.category as string) || 'REWARD',
     mode,
     intent_category:        (p.intent_category as string) || null,
     target_segment:         (p.target_segment as string) || null,
