@@ -549,7 +549,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     if (!mappedPreview) return;
     
     try {
-      const savedPromo = await promoKB.add(mappedPreview);
+      // Force status='active' — user sudah review dan konfirmasi via "Gunakan Promo"
+      // Draft tidak boleh masuk Supabase (hanya localStorage via wizard)
+      const promoToCommit = { ...mappedPreview, status: 'active' as const };
+      const savedPromo = await promoKB.add(promoToCommit);
       
       shadcnToast({
         title: "✅ Promo berhasil ditambahkan!",
