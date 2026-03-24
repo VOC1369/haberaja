@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { 
   extractPromoFromContent, 
   extractPromoFromImage,
@@ -105,7 +106,12 @@ const getBlacklistSummary = (data: ExtractedPromo): string => {
   return 'Tidak Aktif';
 };
 
-export function PseudoKnowledgeSection() {
+interface PseudoKnowledgeSectionProps {
+  onNavigateToPromo?: () => void;
+}
+
+export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSectionProps) {
+  const { toast: shadcnToast } = useToast();
   // Input state
   const [inputMode, setInputMode] = useState<InputMode>('url');
   const [currentInput, setCurrentInput] = useState('');
@@ -545,8 +551,18 @@ export function PseudoKnowledgeSection() {
     try {
       const savedPromo = await promoKB.add(mappedPreview);
       
-      toast.success("Promo berhasil ditambahkan!", {
-        description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`
+      shadcnToast({
+        title: "✅ Promo berhasil ditambahkan!",
+        description: `"${savedPromo.promo_name}" sekarang ada di Knowledge Base`,
+        action: onNavigateToPromo ? (
+          <button
+            onClick={onNavigateToPromo}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-full border border-button-hover/50 bg-button-hover/20 px-3 text-xs font-semibold text-button-hover hover:bg-button-hover/30 transition-colors"
+          >
+            Cek Promo →
+          </button>
+        ) : undefined,
+        duration: 6000,
       });
       
       handleRestart();

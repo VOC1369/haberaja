@@ -7,9 +7,10 @@ import type { KnowledgeCategory } from "@/pages/Dashboard";
 interface KnowledgeBaseSectionProps {
   activeCategory: KnowledgeCategory;
   forceResetKey?: number;
+  onNavigateToPromo?: () => void;
 }
 
-export function KnowledgeBaseSection({ activeCategory, forceResetKey }: KnowledgeBaseSectionProps) {
+export function KnowledgeBaseSection({ activeCategory, forceResetKey, onNavigateToPromo }: KnowledgeBaseSectionProps) {
   if (activeCategory === "general") {
     return <GeneralKnowledgeSection />;
   }
@@ -23,7 +24,7 @@ export function KnowledgeBaseSection({ activeCategory, forceResetKey }: Knowledg
   }
 
   if (activeCategory === "pseudo") {
-    return <PseudoKnowledgeSection />;
+    return <PseudoKnowledgeSection onNavigateToPromo={onNavigateToPromo} />;
   }
 
   return null;
