@@ -962,6 +962,7 @@ const PromoReadinessCard = ({ data, onGoToStep }: PromoReadinessCardProps) => {
     // Step 1: Identitas Promo
     const step1Fields = [
       !!data.client_id,
+      !!data.client_name,   // FIX: Nama Brand wajib diisi
       !!data.promo_name,
       !!data.promo_type
     ];
