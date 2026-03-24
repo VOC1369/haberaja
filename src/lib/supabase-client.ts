@@ -10,7 +10,13 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = 'https://dgcfnhexutwzplgxebah.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRnY2ZuaGV4dXR3enBsZ3hlYmFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyODc5NzQsImV4cCI6MjA4OTg2Mzk3NH0.13mkY4YkQKTGNN5pzAeU7vI8FoZG8b6e7AKHSUDKaqQ';
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
 
 // Default client ID for single-brand mode (1 brand per client)
 export const DEFAULT_CLIENT_ID = 'local_dev';
