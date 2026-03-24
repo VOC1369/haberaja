@@ -1,16 +1,16 @@
 /**
- * REJECT GATE v1.0
+ * REJECT GATE v2.0 — Anthropic via ai-proxy
  *
  * Two-level input filter that runs BEFORE the Q1-Q4 classifier and extractor.
  * Purpose: discard garbage input before spending LLM tokens.
  *
  * Flow:
- *   Input → L1 (rule-based) → L2 (LLM lightweight) → Q1-Q4 Classifier → Extractor
+ *   Input → L1 (rule-based) → L2 (LLM lightweight via Anthropic) → Q1-Q4 Classifier → Extractor
  *
- * @version 1.0
+ * @version 2.0
  */
 
-import { getOpenAIKey } from './config/openai.dev';
+import { callAI, extractJSON } from './ai-client';
 
 // ============================================================================
 // TYPES
@@ -114,39 +114,21 @@ Reject (is_valid_promo: false) if:
 - It has promo keywords but no actual rules to extract`;
 
 export async function runL2Gate(input: string): Promise<L2GateResult> {
-  const apiKey = getOpenAIKey();
   const truncated = input.slice(0, 800); // lightweight — cap tokens
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      temperature: 0,
-      max_tokens: 120,
-      messages: [
-        { role: 'system', content: L2_SYSTEM_PROMPT },
-        {
-          role: 'user',
-          content: `Apakah teks ini adalah deskripsi promo/bonus iGaming yang valid dan bisa di-extract?\n\n${truncated}`,
-        },
-      ],
-    }),
+  const response = await callAI({
+    type: 'reject_gate',
+    system: L2_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: 'user',
+        content: `Apakah teks ini adalah deskripsi promo/bonus iGaming yang valid dan bisa di-extract?\n\n${truncated}`,
+      },
+    ],
+    temperature: 0,
   });
 
-  if (!response.ok) {
-    throw new Error(`L2 Gate API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const raw = data.choices?.[0]?.message?.content?.trim() ?? '{}';
-
-  // Strip markdown code block if present
-  const cleaned = raw.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
-  return JSON.parse(cleaned) as L2GateResult;
+  return extractJSON<L2GateResult>(response);
 }
 
 // ============================================================================

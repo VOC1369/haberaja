@@ -19,7 +19,7 @@
  * ✅ Ditentukan oleh sebab–akibat sistem
  */
 
-import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
+import { callAI, extractText } from '../ai-client';
 
 // ============================================
 // KEYWORD OVERRIDE VERSION (for session invalidation)
@@ -392,9 +392,6 @@ function assessQuality(
 // ============================================
 
 export async function classifyContent(content: string): Promise<ClassificationResult> {
-  // Use centralized DEV MODE API key
-  const apiKey = getOpenAIKey();
-
   console.log('[Classifier] Starting 3-GATE classification (PROMO SUPER CONTRACT)...');
   console.log('[Classifier] Prompt version:', CLASSIFIER_PROMPT_VERSION);
   console.log('[Classifier] Content length:', content.length);
@@ -402,37 +399,18 @@ export async function classifyContent(content: string): Promise<ClassificationRe
   const startTime = performance.now();
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: CLASSIFICATION_MODEL,
-        messages: [
-          { role: 'system', content: CLASSIFICATION_PROMPT },
-          { role: 'user', content: `Analisis content berikut:\n\n---\n${content.substring(0, 4000)}\n---` },
-        ],
-        response_format: { type: 'json_object' },
-        temperature: 0.1,
-        max_tokens: 1000,
-      }),
+    const aiResponse = await callAI({
+      type: 'classify',
+      system: CLASSIFICATION_PROMPT,
+      messages: [
+        { role: 'user', content: `Analisis content berikut:\n\n---\n${content.substring(0, 4000)}\n---` },
+      ],
+      temperature: 0.1,
     });
 
     const latency = Math.round(performance.now() - startTime);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Classifier] API error:', response.status, errorText);
-      throw new Error(`Classification API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    let resultText = data.choices?.[0]?.message?.content || '{}';
-    
-    // Clean markdown wrapper if present
-    resultText = resultText.replace(/```json\n?/g, '').replace(/\n?```/g, '');
+    const rawText = extractText(aiResponse);
+    let resultText = rawText.replace(/```json\n?/g, '').replace(/\n?```/g, '');
 
     const parsed = JSON.parse(resultText);
 
@@ -543,7 +521,7 @@ export async function classifyContent(content: string): Promise<ClassificationRe
       classifier_runtime: 'client',
       content_length: content.length,
       latency_ms: latency,
-      tokens_used: data.usage?.total_tokens,
+      tokens_used: undefined,
       
       // Legacy (for backward compatibility)
       q1: legacyQ1,
