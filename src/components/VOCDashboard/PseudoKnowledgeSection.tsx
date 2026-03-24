@@ -362,13 +362,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           // HYBRID MODE: Best of both worlds
           setInputMode('hybrid');
           toast.info("Mengekstrak dengan mode HYBRID (Image + Text)...", {
-            description: "Text = angka & syarat. Image = layout & konteks."
+            description: "Text = angka & syarat. Image = layout & konteks.",
+            duration: 30000
           });
           result = await extractPromoFromImage(imageBase64, currentInput.trim());
         } else {
           // IMAGE ONLY mode
           setInputMode('image');
-          toast.info("Mengekstrak dari image dengan VOC AI Knowledge...");
+          toast.info("Mengekstrak dari image dengan VOC AI Knowledge...", { duration: 30000 });
           result = await extractPromoFromImage(imageBase64);
         }
       } else if (currentInput.trim()) {
@@ -376,7 +377,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         setInputMode(detectedType);
         
         if (detectedType === 'url') {
-          toast.info("Mengambil konten dari URL...");
+          toast.info("Mengambil konten dari URL...", { duration: 30000 });
           try {
             const htmlContent = await fetchUrlContent(currentInput);
             if (!htmlContent || htmlContent.length < 500) {
@@ -392,7 +393,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         } else {
           // TEXT mode (includes both HTML and plain text)
           setInputMode('text');
-          toast.info("Mengekstrak dari konten teks...");
+          toast.info("Mengekstrak dari konten teks...", { duration: 30000 });
           result = await extractPromoFromContent(currentInput);
         }
       } else {
