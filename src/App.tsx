@@ -35,7 +35,6 @@ const App = () => {
         storageKey="voc-theme"
       >
         <TooltipProvider>
-          <Toaster />
           <NotificationModal />
           <BrowserRouter>
             <Routes>
