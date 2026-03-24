@@ -2639,7 +2639,7 @@ export function Step4Review({ data, onGoToStep }: Step4Props) {
                           </Badge>
                           {jsonMode === 'canonical' && (
                             <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
-                              schema_version: "2.1"
+                              schema_version: "3.1"
                             </Badge>
                           )}
                         </div>
