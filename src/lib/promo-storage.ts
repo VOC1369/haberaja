@@ -62,7 +62,7 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     'archetype_payload', 'archetype_invariants',
     'has_subcategories', 'subcategories',
     'extraction_confidence', 'human_verified', 'penalty_type',
-    'created_by', 'created_at', 'updated_at',
+    'created_by', 'created_at', 'updated_at', 'is_locked',
   ]);
 
   // Kumpulkan field non-standard ke extra_config
@@ -190,6 +190,7 @@ function toFlatRow(promo: PromoFormData, id: string, now: string): Record<string
     // Extraction meta
     extraction_confidence:  (p.extraction_confidence as number) ?? 0.9,
     human_verified:         (p.human_verified as boolean) ?? false,
+    is_locked:              (p.is_locked as boolean) ?? false,
 
     // Audit
     created_by:             (p.created_by as string) || 'Admin',
@@ -349,6 +350,7 @@ function fromFlatRow(row: Record<string, unknown>): PromoItem {
     // Extraction meta
     extraction_confidence:  (row.extraction_confidence as number) ?? 0.9,
     human_verified:         (row.human_verified as boolean) ?? false,
+    is_locked:              (row.is_locked as boolean) ?? false,
     created_by:             (row.created_by as string) || 'Admin',
 
     // Audit timestamps
