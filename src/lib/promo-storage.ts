@@ -1109,8 +1109,11 @@ export const localDraftKB = {
         if (key && key.startsWith(LOCAL_DRAFT_KEY)) {
           const raw = localStorage.getItem(key);
           if (raw) {
-            try {
-              drafts.push(JSON.parse(raw) as PromoItem);
+          try {
+              const parsed = JSON.parse(raw) as PromoItem;
+              const parsedAny = parsed as any;
+              console.log(`[localDraftKB.load] id: ${parsed.id} | _mechanics_v31: ${parsedAny._mechanics_v31?.length ?? 0} primitives`);
+              drafts.push(parsed);
             } catch {
               // skip corrupted
             }

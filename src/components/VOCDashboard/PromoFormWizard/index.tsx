@@ -182,6 +182,9 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   // - initialData tidak ada → promo BARU → CREATE di Supabase
   const handlePublish = async () => {
     const generatedTerms = generateFullTermsString(formData);
+    // Debug log sebelum publish — verifikasi carry-forward status
+    const fmAny = formData as any;
+    console.log(`[handlePublish] _mechanics_v31: ${fmAny._mechanics_v31?.length ?? 0} primitives | dirty: ${fmAny._mechanics_v31_dirty ?? false} | source: ${fmAny._mechanics_source ?? 'none'}`);
     const dataToSave: PromoFormData = { 
       ...formData, 
       status: 'active',  // WAJIB active — draft tidak boleh masuk Supabase
