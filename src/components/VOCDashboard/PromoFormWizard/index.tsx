@@ -80,8 +80,25 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   // Determine initial edit target based on reward_mode
   const initialEditTarget = formData.reward_mode === 'fixed' ? 'fixed' : 'base';
 
+  // Fields that semantically affect mechanic primitives — changes set dirty flag
+  const MECHANICS_SENSITIVE_FIELDS = [
+    'trigger_event', 'reward_type', 'reward_unit', 'reward_amount',
+    'calculation_base', 'conversion_formula', 'max_bonus',
+    'claim_method', 'claim_platform', 'distribution_mode',
+    'turnover_enabled', 'turnover_multiplier', 'tiers', 'tier_archetype',
+  ];
+
   const handleChange = (updates: Partial<PromoFormData>) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
+    const touchesSensitiveField = Object.keys(updates).some(k =>
+      MECHANICS_SENSITIVE_FIELDS.includes(k)
+    );
+    if (touchesSensitiveField) {
+      const dirtyFields = Object.keys(updates).filter(k => MECHANICS_SENSITIVE_FIELDS.includes(k));
+      console.warn(`[FormWizard] _mechanics_v31_dirty=true karena field ${dirtyFields.join(', ')} diubah`);
+      setFormData((prev) => ({ ...prev, ...updates, _mechanics_v31_dirty: true }));
+    } else {
+      setFormData((prev) => ({ ...prev, ...updates }));
+    }
   };
 
   const handleNext = () => {
@@ -165,6 +182,9 @@ export function PromoFormWizard({ onBack, initialData, onSaveSuccess }: PromoFor
   // - initialData tidak ada → promo BARU → CREATE di Supabase
   const handlePublish = async () => {
     const generatedTerms = generateFullTermsString(formData);
+    // Debug log sebelum publish — verifikasi carry-forward status
+    const fmAny = formData as any;
+    console.log(`[handlePublish] _mechanics_v31: ${fmAny._mechanics_v31?.length ?? 0} primitives | dirty: ${fmAny._mechanics_v31_dirty ?? false} | source: ${fmAny._mechanics_source ?? 'none'}`);
     const dataToSave: PromoFormData = { 
       ...formData, 
       status: 'active',  // WAJIB active — draft tidak boleh masuk Supabase

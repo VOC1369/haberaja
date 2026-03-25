@@ -484,18 +484,18 @@ function toV31Row(
 ): Record<string, unknown> {
   const p = promo as unknown as Record<string, unknown>;
 
-  // Priority: gunakan _mechanics_v31 dari LLM jika valid dan non-empty
+  // Priority: gunakan _mechanics_v31 dari LLM jika valid, non-empty, dan tidak dirty
   // Fallback: derive dari form data via buildMechanicsFromFormData()
   const llmMechanics = (p._mechanics_v31 as MechanicNode[]) || [];
-  const mechanics = llmMechanics.length > 0
+  const isDirty = (p._mechanics_v31_dirty as boolean) === true;
+
+  const mechanics = (llmMechanics.length > 0 && !isDirty)
     ? llmMechanics
     : buildMechanicsFromFormData(promo);
 
-  if (llmMechanics.length > 0) {
-    console.log(`[toV31Row] Using LLM mechanics: ${llmMechanics.length} primitives`);
-  } else {
-    console.warn('[toV31Row] _mechanics_v31 empty — fallback to buildMechanicsFromFormData()');
-  }
+  console.log(`[toV31Row] mechanics source: ${
+    llmMechanics.length > 0 && !isDirty ? 'llm' : 'derived'
+  } | llm_count: ${llmMechanics.length} | dirty: ${isDirty}`);
   const adjudication = defaultAdjudication();
   adjudication.status = 'resolved'; // Form data = already human-reviewed
 
@@ -1082,6 +1082,15 @@ export const localDraftKB = {
       updated_by: 'Admin',
     } as PromoItem;
 
+    // Carry-forward internal mechanics metadata (tidak di-spread oleh PromoItem interface)
+    const promoAny = promo as any;
+    if (promoAny._mechanics_v31) {
+      (draft as any)._mechanics_v31 = promoAny._mechanics_v31;
+      (draft as any)._mechanics_source = promoAny._mechanics_source;
+      (draft as any)._mechanics_v31_dirty = promoAny._mechanics_v31_dirty;
+      console.log(`[localDraftKB.save] _mechanics_v31 preserved: ${promoAny._mechanics_v31.length} primitives`);
+    }
+
     try {
       localStorage.setItem(`${LOCAL_DRAFT_KEY}${id}`, JSON.stringify(draft));
       window.dispatchEvent(new CustomEvent('promo-storage-updated'));
@@ -1100,8 +1109,11 @@ export const localDraftKB = {
         if (key && key.startsWith(LOCAL_DRAFT_KEY)) {
           const raw = localStorage.getItem(key);
           if (raw) {
-            try {
-              drafts.push(JSON.parse(raw) as PromoItem);
+          try {
+              const parsed = JSON.parse(raw) as PromoItem;
+              const parsedAny = parsed as any;
+              console.log(`[localDraftKB.load] id: ${parsed.id} | _mechanics_v31: ${parsedAny._mechanics_v31?.length ?? 0} primitives`);
+              drafts.push(parsed);
             } catch {
               // skip corrupted
             }
