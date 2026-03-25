@@ -672,8 +672,18 @@ export interface PromoFormData {
   // =============================================
   // INTERNAL v3.1 MECHANICS METADATA
   // Prefixed _ = internal use only, never shown in UI
+  // Inline type to avoid circular dependency with promo-storage.ts
   // =============================================
-  _mechanics_v31?: import('@/lib/promo-storage').MechanicNode[];
+  _mechanics_v31?: Array<{
+    mechanic_id: string;
+    mechanic_type: string;
+    evidence: string;
+    confidence: number;
+    ambiguity: boolean;
+    ambiguity_reason: string | null;
+    activation_rule?: { type: string; conditions: string[] };
+    data: Record<string, unknown>;
+  }>;
   _mechanics_source?: 'llm' | 'derived';
   _mechanics_v31_dirty?: boolean;
 }
