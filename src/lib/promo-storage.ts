@@ -759,6 +759,20 @@ function fromV31Row(row: Record<string, unknown>): PromoItem {
     referral_admin_fee_percentage: null,
   };
 
+  // Restore mechanics dari DB sebagai first-class persisted state
+  // Tanpa ini, update path selalu fallback ke buildMechanicsFromFormData()
+  const persistedMechanics = (row.mechanics as MechanicNode[]) || [];
+
+  if (persistedMechanics.length > 0) {
+    promo._mechanics_v31 = persistedMechanics;
+    promo._mechanics_source = 'persisted';
+    promo._mechanics_v31_dirty = false;
+
+    console.log(
+      `[fromV31Row] restored mechanics: ${persistedMechanics.length} primitives`
+    );
+  }
+
   return promo as PromoItem;
 }
 
