@@ -6776,5 +6776,17 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     game_exclusions: finalData.game_exclusions,
   });
 
+  // ============================================
+  // FIX: CARRY-FORWARD _mechanics_v31 dari LLM dual-output
+  // Jika extracted memiliki _mechanics_v31, inject ke result agar toV31Row() bisa menggunakannya
+  // ============================================
+  const llmMechanicsCarry = (extracted as any)._mechanics_v31;
+  if (Array.isArray(llmMechanicsCarry) && llmMechanicsCarry.length > 0) {
+    (finalData as any)._mechanics_v31 = llmMechanicsCarry;
+    (finalData as any)._mechanics_source = 'llm';
+    (finalData as any)._mechanics_v31_dirty = false;
+    console.log(`[mapExtracted] _mechanics_v31 carried forward: ${llmMechanicsCarry.length} primitives`);
+  }
+
   return finalData as unknown as PromoFormData;
 }

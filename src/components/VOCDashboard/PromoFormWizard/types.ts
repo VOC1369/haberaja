@@ -668,6 +668,14 @@ export interface PromoFormData {
     evidence?: string[];
     ambiguity_flags?: string[];
   };
+
+  // =============================================
+  // INTERNAL v3.1 MECHANICS METADATA
+  // Prefixed _ = internal use only, never shown in UI
+  // =============================================
+  _mechanics_v31?: import('@/lib/promo-storage').MechanicNode[];
+  _mechanics_source?: 'llm' | 'derived';
+  _mechanics_v31_dirty?: boolean;
 }
 
 
