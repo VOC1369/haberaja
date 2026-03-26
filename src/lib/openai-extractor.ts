@@ -2151,7 +2151,29 @@ WAJIB:
 - Kedua key harus ada: legacy_flat dan mechanics
 - legacy_flat mengikuti format lama persis
 - mechanics[] adalah hasil reasoning independen, bukan mapping dari legacy_flat
-- Jika mechanics[] kosong → tetap kembalikan key dengan value []`;
+- Jika mechanics[] kosong → tetap kembalikan key dengan value []
+
+═══════════════════════════════════════════════════════════════
+OUTPUT RULES (STRICT — NON NEGOTIABLE)
+═══════════════════════════════════════════════════════════════
+
+- Anda WAJIB mengembalikan HANYA JSON
+- Jangan menambahkan penjelasan apapun
+- Jangan menambahkan teks sebelum atau sesudah JSON
+- Jangan menggunakan markdown (\`\`\`json)
+- Jangan menggunakan komentar
+- Jangan menggunakan trailing comma
+- Semua key harus menggunakan double quotes
+- Output HARUS bisa di-parse langsung oleh JSON.parse()
+
+Format WAJIB:
+
+{
+  "legacy_flat": { ... },
+  "mechanics": [ ... ]
+}
+
+Jika Anda tidak yakin, tetap output JSON kosong yang valid, jangan menjelaskan apapun.`;
 
 // ============= IMAGE EXTRACTION WITH VISION (GPT-4o) =============
 
