@@ -3993,6 +3993,16 @@ function buildArchetypePayloadFromExtracted(
  * This function is used inside useMemo and relies on referential stability.
  */
 export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: ExtractionSource): PromoFormData {
+  // ══════ TRACE STEP 4: mapExtractedToPromoFormData ENTRY ══════
+  console.log('[TRACE-4] mapExtractedToPromoFormData ENTRY', {
+    promo_name: extracted.promo_name,
+    promo_type: extracted.promo_type,
+    mode: extracted.mode,
+    tier_archetype: (extracted as any).tier_archetype,
+    subcategories_count: extracted.subcategories?.length ?? 0,
+    has_reasoning_v2: !!extracted._reasoning_v2,
+    source,
+  });
   // ============================================
   // TAXONOMY PIPELINE v1.0 — SINGLE SOURCE OF TRUTH
   // Runs BEFORE any other mode/field logic
