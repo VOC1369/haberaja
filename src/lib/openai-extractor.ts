@@ -6747,7 +6747,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       });
       // In development, throw to catch this immediately
       throw new Error(
-        `[ARCHITECTURE VIOLATION] reward_mode was "${finalMode}" but Gate decided "${gateDecision.mode}". ` +
+        `[ARCHITECTURE VIOLATION] reward_mode was "${finalModeCheck}" but Gate decided "${gateDecision.mode}". ` +
         `Promo: "${extracted.promo_name}". No override is allowed after Primitive Gate v1.2.1.`
       );
     }
