@@ -2344,12 +2344,8 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
 
   // Parse JSON dari response
   try {
-    let cleanJson = resultText.trim();
-    if (cleanJson.startsWith("```")) {
-      cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
-    }
-    
-    const parsed = JSON.parse(cleanJson) as ExtractedPromo;
+    const rawParsedImage = extractJsonFromResponse(resultText);
+    const parsed = rawParsedImage as ExtractedPromo;
     parsed.raw_content = "[Image extraction]";
     parsed.ready_to_commit = false;
     
@@ -2719,23 +2715,24 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
 
   // Parse JSON dari response
   try {
-    let cleanJson = resultText.trim();
-    if (cleanJson.startsWith("```")) {
-      cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
-    }
-    
     // ============================================================
     // DUAL OUTPUT PARSER — v3.1 compatibility
+    // Uses extractJsonFromResponse: strips markdown, finds JSON boundaries,
+    // repairs trailing commas, logs on failure.
     // LLM now returns { legacy_flat: {...}, mechanics: [...] }
     // Fallback: if no legacy_flat key → treat entire response as legacy_flat
     // ============================================================
-    const rawParsed = JSON.parse(cleanJson);
+    const rawParsed = extractJsonFromResponse(resultText);
     let mechanicsV31: unknown[] = [];
 
     let flatData: Record<string, unknown>;
-    if (rawParsed && typeof rawParsed === 'object' && 'legacy_flat' in rawParsed) {
-      flatData = rawParsed.legacy_flat as Record<string, unknown>;
-      mechanicsV31 = Array.isArray(rawParsed.mechanics) ? rawParsed.mechanics : [];
+    if (rawParsed && typeof rawParsed === 'object' && 'legacy_flat' in (rawParsed as object)) {
+      const dualOut = rawParsed as { legacy_flat: Record<string, unknown>; mechanics?: unknown[] };
+      if (!dualOut.legacy_flat || !('mechanics' in dualOut)) {
+        throw new Error("[DualOutput] Hard validation failed: legacy_flat or mechanics key missing");
+      }
+      flatData = dualOut.legacy_flat;
+      mechanicsV31 = Array.isArray(dualOut.mechanics) ? dualOut.mechanics : [];
       console.log(`[DualOutput] mechanics[] v3.1 received: ${mechanicsV31.length} primitives`);
     } else {
       // Fallback: old response format (no dual output key)
