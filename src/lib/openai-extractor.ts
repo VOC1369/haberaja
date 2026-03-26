@@ -2151,7 +2151,69 @@ WAJIB:
 - Kedua key harus ada: legacy_flat dan mechanics
 - legacy_flat mengikuti format lama persis
 - mechanics[] adalah hasil reasoning independen, bukan mapping dari legacy_flat
-- Jika mechanics[] kosong → tetap kembalikan key dengan value []`;
+- Jika mechanics[] kosong → tetap kembalikan key dengan value []
+
+═══════════════════════════════════════════════════════════════
+OUTPUT RULES (STRICT — NON NEGOTIABLE)
+═══════════════════════════════════════════════════════════════
+
+- Anda WAJIB mengembalikan HANYA JSON
+- Jangan menambahkan penjelasan apapun
+- Jangan menambahkan teks sebelum atau sesudah JSON
+- Jangan menggunakan markdown (\`\`\`json)
+- Jangan menggunakan komentar
+- Jangan menggunakan trailing comma
+- Semua key harus menggunakan double quotes
+- Output HARUS bisa di-parse langsung oleh JSON.parse()
+
+Format WAJIB:
+
+{
+  "legacy_flat": { ... },
+  "mechanics": [ ... ]
+}
+
+Jika Anda tidak yakin, tetap output JSON kosong yang valid, jangan menjelaskan apapun.`;
+
+// ============================================================
+// extractJsonFromResponse — robust JSON guard (no regex overkill)
+// Strips markdown wrappers, finds first { and last }, parses.
+// Falls back to trailing-comma removal on parse error.
+// ============================================================
+function extractJsonFromResponse(raw: string): unknown {
+  let cleaned = raw
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+
+  const jsonStart = cleaned.search(/[{[]/);
+  const firstChar = jsonStart !== -1 ? cleaned[jsonStart] : '';
+  const closingChar = firstChar === '[' ? ']' : '}';
+  const jsonEnd = cleaned.lastIndexOf(closingChar);
+
+  if (jsonStart === -1 || jsonEnd === -1) {
+    console.error(`[extractor.error] No JSON found | length: ${raw.length} | snippet: "${raw.substring(0, 500)}"`);
+    throw new Error("No JSON object found in LLM response");
+  }
+
+  cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Attempt repair: trailing commas + control chars
+    const repaired = cleaned
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*]/g, "]")
+      .replace(/[\x00-\x1F\x7F]/g, "");
+    try {
+      return JSON.parse(repaired);
+    } catch (e2) {
+      console.error(`[extractor.error] invalid JSON | length: ${raw.length} | snippet: "${raw.substring(0, 500)}"`);
+      throw e2;
+    }
+  }
+}
 
 // ============= IMAGE EXTRACTION WITH VISION (GPT-4o) =============
 
@@ -2282,12 +2344,8 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
 
   // Parse JSON dari response
   try {
-    let cleanJson = resultText.trim();
-    if (cleanJson.startsWith("```")) {
-      cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
-    }
-    
-    const parsed = JSON.parse(cleanJson) as ExtractedPromo;
+    const rawParsedImage = extractJsonFromResponse(resultText);
+    const parsed = rawParsedImage as ExtractedPromo;
     parsed.raw_content = "[Image extraction]";
     parsed.ready_to_commit = false;
     
@@ -2448,7 +2506,7 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     
     return downgraded;
   } catch (parseError) {
-    console.error("Failed to parse OpenAI Vision response:", resultText);
+    console.error(`[extractor.error] invalid JSON (image) | length: ${resultText.length} | snippet: "${resultText.substring(0, 500)}"`, parseError);
     throw new Error("Gagal parsing hasil ekstraksi dari image. Response bukan JSON valid.");
   }
 }
@@ -2657,23 +2715,24 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
 
   // Parse JSON dari response
   try {
-    let cleanJson = resultText.trim();
-    if (cleanJson.startsWith("```")) {
-      cleanJson = cleanJson.replace(/```json?\n?/g, "").replace(/```$/g, "").trim();
-    }
-    
     // ============================================================
     // DUAL OUTPUT PARSER — v3.1 compatibility
+    // Uses extractJsonFromResponse: strips markdown, finds JSON boundaries,
+    // repairs trailing commas, logs on failure.
     // LLM now returns { legacy_flat: {...}, mechanics: [...] }
     // Fallback: if no legacy_flat key → treat entire response as legacy_flat
     // ============================================================
-    const rawParsed = JSON.parse(cleanJson);
+    const rawParsed = extractJsonFromResponse(resultText);
     let mechanicsV31: unknown[] = [];
 
     let flatData: Record<string, unknown>;
-    if (rawParsed && typeof rawParsed === 'object' && 'legacy_flat' in rawParsed) {
-      flatData = rawParsed.legacy_flat as Record<string, unknown>;
-      mechanicsV31 = Array.isArray(rawParsed.mechanics) ? rawParsed.mechanics : [];
+    if (rawParsed && typeof rawParsed === 'object' && 'legacy_flat' in (rawParsed as object)) {
+      const dualOut = rawParsed as { legacy_flat: Record<string, unknown>; mechanics?: unknown[] };
+      if (!dualOut.legacy_flat || !('mechanics' in dualOut)) {
+        throw new Error("[DualOutput] Hard validation failed: legacy_flat or mechanics key missing");
+      }
+      flatData = dualOut.legacy_flat;
+      mechanicsV31 = Array.isArray(dualOut.mechanics) ? dualOut.mechanics : [];
       console.log(`[DualOutput] mechanics[] v3.1 received: ${mechanicsV31.length} primitives`);
     } else {
       // Fallback: old response format (no dual output key)
@@ -3341,7 +3400,7 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     
     return parsed;
   } catch (parseError) {
-    console.error("Failed to parse OpenAI response:", resultText);
+    console.error(`[extractor.error] invalid JSON | length: ${resultText.length} | snippet: "${resultText.substring(0, 500)}"`, parseError);
     throw new Error("Gagal parsing hasil ekstraksi. Response bukan JSON valid.");
   }
 }
