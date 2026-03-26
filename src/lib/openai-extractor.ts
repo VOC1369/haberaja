@@ -2175,6 +2175,46 @@ Format WAJIB:
 
 Jika Anda tidak yakin, tetap output JSON kosong yang valid, jangan menjelaskan apapun.`;
 
+// ============================================================
+// extractJsonFromResponse — robust JSON guard (no regex overkill)
+// Strips markdown wrappers, finds first { and last }, parses.
+// Falls back to trailing-comma removal on parse error.
+// ============================================================
+function extractJsonFromResponse(raw: string): unknown {
+  let cleaned = raw
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
+
+  const jsonStart = cleaned.search(/[{[]/);
+  const firstChar = jsonStart !== -1 ? cleaned[jsonStart] : '';
+  const closingChar = firstChar === '[' ? ']' : '}';
+  const jsonEnd = cleaned.lastIndexOf(closingChar);
+
+  if (jsonStart === -1 || jsonEnd === -1) {
+    console.error(`[extractor.error] No JSON found | length: ${raw.length} | snippet: "${raw.substring(0, 500)}"`);
+    throw new Error("No JSON object found in LLM response");
+  }
+
+  cleaned = cleaned.substring(jsonStart, jsonEnd + 1);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // Attempt repair: trailing commas + control chars
+    const repaired = cleaned
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*]/g, "]")
+      .replace(/[\x00-\x1F\x7F]/g, "");
+    try {
+      return JSON.parse(repaired);
+    } catch (e2) {
+      console.error(`[extractor.error] invalid JSON | length: ${raw.length} | snippet: "${raw.substring(0, 500)}"`);
+      throw e2;
+    }
+  }
+}
+
 // ============= IMAGE EXTRACTION WITH VISION (GPT-4o) =============
 
 /**
