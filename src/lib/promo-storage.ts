@@ -449,18 +449,93 @@ function buildCanonicalProjectionFromMechanics(
   const calcM = mechanics.find(m => m.mechanic_type === 'calculation');
   const stateM = mechanics.find(m => m.mechanic_type === 'state');
 
-  return {
+  // ============================================
+  // REWARD FORM: multi-source fallback
+  // 1. mechanics reward node data.reward_form
+  // 2. dinamis_reward_type (formula mode)
+  // 3. fixed_reward_type (fixed mode)
+  // 4. reward_type (root, used in tier mode)
+  // ============================================
+  const resolvedRewardForm: string =
+    (rewardM?.data?.reward_form as string) ||
+    (p.dinamis_reward_type as string) ||
+    (p.fixed_reward_type as string) ||
+    (p.reward_type as string) ||
+    '';
+
+  // ============================================
+  // REWARD PERCENT: multi-source fallback
+  // 1. mechanics reward node data.reward_percent
+  // 2. subcategories[0].calculation_value (dinamis formula rate)
+  // 3. fixed_calculation_value (fixed mode)
+  // 4. calculation_value (root)
+  // ============================================
+  const subs = (p.subcategories as Array<Record<string, unknown>>) || [];
+  const sub0CalcValue = (subs[0]?.calculation_value as number) ?? null;
+  const resolvedRewardPercent: number | null =
+    (rewardM?.data?.reward_percent as number) ??
+    sub0CalcValue ??
+    (p.fixed_calculation_value as number) ??
+    (p.calculation_value as number) ??
+    null;
+
+  // ============================================
+  // MAX BONUS: multi-source fallback
+  // 1. p.max_bonus (root canonical)
+  // 2. subcategories[0].max_bonus
+  // 3. fixed_max_claim (fixed mode)
+  // 4. dinamis_max_claim (formula mode)
+  // ============================================
+  const resolvedMaxBonus: number | null =
+    (p.max_bonus as number) ??
+    (subs[0]?.max_bonus as number) ??
+    (p.fixed_max_claim as number) ??
+    (p.dinamis_max_claim as number) ??
+    null;
+
+  // ============================================
+  // PAYOUT DIRECTION: multi-source fallback
+  // 1. calcM.data.payout_direction
+  // 2. p.payout_direction (root)
+  // 3. p.global_payout_direction (formula mode global)
+  // 4. subcategories[0].payout_direction
+  // ============================================
+  const resolvedPayoutDirection: string =
+    (calcM?.data?.payout_direction as string) ||
+    (p.payout_direction as string) ||
+    (p.global_payout_direction as string) ||
+    (subs[0]?.payout_direction as string) ||
+    '';
+
+  // ============================================
+  // CLAIM METHOD: multi-source fallback
+  // 1. claimM.data.method
+  // 2. p.claim_method
+  // 3. p.contact_channel (if enabled)
+  // ============================================
+  const resolvedClaimMethod: string =
+    (claimM?.data?.method as string) ||
+    (p.claim_method as string) ||
+    ((p.contact_channel_enabled && p.contact_channel) ? (p.contact_channel as string) : '') ||
+    '';
+
+  const resolvedClaimPlatform: string =
+    (claimM?.data?.platform as string) ||
+    (p.claim_platform as string) ||
+    '';
+
+  const cp: CanonicalProjection = {
     promo_summary: (p.promo_summary as string) || '',
     main_trigger: (triggerM?.data?.event as string) || (p.trigger_event as string) || '',
-    main_reward_form: (rewardM?.data?.reward_form as string) || (p.reward_type as string) || '',
-    main_reward_percent: (rewardM?.data?.reward_percent as number) ?? null,
-    max_bonus: (p.max_bonus as number) ?? null,
-    payout_direction: (calcM?.data?.payout_direction as string) || (p.payout_direction as string) || '',
+    main_reward_form: resolvedRewardForm,
+    main_reward_percent: resolvedRewardPercent,
+    max_bonus: resolvedMaxBonus,
+    payout_direction: resolvedPayoutDirection,
     turnover_multiplier: (controlM?.data?.turnover_multiplier as number) ?? null,
-    turnover_basis: (controlM?.data?.turnover_basis as string) || '',
-    primary_claim_method: (claimM?.data?.method as string) || '',
-    primary_claim_platform: (claimM?.data?.platform as string) || '',
-    proof_required: (claimM?.data?.proof_required as boolean) ?? false,
+    turnover_basis: (controlM?.data?.turnover_basis as string) || (p.turnover_basis as string) || '',
+    primary_claim_method: resolvedClaimMethod,
+    primary_claim_platform: resolvedClaimPlatform,
+    proof_required: (claimM?.data?.proof_required as boolean) ?? (p.proof_required as boolean) ?? false,
     stateful: !!stateM,
     game_scope: (p.game_restriction as string) || (p.game_scope as string) || 'semua',
     game_types: ((p.game_types as string[]) || []),
@@ -471,6 +546,29 @@ function buildCanonicalProjectionFromMechanics(
     intent_category: (p.intent_category as string) || '',
     target_segment: (p.target_segment as string) || '',
   };
+
+  // ============================================
+  // AUDIT LOG: canonical_projection fields resolved
+  // ============================================
+  const missingCritical: string[] = [];
+  if (!cp.main_trigger) missingCritical.push('main_trigger');
+  if (!cp.main_reward_form) missingCritical.push('main_reward_form');
+  if (cp.main_reward_percent === null && cp.max_bonus === null) missingCritical.push('main_reward_percent + max_bonus (both null)');
+  if (!cp.primary_claim_method) missingCritical.push('primary_claim_method');
+
+  console.log('[canonical_projection] resolved fields:', {
+    main_trigger: cp.main_trigger,
+    main_reward_form: cp.main_reward_form,
+    main_reward_percent: cp.main_reward_percent,
+    max_bonus: cp.max_bonus,
+    payout_direction: cp.payout_direction,
+    turnover_multiplier: cp.turnover_multiplier,
+    primary_claim_method: cp.primary_claim_method,
+    stateful: cp.stateful,
+    missing_critical: missingCritical.length > 0 ? missingCritical : 'none',
+  });
+
+  return cp;
 }
 
 // ============================================

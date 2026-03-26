@@ -5232,7 +5232,22 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     _raw_subcategories: extracted.subcategories,
     
     // Fixed mode defaults - using INERT VALUES (null, not 0)
-    reward_type: 'freechip',  // lowercase to match enum
+    // ✅ FIX: reward_type root should reflect actual reward type, not hardcoded 'freechip'
+    // Priority: fixed_reward_type (fixed mode) → dinamis_reward_type (formula mode) → fallback
+    reward_type: (() => {
+      // For fixed mode: use fixed_reward_type from sub[0]
+      if (initialMode === 'fixed' && extracted.subcategories[0]?.reward_type) {
+        return extracted.subcategories[0].reward_type;
+      }
+      // For formula/dinamis mode: use first sub's reward_type or default
+      if (initialMode === 'formula' && extracted.subcategories[0]?.reward_type) {
+        return extracted.subcategories[0].reward_type;
+      }
+      // For tier mode: leave as empty (reward is in tiers array)
+      if (initialMode === 'tier') return '';
+      // Fallback: freechip
+      return 'freechip';
+    })(),
     // ✅ V1.2: APK promo - use min from range as reward_amount (Min Bonus)
     reward_amount: isApkLikePromo && apkBonusRange.min ? apkBonusRange.min : null,
     // ✅ V1.2: APK promo - use max from range as max_bonus
@@ -6846,6 +6861,59 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     (finalData as any)._mechanics_v31_dirty = false;
     console.log(`[mapExtracted] _mechanics_v31 carried forward: ${llmMechanicsCarry.length} primitives`);
   }
+
+  // ============================================
+  // DEBUG LOG: Pre-return mapping audit
+  // Logs which critical fields are filled vs missing
+  // ============================================
+  const fd = finalData as Record<string, unknown>;
+  const subs0 = (fd.subcategories as Array<Record<string, unknown>> | undefined)?.[0];
+  const mappingAudit = {
+    // Identity
+    promo_name: fd.promo_name || '[MISSING]',
+    reward_mode: fd.reward_mode || '[MISSING]',
+    // Calculation mapping
+    calculation_base: fd.calculation_base || subs0?.calculation_base || '[MISSING]',
+    calculation_value: fd.calculation_value ?? subs0?.calculation_value ?? '[MISSING]',
+    fixed_calculation_base: fd.fixed_calculation_base || '[MISSING]',
+    fixed_calculation_value: fd.fixed_calculation_value ?? '[MISSING]',
+    // Reward type mapping
+    reward_type: fd.reward_type || '[MISSING]',
+    dinamis_reward_type: fd.dinamis_reward_type || '[MISSING]',
+    fixed_reward_type: fd.fixed_reward_type || '[MISSING]',
+    // Trigger threshold
+    min_calculation: fd.min_calculation ?? '[MISSING]',
+    fixed_min_calculation: fd.fixed_min_calculation ?? '[MISSING]',
+    trigger_min_value: fd.trigger_min_value ?? '[MISSING]',
+    // Distribution / Claim
+    claim_frequency: fd.claim_frequency || '[MISSING]',
+    reward_distribution: fd.reward_distribution || '[MISSING]',
+    distribution_day: fd.distribution_day || '[not set]',
+    // Max bonus
+    max_bonus: fd.max_bonus ?? '[MISSING]',
+    max_claim: fd.max_claim ?? '[MISSING]',
+    fixed_max_claim: fd.fixed_max_claim ?? '[MISSING]',
+    // WD rule
+    turnover_rule: fd.turnover_rule || '[not set]',
+    turnover_rule_enabled: fd.turnover_rule_enabled,
+    // Mechanics carry-forward
+    _mechanics_v31_count: Array.isArray((fd as any)._mechanics_v31) ? (fd as any)._mechanics_v31.length : 0,
+    _mechanics_source: (fd as any)._mechanics_source || 'none',
+    _mechanics_v31_dirty: (fd as any)._mechanics_v31_dirty ?? 'undefined',
+  };
+
+  // Detect missing critical fields
+  const criticalMissing = Object.entries(mappingAudit)
+    .filter(([, v]) => v === '[MISSING]')
+    .map(([k]) => k);
+
+  if (criticalMissing.length > 0) {
+    console.warn('[mapExtracted] ⚠️ CRITICAL FIELDS MISSING after mapping:', criticalMissing);
+  } else {
+    console.log('[mapExtracted] ✅ All critical fields populated');
+  }
+
+  console.log('[mapExtracted] MAPPING AUDIT (pre-return):', mappingAudit);
 
   return finalData as unknown as PromoFormData;
 }
