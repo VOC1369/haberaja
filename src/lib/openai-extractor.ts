@@ -2506,7 +2506,7 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     
     return downgraded;
   } catch (parseError) {
-    console.error("Failed to parse OpenAI Vision response:", resultText);
+    console.error(`[extractor.error] invalid JSON (image) | length: ${resultText.length} | snippet: "${resultText.substring(0, 500)}"`, parseError);
     throw new Error("Gagal parsing hasil ekstraksi dari image. Response bukan JSON valid.");
   }
 }
@@ -3400,7 +3400,7 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     
     return parsed;
   } catch (parseError) {
-    console.error("Failed to parse OpenAI response:", resultText);
+    console.error(`[extractor.error] invalid JSON | length: ${resultText.length} | snippet: "${resultText.substring(0, 500)}"`, parseError);
     throw new Error("Gagal parsing hasil ekstraksi. Response bukan JSON valid.");
   }
 }
