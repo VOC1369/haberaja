@@ -6727,12 +6727,21 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // HARD GUARD: ARCHITECTURE VIOLATION CHECK (v1.2.1)
   // Fail-loud if reward_mode was overridden after Gate decision
   // ============================================
+  // ══════ TRACE STEP 5: HARD GUARD ══════
+  const finalModeCheck = sanitizedData.reward_mode || sanitizedData.mode;
+  console.log('[TRACE-5] HARD GUARD check', {
+    gate_mode: gateDecision.mode,
+    final_mode: finalModeCheck,
+    match: finalModeCheck === gateDecision.mode || !finalModeCheck,
+    is_dev: !!import.meta.env?.DEV,
+    promo_name: extracted.promo_name,
+  });
+  
   if (import.meta.env?.DEV) {
-    const finalMode = sanitizedData.reward_mode || sanitizedData.mode;
-    if (finalMode && finalMode !== gateDecision.mode) {
+    if (finalModeCheck && finalModeCheck !== gateDecision.mode) {
       console.error('[ARCHITECTURE VIOLATION] reward_mode overridden after Primitive Gate!', {
         gateDecision: gateDecision.mode,
-        finalMode: finalMode,
+        finalMode: finalModeCheck,
         isApkPromo: gateDecision.constraints.require_apk,
         promo_name: extracted.promo_name,
       });
