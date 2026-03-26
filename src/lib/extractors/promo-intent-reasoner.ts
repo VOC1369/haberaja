@@ -21,7 +21,7 @@
  * Version: v1.2.0+2025-01-14
  */
 
-import { getOpenAIKey, IS_DEV_MODE } from '../config/openai.dev';
+import { callAI, extractJSON } from '../ai-client';
 
 // ============================================
 // TYPES
