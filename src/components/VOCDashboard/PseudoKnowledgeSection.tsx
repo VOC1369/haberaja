@@ -402,6 +402,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         return;
       }
       
+      // ══════ TRACE STEP 6: UI State Update ══════
+      console.log('[TRACE-6] extractPromoFromContent returned', {
+        has_result: !!result,
+        promo_name: result?.promo_name,
+        promo_type: result?.promo_type,
+        mode: result?.mode,
+        subcategories_count: result?.subcategories?.length ?? 0,
+      });
+      
       setExtractedPromo(result);
       setEditHistory([]);
       
