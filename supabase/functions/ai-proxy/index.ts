@@ -7,6 +7,7 @@ const MODEL_CONFIG = {
   extract: { model: "claude-sonnet-4-20250514", max_tokens: 8000 },
   classify: { model: "claude-haiku-4-5-20251001", max_tokens: 500 },
   reject_gate: { model: "claude-haiku-4-5-20251001", max_tokens: 120 },
+  intent: { model: "claude-haiku-4-5-20251001", max_tokens: 800 },
 };
 
 const corsHeaders = {

@@ -4,7 +4,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const AI_PROXY_URL = `${SUPABASE_URL}/functions/v1/ai-proxy`;
 
-export type AIProxyType = "extract" | "classify" | "reject_gate";
+export type AIProxyType = "extract" | "classify" | "reject_gate" | "intent";
 
 export class AICreditsExhaustedError extends Error {
   constructor(message = "Kredit Anthropic habis.") {
