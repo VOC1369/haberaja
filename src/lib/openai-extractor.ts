@@ -2712,6 +2712,13 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
   });
 
   const resultText = extractText(aiResponse);
+  
+  // ══════ TRACE STEP 1: LLM Response ══════
+  console.log('[TRACE-1] LLM response received', {
+    response_length: resultText?.length ?? 0,
+    has_content: !!resultText && resultText.length > 0,
+    snippet: resultText?.substring(0, 200) ?? 'NULL',
+  });
 
   // Parse JSON dari response
   try {
@@ -2723,6 +2730,14 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     // Fallback: if no legacy_flat key → treat entire response as legacy_flat
     // ============================================================
     const rawParsed = extractJsonFromResponse(resultText);
+    
+    // ══════ TRACE STEP 2: JSON Parse ══════
+    console.log('[TRACE-2] extractJsonFromResponse succeeded', {
+      parsed_type: typeof rawParsed,
+      is_object: rawParsed !== null && typeof rawParsed === 'object',
+      top_keys: rawParsed && typeof rawParsed === 'object' ? Object.keys(rawParsed as object).slice(0, 10) : [],
+    });
+    
     let mechanicsV31: unknown[] = [];
 
     let flatData: Record<string, unknown>;
@@ -2734,11 +2749,32 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
       flatData = dualOut.legacy_flat;
       mechanicsV31 = Array.isArray(dualOut.mechanics) ? dualOut.mechanics : [];
       console.log(`[DualOutput] mechanics[] v3.1 received: ${mechanicsV31.length} primitives`);
+      
+      // ══════ TRACE STEP 3: Dual Output Path ══════
+      console.log('[TRACE-3] Dual output parsed', {
+        has_legacy_flat: true,
+        legacy_flat_keys: Object.keys(flatData).slice(0, 15),
+        mechanics_count: mechanicsV31.length,
+        promo_name: flatData.promo_name,
+        promo_type: flatData.promo_type,
+        mode: flatData.mode,
+        tier_archetype: flatData.tier_archetype,
+      });
     } else {
       // Fallback: old response format (no dual output key)
       flatData = rawParsed as Record<string, unknown>;
       mechanicsV31 = [];
       console.warn('[DualOutput] legacy_flat key not found — treating entire response as flat v2.2, mechanics=[]');
+      
+      // ══════ TRACE STEP 3: Fallback Path ══════
+      console.log('[TRACE-3] Fallback path (no dual output)', {
+        has_legacy_flat: false,
+        flat_keys: Object.keys(flatData).slice(0, 15),
+        promo_name: flatData.promo_name,
+        promo_type: flatData.promo_type,
+        mode: flatData.mode,
+        tier_archetype: flatData.tier_archetype,
+      });
     }
 
     const parsed = flatData as unknown as ExtractedPromo;
