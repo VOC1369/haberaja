@@ -125,8 +125,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const mappedPreview = useMemo<PromoFormData | null>(() => {
     if (!extractedPromo) return null;
     try {
-      return mapExtractedToPromoFormData(extractedPromo);
+      console.log('[TRACE-6B] useMemo calling mapExtractedToPromoFormData...');
+      const result = mapExtractedToPromoFormData(extractedPromo);
+      console.log('[TRACE-6B] mapExtractedToPromoFormData succeeded', {
+        reward_mode: (result as any)?.reward_mode,
+        tier_archetype: (result as any)?.tier_archetype,
+        tiers_count: (result as any)?.tiers?.length ?? 0,
+      });
+      return result;
     } catch (err) {
+      console.error('[TRACE-6B] mapExtractedToPromoFormData FAILED:', err);
       console.error('[PseudoKnowledgeSection] mapExtractedToPromoFormData failed — stale extraction data cleared:', err);
       // Clear corrupted extraction state so the page doesn't hard-crash
       setExtractedPromo(null);
@@ -401,6 +409,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         setIsExtracting(false);
         return;
       }
+      
+      // ══════ TRACE STEP 6: UI State Update ══════
+      console.log('[TRACE-6] extractPromoFromContent returned', {
+        has_result: !!result,
+        promo_name: result?.promo_name,
+        promo_type: result?.promo_type,
+        mode: result?.mode,
+        subcategories_count: result?.subcategories?.length ?? 0,
+      });
       
       setExtractedPromo(result);
       setEditHistory([]);
