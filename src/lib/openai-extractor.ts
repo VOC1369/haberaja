@@ -5232,7 +5232,22 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     _raw_subcategories: extracted.subcategories,
     
     // Fixed mode defaults - using INERT VALUES (null, not 0)
-    reward_type: 'freechip',  // lowercase to match enum
+    // ✅ FIX: reward_type root should reflect actual reward type, not hardcoded 'freechip'
+    // Priority: fixed_reward_type (fixed mode) → dinamis_reward_type (formula mode) → fallback
+    reward_type: (() => {
+      // For fixed mode: use fixed_reward_type from sub[0]
+      if (initialMode === 'fixed' && extracted.subcategories[0]?.reward_type) {
+        return extracted.subcategories[0].reward_type;
+      }
+      // For formula/dinamis mode: use first sub's reward_type or default
+      if (initialMode === 'formula' && extracted.subcategories[0]?.reward_type) {
+        return extracted.subcategories[0].reward_type;
+      }
+      // For tier mode: leave as empty (reward is in tiers array)
+      if (initialMode === 'tier') return '';
+      // Fallback: freechip
+      return 'freechip';
+    })(),
     // ✅ V1.2: APK promo - use min from range as reward_amount (Min Bonus)
     reward_amount: isApkLikePromo && apkBonusRange.min ? apkBonusRange.min : null,
     // ✅ V1.2: APK promo - use max from range as max_bonus
