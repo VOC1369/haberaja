@@ -549,39 +549,18 @@ export async function reasonPromoIntent(content: string): Promise<PromoIntent> {
     return obviousIntent;
   }
   
-  // STEP 1: Try LLM if API key exists
-  const apiKey = getOpenAIKey();
-  if (!apiKey) {
-    console.warn('[Intent Reasoner] No API key → UNCERTAINTY MODE');
-    return createUncertainIntent(content);
-  }
-  
+  // STEP 1: LLM reasoning via ai-proxy (Haiku)
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: 0.1, // Low temperature for consistency
-        messages: [
-          { role: 'system', content: INTENT_REASONER_PROMPT },
-          { role: 'user', content: `Analisis promo berikut:\n\n${content}` },
-        ],
-      }),
+    const response = await callAI({
+      type: 'intent',
+      system: INTENT_REASONER_PROMPT,
+      messages: [
+        { role: 'user', content: `Analisis promo berikut:\n\n${content}` },
+      ],
+      temperature: 0,
     });
     
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content || '';
-    
-    // Parse LLM response
-    const parsed = parseIntentResponse(rawContent);
+    const parsed = extractJSON<Partial<PromoIntent>>(response);
     
     // Calculate deterministic confidence
     const confidence = calculateIntentConfidence(parsed);
@@ -592,12 +571,9 @@ export async function reasonPromoIntent(content: string): Promise<PromoIntent> {
     // Apply conflict penalty
     const finalConfidence = Math.max(0, confidence - (conflicts.length * 0.1));
     
-    if (IS_DEV_MODE) {
-      console.log('[Intent Reasoner] Raw LLM response:', rawContent);
-      console.log('[Intent Reasoner] Parsed intent:', parsed);
-      console.log('[Intent Reasoner] Conflicts:', conflicts);
-      console.log('[Intent Reasoner] Final confidence:', finalConfidence);
-    }
+    console.log('[Intent Reasoner] Parsed intent:', parsed);
+    console.log('[Intent Reasoner] Conflicts:', conflicts);
+    console.log('[Intent Reasoner] Final confidence:', finalConfidence);
     
     return {
       primary_action: parsed.primary_action || 'deposit',
