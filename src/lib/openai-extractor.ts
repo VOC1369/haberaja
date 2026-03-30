@@ -32,6 +32,7 @@ import { generateUUID } from './supabase-client';
 import { enforceFieldApplicability } from './extractors/field-applicability-map';
 import { getDefaultsFromKeywords } from './extractors/keyword-rules';
 import { sanitizeByMode, NON_FORMULA_MODES } from './sanitize-by-mode';
+import { isMechanicsAuthoritative, deriveModeFromMechanics, type MechanicsAuthority } from './mechanics-authority';
 import { normalizeExtractedPromo, type ExtractionSource } from './extractors/post-extraction-normalizer';
 
 // DYNAMIC CONTRACT INJECTION (v2.0 — Taxonomy-Driven)
@@ -4449,8 +4450,33 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   };
 
   // ============================================
+  // AUTHORITY INVERSION v1.0 — MECHANICS AUTHORITY CHECK
+  // If _mechanics_v31 is structurally valid, derive mode/tier_archetype from it.
+  // Legacy pipeline only runs as fallback when mechanics is empty/invalid.
+  // ============================================
+  const llmMechanics = (extracted as any)._mechanics_v31;
+  const mechanicsIsAuthoritative = isMechanicsAuthoritative(llmMechanics);
+  const mechanicsAuthority: MechanicsAuthority | null = mechanicsIsAuthoritative
+    ? deriveModeFromMechanics(llmMechanics)
+    : null;
+
+  if (mechanicsAuthority) {
+    console.log('[AUTHORITY] mechanics_v31 is AUTHORITATIVE', {
+      mode: mechanicsAuthority.mode,
+      tier_archetype: mechanicsAuthority.tier_archetype,
+      reasoning: mechanicsAuthority.reasoning,
+    });
+  } else {
+    console.log('[AUTHORITY] mechanics_v31 NOT authoritative — legacy pipeline will run', {
+      exists: Array.isArray(llmMechanics),
+      length: Array.isArray(llmMechanics) ? llmMechanics.length : 0,
+    });
+  }
+
+  // ============================================
   // PROMO PRIMITIVE GATE v1.2.1 — SINGLE SOURCE OF TRUTH
   // Mode ONLY comes from this gate (or Taxonomy if high/medium confidence)
+  // AUTHORITY INVERSION: If mechanics authoritative, gate early-returns mechanics values
   // ============================================
   
   const getGateDecision = (): { 
