@@ -26,7 +26,7 @@ describe('generatePromoSummary', () => {
       { mechanic_type: 'distribution', data: { schedule: 'mingguan' } },
     ];
     expect(generatePromoSummary(mechanics)).toBe(
-      'Cashback 10% hingga Rp500.000, dari kekalahan, dibagikan mingguan.'
+      'Cashback 10% hingga Rp500.000 dari kekalahan, dibagikan mingguan.'
     );
   });
 
