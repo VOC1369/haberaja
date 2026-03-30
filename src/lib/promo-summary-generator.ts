@@ -83,7 +83,9 @@ function buildValueSummary(
     return `${fmtPct(percentage)}%`;
   }
   if (fixedAmount != null) {
-    return fmtRp(fixedAmount);
+    // Non-currency amounts (freespin count, item count) — no Rp prefix
+    if (isCurrencyReward) return fmtRp(fixedAmount);
+    return String(fixedAmount);
   }
   return null;
 }
