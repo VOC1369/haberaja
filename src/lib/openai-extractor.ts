@@ -6603,7 +6603,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     referral_admin_fee_percentage: isReferralMultiTier ? 20 : null,  // ✅ INERT: null for non-referral
     
     // Override for referral multi-tier: switch to tier mode with referral archetype
-    ...(isReferralMultiTier && {
+    // AUTHORITY INVERSION: Only apply when mechanics is NOT authoritative
+    ...(isReferralMultiTier && !mechanicsAuthority && {
       reward_mode: 'tier' as const,
       tier_archetype: 'referral' as const,
       has_subcategories: false,  // Disable combo subcategories mode
@@ -6611,7 +6612,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     }),
     
     // Override for Event Level Up: switch to tier mode with level archetype
-    ...(isEventLevelUp && {
+    // AUTHORITY INVERSION: Only apply when mechanics is NOT authoritative
+    ...(isEventLevelUp && !mechanicsAuthority && {
       reward_mode: 'tier' as const,
       tier_archetype: 'level' as const,
       tiers: eventLevelUpTiers,  // ✅ Use existing tiers[] structure with minimal_point
@@ -6627,7 +6629,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
 
     // Override for Deposit Bonus Tier: switch to tier mode with level archetype
     // subcategories[] converted to depositBonusTiers[] (deposit_amount dimension)
-    ...(isDepositBonusTier && {
+    // AUTHORITY INVERSION: Only apply when mechanics is NOT authoritative
+    ...(isDepositBonusTier && !mechanicsAuthority && {
       reward_mode: 'tier' as const,
       tier_archetype: 'level' as const,
       tiers: depositBonusTiers,
