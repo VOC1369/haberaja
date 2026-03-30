@@ -211,7 +211,7 @@ export function generatePromoSummary(mechanics: MechanicNode[]): string {
   const valueSummary = buildValueSummary(percentage, capAmount, fixedAmount, isCurrency);
   const basisOrTrigger = buildBasisOrTrigger(calcBasis, triggerEvent, rewardLabel);
   const turnoverSummary = buildTurnoverSummary(toControl);
-  const restrictionSummary = buildRestrictionSummary(gameControl);
+  const restrictionSummary = buildRestrictionSummary(mechanics);
   const distributionSummary = buildDistributionSummary(dist);
 
   // Mandatory: reward_label + value_summary
