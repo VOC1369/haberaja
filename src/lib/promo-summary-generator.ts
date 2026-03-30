@@ -181,7 +181,7 @@ export function generatePromoSummary(mechanics: MechanicNode[]): string {
 
   // Source values
   const rewardForm = reward?.data.reward_form as string | undefined;
-  const calcBasis = calc?.data.basis as string | undefined;
+  const calcBasis = (calc?.data.calculation_basis ?? calc?.data.basis) as string | undefined;
   const percentage = calc?.data.percentage as number | undefined;
   const capAmount = calc?.data.cap_amount as number | undefined;
   const fixedAmount = (reward?.data.amount ?? calc?.data.amount) as number | undefined;
