@@ -5174,8 +5174,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // TierReward shape (legacy) — used by tiers[] in PromoFormData
   let depositBonusTiers: import('../components/VOCDashboard/PromoFormWizard/types').TierReward[] = [];
 
-  if (isDepositBonusTier) {
+  if (isDepositBonusTier && !mechanicsAuthority) {
     // Rescue: if gate returned 'fixed' due to arbitration conflict, upgrade to 'tier'
+    // AUTHORITY INVERSION: Only runs when mechanics is NOT authoritative
     // CRITICAL: Must also patch gateDecision.mode AND taxonomyDecision.mode so that:
     //   1. HARD GUARD (line ~6347) does not throw "ARCHITECTURE VIOLATION"
     //   2. Taxonomy lock (line ~6391) does not re-override back to 'fixed'
