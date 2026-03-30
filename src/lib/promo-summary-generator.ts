@@ -129,17 +129,35 @@ function buildTurnoverSummary(control: MechanicNode | undefined): string | null 
 /**
  * Slot 5 — restriction_summary
  */
-function buildRestrictionSummary(control: MechanicNode | undefined): string | null {
-  if (!control) return null;
-  const d = control.data;
+function buildRestrictionSummary(mechanics: MechanicNode[]): string | null {
+  // Collect restrictions from ALL relevant mechanic nodes
+  let gameTypes: string[] = [];
+  let providers: string[] = [];
+  let gameNames: string[] = [];
 
-  const gameTypes = d.game_types as string[] | undefined;
-  const providers = d.providers as string[] | undefined;
-  const gameNames = d.game_names as string[] | undefined;
+  for (const m of mechanics) {
+    if (m.mechanic_type === 'control' && m.data.control_type === 'game_restriction') {
+      if (Array.isArray(m.data.game_types)) gameTypes.push(...(m.data.game_types as string[]));
+      if (Array.isArray(m.data.providers)) providers.push(...(m.data.providers as string[]));
+      if (Array.isArray(m.data.game_names)) gameNames.push(...(m.data.game_names as string[]));
+    }
+    // Also check reward/eligibility nodes for game restrictions
+    if ((m.mechanic_type === 'reward' || m.mechanic_type === 'eligibility') && m.data.game_restriction) {
+      const gr = m.data.game_restriction as Record<string, unknown>;
+      if (Array.isArray(gr.game_types)) gameTypes.push(...(gr.game_types as string[]));
+      if (Array.isArray(gr.providers)) providers.push(...(gr.providers as string[]));
+      if (Array.isArray(gr.game_names)) gameNames.push(...(gr.game_names as string[]));
+    }
+  }
 
-  if (gameTypes?.length) return `khusus ${gameTypes.join('/')}`;
-  if (providers?.length) return `khusus provider ${providers.join('/')}`;
-  if (gameNames?.length) return `khusus game ${gameNames.join('/')}`;
+  // Deduplicate
+  gameTypes = [...new Set(gameTypes)];
+  providers = [...new Set(providers)];
+  gameNames = [...new Set(gameNames)];
+
+  if (gameTypes.length) return `khusus ${gameTypes.join('/')}`;
+  if (providers.length) return `khusus provider ${providers.join('/')}`;
+  if (gameNames.length) return `khusus game ${gameNames.join('/')}`;
   return null;
 }
 
