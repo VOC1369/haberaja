@@ -189,7 +189,8 @@ export function generatePromoSummary(mechanics: MechanicNode[]): string {
 
   // Build slots
   const rewardLabel = buildRewardLabel(rewardForm, calcBasis);
-  const valueSummary = buildValueSummary(percentage, capAmount, fixedAmount);
+  const isCurrency = !rewardForm || !['freespin', 'physical_reward'].includes(rewardForm.toLowerCase());
+  const valueSummary = buildValueSummary(percentage, capAmount, fixedAmount, isCurrency);
   const basisOrTrigger = buildBasisOrTrigger(calcBasis, triggerEvent, rewardLabel);
   const turnoverSummary = buildTurnoverSummary(toControl);
   const restrictionSummary = buildRestrictionSummary(gameControl);
