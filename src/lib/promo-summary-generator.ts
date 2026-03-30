@@ -202,7 +202,9 @@ export function generatePromoSummary(mechanics: MechanicNode[]): string {
   // Build core (slot1 + slot2 + slot3 merged naturally)
   let core = valueSummary ? `${rewardLabel} ${valueSummary}` : rewardLabel;
   if (basisOrTrigger) {
-    core += `, ${basisOrTrigger}`;
+    // "dari X" attaches naturally without comma; "untuk X" uses comma
+    const sep = basisOrTrigger.startsWith('dari ') ? ' ' : ', ';
+    core += `${sep}${basisOrTrigger}`;
   }
 
   // Conditional slots
