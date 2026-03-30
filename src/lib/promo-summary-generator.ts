@@ -248,7 +248,7 @@ export function generatePromoSummary(mechanics: MechanicNode[]): string {
   if (toControl && !turnoverSummary) {
     console.warn('[promo-summary] turnover control exists but not in summary');
   }
-  if (gameControl && !restrictionSummary) {
+  if (findControl(mechanics, 'game_restriction') && !restrictionSummary) {
     console.warn('[promo-summary] game restriction exists but not in summary');
   }
 
