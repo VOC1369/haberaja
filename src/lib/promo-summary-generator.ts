@@ -195,12 +195,14 @@ export function generatePromoSummary(mechanics: MechanicNode[]): string {
   // Mandatory: reward_label + value_summary
   if (!rewardLabel) return '';
 
-  // Build core (slot1 + slot2 merged)
-  const core = valueSummary ? `${rewardLabel} ${valueSummary}` : rewardLabel;
+  // Build core (slot1 + slot2 + slot3 merged naturally)
+  let core = valueSummary ? `${rewardLabel} ${valueSummary}` : rewardLabel;
+  if (basisOrTrigger) {
+    core += `, ${basisOrTrigger}`;
+  }
 
   // Conditional slots
   const conditionalParts = [
-    basisOrTrigger,
     turnoverSummary,
     restrictionSummary,
     distributionSummary,
