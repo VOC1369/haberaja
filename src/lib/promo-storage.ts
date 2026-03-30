@@ -310,6 +310,7 @@ function buildMechanicsFromFormData(promo: PromoFormData): MechanicNode[] {
       data: {
         owner: 'user',
         scope: 'lifetime',
+        tier_archetype: tierArchetype,  // ← PERSIST in data object for round-trip
         storage_key: tierArchetype === 'point_store' ? 'loyalty_point_balance' : 'level_progress',
         initial_value: 0,
         update_rule: {
@@ -662,8 +663,15 @@ function fromV31Row(row: Record<string, unknown>): PromoItem {
 
   // Derive reward_mode from state + tiers
   const hasTiers = Array.isArray(stateData?.tiers) && (stateData.tiers as unknown[]).length > 0;
+  
+  // ============================================
+  // AUTHORITY INVERSION: Read tier_archetype from stored data first
+  // Only fallback to heuristic if data.tier_archetype not present
+  // ============================================
   const tierArchetype = hasTiers
-    ? (stateData?.storage_key === 'loyalty_point_balance' ? 'point_store' : 'level')
+    ? (typeof stateData?.tier_archetype === 'string' && stateData.tier_archetype
+        ? stateData.tier_archetype  // ← Stored authority (round-trip safe)
+        : (stateData?.storage_key === 'loyalty_point_balance' ? 'point_store' : 'level'))  // ← Legacy fallback
     : undefined;
 
   const rewardMode = hasTiers ? 'tier' : (calcData?.formula ? 'formula' : 'fixed');

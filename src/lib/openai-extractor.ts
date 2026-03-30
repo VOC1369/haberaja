@@ -32,6 +32,7 @@ import { generateUUID } from './supabase-client';
 import { enforceFieldApplicability } from './extractors/field-applicability-map';
 import { getDefaultsFromKeywords } from './extractors/keyword-rules';
 import { sanitizeByMode, NON_FORMULA_MODES } from './sanitize-by-mode';
+import { isMechanicsAuthoritative, deriveModeFromMechanics, type MechanicsAuthority } from './mechanics-authority';
 import { normalizeExtractedPromo, type ExtractionSource } from './extractors/post-extraction-normalizer';
 
 // DYNAMIC CONTRACT INJECTION (v2.0 — Taxonomy-Driven)
@@ -4449,8 +4450,33 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   };
 
   // ============================================
+  // AUTHORITY INVERSION v1.0 — MECHANICS AUTHORITY CHECK
+  // If _mechanics_v31 is structurally valid, derive mode/tier_archetype from it.
+  // Legacy pipeline only runs as fallback when mechanics is empty/invalid.
+  // ============================================
+  const llmMechanics = (extracted as any)._mechanics_v31;
+  const mechanicsIsAuthoritative = isMechanicsAuthoritative(llmMechanics);
+  const mechanicsAuthority: MechanicsAuthority | null = mechanicsIsAuthoritative
+    ? deriveModeFromMechanics(llmMechanics)
+    : null;
+
+  if (mechanicsAuthority) {
+    console.log('[AUTHORITY] mechanics_v31 is AUTHORITATIVE', {
+      mode: mechanicsAuthority.mode,
+      tier_archetype: mechanicsAuthority.tier_archetype,
+      reasoning: mechanicsAuthority.reasoning,
+    });
+  } else {
+    console.log('[AUTHORITY] mechanics_v31 NOT authoritative — legacy pipeline will run', {
+      exists: Array.isArray(llmMechanics),
+      length: Array.isArray(llmMechanics) ? llmMechanics.length : 0,
+    });
+  }
+
+  // ============================================
   // PROMO PRIMITIVE GATE v1.2.1 — SINGLE SOURCE OF TRUTH
   // Mode ONLY comes from this gate (or Taxonomy if high/medium confidence)
+  // AUTHORITY INVERSION: If mechanics authoritative, gate early-returns mechanics values
   // ============================================
   
   const getGateDecision = (): { 
@@ -4459,6 +4485,26 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     confidence: 'high' | 'medium' | 'low';
     reasoning: string;
   } => {
+    // ============================================
+    // AUTHORITY INVERSION: Mechanics wins if authoritative
+    // Legacy taxonomy/gate only runs as fallback
+    // ============================================
+    if (mechanicsAuthority) {
+      console.log('[GATE] AUTHORITY INVERSION — mechanics_v31 wins over taxonomy/legacy', {
+        mode: mechanicsAuthority.mode,
+        tier_archetype: mechanicsAuthority.tier_archetype,
+        reasoning: mechanicsAuthority.reasoning,
+      });
+      return {
+        mode: mechanicsAuthority.mode as CanonicalMode,
+        constraints: { 
+          require_apk: lockedFields?.require_apk === true || taxonomyEvidence?.flags?.has_apk_keywords 
+        },
+        confidence: 'high' as const,
+        reasoning: `mechanics_v31: ${mechanicsAuthority.reasoning}`,
+      };
+    }
+
     // ============================================
     // TAXONOMY WINS (if not UNKNOWN + low)
     // ============================================
@@ -5128,8 +5174,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   // TierReward shape (legacy) — used by tiers[] in PromoFormData
   let depositBonusTiers: import('../components/VOCDashboard/PromoFormWizard/types').TierReward[] = [];
 
-  if (isDepositBonusTier) {
+  if (isDepositBonusTier && !mechanicsAuthority) {
     // Rescue: if gate returned 'fixed' due to arbitration conflict, upgrade to 'tier'
+    // AUTHORITY INVERSION: Only runs when mechanics is NOT authoritative
     // CRITICAL: Must also patch gateDecision.mode AND taxonomyDecision.mode so that:
     //   1. HARD GUARD (line ~6347) does not throw "ARCHITECTURE VIOLATION"
     //   2. Taxonomy lock (line ~6391) does not re-override back to 'fixed'
@@ -6557,7 +6604,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     referral_admin_fee_percentage: isReferralMultiTier ? 20 : null,  // ✅ INERT: null for non-referral
     
     // Override for referral multi-tier: switch to tier mode with referral archetype
-    ...(isReferralMultiTier && {
+    // AUTHORITY INVERSION: Only apply when mechanics is NOT authoritative
+    ...(isReferralMultiTier && !mechanicsAuthority && {
       reward_mode: 'tier' as const,
       tier_archetype: 'referral' as const,
       has_subcategories: false,  // Disable combo subcategories mode
@@ -6565,7 +6613,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     }),
     
     // Override for Event Level Up: switch to tier mode with level archetype
-    ...(isEventLevelUp && {
+    // AUTHORITY INVERSION: Only apply when mechanics is NOT authoritative
+    ...(isEventLevelUp && !mechanicsAuthority && {
       reward_mode: 'tier' as const,
       tier_archetype: 'level' as const,
       tiers: eventLevelUpTiers,  // ✅ Use existing tiers[] structure with minimal_point
@@ -6581,7 +6630,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
 
     // Override for Deposit Bonus Tier: switch to tier mode with level archetype
     // subcategories[] converted to depositBonusTiers[] (deposit_amount dimension)
-    ...(isDepositBonusTier && {
+    // AUTHORITY INVERSION: Only apply when mechanics is NOT authoritative
+    ...(isDepositBonusTier && !mechanicsAuthority && {
       reward_mode: 'tier' as const,
       tier_archetype: 'level' as const,
       tiers: depositBonusTiers,
@@ -6916,6 +6966,19 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     (finalData as any)._mechanics_v31_dirty = false;
     console.log(`[mapExtracted] _mechanics_v31 carried forward: ${llmMechanicsCarry.length} primitives`);
   }
+
+  // ============================================
+  // AUTHORITY TRACE LOG — Which path determined mode/tier_archetype?
+  // ============================================
+  console.log('[AUTHORITY TRACE]', {
+    authority_source: mechanicsAuthority ? 'mechanics_v31' : 'legacy_pipeline',
+    final_mode: finalData.reward_mode,
+    final_tier_archetype: finalData.tier_archetype,
+    mechanics_mode: mechanicsAuthority?.mode ?? null,
+    mechanics_tier_archetype: mechanicsAuthority?.tier_archetype ?? null,
+    legacy_gate_mode: gateDecision.mode,
+    taxonomy_mode: taxonomyDecision.mode,
+  });
 
   // ============================================
   // DEBUG LOG: Pre-return mapping audit
