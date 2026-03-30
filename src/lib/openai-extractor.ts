@@ -4486,6 +4486,26 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     reasoning: string;
   } => {
     // ============================================
+    // AUTHORITY INVERSION: Mechanics wins if authoritative
+    // Legacy taxonomy/gate only runs as fallback
+    // ============================================
+    if (mechanicsAuthority) {
+      console.log('[GATE] AUTHORITY INVERSION — mechanics_v31 wins over taxonomy/legacy', {
+        mode: mechanicsAuthority.mode,
+        tier_archetype: mechanicsAuthority.tier_archetype,
+        reasoning: mechanicsAuthority.reasoning,
+      });
+      return {
+        mode: mechanicsAuthority.mode as CanonicalMode,
+        constraints: { 
+          require_apk: lockedFields?.require_apk === true || taxonomyEvidence?.flags?.has_apk_keywords 
+        },
+        confidence: 'high' as const,
+        reasoning: `mechanics_v31: ${mechanicsAuthority.reasoning}`,
+      };
+    }
+
+    // ============================================
     // TAXONOMY WINS (if not UNKNOWN + low)
     // ============================================
     if (useTaxonomy) {
