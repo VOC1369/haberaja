@@ -6968,6 +6968,19 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   }
 
   // ============================================
+  // AUTHORITY TRACE LOG — Which path determined mode/tier_archetype?
+  // ============================================
+  console.log('[AUTHORITY TRACE]', {
+    authority_source: mechanicsAuthority ? 'mechanics_v31' : 'legacy_pipeline',
+    final_mode: finalData.reward_mode,
+    final_tier_archetype: finalData.tier_archetype,
+    mechanics_mode: mechanicsAuthority?.mode ?? null,
+    mechanics_tier_archetype: mechanicsAuthority?.tier_archetype ?? null,
+    legacy_gate_mode: gateDecision.mode,
+    taxonomy_mode: taxonomyDecision.mode,
+  });
+
+  // ============================================
   // DEBUG LOG: Pre-return mapping audit
   // Logs which critical fields are filled vs missing
   // ============================================
