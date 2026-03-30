@@ -310,6 +310,7 @@ function buildMechanicsFromFormData(promo: PromoFormData): MechanicNode[] {
       data: {
         owner: 'user',
         scope: 'lifetime',
+        tier_archetype: tierArchetype,  // ← PERSIST in data object for round-trip
         storage_key: tierArchetype === 'point_store' ? 'loyalty_point_balance' : 'level_progress',
         initial_value: 0,
         update_rule: {
