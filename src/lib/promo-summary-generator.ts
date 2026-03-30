@@ -211,8 +211,8 @@ export function generatePromoSummary(mechanics: MechanicNode[]): string {
     distributionSummary,
   ].filter(Boolean) as string[];
 
-  // Expiry — only if total slots ≤ 5
-  const totalSlots = 1 + (valueSummary ? 1 : 0) + conditionalParts.length;
+  // Expiry — only if total active slots < 5
+  const totalSlots = 1 + (valueSummary ? 1 : 0) + (basisOrTrigger ? 1 : 0) + conditionalParts.length;
   const expirySummary = buildExpirySummary(expiryControl, totalSlots);
   if (expirySummary) conditionalParts.push(expirySummary);
 
