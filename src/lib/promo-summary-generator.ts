@@ -157,7 +157,7 @@ function buildDistributionSummary(dist: MechanicNode | undefined): string | null
  * Slot 7 — expiry_summary (low priority)
  */
 function buildExpirySummary(control: MechanicNode | undefined, slotCount: number): string | null {
-  if (!control || slotCount > 5) return null;
+  if (!control || slotCount >= 5) return null;
   const days = control.data.expiry_days as number | undefined;
   if (days != null) return `hangus dalam ${days} hari`;
   return null;
