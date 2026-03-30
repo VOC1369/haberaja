@@ -194,7 +194,7 @@ export function generatePromoSummary(mechanics: MechanicNode[]): string {
   const trigger = findByType(mechanics, 'trigger');
   const dist = findByType(mechanics, 'distribution');
   const toControl = findControl(mechanics, 'turnover_requirement');
-  const gameControl = findControl(mechanics, 'game_restriction');
+  
   const expiryControl = findControl(mechanics, 'expiry');
 
   // Source values
