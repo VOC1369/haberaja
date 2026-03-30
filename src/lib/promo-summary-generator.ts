@@ -74,7 +74,8 @@ function buildRewardLabel(rewardForm: string | undefined, calcBasis: string | un
 function buildValueSummary(
   percentage: number | undefined | null,
   capAmount: number | undefined | null,
-  fixedAmount: number | undefined | null
+  fixedAmount: number | undefined | null,
+  isCurrencyReward: boolean = true
 ): string | null {
   if (percentage != null && capAmount != null) {
     return `${fmtPct(percentage)}% hingga ${fmtRp(capAmount)}`;
