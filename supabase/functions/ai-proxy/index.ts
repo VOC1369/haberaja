@@ -4,7 +4,7 @@ const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
 const MODEL_CONFIG = {
-  extract: { model: "claude-sonnet-4-20250514", max_tokens: 8000 },
+  extract: { model: "claude-sonnet-4-5-20250929", max_tokens: 8000 },
   classify: { model: "claude-haiku-4-5-20251001", max_tokens: 500 },
   reject_gate: { model: "claude-haiku-4-5-20251001", max_tokens: 120 },
   intent: { model: "claude-haiku-4-5-20251001", max_tokens: 800 },
