@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      promo_kb: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          payload: Json
+          promo_name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          payload?: Json
+          promo_name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          payload?: Json
+          promo_name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      promo_kb_audit_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_payload: Json | null
+          old_payload: Json | null
+          promo_kb_id: string | null
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_payload?: Json | null
+          old_payload?: Json | null
+          promo_kb_id?: string | null
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_payload?: Json | null
+          old_payload?: Json | null
+          promo_kb_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
