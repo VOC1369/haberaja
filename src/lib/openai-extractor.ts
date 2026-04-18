@@ -975,9 +975,9 @@ export function validateExtractedPromo(data: ExtractedPromo): ValidationResult {
 }
 
 // ============= EXTRACTION PROMPT v2 (SOURCE OF TRUTH HIERARCHY) =============
-const EXTRACTION_PROMPT = `Kamu adalah Promo Knowledge Extractor (Pseudo Knowledge).
-Tugas kamu HANYA mengekstrak dan memetakan promo ke schema Knowledge Base internal.
-Kamu BUKAN pembuat promo, BUKAN penebak, dan DILARANG mengisi asumsi.
+const EXTRACTION_PROMPT = `Kamu adalah analis promo iGaming berpengalaman dengan domain knowledge mendalam tentang operator Indonesia/SEA.
+Ketika menerima input promo (teks, HTML, atau screenshot), kerjamu adalah: PAHAMI dulu promo ini secara holistik — siapa target player, apa yang harus dilakukan player, apa yang player dapatkan, dan bagaimana operator mengontrol risikonya.
+Baru setelah paham, representasikan pemahaman itu ke dalam JSON schema yang sudah ditentukan. Kalau data tidak ada di sumber → isi null dan ambiguity: true dengan alasan jelas. JANGAN menebak.
 
 🧠 PRINSIP WAJIB (NON-NEGOTIABLE)
 
@@ -2058,6 +2058,26 @@ DILARANG KERAS:
 6. distribution → kapan dan bagaimana reward cair
 7. claim        → cara claim, platform, proof requirement
 8. control      → turnover rule, anti-fraud, kombinasi promo
+
+═══════════════════════════════════════════════════════════════
+CANONICAL_PROJECTION — WAJIB DIISI DARI MECHANICS
+═══════════════════════════════════════════════════════════════
+
+Setelah mechanics[] selesai, derive canonical_projection langsung dari mechanics:
+
+- promo_summary → 1 kalimat ringkas: trigger + reward + control. Contoh: "Bonus 0.5% dari turnover slot mingguan, min TO 1jt, cair otomatis tiap Senin"
+- main_trigger → dari m_trigger_1.data.trigger_event
+- main_reward_form → dari m_reward_1.data.reward_type
+- main_reward_percent → dari m_calculation_1.data.percentage (null jika tidak ada)
+- max_bonus → dari m_control_1.data.max_bonus_cap (null jika unlimited)
+- payout_direction → dari m_calculation_1.data.payout_direction
+- turnover_multiplier → dari m_control_1.data.turnover_requirement
+- turnover_basis → dari m_control_1.data.turnover_basis
+- primary_claim_method → dari m_claim_1.data.claim_method
+- primary_claim_platform → dari m_claim_1.data.claim_channels[0] jika ada, null jika tidak
+- proof_required → dari m_claim_1.data.proof_required
+
+ATURAN KERAS: DILARANG isi canonical_projection dengan string kosong "". Kalau data tidak tersedia di mechanics → null, bukan "".
 9. invalidator  → kondisi yang membatalkan promo/reward
 10. dependency  → hubungan kondisional antar mechanic
 
@@ -2292,16 +2312,10 @@ export async function extractPromoFromImage(
   if (isHybrid) {
     contentParts.push({
       type: "text",
-      text: `🔒 KONTEKS TEXT DARI USER (SUMBER KEBENARAN):
+      text: `📋 KONTEKS TEXT DARI USER:
 ---
 ${textContext!.trim()}
----
-
-⚠️ ATURAN HYBRID EXTRACTION:
-1. TEXT MENANG jika ada konflik dengan Image
-2. Gunakan TEXT untuk: min_calculation, turnover_rule, terms_conditions, angka %
-3. Gunakan IMAGE untuk: layout tabel, struktur subcategory, judul promo
-4. Data inti TANPA suffix (%, x, Rp) - UI yang menambahkan nanti`
+---`
     });
   }
 
@@ -2313,11 +2327,26 @@ ${textContext!.trim()}
 ⚠️ INSTRUKSI KHUSUS - MODE: ${isHybrid ? 'HYBRID (Image + Text)' : 'IMAGE ONLY'}
 
 ${isHybrid ? `
-🔒 PRIORITAS HYBRID:
-- Angka (Min WD, TO, %) → AMBIL DARI TEXT CONTEXT DI ATAS
-- Layout & struktur → AMBIL DARI IMAGE
-- Jika konflik → TEXT MENANG TANPA DEBAT
-- confidence: "explicit" untuk data dari text
+⚠️ HYBRID MODE — TEXT + IMAGE tersedia.
+Gunakan reasoning ini untuk setiap data yang konflik:
+
+LAYER 1 — Percaya TEXT untuk:
+- Angka eksplisit (%, nominal Rp, TO multiplier) di S&K tertulis
+- Syarat dan ketentuan legal
+→ Jika konflik: pakai TEXT, confidence: 0.9
+
+LAYER 2 — Percaya IMAGE untuk:
+- Struktur tabel dan urutan kolom
+- Formula multi-langkah (contoh: Winlose - Commission - Fee = Bersih × %)
+- Layout subcategory dan tier breakdown visual
+→ Jika konflik: pakai IMAGE, confidence: 0.8
+
+LAYER 3 — FLAG AMBIGUITY jika TEXT dan IMAGE tunjukkan OPERASI BERBEDA:
+Contoh: TEXT "5% dari Winlose" vs IMAGE tabel "(Winlose - Commission - Cashback - Fee 20%) × 5%"
+→ ambiguity: true
+→ ambiguity_reason: tulis perbedaan operasinya dengan jelas
+→ confidence: 0.4
+→ Pilih interpretasi IMAGE sebagai fallback (lebih operasional dan konservatif)
 ` : `
 Karena ini IMAGE-ONLY, SEMUA field numerik WAJIB menggunakan:
 - confidence: "derived" (BUKAN "explicit")
