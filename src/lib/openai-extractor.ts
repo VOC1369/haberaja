@@ -25,7 +25,7 @@
  */
 
 
-import { callAI, extractText } from './ai-client';
+import { callAI, extractText, type AIContentBlock } from './ai-client';
 import { runRejectGate } from './reject-gate';
 import { preprocessPromoInput } from './promo-preprocessor';
 import { generateUUID } from './supabase-client';
