@@ -20,9 +20,14 @@ export class AIRateLimitError extends Error {
   }
 }
 
+// Anthropic content blocks: text or image (base64)
+export type AIContentBlock =
+  | { type: "text"; text: string }
+  | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+
 export async function callAI({ type, messages, system = undefined, temperature = 0 }: {
   type: AIProxyType;
-  messages: Array<{ role: "user" | "assistant"; content: string }>;
+  messages: Array<{ role: "user" | "assistant"; content: string | AIContentBlock[] }>;
   system?: string;
   temperature?: number;
 }) {
