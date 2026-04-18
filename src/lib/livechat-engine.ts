@@ -5,6 +5,7 @@
 
 import { compileRuntimePrompt } from './apbe-prompt-template';
 import { callAI, extractText } from './ai-client';
+import { IS_DEV_MODE } from './config/dev-mode';
 
 // AI Proxy URL (Supabase Edge Function — Claude Sonnet 4.5)
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
