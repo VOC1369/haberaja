@@ -634,24 +634,13 @@ Jawab HANYA dalam format JSON valid (tanpa markdown, tanpa backtick):
   "fieldsReferenced": ["deskripsi field/FAQ/rule yang dirujuk"]
 }`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getOpenAIKey()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: reasoningPrompt }],
-        temperature: 0.1,
-        max_tokens: 500,
-      }),
+    // Reasoning call via Claude Sonnet 4.5 (ai-proxy)
+    const aiResponse = await callAI({
+      type: 'intent',
+      messages: [{ role: 'user', content: reasoningPrompt }],
+      temperature: 0.1,
     });
-
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-
-    const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content || '';
+    const rawContent = extractText(aiResponse) || '';
     
     // Parse JSON from response (handle possible markdown wrapping)
     let jsonStr = rawContent.trim();
