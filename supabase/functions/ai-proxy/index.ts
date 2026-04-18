@@ -3,11 +3,15 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
-const MODEL_CONFIG = {
-  extract: { model: "claude-sonnet-4-5-20250929", max_tokens: 8000 },
-  classify: { model: "claude-haiku-4-5-20251001", max_tokens: 500 },
-  reject_gate: { model: "claude-haiku-4-5-20251001", max_tokens: 120 },
-  intent: { model: "claude-haiku-4-5-20251001", max_tokens: 800 },
+// OFFICIAL: 1 LLM = Claude Sonnet 4.5 untuk semua type
+const SONNET_MODEL = "claude-sonnet-4-5-20250929";
+
+const MODEL_CONFIG: Record<string, { model: string; max_tokens: number }> = {
+  extract:     { model: SONNET_MODEL, max_tokens: 8000 },
+  classify:    { model: SONNET_MODEL, max_tokens: 500 },
+  reject_gate: { model: SONNET_MODEL, max_tokens: 120 },
+  intent:      { model: SONNET_MODEL, max_tokens: 800 },
+  chat:        { model: SONNET_MODEL, max_tokens: 4000 },
 };
 
 const corsHeaders = {
@@ -22,7 +26,7 @@ serve(async (req) => {
   }
   try {
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not set");
-    const { type, messages, system, temperature = 0 } = await req.json();
+    const { type, messages, system, temperature = 0, stream = false } = await req.json();
     if (!MODEL_CONFIG[type]) throw new Error(`Invalid type: ${type}`);
     const config = MODEL_CONFIG[type];
     const body: Record<string, unknown> = {
@@ -32,6 +36,8 @@ serve(async (req) => {
       messages,
     };
     if (system) body.system = system;
+    if (stream) body.stream = true;
+
     const response = await fetch(ANTHROPIC_API_URL, {
       method: "POST",
       headers: {
@@ -65,6 +71,18 @@ serve(async (req) => {
       }
 
       throw new Error(`Anthropic error: ${response.status} ${JSON.stringify(errorBody)}`);
+    }
+
+    // Stream passthrough (SSE) untuk chat
+    if (stream && response.body) {
+      return new Response(response.body, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        },
+      });
     }
 
     const data = await response.json();

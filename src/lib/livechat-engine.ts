@@ -3,8 +3,13 @@
  * Dev-only chat engine using APBE persona + Promo KB data
  */
 
-import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
 import { compileRuntimePrompt } from './apbe-prompt-template';
+import { callAI, extractText } from './ai-client';
+
+// AI Proxy URL (Supabase Edge Function — Claude Sonnet 4.5)
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const AI_PROXY_URL = `${SUPABASE_URL}/functions/v1/ai-proxy`;
 import { loadInitialConfig } from './apbe-storage';
 import { promoKB } from './promo-storage';
 import { getPayloadContract } from './extractors/promo-taxonomy';
