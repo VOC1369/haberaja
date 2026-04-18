@@ -440,25 +440,29 @@ export async function streamChat(
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Stream from Claude Sonnet 4.5 via Supabase ai-proxy (SSE passthrough)
+    const response = await fetch(AI_PROXY_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${getOpenAIKey()}`,
         'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messages,
-        ],
+        type: 'chat',
+        system: systemPrompt,
+        messages: messages.map(m => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content,
+        })),
+        temperature: 0.7,
         stream: true,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      onError(`OpenAI API error: ${response.status} - ${errorText}`);
+      onError(`AI proxy error: ${response.status} - ${errorText}`);
       return;
     }
 
@@ -472,31 +476,38 @@ export async function streamChat(
     let buffer = '';
     let fullResponse = '';
 
+    // Anthropic SSE format:
+    //   event: content_block_delta
+    //   data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"..."}}
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      
+
       buffer += decoder.decode(value, { stream: true });
-      
+
       let newlineIndex: number;
       while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
         let line = buffer.slice(0, newlineIndex);
         buffer = buffer.slice(newlineIndex + 1);
-        
+
         if (line.endsWith('\r')) line = line.slice(0, -1);
         if (line.startsWith(':') || line.trim() === '') continue;
+        if (line.startsWith('event:')) continue;
         if (!line.startsWith('data: ')) continue;
-        
+
         const jsonStr = line.slice(6).trim();
         if (jsonStr === '[DONE]') break;
-        
+
         try {
           const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) {
-            fullResponse += content;
-            onDelta(content);
+          if (parsed.type === 'content_block_delta') {
+            const text = parsed.delta?.text as string | undefined;
+            if (text) {
+              fullResponse += text;
+              onDelta(text);
+            }
           }
+          // Other event types (message_start, message_delta, message_stop, ping) ignored
         } catch {
           buffer = line + '\n' + buffer;
           break;
