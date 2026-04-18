@@ -2253,14 +2253,15 @@ function forceConfidenceDowngradeForImage(promo: ExtractedPromo): ExtractedPromo
 }
 
 /**
- * Extract promo from image using GPT-4o Vision
- * 
- * CRITICAL: 
- * - Uses gpt-4o (NOT gpt-4o-mini) for vision capability
- * - All numeric confidence downgraded to "derived"
+ * Extract promo from image using Claude Sonnet 4.5 Vision (via ai-proxy)
+ *
+ * CRITICAL:
+ * - Uses Anthropic native image content blocks (type:"image", source.base64)
+ * - Image + text prompts dikirim sebagai messages[0].content array
+ * - All numeric confidence downgraded to "derived" (OCR risk)
  * - Supports HYBRID mode: Image + Text context for best results
- * 
- * @param base64Image - Base64 encoded image data
+ *
+ * @param base64Image - Base64 encoded image (boleh dengan/atau tanpa data URL prefix)
  * @param textContext - Optional text context (S&K) for hybrid extraction
  */
 export async function extractPromoFromImage(
@@ -2272,9 +2273,20 @@ export async function extractPromoFromImage(
   }
 
   const isHybrid = textContext && textContext.trim().length > 50;
-  
-  // Build content parts dynamically
-  const contentParts: Array<{type: string; text?: string; image_url?: {url: string; detail: string}}> = [];
+
+  // Detect media_type dari data URL prefix (default: image/png)
+  const getMediaType = (b64: string): string => {
+    if (b64.startsWith('data:image/jpeg') || b64.startsWith('data:image/jpg')) return 'image/jpeg';
+    if (b64.startsWith('data:image/webp')) return 'image/webp';
+    if (b64.startsWith('data:image/gif')) return 'image/gif';
+    return 'image/png';
+  };
+  const mediaType = getMediaType(base64Image);
+  // Strip data URL prefix — Anthropic expects pure base64 only
+  const pureBase64 = base64Image.replace(/^data:image\/\w+;base64,/, '');
+
+  // Build content blocks (Anthropic format)
+  const contentParts: AIContentBlock[] = [];
 
   // 1. Add text context FIRST if hybrid mode (TEXT = source of truth)
   if (isHybrid) {
@@ -2315,28 +2327,21 @@ Alasan: OCR dari image bisa salah baca.
 Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan syarat & ketentuan yang terlihat.`
   });
 
-  // 3. Add image
+  // 3. Add image block (Anthropic native format)
   contentParts.push({
-    type: "image_url",
-    image_url: {
-      url: base64Image,
-      detail: "high" // High detail untuk baca tabel/angka kecil
-    }
+    type: "image",
+    source: {
+      type: "base64",
+      media_type: mediaType,
+      data: pureBase64,
+    },
   });
 
-  // Image extraction via Anthropic — vision not supported by current proxy
-  // Fallback: use extractText from content parts as text-only extraction
-  // Note: Claude vision support can be added to ai-proxy if needed
-  const textOnlyContent = contentParts
-    .filter((p: any) => p.type === 'text')
-    .map((p: any) => p.text)
-    .join('\n\n');
-
+  // Send text + image together as messages[0].content array (Anthropic multimodal)
   const aiResponse = await callAI({
     type: 'extract',
-    system: textOnlyContent,
     messages: [
-      { role: 'user', content: 'Ekstrak informasi promo dari screenshot/konten yang diberikan.' },
+      { role: 'user', content: contentParts },
     ],
     temperature: 0.1,
   });
