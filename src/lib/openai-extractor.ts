@@ -2387,7 +2387,18 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
   // Parse JSON dari response
   try {
     const rawParsedImage = extractJsonFromResponse(resultText);
-    const parsed = rawParsedImage as ExtractedPromo;
+    let parsed: ExtractedPromo;
+    if (rawParsedImage && typeof rawParsedImage === 'object' && 'legacy_flat' in (rawParsedImage as object)) {
+      const dualOut = rawParsedImage as { legacy_flat: Record<string, unknown>; mechanics?: unknown[] };
+      parsed = dualOut.legacy_flat as unknown as ExtractedPromo;
+      if (dualOut.mechanics && Array.isArray(dualOut.mechanics) && dualOut.mechanics.length > 0) {
+        (parsed as any)._mechanics_v31 = dualOut.mechanics;
+        (parsed as any)._mechanics_source = 'llm_image_extraction';
+      }
+      console.log('[IMAGE-DUAL-UNWRAP] legacy_flat unwrapped, promo_name:', parsed.promo_name);
+    } else {
+      parsed = rawParsedImage as ExtractedPromo;
+    }
     parsed.raw_content = "[Image extraction]";
     parsed.ready_to_commit = false;
     
