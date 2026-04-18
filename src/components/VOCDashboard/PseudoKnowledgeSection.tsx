@@ -121,6 +121,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // Extraction state  
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
   // Memoized mapped preview (single source of truth for badge + commit)
   const mappedPreview = useMemo<PromoFormData | null>(() => {
     if (!extractedPromo) return null;
@@ -222,6 +223,20 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       }, 100);
     }
   }, [extractedPromo, isExtracting]);
+
+  // Extraction timer — UI only, ticks while isExtracting=true
+  useEffect(() => {
+    if (!isExtracting) {
+      setExtractionElapsedMs(0);
+      return;
+    }
+    const startedAt = Date.now();
+    setExtractionElapsedMs(0);
+    const interval = setInterval(() => {
+      setExtractionElapsedMs(Date.now() - startedAt);
+    }, 100);
+    return () => clearInterval(interval);
+  }, [isExtracting]);
 
   // ============================================
   // IMAGE UPLOAD HANDLERS
@@ -1693,10 +1708,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 <Loader2 className="w-6 h-6 animate-spin text-button-hover" />
                 <span className="text-foreground font-medium">Mengekstrak promo...</span>
               </div>
-              <Badge variant="outline" className="bg-success/10 text-success border-success/30">
-                <span className="w-2 h-2 rounded-full bg-success mr-2" />
-                VOC AI Knowledge
-              </Badge>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-sm tabular-nums text-muted-foreground">
+                  {`${String(Math.floor(extractionElapsedMs / 60000)).padStart(2, '0')}:${String(Math.floor((extractionElapsedMs % 60000) / 1000)).padStart(2, '0')}.${String(Math.floor((extractionElapsedMs % 1000) / 100))}`}
+                </span>
+                <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                  <span className="w-2 h-2 rounded-full bg-success mr-2" />
+                  VOC AI Knowledge
+                </Badge>
+              </div>
             </div>
           )}
 
