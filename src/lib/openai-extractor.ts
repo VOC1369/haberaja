@@ -2390,7 +2390,7 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     let parsed: ExtractedPromo;
     if (rawParsedImage && typeof rawParsedImage === 'object' && 'legacy_flat' in (rawParsedImage as object)) {
       const dualOut = rawParsedImage as { legacy_flat: Record<string, unknown>; mechanics?: unknown[] };
-      parsed = dualOut.legacy_flat as ExtractedPromo;
+      parsed = dualOut.legacy_flat as unknown as ExtractedPromo;
       if (dualOut.mechanics && Array.isArray(dualOut.mechanics) && dualOut.mechanics.length > 0) {
         (parsed as any)._mechanics_v31 = dualOut.mechanics;
         (parsed as any)._mechanics_source = 'llm_image_extraction';
