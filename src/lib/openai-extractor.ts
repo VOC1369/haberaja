@@ -2378,6 +2378,10 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     temperature: 0.1,
   });
 
+  console.log('[IMAGE-RAW-RESPONSE]', typeof aiResponse === 'string'
+    ? aiResponse.substring(0, 800)
+    : JSON.stringify(aiResponse).substring(0, 800));
+
   const resultText = extractText(aiResponse);
 
   // Parse JSON dari response
