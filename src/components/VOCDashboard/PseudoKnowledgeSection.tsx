@@ -1139,7 +1139,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             {/* Row 1: Title + Status Badge (right-aligned) */}
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-semibold text-foreground">
-                {extractedPromo.promo_name || "Promo Tanpa Nama"}
+                {extractedPromo.promo_name || mappedPreview?.promo_name || "Promo Tanpa Nama"}
               </h3>
               <Badge variant="outline" className={getStatusBadgeStyle(status)}>
                 {status === 'ready' && <CheckCircle2 className="w-3 h-3 mr-1" />}

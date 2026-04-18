@@ -2351,6 +2351,9 @@ Contoh: TEXT "5% dari Winlose" vs IMAGE tabel "(Winlose - Commission - Cashback 
 Karena ini IMAGE-ONLY, SEMUA field numerik WAJIB menggunakan:
 - confidence: "derived" (BUKAN "explicit")
 Alasan: OCR dari image bisa salah baca.
+
+📌 PROMO NAME EXTRACTION (WAJIB):
+Identifikasi judul atau nama promo dari elemen visual yang paling prominent — bisa dari header teks besar, banner title, atau teks utama gambar. Isi di field promo_name. Jangan kosongkan field ini.
 `}
 
 Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan syarat & ketentuan yang terlihat.`
