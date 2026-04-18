@@ -2058,6 +2058,10 @@ DILARANG KERAS:
 6. distribution → kapan dan bagaimana reward cair
 7. claim        → cara claim, platform, proof requirement
 8. control      → turnover rule, anti-fraud, kombinasi promo
+9. invalidator  → kondisi yang membatalkan promo/reward
+10. dependency  → hubungan kondisional antar mechanic
+
+JANGAN TAMBAH primitive baru. Kalau tidak bisa direpresentasikan → periksa dependency.
 
 ═══════════════════════════════════════════════════════════════
 CANONICAL_PROJECTION — WAJIB DIISI DARI MECHANICS
@@ -2078,10 +2082,6 @@ Setelah mechanics[] selesai, derive canonical_projection langsung dari mechanics
 - proof_required → dari m_claim_1.data.proof_required
 
 ATURAN KERAS: DILARANG isi canonical_projection dengan string kosong "". Kalau data tidak tersedia di mechanics → null, bukan "".
-9. invalidator  → kondisi yang membatalkan promo/reward
-10. dependency  → hubungan kondisional antar mechanic
-
-JANGAN TAMBAH primitive baru. Kalau tidak bisa direpresentasikan → periksa dependency.
 
 ═══════════════════════════════════════════════════════════════
 ATURAN WAJIB
