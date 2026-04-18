@@ -1709,8 +1709,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 <span className="text-foreground font-medium">Mengekstrak promo...</span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-sm tabular-nums text-muted-foreground">
-                  {`${String(Math.floor(extractionElapsedMs / 60000)).padStart(2, '0')}:${String(Math.floor((extractionElapsedMs % 60000) / 1000)).padStart(2, '0')}.${String(Math.floor((extractionElapsedMs % 1000) / 100))}`}
+                <span className="font-mono text-base font-semibold tabular-nums text-foreground bg-muted/50 px-3 py-1 rounded-md border border-border">
+                  ⏱ {`${String(Math.floor(extractionElapsedMs / 60000)).padStart(2, '0')}:${String(Math.floor((extractionElapsedMs % 60000) / 1000)).padStart(2, '0')}.${String(Math.floor((extractionElapsedMs % 1000) / 100))}`}
                 </span>
                 <Badge variant="outline" className="bg-success/10 text-success border-success/30">
                   <span className="w-2 h-2 rounded-full bg-success mr-2" />
