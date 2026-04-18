@@ -75,15 +75,23 @@ RULES:
 
 ⚠️ CRITICAL: ROLLINGAN/CASHBACK FIELD MAPPING:
 Untuk promo tipe "cashback" atau "rebate" (Rollingan):
-- "Minimal turnover 1.000.000" → turnover_rule: "min 1000000" (BUKAN minimum_base!)
-- "Min TO 500rb" → turnover_rule: "min 500000" (BUKAN minimum_base!)
+- "Minimal turnover 1.000.000" → WAJIB isi TIGA field bersamaan:
+    1. turnover_rule: "min 1000000"        (string, untuk legacy display)
+    2. min_calculation: 1000000             (number rupiah, TANPA titik/koma — INI YANG DIBACA UI)
+    3. turnover_rule_format: "min_rupiah"   (penanda format agar UI render sebagai rupiah, bukan multiplier)
+- "Min TO 500rb" → turnover_rule: "min 500000", min_calculation: 500000, turnover_rule_format: "min_rupiah"
 - minimum_base = syarat DEPOSIT, turnover_rule = syarat TURNOVER/LOSE
 - Rollingan/Cashback biasanya TIDAK PUNYA min deposit, hanya min turnover!
 
+CONTOH OUTPUT BENAR untuk Rollingan dengan "Minimal turnover 1jt":
+  "turnover_rule": "min 1000000",
+  "min_calculation": 1000000,
+  "turnover_rule_format": "min_rupiah"
+
 JANGAN BINGUNG:
 - "Minimal deposit" → minimum_base ✅
-- "Minimal turnover" → turnover_rule ✅ (BUKAN minimum_base!)
-- "Syarat TO" → turnover_rule ✅
+- "Minimal turnover" → turnover_rule + min_calculation + turnover_rule_format ✅ (BUKAN minimum_base!)
+- "Syarat TO" → turnover_rule + min_calculation + turnover_rule_format ✅
 
 ⚠️ ATURAN JENIS HADIAH (reward_type) — CRITICAL:
 
