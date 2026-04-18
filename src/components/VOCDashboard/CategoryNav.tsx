@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Database, BookOpen, Settings, Shield, LogOut, LucideIcon, HelpCircle, ChevronDown, Ticket, MessageCircle, Bug } from "lucide-react";
-import { IS_DEV_MODE } from "@/lib/config/openai.dev";
+import { IS_DEV_MODE } from "@/lib/config/dev-mode";
 import { useNavigate } from "react-router-dom";
 import predictoLogo from "@/assets/predicto-logo.svg";
 import {

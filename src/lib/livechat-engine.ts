@@ -3,8 +3,14 @@
  * Dev-only chat engine using APBE persona + Promo KB data
  */
 
-import { getOpenAIKey, IS_DEV_MODE } from './config/openai.dev';
 import { compileRuntimePrompt } from './apbe-prompt-template';
+import { callAI, extractText } from './ai-client';
+import { IS_DEV_MODE } from './config/dev-mode';
+
+// AI Proxy URL (Supabase Edge Function — Claude Sonnet 4.5)
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const AI_PROXY_URL = `${SUPABASE_URL}/functions/v1/ai-proxy`;
 import { loadInitialConfig } from './apbe-storage';
 import { promoKB } from './promo-storage';
 import { getPayloadContract } from './extractors/promo-taxonomy';
@@ -434,25 +440,29 @@ export async function streamChat(
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Stream from Claude Sonnet 4.5 via Supabase ai-proxy (SSE passthrough)
+    const response = await fetch(AI_PROXY_URL, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${getOpenAIKey()}`,
         'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messages,
-        ],
+        type: 'chat',
+        system: systemPrompt,
+        messages: messages.map(m => ({
+          role: m.role === 'assistant' ? 'assistant' : 'user',
+          content: m.content,
+        })),
+        temperature: 0.7,
         stream: true,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      onError(`OpenAI API error: ${response.status} - ${errorText}`);
+      onError(`AI proxy error: ${response.status} - ${errorText}`);
       return;
     }
 
@@ -466,31 +476,38 @@ export async function streamChat(
     let buffer = '';
     let fullResponse = '';
 
+    // Anthropic SSE format:
+    //   event: content_block_delta
+    //   data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"..."}}
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      
+
       buffer += decoder.decode(value, { stream: true });
-      
+
       let newlineIndex: number;
       while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
         let line = buffer.slice(0, newlineIndex);
         buffer = buffer.slice(newlineIndex + 1);
-        
+
         if (line.endsWith('\r')) line = line.slice(0, -1);
         if (line.startsWith(':') || line.trim() === '') continue;
+        if (line.startsWith('event:')) continue;
         if (!line.startsWith('data: ')) continue;
-        
+
         const jsonStr = line.slice(6).trim();
         if (jsonStr === '[DONE]') break;
-        
+
         try {
           const parsed = JSON.parse(jsonStr);
-          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
-          if (content) {
-            fullResponse += content;
-            onDelta(content);
+          if (parsed.type === 'content_block_delta') {
+            const text = parsed.delta?.text as string | undefined;
+            if (text) {
+              fullResponse += text;
+              onDelta(text);
+            }
           }
+          // Other event types (message_start, message_delta, message_stop, ping) ignored
         } catch {
           buffer = line + '\n' + buffer;
           break;
@@ -617,24 +634,13 @@ Jawab HANYA dalam format JSON valid (tanpa markdown, tanpa backtick):
   "fieldsReferenced": ["deskripsi field/FAQ/rule yang dirujuk"]
 }`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getOpenAIKey()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: reasoningPrompt }],
-        temperature: 0.1,
-        max_tokens: 500,
-      }),
+    // Reasoning call via Claude Sonnet 4.5 (ai-proxy)
+    const aiResponse = await callAI({
+      type: 'intent',
+      messages: [{ role: 'user', content: reasoningPrompt }],
+      temperature: 0.1,
     });
-
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-
-    const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content || '';
+    const rawContent = extractText(aiResponse) || '';
     
     // Parse JSON from response (handle possible markdown wrapping)
     let jsonStr = rawContent.trim();
