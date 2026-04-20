@@ -70,6 +70,18 @@ serve(async (req) => {
         );
       }
 
+      // Server overloaded (529) atau 5xx upstream → transient, retryable
+      if (response.status === 529 || errorType === "overloaded_error" || response.status >= 500) {
+        return new Response(
+          JSON.stringify({
+            error: "OVERLOADED",
+            message: "Server Anthropic sedang overload. Coba lagi sebentar.",
+            upstream_status: response.status,
+          }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       throw new Error(`Anthropic error: ${response.status} ${JSON.stringify(errorBody)}`);
     }
 
