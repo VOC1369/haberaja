@@ -113,3 +113,8 @@ Status: PENDING — tidak dikerjakan sekarang.
 2. Verify Form Wizard → Supabase flow
 3. Fix promo_summary (selalu null)
 4. Wire validation engine ke Publish button
+5. Multiple image attachment support di Pseudo Knowledge
+   - Saat ini hanya support 1 image + 1 text
+   - Dibutuhkan untuk promo kompleks (referral multi-halaman, promo dengan banyak banner)
+   - Referensi: Claude chat UI yang support multiple file attachment
+   - Approach: queue multiple images, process sequentially atau concatenate sebagai multi-part content
