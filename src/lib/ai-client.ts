@@ -64,6 +64,12 @@ export async function callAI({ type, messages, system = undefined, temperature =
       throw new AIRateLimitError(msg);
     }
 
+    if (response.status === 503 || body?.error === "OVERLOADED") {
+      const msg = body?.message ?? "Server Anthropic sedang overload. Coba lagi sebentar.";
+      toast.error("🔄 Server Overload", { description: msg });
+      throw new AIOverloadedError(msg);
+    }
+
     const err = body?.error ?? response.statusText;
     throw new Error(`AI proxy error: ${response.status} ${err}`);
   }
