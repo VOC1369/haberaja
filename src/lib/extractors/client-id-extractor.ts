@@ -10,7 +10,7 @@
  * IMPORTANT: Never guess. If uncertain, return unknown.
  */
 
-import type { ConfidenceLevel } from '../openai-extractor';
+import type { ConfidenceLevel } from '../voc-wolf-extractor';
 
 /**
  * Ensure regex has global flag for matchAll compatibility

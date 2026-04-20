@@ -7,7 +7,7 @@
  * Better reject 10 commands daripada salah execute 1 mutation.
  */
 
-import type { ExtractedPromo, ExtractedPromoSubCategory } from '@/lib/openai-extractor';
+import type { ExtractedPromo, ExtractedPromoSubCategory } from '@/lib/voc-wolf-extractor';
 
 // ============================================
 // COMMAND PATTERNS (EXACT MATCH ONLY)

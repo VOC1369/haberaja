@@ -11,7 +11,7 @@
  * - ambiguous: S&K has blacklist but for different provider
  */
 
-import type { ConfidenceLevel } from '../openai-extractor';
+import type { ConfidenceLevel } from '../voc-wolf-extractor';
 
 export type BlacklistConfidence = 'explicit' | 'derived' | 'ambiguous' | 'none';
 

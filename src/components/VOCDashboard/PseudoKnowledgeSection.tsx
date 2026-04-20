@@ -56,7 +56,7 @@ import {
   type ClassificationConfidence,
   type QAnswer,
   type QualityFlag,
-} from "@/lib/openai-extractor";
+} from "@/lib/voc-wolf-extractor";
 import { promoKB, localDraftKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
 import { formatPromoType, getPromoSubTypeDisplay } from "@/lib/utils";
