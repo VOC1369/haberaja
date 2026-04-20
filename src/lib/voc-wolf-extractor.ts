@@ -1926,6 +1926,8 @@ FORMAT OUTPUT (PHASE 7 - UPDATED WITH MODE + TIER DIMENSION + FORMULA):
 {
   "promo_name": "nama promo utama",
   "promo_type": "Welcome Bonus|Deposit Bonus|Withdraw Bonus|Cashback|Rollingan|Referral Bonus|Event Level Up|Mini Game|Freechip|Loyalty Point|Merchandise|Campaign Informational|Birthday Bonus",
+  "client_id": "Kode unik brand/operator dari konten promo (contoh: CITRA77, LAUTAN77, WG77). Ambil dari nama brand yang paling sering muncul atau dari header/watermark promo. Lowercase, tanpa spasi.|null",
+  "client_name": "Nama display brand seperti yang tertulis di konten promo (contoh: CITRA77, Lautan77). Boleh mixed case.|null",
   "target_user": "new_member|all|vip",
   "promo_mode": "single|multi",
   "mode": "fixed|formula|tier",
@@ -5514,8 +5516,8 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   const promoData: PromoFormData = {
     // Step 1 - Identitas (with exact enum value mappings)
     // ✅ Apply keyword-based overrides for promo_type, trigger_event
-    client_id: extracted.client_id || '',  // Auto-detected from content
-    client_name: extracted.client_id || '', // Nama Brand = client_id jika tidak ada sumber lain
+    client_id: (extracted.client_id || '').toLowerCase().replace(/\s+/g, ''),  // Auto-detected, normalized lowercase + no spaces
+    client_name: (extracted as any).client_name || extracted.client_id || '', // Nama Brand: prefer dedicated client_name, fallback ke client_id
     promo_name: extracted.promo_name || 'Promo Baru',
     promo_type: (() => {
       // Priority 1: Keyword-based override (Birthday, Lucky Spin, etc.)

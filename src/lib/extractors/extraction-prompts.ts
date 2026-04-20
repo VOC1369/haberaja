@@ -189,7 +189,8 @@ mode: Tentukan berdasarkan STRUKTUR MEKANIK promo, BUKAN namanya.
 {
   "promo_name": "nama promo",
   "promo_type": "welcome_bonus" | "deposit_bonus" | "cashback" | "rebate" | "reload_bonus" | "other",
-  "client_id": "ID client jika disebutkan" | null,
+  "client_id": "Kode unik brand/operator jika disebutkan, biasanya huruf kapital seperti CITRA77, LAUTAN77, WG77" | null,
+  "client_name": "Nama display brand yang muncul di konten promo, bisa sama atau berbeda dengan client_id" | null,
   "target_user": "new_member" | "existing_member" | "vip" | "all",
 
   "mode": "fixed" | "formula" | "tier",
@@ -484,7 +485,8 @@ min_deposit adalah ANGKA (number), bukan string.
 {
   "promo_name": "nama event",
   "promo_type": "lucky_draw" | "tournament" | "race" | "leaderboard" | "spin_wheel" | "level_up" | "other",
-  "client_id": "ID client jika disebutkan" | null,
+  "client_id": "Kode unik brand/operator jika disebutkan, biasanya huruf kapital seperti CITRA77, LAUTAN77, WG77" | null,
+  "client_name": "Nama display brand yang muncul di konten promo, bisa sama atau berbeda dengan client_id" | null,
   "target_user": "new_member" | "existing_member" | "vip" | "all",
   
   "valid_from": "YYYY-MM-DD" | null,
@@ -685,7 +687,8 @@ Jika tidak ada provider spesifik → eligible_providers: []
 {
   "promo_name": "nama kebijakan/sistem",
   "promo_type": "deposit_policy" | "withdrawal_policy" | "loyalty_program" | "betting_restriction" | "account_policy" | "other",
-  "client_id": "ID client jika disebutkan" | null,
+  "client_id": "Kode unik brand/operator jika disebutkan, biasanya huruf kapital seperti CITRA77, LAUTAN77, WG77" | null,
+  "client_name": "Nama display brand yang muncul di konten promo, bisa sama atau berbeda dengan client_id" | null,
   
   "deposit_method": "metode deposit" | null,
   "accepted_providers": ["provider 1", ...] | null,
