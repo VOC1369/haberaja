@@ -30,10 +30,11 @@ RESOLVED:
 - File bernama openai-extractor.ts → RENAMED ke voc-wolf-extractor.ts
 - Min Turnover kosong untuk image extraction → FIXED (session Apr 20)
 - promo_risk_level hardcoded 'medium' → FIXED (session Apr 20)
+- promo_summary selalu null → FIXED (session Apr 20)
+- primary_claim_method null untuk referral → FIXED (session Apr 20)
 
 REMAINING MINOR:
 
-- promo_summary selalu null (LLM belum generate meskipun instruksi ada)
 - target_segment: "all" harusnya "Semua" (konsistensi bahasa)
 - meta field tidak ada di raw extraction (schema_version, human_verified)
 
@@ -101,6 +102,12 @@ Status: PENDING — tidak dikerjakan sekarang.
     - Function deriveRiskLevel() — HIGH→MEDIUM→LOW→NO logic
     - Hardcoded 'medium' dihapus dari seluruh codebase
     - Override: derivation hanya jalan jika field kosong/null
+13. generatePromoSummary() extended untuk referral tier
+    - PromoSummaryContext interface ditambahkan (tier_archetype, promo_type, subcategories)
+    - Referral branch: format "5% – 15%" dari subcategories[]
+    - Aggregate min downline + verifikasi flag dari claim mechanic
+    - 14/14 tests pass (4 referral tests baru ditambahkan)
+    - Wired ke deriveCanonicalProjection() sebagai fallback ketika parsed.promo_summary kosong
 
 ### Verified Working (tested dengan real promo)
 
