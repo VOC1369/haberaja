@@ -32,6 +32,7 @@ RESOLVED:
 - promo_risk_level hardcoded 'medium' → FIXED (session Apr 20)
 - promo_summary selalu null → FIXED (session Apr 20)
 - primary_claim_method null untuk referral → FIXED (session Apr 20)
+- promo_summary kosong di Form Wizard canonical → FIXED (session Apr 20)
 
 REMAINING MINOR:
 
@@ -44,15 +45,16 @@ PENDING MAJOR:
 - Form Wizard → Supabase flow belum diverifikasi end-to-end
 - Validation engine belum di-wire ke Publish button
 
-CANONICAL PROJECTION GAPS (ditemukan Apr 20, audit lengkap):
+CANONICAL PROJECTION GAPS (updated Apr 20):
 
 - main_reward_percent: tidak tier-aware, ambil calculation pertama saja
   Fix: iterate subcategories[] → format "min% – max%"
 - primary_claim_method / primary_claim_platform: kosong di referral
-  Fix A: render tier_claim_mode di referral branch Step3Reward
-  Fix B: tambah "dashboard" ke enum claim_platform
-- promo_summary: generatePromoSummary() tier-blind, tidak kenal referral
-  Fix: extend function signature + subcategories[] + referral branch
+  Root cause: tidak ada UI field untuk claim_method di referral branch Step3Reward
+  Fix: tambah UI field + wire ke canonical (next session)
+- promo_risk_level di Form Wizard canonical = "medium" hardcoded
+  Root cause: toV31Row tidak pakai deriveRiskLevel()
+  Perlu audit apakah promo_risk_level dari extracted data ter-carry ke PromoFormData
 - promo_summary tidak ada di UI Step 4 untuk review/edit
 
 ## Decisions Locked
@@ -108,6 +110,14 @@ Status: PENDING — tidak dikerjakan sekarang.
     - Aggregate min downline + verifikasi flag dari claim mechanic
     - 14/14 tests pass (4 referral tests baru ditambahkan)
     - Wired ke deriveCanonicalProjection() sebagai fallback ketika parsed.promo_summary kosong
+19. promo_summary fix di buildCanonicalProjectionFromMechanics()
+    - Root cause: buildCanonicalPayload() adalah dead code untuk Form Wizard
+    - Real path: toV31Row → buildCanonicalProjectionFromMechanics (promo-storage.ts)
+    - Fix: import generatePromoSummary + 3-priority fallback chain
+    - Priority 1: p.promo_summary jika ada
+    - Priority 2: generate dari referral_tiers[] untuk referral
+    - Priority 3: generate dari subcategories[] untuk non-referral
+    - buildCanonicalPayload() di types.ts ditandai @deprecated
 
 ### Verified Working (tested dengan real promo)
 
@@ -129,7 +139,7 @@ Status: PENDING — tidak dikerjakan sekarang.
 
 1. Test hybrid extraction dengan referral tier promo
 2. Verify Form Wizard → Supabase flow
-3. Fix promo_summary (selalu null)
+3. Fix primary_claim_method/platform untuk referral (UI field di Step3Reward)
 4. Wire validation engine ke Publish button
 5. Multiple image attachment support di Pseudo Knowledge
    - Saat ini hanya support 1 image + 1 text
