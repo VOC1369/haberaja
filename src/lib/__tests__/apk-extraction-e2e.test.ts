@@ -181,7 +181,7 @@ describe('APK Download Extraction E2E', () => {
       expect(routerResult.locked_fields.mode).toBe('event');
       expect(routerResult.locked_fields.calculation_basis).toBeNull();
       
-      // Step 2: Create mock form data (simulating openai-extractor output)
+      // Step 2: Create mock form data (simulating voc-wolf-extractor output)
       const mockFormData = {
         promo_name: 'Download APK Dapat Freechip',
         reward_mode: routerResult.locked_fields.mode,

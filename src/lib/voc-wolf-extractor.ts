@@ -2284,6 +2284,46 @@ function forceConfidenceDowngradeForImage(promo: ExtractedPromo): ExtractedPromo
  * @param base64Image - Base64 encoded image (boleh dengan/atau tanpa data URL prefix)
  * @param textContext - Optional text context (S&K) for hybrid extraction
  */
+
+/**
+ * Derive canonical_projection from _mechanics_v31 array.
+ * Mutates `parsed` in place. No-op if mechanics array missing/empty.
+ *
+ * Surfaces a flat, UI-friendly summary of the 10 mechanic primitives
+ * for downstream consumers (preview cards, deterministic summaries).
+ */
+const deriveCanonicalProjection = (parsed: any): void => {
+  if (!parsed._mechanics_v31 || !Array.isArray(parsed._mechanics_v31) || parsed._mechanics_v31.length === 0) return;
+
+  const mechanics = parsed._mechanics_v31 as any[];
+  const trigger = mechanics.find(m => m.mechanic_type === 'trigger');
+  const calculation = mechanics.find(m => m.mechanic_type === 'calculation');
+  const reward = mechanics.find(m => m.mechanic_type === 'reward');
+  const control = mechanics.find(m => m.mechanic_type === 'control');
+  const claim = mechanics.find(m => m.mechanic_type === 'claim');
+
+  parsed.canonical_projection = {
+    promo_summary: parsed.promo_summary || null,
+    main_trigger: trigger?.data?.trigger_event || null,
+    main_reward_form: reward?.data?.reward_type || null,
+    main_reward_percent: calculation?.data?.percentage || null,
+    max_bonus: control?.data?.max_bonus_cap || null,
+    payout_direction: calculation?.data?.payout_direction || null,
+    turnover_multiplier: control?.data?.turnover_requirement || null,
+    turnover_basis: control?.data?.turnover_basis || null,
+    primary_claim_method: claim?.data?.claim_method || null,
+    primary_claim_platform: claim?.data?.claim_channels?.[0] || null,
+    proof_required: claim?.data?.proof_required ?? false,
+    stateful: mechanics.some(m => m.mechanic_type === 'state'),
+    game_scope: parsed.game_scope || null,
+    game_types: parsed.subcategories?.[0]?.game_types || [],
+    game_providers: parsed.subcategories?.[0]?.game_providers || [],
+    game_exclusions: [],
+    intent_category: parsed.intent_category || null,
+    target_segment: parsed.target_user || 'Semua'
+  };
+};
+
 export async function extractPromoFromImage(
   base64Image: string,
   textContext?: string
@@ -2399,6 +2439,15 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
     } else {
       parsed = rawParsedImage as ExtractedPromo;
     }
+
+    // Derive canonical_projection from mechanics[] (Fix #1)
+    deriveCanonicalProjection(parsed);
+
+    // Expose mechanics as official field, retain _mechanics_v31 for backward compat (Fix #2)
+    if ((parsed as any)._mechanics_v31) {
+      (parsed as any).mechanics = (parsed as any)._mechanics_v31;
+    }
+
     parsed.raw_content = "[Image extraction]";
     parsed.ready_to_commit = false;
     
@@ -2833,6 +2882,14 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     const parsed = flatData as unknown as ExtractedPromo;
     // Attach mechanics_v31 for downstream storage (promo-storage.ts toV31Row picks this up)
     (parsed as any)._mechanics_v31 = mechanicsV31;
+
+    // Derive canonical_projection from mechanics[] (Fix #1)
+    deriveCanonicalProjection(parsed);
+
+    // Expose mechanics as official field, retain _mechanics_v31 for backward compat (Fix #2)
+    if ((parsed as any)._mechanics_v31) {
+      (parsed as any).mechanics = (parsed as any)._mechanics_v31;
+    }
 
     parsed.raw_content = content.substring(0, 1000);
     parsed.source_url = sourceUrl;
