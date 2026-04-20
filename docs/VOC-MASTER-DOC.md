@@ -63,3 +63,41 @@ Status: PENDING — tidak dikerjakan sekarang.
 2. Rename _mechanics_v31 → mechanics di raw extraction output (Copy JSON)
 3. Form Wizard → Supabase flow verification
 4. Validation engine wire ke Publish button
+
+## Session Progress (April 20, 2026)
+
+### Fixes Completed Today
+
+1. Vision fix — image extraction pakai Anthropic native format (bukan OpenAI image_url)
+2. Dual envelope unwrap di image path — semua field dari legacy_flat sekarang ter-extract
+3. Opening prompt → reasoning-first (analis iGaming berpengalaman, bukan rule engine)
+4. Hybrid conflict rule → 3-layer (LAYER 1: TEXT, LAYER 2: IMAGE, LAYER 3: AMBIGUITY)
+5. Canonical projection instruksi di EXTRACTION_PROMPT
+6. Min Turnover field mapping untuk Rollingan (turnover_rule_format: min_rupiah + min_calculation)
+7. promo_name fallback chain di UI
+8. deriveCanonicalProjection() — generate canonical_projection dari mechanics[]
+9. mechanics field resmi di-expose di output (sebelumnya hanya _mechanics_v31)
+10. File renamed: openai-extractor.ts → voc-wolf-extractor.ts
+
+### Verified Working (tested dengan real promo)
+
+- Image extraction: Rollingan SLOT 0.5% ✅
+- Text extraction: Rollingan SLOT 0.5% ✅
+- canonical_projection ter-populate dari mechanics ✅
+- mechanics[] dan _mechanics_v31 keduanya ada di output ✅
+- promo_name ter-extract dari image ✅
+- Min Turnover ter-extract dari image ✅
+- ambiguity flagging bekerja (m_claim_1 ambiguity: true dengan reason) ✅
+
+### Not Yet Tested
+
+- Hybrid extraction (text + image sekaligus)
+- Referral tier promo (multi-tier formula)
+- Form Wizard → Supabase end-to-end flow
+
+### Next Session Priority
+
+1. Test hybrid extraction dengan referral tier promo
+2. Verify Form Wizard → Supabase flow
+3. Fix promo_summary (selalu null)
+4. Wire validation engine ke Publish button
