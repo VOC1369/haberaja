@@ -2450,6 +2450,16 @@ Ekstrak informasi promo dari screenshot berikut. Perhatikan tabel, angka, dan sy
       parsed = rawParsedImage as ExtractedPromo;
     }
 
+    // [TEMP AUDIT LOG] Confirm mechanic_type values from LLM before derive
+    console.log('[RAW-MECHANICS-TYPES]',
+      ((parsed as any)._mechanics_v31 || []).map((m: any) => ({
+        id: m.mechanic_id,
+        type: m.mechanic_type,
+        claim_method: m.data?.claim_method,
+        claim_channels: m.data?.claim_channels,
+      }))
+    );
+
     // Derive canonical_projection from mechanics[] (Fix #1)
     deriveCanonicalProjection(parsed);
 
@@ -2892,6 +2902,16 @@ Field yang TERKUNCI akan di-override oleh sistem setelah extraction.`;
     const parsed = flatData as unknown as ExtractedPromo;
     // Attach mechanics_v31 for downstream storage (promo-storage.ts toV31Row picks this up)
     (parsed as any)._mechanics_v31 = mechanicsV31;
+
+    // [TEMP AUDIT LOG] Confirm mechanic_type values from LLM before derive
+    console.log('[RAW-MECHANICS-TYPES]',
+      ((parsed as any)._mechanics_v31 || []).map((m: any) => ({
+        id: m.mechanic_id,
+        type: m.mechanic_type,
+        claim_method: m.data?.claim_method,
+        claim_channels: m.data?.claim_channels,
+      }))
+    );
 
     // Derive canonical_projection from mechanics[] (Fix #1)
     deriveCanonicalProjection(parsed);
