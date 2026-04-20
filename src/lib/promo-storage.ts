@@ -544,7 +544,7 @@ function buildCanonicalProjectionFromMechanics(
             sub_name: t.tier_label,
           })),
         };
-        const generated = generatePromoSummary(mechanics, ctx);
+        const generated = generatePromoSummary(mechanics as any, ctx);
         if (generated) return generated;
       }
 
@@ -558,7 +558,7 @@ function buildCanonicalProjectionFromMechanics(
             sub_name: s.sub_name || s.name,
           })),
         };
-        const generated = generatePromoSummary(mechanics, ctx);
+        const generated = generatePromoSummary(mechanics as any, ctx);
         if (generated) return generated;
       }
 
