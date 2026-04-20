@@ -151,7 +151,7 @@ export interface PromoV31 {
 function defaultAdjudication(): AdjudicationResult {
   return {
     status: 'pending',
-    adjudication_rules_version: 'v1',
+    adjudication_rules_version: 'V.APR.09',
     priority_order: [
       'numeric_value',
       'explicit_formula',
@@ -202,9 +202,9 @@ function defaultQueryHints(): QueryHints {
 
 function defaultMeta(createdBy = 'Admin'): PromoMeta {
   return {
-    schema_version: '3.1',
+    schema_version: 'V.APR.09',
     created_by: createdBy,
-    schema_evolved_from: '2.2',
+    schema_evolved_from: 'V.APR.09',
     human_verified: false,
     overall_extraction_confidence: 0,
   };
@@ -687,7 +687,7 @@ function fromV31Row(row: Record<string, unknown>): PromoItem {
     promo_slug: (row.promo_slug as string) || '',
     source_url: (row.source_url as string) || '',
     promo_summary: cp.promo_summary || '',
-    schema_version: '3.1' as '2.1',
+    schema_version: 'V.APR.09',
     status: ((row.status as string) || 'draft') as 'active' | 'paused' | 'draft' | 'expired',
     is_active: false,
     version: 1,

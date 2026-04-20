@@ -326,7 +326,7 @@ export const MODE_DISPLAY: Record<CanonicalMode, string> = {
 // VERSION
 // ============================================
 
-export const PRIMITIVE_GATE_VERSION = 'v1.2.1+2025-01-14 (FROZEN)';
+export const PRIMITIVE_GATE_VERSION = 'V.APR.09';
 
 // ============================================
 // DECISION TRACE LOGGING (Dev Only)

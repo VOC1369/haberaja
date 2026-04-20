@@ -67,7 +67,7 @@ export interface CanonicalSubCategory {
  * This is the OUTPUT schema for storage/export/API
  */
 export interface CanonicalPromoKB {
-  schema_version: '2.1' | '2.2';
+  schema_version: '2.1' | '2.2' | 'V.APR.09';
 
   // ===============================
   // CORE IDENTITY
@@ -294,7 +294,7 @@ export function consolidateGameExclusions(
  * Inert value for CanonicalPromoKB (empty/null baseline)
  */
 export const CANONICAL_INERT: CanonicalPromoKB = {
-  schema_version: '2.1',
+  schema_version: 'V.APR.09',
   
   // Core Identity
   client_id: '',

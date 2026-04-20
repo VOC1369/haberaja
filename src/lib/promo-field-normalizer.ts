@@ -178,9 +178,9 @@ export function normalizeToStandard<T extends Partial<PromoFormData>>(data: T): 
 function applyCanonicalMigrations(data: Record<string, unknown>): Record<string, unknown> {
   const migrated = { ...data };
   
-  // 3.1: Set schema_version if not present
+  // V.APR.09: Set schema_version if not present
   if (!migrated.schema_version) {
-    migrated.schema_version = '2.1';
+    migrated.schema_version = 'V.APR.09';
   }
   
   // 3.2: Migrate turnover_rule (string) → turnover_multiplier (number)
