@@ -593,7 +593,7 @@ export function downloadPrompt(
 // ============================================================
 
 /** Runtime Prompt Template version */
-export const RUNTIME_PROMPT_VERSION = "1.3.0" as const;
+export const RUNTIME_PROMPT_VERSION = "V.APR.09" as const;
 
 /** Channel style mapping (exported for testing/customization) */
 export { CHANNEL_STYLE_MAP, getChannelStyle };

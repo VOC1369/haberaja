@@ -1,5 +1,5 @@
 /**
- * OpenAI Promo Extractor v4.2 — BLACKLIST PARSING FIX
+ * VOC Wolf Extractor V.APR.09
  * 
  * ⛔ MODE DECISION FORBIDDEN HERE
  * This file may NOT assign: mode, reward_mode, category
@@ -2033,7 +2033,7 @@ Catatan khusus Loyalty Point 2 tabel:
 Return HANYA JSON valid tanpa markdown code block.
 
 ═══════════════════════════════════════════════════════════════
-SECTION BARU — MECHANICS OUTPUT v3.1 (DUAL OUTPUT MODE)
+SECTION BARU — MECHANICS OUTPUT V.APR.09 (DUAL OUTPUT MODE)
 ═══════════════════════════════════════════════════════════════
 
 PROSES BERPIKIR WAJIB — IKUTI URUTAN INI:
@@ -2162,7 +2162,7 @@ Kamu WAJIB mengembalikan JSON dengan struktur ini:
     (semua field flat JSON v2.2 seperti biasa - tidak ada yang berubah)
   },
   "mechanics": [
-    (array mechanic primitives v3.1)
+    (array mechanic primitives V.APR.09)
     (KOSONG [] jika tidak ada mechanic yang bisa diidentifikasi)
     (TIDAK BOLEH null atau missing)
   ]
@@ -2321,6 +2321,16 @@ const deriveCanonicalProjection = (parsed: any): void => {
     game_exclusions: [],
     intent_category: parsed.intent_category || null,
     target_segment: parsed.target_user === 'all' ? 'Semua' : (parsed.target_user || 'Semua')
+  };
+
+  // V.APR.09: Inject meta block with version + extractor identity
+  parsed.meta = {
+    schema_version: 'V.APR.09',
+    schema_evolved_from: 'V.APR.09',
+    extractor: 'VOC Wolf Extractor',
+    created_by: 'voc-wolf-extractor',
+    human_verified: false,
+    ...(parsed.meta || {}),
   };
 };
 

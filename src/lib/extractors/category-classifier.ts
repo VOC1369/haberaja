@@ -126,7 +126,7 @@ export interface ClassificationOverride {
 // CONSTANTS
 // ============================================
 
-export const CLASSIFIER_PROMPT_VERSION = 'v2.0.0+2025-01-14-SUPER';
+export const CLASSIFIER_PROMPT_VERSION = 'V.APR.09';
 export const CLASSIFICATION_MODEL = 'gpt-4o-mini';
 
 // ============================================

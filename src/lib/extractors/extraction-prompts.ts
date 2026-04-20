@@ -1,6 +1,6 @@
 /**
  * Category-Specific Extraction Prompts
- * Version: v1.0.0+2025-12-21
+ * Version: V.APR.09
  * 
  * CONTRACT OF TRUTH:
  * - Category is LOCKED by code before extraction
@@ -11,9 +11,9 @@
 import type { ProgramCategory } from './category-classifier';
 
 export const EXTRACTOR_PROMPT_VERSIONS = {
-  A: 'v1.0.0+2025-12-21',
-  B: 'v1.1.0+2025-12-24',  // Added min_deposit field
-  C: 'v1.0.0+2025-12-21',
+  A: 'V.APR.09',
+  B: 'V.APR.09',
+  C: 'V.APR.09',
 } as const;
 
 // ============================================

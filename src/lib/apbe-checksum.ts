@@ -104,4 +104,4 @@ export function validateIntegrity(
 // VERSION
 // ============================================================
 
-export const CHECKSUM_VERSION = "1.2.0" as const;
+export const CHECKSUM_VERSION = "V.APR.09" as const;
