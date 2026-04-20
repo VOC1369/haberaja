@@ -20,6 +20,13 @@ export class AIRateLimitError extends Error {
   }
 }
 
+export class AIOverloadedError extends Error {
+  constructor(message = "Server Anthropic sedang overload.") {
+    super(message);
+    this.name = "AIOverloadedError";
+  }
+}
+
 // Anthropic content blocks: text or image (base64)
 export type AIContentBlock =
   | { type: "text"; text: string }
