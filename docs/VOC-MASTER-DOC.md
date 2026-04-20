@@ -28,6 +28,8 @@ RESOLVED:
 - canonical_projection tidak ter-generate → FIXED
 - mechanics[] tersimpan di _mechanics_v31 → FIXED (sekarang ada di kedua field)
 - File bernama openai-extractor.ts → RENAMED ke voc-wolf-extractor.ts
+- Min Turnover kosong untuk image extraction → FIXED (session Apr 20)
+- promo_risk_level hardcoded 'medium' → FIXED (session Apr 20)
 
 REMAINING MINOR:
 
@@ -80,6 +82,14 @@ Status: PENDING — tidak dikerjakan sekarang.
 8. deriveCanonicalProjection() — generate canonical_projection dari mechanics[]
 9. mechanics field resmi di-expose di output (sebelumnya hanya _mechanics_v31)
 10. File renamed: openai-extractor.ts → voc-wolf-extractor.ts
+11. Mechanic-to-flat sync untuk min_calculation
+    - deriveCanonicalProjection() sekarang sync min_turnover dari m_eligibility.data ke subcategories[0].min_calculation
+    - Guard: hanya jalan jika min_calculation & minimum_base kosong DAN calculation_base = 'turnover'
+    - Lookup chain: 7 field alias untuk handle LLM naming inconsistency
+12. Auto-derive promo_risk_level
+    - Function deriveRiskLevel() — HIGH→MEDIUM→LOW→NO logic
+    - Hardcoded 'medium' dihapus dari seluruh codebase
+    - Override: derivation hanya jalan jika field kosong/null
 
 ### Verified Working (tested dengan real promo)
 
