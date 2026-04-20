@@ -2396,6 +2396,33 @@ const deriveCanonicalProjection = (parsed: any): void => {
   if (!parsed.promo_risk_level || parsed.promo_risk_level === '') {
     parsed.promo_risk_level = deriveRiskLevel(parsed);
   }
+
+  // ── MECHANIC TO FLAT SYNC ─────────────────────────────
+  // Sync min_turnover dari mechanics ke subcategory flat
+  // Diperlukan karena image extraction raw_content = placeholder string
+  // sehingga regex di ROLLINGAN assertion block tidak bisa extract nilai
+  if (parsed.subcategories && Array.isArray(parsed.subcategories)) {
+    const eligibility = mechanics.find(
+      (m: any) => m.mechanic_type === 'eligibility'
+    );
+    const minTurnoverFromMechanics = eligibility?.data?.min_turnover
+      || eligibility?.data?.threshold_amount
+      || eligibility?.data?.minimum_turnover;
+
+    parsed.subcategories.forEach((sub: any) => {
+      // Hanya sync jika sub.min_calculation dan sub.minimum_base keduanya kosong
+      // dan calculation_base adalah turnover (Rollingan/Cashback pattern)
+      if (
+        (!sub.min_calculation || sub.min_calculation === 0)
+        && (!sub.minimum_base || sub.minimum_base === 0)
+        && sub.calculation_base === 'turnover'
+        && minTurnoverFromMechanics
+      ) {
+        sub.min_calculation = minTurnoverFromMechanics;
+        sub.turnover_rule_format = 'min_rupiah';
+      }
+    });
+  }
 };
 
 export async function extractPromoFromImage(
