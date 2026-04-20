@@ -2292,6 +2292,65 @@ function forceConfidenceDowngradeForImage(promo: ExtractedPromo): ExtractedPromo
  * Surfaces a flat, UI-friendly summary of the 10 mechanic primitives
  * for downstream consumers (preview cards, deterministic summaries).
  */
+/**
+ * Auto-derive promo_risk_level from mechanics signals.
+ * Priority: HIGH → MEDIUM → LOW → NO. Highest match wins.
+ * Only invoked when parsed.promo_risk_level is null/undefined/empty.
+ */
+const deriveRiskLevel = (parsed: any): 'no' | 'low' | 'medium' | 'high' => {
+  const mechanics = parsed._mechanics_v31 || [];
+  const claimMechanic = mechanics.find((m: any) => m.mechanic_type === 'claim');
+  const controlMechanic = mechanics.find((m: any) => m.mechanic_type === 'control');
+  const invalidators = mechanics.filter((m: any) => m.mechanic_type === 'invalidator');
+
+  const claimMethod = claimMechanic?.data?.claim_method
+    || parsed.canonical_projection?.primary_claim_method;
+  const proofRequired = claimMechanic?.data?.proof_required
+    || parsed.canonical_projection?.proof_required;
+  const promoType = parsed.promo_type || '';
+  const turnoverReq = controlMechanic?.data?.turnover_requirement;
+  const calculationBase = parsed.subcategories?.[0]?.calculation_base;
+  const hasExclusivity = invalidators.some(
+    (m: any) => m.data?.void_condition === 'other_bonus_active'
+  );
+  const isManualClaim = claimMethod === 'manual'
+    || (Array.isArray(claimMechanic?.data?.claim_channels)
+        && claimMechanic.data.claim_channels.some(
+          (c: string) => ['livechat', 'whatsapp', 'wa'].includes(c.toLowerCase())
+        ));
+
+  // HIGH
+  const isHigh = (isManualClaim && proofRequired)
+    || ['Referral', 'WD Bonus', 'Bonus WD'].some(t => promoType.toLowerCase().includes(t.toLowerCase()))
+    || (isManualClaim && hasExclusivity);
+
+  if (isHigh) return 'high';
+
+  // MEDIUM
+  const isMedium = (promoType.toLowerCase().includes('deposit') && turnoverReq && turnoverReq > 1)
+    || (calculationBase === 'winlose' || calculationBase === 'net_winlose')
+    || (isManualClaim && !proofRequired)
+    || (turnoverReq && turnoverReq > 3);
+
+  if (isMedium) return 'medium';
+
+  // LOW
+  const isLow = (!isManualClaim && !proofRequired)
+    || (turnoverReq && turnoverReq <= 1)
+    || ['Rollingan', 'Cashback'].some(t => promoType.toLowerCase().includes(t.toLowerCase()));
+
+  if (isLow) return 'low';
+
+  // NO RISK
+  const isNo = ['merchandise', 'voucher', 'informasi'].some(
+    t => promoType.toLowerCase().includes(t)
+  ) || parsed.program_classification === 'C';
+
+  if (isNo) return 'no';
+
+  return 'medium'; // ultimate fallback
+};
+
 const deriveCanonicalProjection = (parsed: any): void => {
   if (!parsed._mechanics_v31 || !Array.isArray(parsed._mechanics_v31) || parsed._mechanics_v31.length === 0) return;
 
@@ -2332,6 +2391,11 @@ const deriveCanonicalProjection = (parsed: any): void => {
     human_verified: false,
     ...(parsed.meta || {}),
   };
+
+  // Auto-derive promo_risk_level jika belum ada
+  if (!parsed.promo_risk_level || parsed.promo_risk_level === '') {
+    parsed.promo_risk_level = deriveRiskLevel(parsed);
+  }
 };
 
 export async function extractPromoFromImage(
@@ -6644,7 +6708,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     status: 'draft',
     geo_restriction: 'indonesia',  // Default wilayah Indonesia
     require_apk: lockedFields?.require_apk ?? false,
-    promo_risk_level: 'medium',
+    // promo_risk_level: di-derive oleh deriveRiskLevel() di deriveCanonicalProjection()
 
     // Admin Fee (untuk Referral Bonus)
     admin_fee_enabled: false,
