@@ -6,6 +6,7 @@ import { calculateAllReferralTiers, getDefaultReferralFormulaMetadata } from '@/
 import { sanitizeByMode } from '@/lib/sanitize-by-mode';
 import { CANONICAL_EXPORT_WHITELIST } from '@/lib/canonical-guard';
 import type { CanonicalTierArchetype } from '@/lib/canonical-guard';
+import { generatePromoSummary } from '@/lib/promo-summary-generator';
 // PKB FIELD WHITELIST
 // ============================================
 
@@ -1553,35 +1554,32 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     : (data.classification_confidence === 'high' ? 0.9 : data.classification_confidence === 'medium' ? 0.7 : 0.5);
   canonical.human_verified = data.human_verified || false;
 
-  // ===============================
-  // AUTO-GENERATE promo_summary JIKA KOSONG
-  // ===============================
+  // ── PROMO SUMMARY ────────────────────────────────────
+  // Priority: existing canonical > generatePromoSummary() > inline fallback
   if (!canonical.promo_summary) {
-    const parts: string[] = [];
-    if (canonical.reward_amount && canonical.reward_unit === 'percent') {
-      parts.push(`Bonus ${canonical.reward_amount}%`);
-    }
-    if (canonical.calculation_basis) {
-      parts.push(`dari ${canonical.calculation_basis}`);
-    }
-    if (canonical.conversion_formula) {
-      parts.push(`(${canonical.conversion_formula})`);
-    }
-    if (canonical.claim_frequency) {
-      parts.push(`dibagikan ${canonical.claim_frequency}`);
-    }
-    if (canonical.min_calculation) {
-      parts.push(`minimal Rp ${Number(canonical.min_calculation).toLocaleString('id-ID')}`);
-    }
-    if (canonical.max_bonus_unlimited) {
-      parts.push('tanpa batas maksimal bonus');
-    } else if (canonical.max_bonus) {
-      parts.push(`maksimal bonus Rp ${Number(canonical.max_bonus).toLocaleString('id-ID')}`);
-    }
-    if (parts.length > 0) {
-      canonical.promo_summary = parts.join(', ') + '.';
+    // Build context untuk generator
+    const summaryContext = {
+      tier_archetype: data.tier_archetype,
+      promo_type: data.promo_type,
+      subcategories: data.tier_archetype === 'referral' && data.referral_tiers?.length
+        ? data.referral_tiers.map(t => ({
+            calculation_value: t.commission_percentage,
+            min_dimension_value: t.min_downline,
+            sub_name: t.tier_label,
+          }))
+        : (canonical.subcategories || []).map(s => ({
+            calculation_value: s.reward_amount ?? undefined,
+            sub_name: s.sub_name,
+          })),
+    };
+
+    // Panggil generator dengan context
+    const generated = generatePromoSummary([], summaryContext);
+    if (generated) {
+      canonical.promo_summary = generated;
     }
   }
+  // ── END PROMO SUMMARY ─────────────────────────────────
 
   // ===============================
   // CANONICAL GUARD VALIDATION
