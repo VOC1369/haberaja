@@ -1560,7 +1560,7 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
     // Build context untuk generator
     const summaryContext = {
       tier_archetype: data.tier_archetype,
-      promo_type: canonical.promo_type,
+      promo_type: data.promo_type,
       subcategories: data.tier_archetype === 'referral' && data.referral_tiers?.length
         ? data.referral_tiers.map(t => ({
             calculation_value: t.commission_percentage,
