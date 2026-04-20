@@ -22,7 +22,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 export const DEFAULT_CLIENT_ID = 'Liveboard';
 
 // Schema version for migrations
-export const CURRENT_SCHEMA_VERSION = '1.2.0';
+export const CURRENT_SCHEMA_VERSION = 'V.APR.09';
 
 /**
  * Helper: Generate UUID
