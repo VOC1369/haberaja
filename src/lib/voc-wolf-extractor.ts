@@ -2406,8 +2406,12 @@ const deriveCanonicalProjection = (parsed: any): void => {
       (m: any) => m.mechanic_type === 'eligibility'
     );
     const minTurnoverFromMechanics = eligibility?.data?.min_turnover
+      || eligibility?.data?.min_turnover_daily
+      || eligibility?.data?.minimum_turnover_daily
       || eligibility?.data?.threshold_amount
-      || eligibility?.data?.minimum_turnover;
+      || eligibility?.data?.minimum_turnover
+      || eligibility?.data?.min_daily_turnover
+      || eligibility?.activation_rule?.parameters?.value;
 
     parsed.subcategories.forEach((sub: any) => {
       // Hanya sync jika sub.min_calculation dan sub.minimum_base keduanya kosong
