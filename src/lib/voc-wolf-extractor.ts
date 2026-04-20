@@ -6926,6 +6926,24 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   };
 
   // ============================================
+  // FALLBACK: Direct tier_archetype dari extraction jika belum di-set
+  // Guard: hanya jika promoData.tier_archetype masih kosong/undefined
+  // DAN extracted.tier_archetype ada dan valid
+  // (Override spreads di atas — referral/level — sudah jalan duluan;
+  //  fallback ini hanya nyala kalau heuristik & mechanics gagal set tier_archetype)
+  // ============================================
+  const VALID_TIER_ARCHETYPES = ['level', 'point_store', 'referral', 'formula'] as const;
+  const extractedArchetype = (extracted as any).tier_archetype;
+  if (
+    !promoData.tier_archetype
+    && extractedArchetype
+    && (VALID_TIER_ARCHETYPES as readonly string[]).includes(extractedArchetype)
+  ) {
+    promoData.tier_archetype = extractedArchetype as PromoFormData['tier_archetype'];
+    console.log('[mapExtractedToPromoFormData] FALLBACK tier_archetype applied:', extractedArchetype);
+  }
+
+  // ============================================
   // SEMANTIC CONSISTENCY ENFORCEMENT
   // Ensure calculation_base matches promo_type semantics
   // ============================================
