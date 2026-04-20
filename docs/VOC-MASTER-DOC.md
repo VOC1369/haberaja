@@ -30,3 +30,24 @@ INPUT → PSEUDO EXTRACTOR → DRAFT LIST → FORM WIZARD → HUMAN AUDIT → SU
 ## Decisions Locked
 
 - JSON yang masuk Supabase = output Form Wizard (bukan raw LLM extraction)
+
+## Decision: legacy_flat retention
+
+legacy_flat DIPERTAHANKAN sampai Form Wizard di-rewrite untuk consume mechanics[] langsung.
+
+Alasan: 3 area tidak bisa di-derive dari mechanics[] saja:
+
+- subcategories[] — multi-variant promo
+- Point store engine config (lp_earn_*, vip_multiplier, fast_exp_missions)
+- Granular distribution schedule (distribution_day, calculation_period_start/end)
+
+Blueprint rewrite sudah ada: fromV31Row() di promo-storage.ts line 641-883.
+
+Status: PENDING — tidak dikerjakan sekarang.
+
+## Next Fix Queue (priority order)
+
+1. canonical_projection — derive dari mechanics[], tambah ke output extraction
+2. Rename _mechanics_v31 → mechanics di raw extraction output (Copy JSON)
+3. Form Wizard → Supabase flow verification
+4. Validation engine wire ke Publish button
