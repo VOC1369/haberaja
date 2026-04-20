@@ -1575,6 +1575,14 @@ export function buildCanonicalPayload(data: PromoFormData, promoId?: string): Ca
 
     // Panggil generator dengan context
     const generated = generatePromoSummary([], summaryContext);
+    console.log('[DEBUG-SUMMARY] tier_archetype:', data.tier_archetype);
+    console.log('[DEBUG-SUMMARY] referral_tiers:', JSON.stringify(data.referral_tiers?.map(t => ({
+      label: t.tier_label,
+      commission: t.commission_percentage,
+      downline: t.min_downline
+    }))));
+    console.log('[DEBUG-SUMMARY] summaryContext.subcategories:', JSON.stringify(summaryContext.subcategories));
+    console.log('[DEBUG-SUMMARY] generated result:', generated);
     if (generated) {
       canonical.promo_summary = generated;
     }
