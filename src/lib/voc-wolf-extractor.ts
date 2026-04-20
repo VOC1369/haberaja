@@ -2320,7 +2320,7 @@ const deriveCanonicalProjection = (parsed: any): void => {
     game_providers: parsed.subcategories?.[0]?.game_providers || [],
     game_exclusions: [],
     intent_category: parsed.intent_category || null,
-    target_segment: parsed.target_user || 'Semua'
+    target_segment: parsed.target_user === 'all' ? 'Semua' : (parsed.target_user || 'Semua')
   };
 };
 

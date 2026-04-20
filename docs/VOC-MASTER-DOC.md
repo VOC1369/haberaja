@@ -59,10 +59,10 @@ Status: PENDING — tidak dikerjakan sekarang.
 
 ## Next Fix Queue (priority order)
 
-1. canonical_projection — derive dari mechanics[], tambah ke output extraction
-2. Rename _mechanics_v31 → mechanics di raw extraction output (Copy JSON)
-3. Form Wizard → Supabase flow verification
-4. Validation engine wire ke Publish button
+1. canonical_projection — derive dari mechanics[], tambah ke output extraction → DONE ✅
+2. Rename _mechanics_v31 → mechanics di raw extraction output (Copy JSON) → DONE ✅
+3. Form Wizard → Supabase flow verification — PENDING
+4. Validation engine wire ke Publish button — PENDING
 
 ## Session Progress (April 20, 2026)
 
