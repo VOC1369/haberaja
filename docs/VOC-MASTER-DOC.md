@@ -19,13 +19,25 @@ INPUT → PSEUDO EXTRACTOR → DRAFT LIST → FORM WIZARD → HUMAN AUDIT → SU
 6. Min Turnover field mapping untuk Rollingan (turnover_rule_format: min_rupiah)
 7. promo_name fallback chain di UI (line 1142)
 
-## Known Gaps (belum difix)
+## Known Gaps (updated April 2026)
 
-1. canonical_projection tidak ter-generate di output
-2. mechanics[] tersimpan di _mechanics_v31 bukan di field mechanics resmi
-3. legacy_flat masih ada di LLM output (belum pure v3.1)
-4. Validation engine ada tapi belum di-wire ke Publish button
-5. Form Wizard → Supabase flow belum diverifikasi end-to-end
+RESOLVED:
+
+- canonical_projection tidak ter-generate → FIXED
+- mechanics[] tersimpan di _mechanics_v31 → FIXED (sekarang ada di kedua field)
+- File bernama openai-extractor.ts → RENAMED ke voc-wolf-extractor.ts
+
+REMAINING MINOR:
+
+- promo_summary selalu null (LLM belum generate meskipun instruksi ada)
+- target_segment: "all" harusnya "Semua" (konsistensi bahasa)
+- meta field tidak ada di raw extraction (schema_version, human_verified)
+
+PENDING MAJOR:
+
+- legacy_flat masih ada di LLM output (ditahan — Form Wizard masih butuh)
+- Form Wizard → Supabase flow belum diverifikasi end-to-end
+- Validation engine belum di-wire ke Publish button
 
 ## Decisions Locked
 
