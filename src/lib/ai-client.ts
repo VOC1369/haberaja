@@ -20,6 +20,13 @@ export class AIRateLimitError extends Error {
   }
 }
 
+export class AIOverloadedError extends Error {
+  constructor(message = "Server Anthropic sedang overload.") {
+    super(message);
+    this.name = "AIOverloadedError";
+  }
+}
+
 // Anthropic content blocks: text or image (base64)
 export type AIContentBlock =
   | { type: "text"; text: string }
@@ -55,6 +62,12 @@ export async function callAI({ type, messages, system = undefined, temperature =
       const msg = body?.message ?? "Terlalu banyak request. Coba lagi sebentar.";
       toast.error("⏳ Rate Limit Tercapai", { description: msg });
       throw new AIRateLimitError(msg);
+    }
+
+    if (response.status === 503 || body?.error === "OVERLOADED") {
+      const msg = body?.message ?? "Server Anthropic sedang overload. Coba lagi sebentar.";
+      toast.error("🔄 Server Overload", { description: msg });
+      throw new AIOverloadedError(msg);
     }
 
     const err = body?.error ?? response.statusText;
