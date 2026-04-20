@@ -1305,12 +1305,16 @@ import {
 /**
  * Build Canonical Promo KB payload (v2.1-FINAL schema)
  * This is the OUTPUT format for storage/export/API
- * 
+ *
  * DIFFERENCES from buildPKBPayload:
  * - Uses canonical field names (turnover_multiplier vs turnover_rule)
  * - Unified tiers[] array for all tier archetypes
  * - Consolidated game_exclusions[]
  * - Includes schema_version and audit fields
+ *
+ * @deprecated — TIDAK DIPAKAI oleh Form Wizard flow (Step4Review pakai toV31Row).
+ * Retained untuk backward compat. Jangan extend atau fix di sini.
+ * Real path: promo-storage.ts → toV31Row → buildCanonicalProjectionFromMechanics
  */
 export function buildCanonicalPayload(data: PromoFormData, promoId?: string): CanonicalPromoKB {
   // Start with inert baseline

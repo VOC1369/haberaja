@@ -19,6 +19,7 @@ import type { PromoFormData, PromoItem } from '@/components/VOCDashboard/PromoFo
 import type { ExtractedPromo } from '@/lib/voc-wolf-extractor';
 import { supabase, DEFAULT_CLIENT_ID, generateUUID, logSupabaseError } from '@/lib/supabase-client';
 import { KEYWORD_OVERRIDE_VERSION } from '@/lib/extractors/category-classifier';
+import { generatePromoSummary, PromoSummaryContext } from './promo-summary-generator';
 
 // ============================================
 // STORAGE CONFIGURATION
@@ -526,7 +527,43 @@ function buildCanonicalProjectionFromMechanics(
     '';
 
   const cp: CanonicalProjection = {
-    promo_summary: (p.promo_summary as string) || '',
+    promo_summary: (() => {
+      // Priority 1: existing promo_summary di PromoFormData
+      if (p.promo_summary && typeof p.promo_summary === 'string' && (p.promo_summary as string).trim()) {
+        return p.promo_summary as string;
+      }
+
+      // Priority 2: generate dari referral_tiers[] untuk referral
+      if (p.tier_archetype === 'referral' && (p as any).referral_tiers?.length) {
+        const ctx: PromoSummaryContext = {
+          tier_archetype: 'referral',
+          promo_type: (p.promo_type as string) || undefined,
+          subcategories: ((p as any).referral_tiers as any[]).map((t: any) => ({
+            calculation_value: t.commission_percentage,
+            min_dimension_value: t.min_downline,
+            sub_name: t.tier_label,
+          })),
+        };
+        const generated = generatePromoSummary(mechanics, ctx);
+        if (generated) return generated;
+      }
+
+      // Priority 3: generate dari subcategories[] untuk non-referral tier
+      if ((p.subcategories as any[])?.length) {
+        const ctx: PromoSummaryContext = {
+          tier_archetype: (p.tier_archetype as string) || undefined,
+          promo_type: (p.promo_type as string) || undefined,
+          subcategories: (p.subcategories as any[]).map((s: any) => ({
+            calculation_value: s.calculation_value,
+            sub_name: s.sub_name || s.name,
+          })),
+        };
+        const generated = generatePromoSummary(mechanics, ctx);
+        if (generated) return generated;
+      }
+
+      return '';
+    })(),
     main_trigger: (triggerM?.data?.event as string) || (p.trigger_event as string) || '',
     main_reward_form: resolvedRewardForm,
     main_reward_percent: resolvedRewardPercent,
