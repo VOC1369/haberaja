@@ -43,6 +43,17 @@ PENDING MAJOR:
 - Form Wizard → Supabase flow belum diverifikasi end-to-end
 - Validation engine belum di-wire ke Publish button
 
+CANONICAL PROJECTION GAPS (ditemukan Apr 20, audit lengkap):
+
+- main_reward_percent: tidak tier-aware, ambil calculation pertama saja
+  Fix: iterate subcategories[] → format "min% – max%"
+- primary_claim_method / primary_claim_platform: kosong di referral
+  Fix A: render tier_claim_mode di referral branch Step3Reward
+  Fix B: tambah "dashboard" ke enum claim_platform
+- promo_summary: generatePromoSummary() tier-blind, tidak kenal referral
+  Fix: extend function signature + subcategories[] + referral branch
+- promo_summary tidak ada di UI Step 4 untuk review/edit
+
 ## Decisions Locked
 
 - JSON yang masuk Supabase = output Form Wizard (bukan raw LLM extraction)
