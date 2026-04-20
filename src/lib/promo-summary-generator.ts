@@ -11,6 +11,16 @@ interface MechanicNode {
   [key: string]: unknown;
 }
 
+export interface PromoSummaryContext {
+  tier_archetype?: string;           // 'referral' | 'level' | 'point_store' | null
+  promo_type?: string;               // 'Referral Bonus' | 'Rollingan' | dll
+  subcategories?: Array<{
+    calculation_value?: number;      // persentase komisi per tier
+    sub_name?: string;               // nama tier
+    min_dimension_value?: number;    // min downline untuk referral
+  }>;
+}
+
 // ============================================
 // HELPERS
 // ============================================
@@ -185,7 +195,50 @@ function buildExpirySummary(control: MechanicNode | undefined, slotCount: number
 // MAIN FUNCTION
 // ============================================
 
-export function generatePromoSummary(mechanics: MechanicNode[]): string {
+export function generatePromoSummary(
+  mechanics: MechanicNode[],
+  context?: PromoSummaryContext
+): string {
+  // ── REFERRAL TIER BRANCH ──────────────────────────────
+  // Dipanggil jika tier_archetype = 'referral' DAN ada subcategories
+  if (context?.tier_archetype === 'referral' && context?.subcategories?.length) {
+    const subs = context.subcategories;
+
+    // Ambil semua nilai komisi dan sort ascending
+    const rates = subs
+      .map(s => s.calculation_value)
+      .filter((v): v is number => typeof v === 'number' && v > 0)
+      .sort((a, b) => a - b);
+
+    // Format range: "5% – 15%" atau "5%" jika hanya satu tier
+    const rateLabel = rates.length > 1
+      ? `${rates[0]}% – ${rates[rates.length - 1]}%`
+      : rates.length === 1
+        ? `${rates[0]}%`
+        : null;
+
+    if (!rateLabel) return '';
+
+    // Ambil min downline dari tier pertama (tier terendah)
+    const minDownline = subs
+      .map(s => s.min_dimension_value)
+      .filter((v): v is number => typeof v === 'number' && v > 0)
+      .sort((a, b) => a - b)[0];
+
+    // Ambil eligibility untuk claim info
+    const claim = mechanics.find(m => m.mechanic_type === 'claim');
+    const proofRequired = claim?.data?.proof_required;
+
+    // Build summary parts
+    const parts: string[] = [];
+    parts.push(`Komisi referral ${rateLabel} dari winlose bersih downline`);
+    if (minDownline) parts.push(`minimal ${minDownline} downline aktif`);
+    if (proofRequired) parts.push(`verifikasi diperlukan pada pencairan pertama`);
+
+    return parts.join(', ') + '.';
+  }
+  // ── END REFERRAL BRANCH ───────────────────────────────
+
   if (!Array.isArray(mechanics) || mechanics.length === 0) return '';
 
   // Extract source nodes

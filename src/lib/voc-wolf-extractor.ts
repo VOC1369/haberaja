@@ -28,6 +28,7 @@
 import { callAI, extractText, type AIContentBlock } from './ai-client';
 import { runRejectGate } from './reject-gate';
 import { preprocessPromoInput } from './promo-preprocessor';
+import { generatePromoSummary } from './promo-summary-generator';
 import { generateUUID } from './supabase-client';
 import { enforceFieldApplicability } from './extractors/field-applicability-map';
 import { getDefaultsFromKeywords } from './extractors/keyword-rules';
@@ -2364,7 +2365,17 @@ const deriveCanonicalProjection = (parsed: any): void => {
   const claim = mechanics.find(m => m.mechanic_type === 'claim');
 
   parsed.canonical_projection = {
-    promo_summary: parsed.promo_summary || null,
+    promo_summary: parsed.promo_summary || (() => {
+      const generated = generatePromoSummary(
+        mechanics,
+        {
+          tier_archetype: parsed.tier_archetype,
+          promo_type: parsed.promo_type,
+          subcategories: parsed.subcategories
+        }
+      );
+      return generated || null;
+    })(),
     main_trigger: trigger?.data?.trigger_event || null,
     main_reward_form: reward?.data?.reward_type || null,
     main_reward_percent: calculation?.data?.percentage || null,
