@@ -488,3 +488,32 @@ body {
     font-family: var(--font-sans) !important;
   }
 }
+
+/* ====================================================================
+ * THIN CUSTOM SCROLLBAR (used inside chat-style input fields)
+ * Hides browser-native chrome and replaces with a subtle pill thumb.
+ * ==================================================================== */
+@layer utilities {
+  .scrollbar-thin-custom {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
+  }
+  .scrollbar-thin-custom::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin-custom::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin-custom::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.25);
+    border-radius: 9999px;
+    border: 1px solid transparent;
+  }
+  .scrollbar-thin-custom::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.45);
+  }
+  .scrollbar-thin-custom::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
