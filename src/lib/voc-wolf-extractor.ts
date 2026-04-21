@@ -4240,6 +4240,49 @@ function buildArchetypePayloadFromExtracted(
  * 
  * This function is used inside useMemo and relies on referential stability.
  */
+
+/**
+ * Smart fallback for intent_category when keyword rules don't match.
+ * Inspects v3.1 mechanics array to detect Acquisition signals.
+ *
+ * Returns:
+ *  - 'Acquisition' if APK download / new member / referral signal found
+ *  - null if no signal detected (caller should fall back to default)
+ */
+function extractedIntentFromMechanics(mechanics: any): string | null {
+  if (!Array.isArray(mechanics) || mechanics.length === 0) return null;
+
+  // APK download trigger = Acquisition
+  const hasApkTrigger = mechanics.some(m =>
+    m?.mechanic_type === 'trigger' && (
+      m?.data?.trigger_event === 'apk_download' ||
+      m?.data?.trigger_event === 'APK Download' ||
+      (typeof m?.evidence === 'string' && m.evidence.toLowerCase().includes('apk')) ||
+      (typeof m?.evidence === 'string' && m.evidence.toLowerCase().includes('download apk')) ||
+      (typeof m?.evidence === 'string' && m.evidence.toLowerCase().includes('unduh apk'))
+    )
+  );
+  if (hasApkTrigger) return 'Acquisition';
+
+  // New member eligibility = Acquisition
+  const hasNewMember = mechanics.some(m =>
+    m?.mechanic_type === 'eligibility' &&
+    m?.data?.user_segment === 'new_member'
+  );
+  if (hasNewMember) return 'Acquisition';
+
+  // Referral trigger = Acquisition
+  const hasReferral = mechanics.some(m =>
+    m?.mechanic_type === 'trigger' && (
+      m?.data?.trigger_event === 'referral' ||
+      m?.data?.trigger_event === 'referral_signup'
+    )
+  );
+  if (hasReferral) return 'Acquisition';
+
+  return null;
+}
+
 export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: ExtractionSource): PromoFormData {
   // ══════ TRACE STEP 4: mapExtractedToPromoFormData ENTRY ══════
   console.log('[TRACE-4] mapExtractedToPromoFormData ENTRY', {
@@ -5603,7 +5646,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     })(),
     intent_category: (() => {
       const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
-      return (keywordDefaults?.intent_category as string) || 'Retention';
+      return (keywordDefaults?.intent_category as string) ||
+        extractedIntentFromMechanics(llmMechanics) ||
+        'Retention';
     })(),
     target_segment: targetUserMap[extracted.target_user?.toLowerCase()] || 'Semua',
     trigger_event: (() => {

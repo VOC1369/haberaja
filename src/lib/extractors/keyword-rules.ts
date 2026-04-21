@@ -775,7 +775,34 @@ export const KEYWORD_RULES: KeywordRule[] = [
       claim_frequency: 'sekali',
     },
   },
-  
+
+  // APK Download Bonus (acquisition via app install)
+  {
+    id: 'apk_download_bonus',
+    name: 'APK Download Bonus',
+    patterns: [
+      /download\s+apk/i,
+      /unduh\s+apk/i,
+      /install\s+apk/i,
+      /bonus\s+apk/i,
+      /freechip\s+apk/i,
+      /download\s+aplikasi/i,
+      /unduh\s+aplikasi/i,
+      /bonus\s+unduh/i,
+      /dapat\s+freechip/i,
+    ],
+    category: 'A',
+    archetype: 'formula_based',
+    reason: 'APK DOWNLOAD → Acquisition Event Program (one-time fixed bonus)',
+    defaults: {
+      reward_mode: 'fixed',
+      trigger_event: 'APK Download',
+      promo_type: 'APK Download Bonus',
+      intent_category: 'Acquisition',
+      claim_frequency: 'sekali',
+    },
+  },
+
   // Leaderboard Referral (rank-based)
   {
     id: 'leaderboard_referral',
