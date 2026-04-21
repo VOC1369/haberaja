@@ -447,11 +447,14 @@ export function ParserDataSection() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzeElapsedMs, setAnalyzeElapsedMs] = useState(0);
   const [parserResult, setParserResult] = useState<ParserResult | null>(null);
   const [gapFills, setGapFills] = useState<Record<string, string>>({});
 
   const screenshotInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ─── Derived state ───────────────────────────────────
   const hasInput = useMemo(() => {
