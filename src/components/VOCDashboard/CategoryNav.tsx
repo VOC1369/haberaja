@@ -25,6 +25,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { subCategories } from "./SubCategoryTabs";
 import { ticketSubCategories } from "./TicketSubCategories";
 import { knowledgeBaseSubCategories } from "./KnowledgeBaseSubCategories";
+import { toast } from "sonner";
 
 export interface MainSection {
   key: string;
