@@ -131,23 +131,8 @@ export default {
       },
       fontFamily: {
         sans: ['var(--font-sans)'],
-        serif: [
-          'Lora',
-          'ui-serif',
-          'Georgia',
-          'Cambria',
-          'Times New Roman',
-          'Times',
-          'serif'
-        ],
-        mono: [
-          'IBM Plex Mono',
-          'Consolas',
-          'Menlo',
-          'Monaco',
-          'Courier New',
-          'monospace'
-        ]
+        serif: ['var(--font-sans)'],
+        mono: ['var(--font-sans)']
       },
       boxShadow: {
         '2xs': 'var(--shadow-2xs)',
