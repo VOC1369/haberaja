@@ -53,16 +53,40 @@ type ParserStatus = "valid" | "bukan_promo" | "gabungan";
 type GapSeverity = "required" | "optional";
 
 interface ParsedPromo {
-  promo_name: string;
-  promo_type: string;
+  // IDENTITY
+  promo_name: string | null;
+  promo_type: string | null;
+  client_id: string | null;
+  target_user: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  platform_access: string | null;
+  geo_restriction: string | null;
+
+  // FACTS
+  min_deposit: number | null;
+  max_bonus: number | null;
+  max_bonus_unlimited: boolean | null;
+
+  // SIGNALS
+  has_turnover: boolean | null;
+  is_tiered: boolean | null;
+  reward_type_hint: string | null;
+
+  // EXTRACTION
   calculation_base: "loss" | "turnover" | "deposit" | null;
   calculation_value: number | null;
-  max_bonus: number | null;
-  max_bonus_unlimited: boolean;
   turnover_requirement: number | null;
+  claim_method: string | null;
   game_types: string[];
-  claim_method: "auto" | "manual" | "website" | "whatsapp" | null;
-  target_user: "new_member" | "all" | "vip";
+  game_exclusions: string[];
+
+  // EVIDENCE & AUDIT
+  source_evidence_map: Record<string, string[]>;
+  ambiguity_flags: string[];
+  parse_confidence: number;
+
+  // OUTPUT
   clean_text: string;
 }
 
@@ -87,95 +111,229 @@ export interface ParserResult {
 // AI SYSTEM PROMPT
 // ════════════════════════════════════════════════════
 
-const PARSER_SYSTEM_PROMPT = `Kamu adalah VOC Parser AI — layer pre-processing sebelum extraction. Tugasmu BUKAN extract mechanics, tapi:
+const PARSER_SYSTEM_PROMPT = `Kamu adalah VOC Parser AI.
+Layer pre-processing sebelum VOC Wolf Extractor.
+Tugasmu BUKAN extract mechanics. BUKAN generate JSON final.
 
-1. VALIDATE: Apakah ini promo iGaming yang valid?
-   Promo valid = ada trigger (aksi/kondisi) + ada benefit (bonus/reward) + ada constraint (syarat).
-   Jika tidak memenuhi 3 unsur → BUKAN PROMO.
+FILOSOFI UTAMA:
+Jujur lebih penting dari kaya data.
+Null lebih baik dari tebakan.
+Field yang terlihat terisi tapi sebenarnya unresolved
+adalah masalah terbesar — lebih berbahaya dari field kosong.
 
-2. DETECT: Apakah ini 1 promo atau gabungan?
-   Gabungan = ada tabel dengan multiple baris berbeda kategori game/persentase/TO yang berbeda.
+Output kamu akan digunakan oleh Danila (AI CS iGaming)
+untuk menjawab player. Kalau kamu hard-fill nilai yang
+tidak ada evidence-nya → Danila jawab salah →
+player dapat informasi salah → operator rugi.
 
-3. STRUCTURE: Extract field-field basic per promo:
-   - promo_name (per varian jika gabungan)
-   - promo_type (Cashback/Rollingan/Deposit Bonus/dll)
-   - calculation_base (loss/turnover/deposit)
-   - calculation_value (angka persentase)
-   - max_bonus (angka, null jika tidak ada/unlimited)
-   - max_bonus_unlimited (boolean)
-   - turnover_requirement (angka x, null jika tidak ada)
-   - game_types (array: slot/casino/sports/arcade/sabung_ayam)
-   - claim_method (auto/manual/website/whatsapp)
-   - target_user (new_member/all/vip)
-   - clean_text (string — teks S&K yang sudah dibersihkan dari noise marketing)
+════════════════════════════════════
+STEP 1 — VALIDATE
+════════════════════════════════════
+Promo valid = ada SEMUA 3 unsur:
+- TRIGGER: aksi atau kondisi yang memicu bonus
+- BENEFIT: bonus/reward yang konkret dan bisa dihitung
+- CONSTRAINT: syarat yang mengikat
 
-4. GAP DETECT — LANDASAN: JSON SCHEMA
+Jika tidak memenuhi 3 unsur → status: "bukan_promo"
+Jika konten hanya marketing/branding tanpa nilai konkret
+→ is_marketing_only: true
 
-   Schema yang harus ter-isi per promo:
-   - promo_name (string)
-   - promo_type (string)
-   - calculation_base (loss|turnover|deposit)
-   - calculation_value (number — persentase bonus)
-   - max_bonus (number | null jika unlimited)
-   - max_bonus_unlimited (boolean)
-   - turnover_requirement (number | null jika tidak ada)
-   - game_types (array — slot/casino/sports/arcade/dll)
-   - claim_method (auto|manual|website|whatsapp)
-   - target_user (new_member|all|vip)
+════════════════════════════════════
+STEP 2 — DETECT SINGLE vs GABUNGAN
+════════════════════════════════════
+GABUNGAN jika ada tabel atau multiple blok yang
+masing-masing punya kombinasi berbeda dari:
+persentase + game type + TO + max bonus
 
-   ATURAN KETAT:
-   - Masukkan field ke gaps[] HANYA JIKA field tersebut null/undefined/kosong di output promos[].
-   - JANGAN masukkan field ke gaps[] jika sudah berhasil di-extract di promos[], meskipun kamu tidak 100% yakin.
-   - Cross-check: setiap gap.field HARUS tidak ada nilainya di promos[0][gap.field].
-   - Jika field memiliki default yang reasonable (mis. game_types = ["semua"] jika tidak disebutkan), gunakan default tersebut dan JANGAN masukkan ke gaps.
+Jika gabungan → status: "gabungan"
+Pecah menjadi promos[] terpisah per baris/blok.
 
-   Severity:
-   WAJIB (required) — tanpa ini extraction akan gagal:
-   - promo_type tidak terdeteksi sama sekali
-   - calculation_base tidak bisa ditentukan
-   - calculation_value null DAN tidak ada petunjuk apapun
+════════════════════════════════════
+STEP 3 — STRUCTURE
+ATURAN PALING PENTING — BACA DENGAN TELITI
+════════════════════════════════════
 
-   OPSIONAL (optional) — bisa di-default:
-   - game_types kosong → default ["semua"]
-   - claim_method null → default "auto"
-   - target_user null → default "all"
-   - max_bonus null → default null (unlimited)
-   - turnover_requirement null → default null (tidak ada TO)
+ATURAN 1 — NULL > TEBAKAN:
+Jika nilai tidak eksplisit di teks/gambar → null.
+JANGAN isi dengan asumsi operasional.
+CONTOH SALAH: claim_frequency: "mingguan"
+  padahal jadwal tidak disebutkan
+CONTOH BENAR: claim_frequency: null
 
-RESPONSE FORMAT — JSON ONLY, TANPA markdown wrapper, TANPA teks penjelasan di luar JSON:
+ATURAN 2 — EVIDENCE WAJIB:
+Setiap field yang ter-isi HARUS masuk ke
+source_evidence_map dengan kutipan dari teks.
+CONTOH:
+source_evidence_map: {
+  "min_deposit": ["Minimal Deposit IDR 50.000"],
+  "calculation_value": [
+    "Cashback 5%",
+    "KEKALAHAN 500.000 → BONUS 25.000 (5%)"
+  ]
+}
+
+ATURAN 3 — AMBIGUITAS = NULL + FLAG:
+Jika ada dua interpretasi yang sama-sama valid
+→ null untuk field tersebut
+→ tambahkan ke ambiguity_flags
+CONTOH: "Admin Fee 5%" di narasi vs "20%" di tabel
+→ calculation_base: null
+→ ambiguity_flags: ["admin_fee_conflict_5pct_vs_20pct"]
+
+ATURAN 4 — PARSE_CONFIDENCE:
+Mulai dari 1.0, kurangi per ambiguity:
+- Setiap required field yang null: -0.1
+- Setiap ambiguity_flag: -0.05
+- Tabel rusak/tidak bisa diparsing: -0.15
+Minimum: 0.1
+
+FIELD YANG HARUS DI-POPULATE:
+
+IDENTITY (stabil, rendah risiko salah tafsir):
+- promo_name: nama promo dari judul/header
+  null jika benar-benar tidak ada
+- promo_type: hint dari judul saja
+  (Cashback/Rollingan/Deposit Bonus/Welcome Bonus/
+  Referral Bonus/Freechip/Loyalty Point/Event)
+  PENTING: ini title-derived hint, bukan final truth.
+  Body promo boleh contradict title → biarkan null
+  dan flag di ambiguity_flags
+- client_id: nama brand/website jika disebutkan
+- target_user: "new_member"/"all"/"vip"
+  null jika tidak disebutkan (JANGAN default "all")
+- valid_from, valid_until: tanggal jika ada
+- platform_access: "web"/"apk"/"semua" jika disebutkan
+- geo_restriction: "indonesia"/"global" jika disebutkan
+
+FACTS (angka eksplisit — rendah risiko):
+- min_deposit: angka IDR jika disebutkan eksplisit
+  null jika tidak ada
+- max_bonus: angka IDR cap bonus jika disebutkan
+  null jika tidak disebutkan atau unlimited
+- max_bonus_unlimited: true HANYA jika teks eksplisit
+  menyebut "tanpa batas" / "unlimited" / "tidak ada maks"
+  null jika tidak disebutkan sama sekali
+
+SIGNALS (boolean — aman untuk sinyal awal):
+- has_turnover:
+  true jika ada angka TO atau kata "turnover"/"TO"
+  false jika eksplisit "tanpa TO"/"no turnover"
+  null jika tidak disebutkan sama sekali
+- is_tiered:
+  true jika ada tabel dengan multiple tier/baris berbeda
+  false jika flat single rate
+  null jika tidak jelas
+- reward_type_hint:
+  "cashback_loss" / "rollingan_turnover" /
+  "deposit_bonus" / "welcome_bonus" / "referral" /
+  "freechip" / "loyalty_point" / "event_prize"
+  null jika tidak bisa ditentukan dari judul+body
+
+EXTRACTION (hanya jika eksplisit — medium risk):
+- calculation_base:
+  "loss" jika ada "kekalahan"/"loss"/"winlose"
+  "turnover" jika ada "turnover"/"TO"/"taruhan"
+  "deposit" jika bonus dari deposit
+  null jika ambigu atau tidak jelas
+  JANGAN derive dari nama promo saja
+- calculation_value:
+  angka persentase jika ada satu angka yang jelas
+  null jika ada conflict atau range atau tiered
+  (gunakan is_tiered: true untuk kasus tiered)
+- turnover_requirement:
+  angka multiplier jika eksplisit (mis. "TO 8x" → 8)
+  null jika tidak ada atau ambigu
+  JANGAN default 0 untuk "tanpa TO" →
+  gunakan has_turnover: false
+- claim_method:
+  "auto" jika bonus otomatis masuk tanpa action
+  "manual" jika harus hubungi CS/admin
+  "website" jika ada halaman klaim di website
+  "whatsapp" jika harus WA
+  null jika tidak jelas
+
+GAME SCOPE:
+- game_types: array dari game yang eligible
+  ["slot"/"casino"/"sports"/"arcade"/"sabung_ayam"]
+  [] jika tidak disebutkan — JANGAN default ["semua"]
+- game_exclusions: array nama game/provider yang dilarang
+  [] jika tidak ada blacklist
+
+════════════════════════════════════
+STEP 4 — GAP DETECTION
+════════════════════════════════════
+Gap = field null yang Danila butuhkan untuk jawab player.
+
+REQUIRED gap (blocker — Danila tidak bisa jawab):
+- calculation_base null DAN tidak ada petunjuk basis
+- calculation_value null DAN tidak ada angka apapun
+- promo_type null DAN tidak ada hint dari judul/body
+
+OPTIONAL gap (Danila bisa eskalasi ke CS):
+- min_deposit null
+- claim_method null
+- game_types [] untuk promo yang menyebut game restriction
+- max_bonus null dan max_bonus_unlimited null
+
+BUKAN GAP (null yang valid/expected):
+- turnover_requirement null → has_turnover: false = normal
+- valid_until null = tidak ada expiry = normal
+- game_exclusions [] = tidak ada blacklist = normal
+- client_id null = operator isi manual = normal
+
+════════════════════════════════════
+RESPONSE FORMAT — JSON ONLY
+Tidak ada teks. Tidak ada markdown wrapper.
+════════════════════════════════════
 {
   "status": "valid" | "bukan_promo" | "gabungan",
-  "reason": "string — penjelasan singkat 1 kalimat",
+  "reason": "string — 1 kalimat",
   "promos": [
     {
-      "promo_name": "string",
-      "promo_type": "string",
-      "calculation_base": "loss" | "turnover" | "deposit" | null,
-      "calculation_value": number | null,
-      "max_bonus": number | null,
-      "max_bonus_unlimited": boolean,
-      "turnover_requirement": number | null,
-      "game_types": ["slot" | "casino" | "sports" | "arcade" | "sabung_ayam"],
-      "claim_method": "auto" | "manual" | "website" | "whatsapp" | null,
-      "target_user": "new_member" | "all" | "vip",
-      "clean_text": "string"
+      "promo_name": "string | null",
+      "promo_type": "string | null",
+      "client_id": "string | null",
+      "target_user": "string | null",
+      "valid_from": "string | null",
+      "valid_until": "string | null",
+      "platform_access": "string | null",
+      "geo_restriction": "string | null",
+      "min_deposit": "number | null",
+      "max_bonus": "number | null",
+      "max_bonus_unlimited": "boolean | null",
+      "has_turnover": "boolean | null",
+      "is_tiered": "boolean | null",
+      "reward_type_hint": "string | null",
+      "calculation_base": "loss | turnover | deposit | null",
+      "calculation_value": "number | null",
+      "turnover_requirement": "number | null",
+      "claim_method": "auto | manual | website | whatsapp | null",
+      "game_types": ["string"],
+      "game_exclusions": ["string"],
+      "source_evidence_map": {
+        "field_name": ["kutipan bukti dari teks"]
+      },
+      "ambiguity_flags": ["string"],
+      "parse_confidence": "number 0.0-1.0",
+      "clean_text": "string — S&K bersih tanpa noise UI"
     }
   ],
   "gaps": [
     {
-      "field": "string — machine key (mis. 'calculation_base')",
-      "label": "string — label human-friendly Bahasa Indonesia",
-      "severity": "required" | "optional",
-      "reason": "string — kenapa tidak bisa ditentukan dari teks",
+      "field": "string",
+      "label": "string — Bahasa Indonesia",
+      "severity": "required | optional",
+      "reason": "string — kenapa tidak bisa ditentukan",
       "default_value": "string | null"
     }
   ],
-  "is_marketing_only": boolean,
-  "general_kb_suggestion": "string | null — saran kategori General KB jika bukan promo"
+  "is_marketing_only": "boolean",
+  "general_kb_suggestion": "string | null"
 }
 
-JIKA status = "bukan_promo" → array promos boleh kosong.
-JIKA status = "gabungan" → promos harus berisi >= 2 elemen.`;
+JIKA status = "bukan_promo" → promos boleh kosong [].
+JIKA status = "gabungan" → promos harus >= 2 elemen.
+JIKA status = "valid" → promos harus tepat 1 elemen.`;
 
 // ════════════════════════════════════════════════════
 // HELPERS
@@ -184,13 +342,19 @@ JIKA status = "gabungan" → promos harus berisi >= 2 elemen.`;
 const FIELD_LABELS: Record<string, string> = {
   promo_name: "Nama Promo",
   promo_type: "Tipe Promo",
+  reward_type_hint: "Hint Tipe Reward",
   calculation_value: "Nilai Bonus",
   max_bonus: "Max Bonus",
+  min_deposit: "Minimal Deposit",
   calculation_base: "Basis Perhitungan",
-  turnover_requirement: "Turnover Requirement",
+  has_turnover: "Ada Turnover?",
+  turnover_requirement: "Syarat Turnover",
+  is_tiered: "Promo Bertier?",
   game_types: "Game Type",
   claim_method: "Cara Klaim",
   target_user: "Target User",
+  parse_confidence: "Confidence Parser",
+  ambiguity_flags: "Flag Ambiguitas",
 };
 
 const TARGET_USER_LABEL: Record<string, string> = {
@@ -218,23 +382,41 @@ function formatPromoFieldValue(promo: ParsedPromo, key: string): string {
       return promo.promo_name || "—";
     case "promo_type":
       return promo.promo_type || "—";
+    case "reward_type_hint":
+      return promo.reward_type_hint || "—";
     case "calculation_value":
       return promo.calculation_value != null ? `${promo.calculation_value}%` : "—";
     case "max_bonus":
-      if (promo.max_bonus_unlimited) return "Unlimited";
+      if (promo.max_bonus_unlimited === true) return "Unlimited";
       return promo.max_bonus != null ? `Rp ${promo.max_bonus.toLocaleString("id-ID")}` : "—";
+    case "min_deposit":
+      return promo.min_deposit != null ? `Rp ${promo.min_deposit.toLocaleString("id-ID")}` : "—";
     case "calculation_base":
       return promo.calculation_base ? CALC_BASE_LABEL[promo.calculation_base] ?? promo.calculation_base : "—";
+    case "has_turnover":
+      if (promo.has_turnover === true) return "Ya";
+      if (promo.has_turnover === false) return "Tidak";
+      return "—";
     case "turnover_requirement":
-      return promo.turnover_requirement != null ? `${promo.turnover_requirement}x` : "Tidak ada TO";
+      return promo.turnover_requirement != null ? `${promo.turnover_requirement}x` : "—";
+    case "is_tiered":
+      if (promo.is_tiered === true) return "Ya (multi-tier)";
+      if (promo.is_tiered === false) return "Tidak";
+      return "—";
     case "game_types":
-      return promo.game_types.length > 0
+      return promo.game_types && promo.game_types.length > 0
         ? promo.game_types.map(g => g.charAt(0).toUpperCase() + g.slice(1).replace("_", " ")).join(", ")
         : "—";
     case "claim_method":
       return promo.claim_method ? CLAIM_METHOD_LABEL[promo.claim_method] ?? promo.claim_method : "—";
     case "target_user":
-      return TARGET_USER_LABEL[promo.target_user] ?? promo.target_user;
+      return promo.target_user ? TARGET_USER_LABEL[promo.target_user] ?? promo.target_user : "—";
+    case "parse_confidence":
+      return promo.parse_confidence != null ? `${(promo.parse_confidence * 100).toFixed(0)}%` : "—";
+    case "ambiguity_flags":
+      return promo.ambiguity_flags && promo.ambiguity_flags.length > 0
+        ? promo.ambiguity_flags.join(", ")
+        : "Tidak ada";
     default:
       return "—";
   }
@@ -355,6 +537,8 @@ export function ParserDataSection() {
         if (val === null || val === undefined) return true;
         if (typeof val === "string" && val.trim() === "") return true;
         if (Array.isArray(val) && val.length === 0) return true;
+        if (typeof val === "boolean") return false; // boolean false bukan empty
+        if (typeof val === "number") return false;  // 0 bukan empty
         return false;
       };
 
@@ -750,13 +934,19 @@ function StructuredDataCard({
   const fieldKeys: (keyof typeof FIELD_LABELS)[] = [
     "promo_name",
     "promo_type",
+    "reward_type_hint",
+    "calculation_base",
     "calculation_value",
     "max_bonus",
-    "calculation_base",
+    "min_deposit",
+    "has_turnover",
     "turnover_requirement",
+    "is_tiered",
     "game_types",
     "claim_method",
     "target_user",
+    "parse_confidence",
+    "ambiguity_flags",
   ];
 
   return (
