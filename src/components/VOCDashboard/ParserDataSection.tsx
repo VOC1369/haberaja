@@ -53,16 +53,40 @@ type ParserStatus = "valid" | "bukan_promo" | "gabungan";
 type GapSeverity = "required" | "optional";
 
 interface ParsedPromo {
-  promo_name: string;
-  promo_type: string;
+  // IDENTITY
+  promo_name: string | null;
+  promo_type: string | null;
+  client_id: string | null;
+  target_user: string | null;
+  valid_from: string | null;
+  valid_until: string | null;
+  platform_access: string | null;
+  geo_restriction: string | null;
+
+  // FACTS
+  min_deposit: number | null;
+  max_bonus: number | null;
+  max_bonus_unlimited: boolean | null;
+
+  // SIGNALS
+  has_turnover: boolean | null;
+  is_tiered: boolean | null;
+  reward_type_hint: string | null;
+
+  // EXTRACTION
   calculation_base: "loss" | "turnover" | "deposit" | null;
   calculation_value: number | null;
-  max_bonus: number | null;
-  max_bonus_unlimited: boolean;
   turnover_requirement: number | null;
+  claim_method: string | null;
   game_types: string[];
-  claim_method: "auto" | "manual" | "website" | "whatsapp" | null;
-  target_user: "new_member" | "all" | "vip";
+  game_exclusions: string[];
+
+  // EVIDENCE & AUDIT
+  source_evidence_map: Record<string, string[]>;
+  ambiguity_flags: string[];
+  parse_confidence: number;
+
+  // OUTPUT
   clean_text: string;
 }
 
