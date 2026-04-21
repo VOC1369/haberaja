@@ -27,6 +27,8 @@ import {
   X,
   Sparkles,
   Info,
+  Plus,
+  ArrowUp,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -922,152 +924,101 @@ export function ParserDataSection() {
           </Badge>
         </div>
 
-        <Tabs value={activeTab} onValueChange={v => setActiveTab(v as "text" | "file")}>
+        {/* ─── UNIFIED INPUT FIELD (Grok-style) ───
+            Single area accepts text + screenshot via type / paste / drag-drop.
+            + button (left) = attach image. ↑ button (right) = submit. */}
+        <div
+          onDragOver={handleScreenshotDragOver}
+          onDragLeave={handleScreenshotDragLeave}
+          onDrop={handleScreenshotDrop}
+          className={`relative rounded-2xl border bg-background transition-colors ${
+            isDragOver
+              ? "border-button-hover bg-button-hover/5"
+              : "border-border hover:border-border/80"
+          }`}
+        >
+          {/* Hidden file input */}
+          <input
+            ref={screenshotInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) setScreenshotFile(f);
+              if (e.target) e.target.value = "";
+            }}
+          />
 
-          {/* TAB 1 — TEKS & URL */}
-          <TabsContent value="text" className="space-y-6 mt-0">
-            <Textarea
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              placeholder="Paste teks S&K promo, URL halaman promo, atau copy-paste dari WhatsApp/Telegram..."
-              className="min-h-48 rounded-lg resize-y"
-              disabled={isAnalyzing}
-            />
+          {/* Textarea */}
+          <Textarea
+            value={inputText}
+            onChange={e => setInputText(e.target.value)}
+            placeholder={
+              isDragOver
+                ? "Lepaskan untuk upload screenshot…"
+                : "Paste teks S&K, URL promo, drop screenshot, atau Ctrl+V…"
+            }
+            className="min-h-40 resize-y border-0 bg-transparent px-5 pt-5 pb-2 focus-visible:ring-0 focus-visible:ring-offset-0"
+            disabled={isAnalyzing}
+            onKeyDown={e => {
+              if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && hasInput && !isAnalyzing) {
+                e.preventDefault();
+                handleAnalyze();
+              }
+            }}
+          />
 
-            {/* Screenshot uploader (compact, dashed) */}
-            <div>
-              <input
-                ref={screenshotInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={e => {
-                  const f = e.target.files?.[0];
-                  if (f) setScreenshotFile(f);
-                  if (e.target) e.target.value = "";
-                }}
-              />
-              {!screenshotFile ? (
-                <div
-                  onDragOver={handleScreenshotDragOver}
-                  onDragLeave={handleScreenshotDragLeave}
-                  onDrop={handleScreenshotDrop}
-                >
-                  <button
-                    type="button"
-                    onClick={() => screenshotInputRef.current?.click()}
-                    disabled={isAnalyzing}
-                    className={`w-full p-4 border-2 border-dashed rounded-xl transition-colors flex items-center justify-center gap-3 ${
-                      isDragOver
-                        ? "border-solid border-button-hover bg-button-hover/10 text-button-hover"
-                        : "border-border bg-muted/0 hover:border-button-hover hover:text-button-hover text-muted-foreground"
-                    }`}
-                  >
-                    <ImageIcon className="h-5 w-5 pointer-events-none" />
-                    <span className="text-sm font-medium pointer-events-none">
-                      {isDragOver
-                        ? "Lepaskan untuk upload"
-                        : "Drag & drop, paste (Ctrl+V), atau klik untuk upload screenshot"}
-                    </span>
-                  </button>
-                </div>
-              ) : (
-                <div className="p-4 bg-muted rounded-xl border border-border flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <ImageIcon className="h-5 w-5 text-button-hover shrink-0" />
-                    <span className="text-sm text-foreground truncate">{screenshotFile.name}</span>
-                    <Badge className="bg-muted text-muted-foreground border border-border shrink-0">
-                      {(screenshotFile.size / 1024).toFixed(0)} KB
-                    </Badge>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => setScreenshotFile(null)}
-                    disabled={isAnalyzing}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          {/* TAB 2 — UPLOAD FILE */}
-          <TabsContent value="file" className="space-y-6 mt-0">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp,application/pdf"
-              className="hidden"
-              onChange={e => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  if (f.size > 10 * 1024 * 1024) {
-                    toast.error("File terlalu besar", { description: "Maksimal 10MB." });
-                    return;
-                  }
-                  setUploadedFile(f);
-                }
-                if (e.target) e.target.value = "";
-              }}
-            />
-            {!uploadedFile ? (
+          {/* Attached screenshot preview chip */}
+          {screenshotFile && (
+            <div className="mx-5 mb-2 inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 border border-border">
+              <ImageIcon className="h-3.5 w-3.5 text-button-hover" />
+              <span className="text-xs text-foreground truncate max-w-[200px]">
+                {screenshotFile.name}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {(screenshotFile.size / 1024).toFixed(0)} KB
+              </span>
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => setScreenshotFile(null)}
                 disabled={isAnalyzing}
-                className="w-full min-h-48 p-8 border-2 border-dashed border-border rounded-xl hover:border-button-hover hover:text-button-hover text-muted-foreground transition-colors flex flex-col items-center justify-center gap-3"
+                className="text-muted-foreground hover:text-foreground"
               >
-                <Upload className="h-10 w-10" />
-                <div className="text-center">
-                  <div className="text-base font-medium text-foreground mb-1">Upload file S&amp;K promo</div>
-                  <div className="text-sm">PDF, PNG, JPG, WEBP — maksimal 10MB</div>
-                </div>
+                <X className="h-3.5 w-3.5" />
               </button>
-            ) : (
-              <div className="p-6 bg-muted rounded-xl border border-border flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <FileText className="h-6 w-6 text-button-hover shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-foreground truncate">{uploadedFile.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {(uploadedFile.size / 1024).toFixed(0)} KB
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => setUploadedFile(null)}
-                  disabled={isAnalyzing}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </TabsContent>
+            </div>
+          )}
 
-          {/* Tab switcher — Grok-style: separate badge pills, not a single container */}
-          <div className="flex justify-center mt-6">
-            <TabsList className="h-auto bg-transparent p-0 gap-2">
-              <TabsTrigger
-                value="text"
-                className="gap-2 h-9 px-4 rounded-full bg-muted border border-border text-muted-foreground data-[state=active]:bg-button-hover data-[state=active]:text-button-hover-foreground data-[state=active]:border-transparent data-[state=active]:shadow-md"
-              >
-                <FileText className="h-4 w-4" />
-                Teks &amp; URL
-              </TabsTrigger>
-              <TabsTrigger
-                value="file"
-                className="gap-2 h-9 px-4 rounded-full bg-muted border border-border text-muted-foreground data-[state=active]:bg-button-hover data-[state=active]:text-button-hover-foreground data-[state=active]:border-transparent data-[state=active]:shadow-md"
-              >
-                <Upload className="h-4 w-4" />
-                Upload File
-              </TabsTrigger>
-            </TabsList>
+          {/* Bottom action bar inside field */}
+          <div className="flex items-center justify-between px-3 pb-3 pt-1">
+            {/* Attach button (left) */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => screenshotInputRef.current?.click()}
+              disabled={isAnalyzing}
+              className="h-9 w-9 rounded-full bg-muted hover:bg-muted/80 text-foreground"
+              title="Lampirkan screenshot"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+
+            {/* Submit arrow (right) */}
+            <Button
+              type="button"
+              variant="golden"
+              size="icon"
+              onClick={handleAnalyze}
+              disabled={!hasInput || isAnalyzing}
+              className="h-9 w-9 rounded-full"
+              title="Analisis (⌘/Ctrl + Enter)"
+            >
+              <ArrowUp className="h-4 w-4" />
+            </Button>
           </div>
-        </Tabs>
+        </div>
 
         {/* CTA / Loading panel */}
         {isAnalyzing ? (
