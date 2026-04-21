@@ -905,23 +905,25 @@ export function ParserDataSection() {
 
   return (
     <div className={`page-wrapper space-y-6 ${!parserResult && !isAnalyzing ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''}`}>
-      {/* ─── HEADER ─── */}
-      <div className="flex items-center gap-4 mb-2">
-        <div className="icon-circle">
-          <FileSearch className="icon-circle-icon" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Parser Data</h1>
-          <p className="text-sm text-muted-foreground">
-            VOC Wolf — validasi, struktur & deteksi gap sebelum extraction.
-          </p>
-        </div>
-      </div>
-
-      {/* ─── SECTION 1: INPUT AREA ─── */}
+      {/* ─── SECTION 1: INPUT AREA (header + tabs in one card) ─── */}
       <Card className="p-8">
+        {/* Header — vertically stacked & centered */}
+        <div className="flex flex-col items-center text-center gap-3 mb-8">
+          <div className="icon-circle">
+            <FileSearch className="icon-circle-icon" />
+          </div>
+          <h1 className="text-2xl font-semibold text-foreground">Parser Data</h1>
+          <p className="text-sm text-muted-foreground max-w-md">
+            validasi, struktur & deteksi gap sebelum extraction.
+          </p>
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30 mt-1">
+            <span className="w-2 h-2 rounded-full bg-success mr-2" />
+            Wolfclaw AI
+          </Badge>
+        </div>
+
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as "text" | "file")}>
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 mx-auto">
             <TabsTrigger value="text" className="gap-2">
               <FileText className="h-4 w-4" />
               Teks &amp; URL
