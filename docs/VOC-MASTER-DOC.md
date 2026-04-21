@@ -33,6 +33,8 @@ RESOLVED:
 - promo_summary selalu null → FIXED (session Apr 20)
 - primary_claim_method null untuk referral → FIXED (session Apr 20)
 - promo_summary kosong di Form Wizard canonical → FIXED (session Apr 20)
+- primary_claim_method / primary_claim_platform kosong di referral → FIXED (session Apr 21)
+- promo_risk_level tidak carry-over dari extraction ke PromoFormData → FIXED (session Apr 21)
 
 REMAINING MINOR:
 
@@ -45,17 +47,16 @@ PENDING MAJOR:
 - Form Wizard → Supabase flow belum diverifikasi end-to-end
 - Validation engine belum di-wire ke Publish button
 
-CANONICAL PROJECTION GAPS (updated Apr 20):
+CANONICAL PROJECTION GAPS (updated Apr 21):
 
 - main_reward_percent: tidak tier-aware, ambil calculation pertama saja
   Fix: iterate subcategories[] → format "min% – max%"
-- primary_claim_method / primary_claim_platform: kosong di referral
-  Root cause: tidak ada UI field untuk claim_method di referral branch Step3Reward
-  Fix: tambah UI field + wire ke canonical (next session)
-- promo_risk_level di Form Wizard canonical = "medium" hardcoded
-  Root cause: toV31Row tidak pakai deriveRiskLevel()
-  Perlu audit apakah promo_risk_level dari extracted data ter-carry ke PromoFormData
 - promo_summary tidak ada di UI Step 4 untuk review/edit
+- referral_proof_notes autofill mengambil field name (e.g. "media_penyebaran_info")
+  bukan deskripsi human-friendly
+  Root cause: claimM.data.proof_type berisi machine key, bukan natural language
+  Fix: tambah proof_type → human text mapping di mapExtractedToPromoFormData
+       (atau minta LLM output proof_description sebagai sentence)
 
 ## Decisions Locked
 
@@ -118,6 +119,22 @@ Status: PENDING — tidak dikerjakan sekarang.
     - Priority 2: generate dari referral_tiers[] untuk referral
     - Priority 3: generate dari subcategories[] untuk non-referral
     - buildCanonicalPayload() di types.ts ditandai @deprecated
+20. UI Section "Distribusi & Klaim Komisi" untuk referral branch (session Apr 21)
+    - 5 field baru di PromoFormData: referral_distribution_frequency,
+      referral_claim_method, referral_claim_platforms, referral_proof_required,
+      referral_proof_notes
+    - Section UI di Step3Reward setelah Tabel Tier Komisi Referral (line ~4578)
+    - Autofill dari mechanics: distribution_frequency + claim_method/channels/proof
+    - Wire ke canonical primary_claim_method + primary_claim_platform
+      (priority: UI referral field → mechanics fallback)
+    - 'dashboard' ditambahkan ke claim_platform enum
+21. promo_risk_level carry-over dari extraction ke PromoFormData (session Apr 21)
+    - Root cause: deriveRiskLevel() jalan saat raw extraction tapi
+      mapExtractedToPromoFormData() tidak copy field ke PromoFormData
+      → toV31Row() fallback ke 'medium' hardcoded (line 664)
+    - Fix 1: mapExtractedToPromoFormData sekarang copy promo_risk_level
+    - Fix 2: toV31Row punya fallback derivation dari mechanics
+      (high untuk referral/wd bonus, medium untuk deposit, low untuk auto+no-proof)
 
 ### Verified Working (tested dengan real promo)
 
