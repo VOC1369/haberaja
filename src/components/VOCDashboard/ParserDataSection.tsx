@@ -1360,9 +1360,13 @@ function GapReportCard({
             ))}
 
             {(() => {
-              const isConfirmDisabled = gaps
-                .filter(g => g.severity === "required")
-                .some(g => !fills[g.field] || fills[g.field].trim() === "");
+              const requiredGaps = gaps.filter(g => g.severity === "required");
+              const isConfirmDisabled =
+                requiredGaps.length > 0 &&
+                requiredGaps.some(g => {
+                  const val = fills[g.field];
+                  return !val || val.trim().length < 3;
+                });
               return (
                 <>
                   <Button
