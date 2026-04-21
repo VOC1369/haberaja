@@ -74,7 +74,7 @@ import { VOCConfig } from "@/types/voc-config";
 // Validation penalty hook
 import { useValidationPenalty } from "@/hooks/use-validation-penalty";
 
-export type KnowledgeCategory = "general" | "promo" | "behavioral" | "pseudo";
+export type KnowledgeCategory = "general" | "promo" | "behavioral" | "pseudo" | "parserData";
 
 type ViewMode = "form" | "json" | "prompt" | "list";
 
