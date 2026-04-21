@@ -1037,7 +1037,7 @@ export function ParserDataSection() {
               className="flex-1"
             >
               <Sparkles className="h-4 w-4" />
-              Analisis dengan Parser AI
+              Analisis dengan VOC Wolf Parser
             </Button>
             {parserResult && (
               <Button variant="outline" size="lg" onClick={handleReset}>
