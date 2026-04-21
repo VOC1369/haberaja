@@ -1493,7 +1493,7 @@ function GapItem({
 
   return (
     <div className="bg-muted rounded-lg p-4 space-y-3">
-      <div className="mb-3 space-y-1">
+      <div className="mb-3 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dotClass}`} />
           <span className="text-sm font-medium text-foreground leading-none">
