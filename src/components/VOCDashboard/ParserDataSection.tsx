@@ -648,6 +648,13 @@ export function ParserDataSection() {
       setParserResult(normalized);
       toast.success("Analisis selesai");
     } catch (err) {
+      // User cancelled — silent (toast already shown by handleCancelAnalyze)
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
+      if ((err as Error)?.name === "AbortError") {
+        return;
+      }
       // Specific AI errors already toast-handled in ai-client
       if (
         err instanceof AICreditsExhaustedError ||
@@ -662,6 +669,11 @@ export function ParserDataSection() {
         });
       }
     } finally {
+      if (elapsedTimerRef.current) {
+        clearInterval(elapsedTimerRef.current);
+        elapsedTimerRef.current = null;
+      }
+      abortControllerRef.current = null;
       setIsAnalyzing(false);
     }
   }, [activeTab, hasInput, inputText, screenshotFile, uploadedFile]);
