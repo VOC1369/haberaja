@@ -1492,7 +1492,7 @@ function GapItem({
   const selectOptions = enumOptions[gap.field];
 
   return (
-    <div className="bg-muted rounded-lg p-4 space-y-3">
+    <div className="bg-muted rounded-lg px-6 py-4 space-y-3">
       <div className="mb-3">
         <div className="flex items-center gap-2 flex-wrap">
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dotClass}`} />
