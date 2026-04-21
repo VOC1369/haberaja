@@ -603,6 +603,7 @@ export function ParserDataSection() {
         system: PARSER_SYSTEM_PROMPT,
         messages: [{ role: "user", content: contentBlocks }],
         temperature: 0,
+        signal: controller.signal,
       });
 
       const parsed = extractJSON<ParserResult>(response);
