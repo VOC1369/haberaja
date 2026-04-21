@@ -776,8 +776,60 @@ export function ParserDataSection() {
     }
   };
 
-  // ════════════════════════════════════════════════════
-  // RENDER
+  // ─── Confirm gap fills → update parserResult ─────────
+  const handleConfirmGapFills = () => {
+    const filledEntries = Object.entries(gapFills).filter(([, v]) => v && v.trim() !== "");
+    if (filledEntries.length === 0) return;
+
+    setParserResult(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev };
+
+      if (updated.promos[0]) {
+        const promo = { ...updated.promos[0] };
+        const evidenceMap = { ...(promo.source_evidence_map || {}) };
+
+        filledEntries.forEach(([field, rawValue]) => {
+          const value = rawValue.trim();
+          if (field in promo) {
+            // Coerce to existing field type
+            const current = (promo as unknown as Record<string, unknown>)[field];
+            let coerced: unknown = value;
+            if (typeof current === "number" || current === null) {
+              const num = Number(value.replace(/[^\d.-]/g, ""));
+              if (!Number.isNaN(num) && value.match(/^-?[\d.,\s]+$/)) {
+                coerced = num;
+              }
+            }
+            if (typeof current === "boolean") {
+              coerced = /^(true|ya|yes|1)$/i.test(value);
+            }
+            (promo as unknown as Record<string, unknown>)[field] = coerced;
+          } else {
+            evidenceMap[field] = [value];
+          }
+        });
+
+        promo.source_evidence_map = evidenceMap;
+        updated.promos = [promo, ...updated.promos.slice(1)];
+      }
+
+      // Remove gaps that have been filled
+      updated.gaps = updated.gaps.filter(gap => {
+        const filled = gapFills[gap.field]?.trim();
+        return !filled;
+      });
+
+      return updated;
+    });
+
+    // Clear local fills for removed gaps
+    setGapFills({});
+
+    toast.success("Data diperbarui", {
+      description: "Promo siap di-extract.",
+    });
+  };
   // ════════════════════════════════════════════════════
 
   return (
