@@ -712,35 +712,27 @@ export function ParserDataSection() {
     setGapFills({});
 
     try {
-      // Build content blocks (text + optional image)
+      // Build content blocks (text + optional images)
       const contentBlocks: AIContentBlock[] = [];
 
-      if (activeTab === "text") {
-        if (inputText.trim()) {
-          contentBlocks.push({ type: "text", text: inputText.trim() });
-        }
-        if (screenshotFile) {
-          const { data, mime } = await fileToBase64(screenshotFile);
+      // Text first
+      if (inputText.trim()) {
+        contentBlocks.push({ type: "text", text: inputText.trim() });
+      }
+
+      // Then all screenshots with context
+      if (screenshotFiles.length > 0) {
+        contentBlocks.push({
+          type: "text",
+          text: `Berikut ${screenshotFiles.length} screenshot promo yang perlu dianalisis. Susun informasi dari semua gambar secara komprehensif:`,
+        });
+        for (const file of screenshotFiles) {
+          const { data, mime } = await fileToBase64(file);
           contentBlocks.push({
             type: "image",
             source: { type: "base64", media_type: mime, data },
           });
         }
-      } else if (uploadedFile) {
-        // Image file → vision; PDF → unsupported here, ask text paste
-        if (uploadedFile.type === "application/pdf") {
-          toast.warning("Format PDF belum didukung", {
-            description: "Sementara silakan copy-paste teks dari PDF ke tab 'Teks & URL'.",
-          });
-          setIsAnalyzing(false);
-          return;
-        }
-        const { data, mime } = await fileToBase64(uploadedFile);
-        contentBlocks.push({ type: "text", text: "Analisis konten promo dari gambar berikut:" });
-        contentBlocks.push({
-          type: "image",
-          source: { type: "base64", media_type: mime, data },
-        });
       }
 
       if (contentBlocks.length === 0) {
