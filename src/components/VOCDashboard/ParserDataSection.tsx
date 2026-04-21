@@ -1533,13 +1533,13 @@ function GapItem({
                   <label
                     key={id}
                     htmlFor={id}
-                    className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer transition-colors ${
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
                       isSelected
                         ? "bg-button-hover/10 border-button-hover"
-                        : "border-border hover:border-button-hover/50"
+                        : "border-transparent hover:bg-muted"
                     }`}
                   >
-                    <RadioGroupItem value={opt} id={id} className="mt-0.5" />
+                    <RadioGroupItem value={opt} id={id} />
                     <span className="text-sm text-foreground">{opt}</span>
                   </label>
                 );
