@@ -833,7 +833,7 @@ export function ParserDataSection() {
   // ════════════════════════════════════════════════════
 
   return (
-    <div className="page-wrapper space-y-6">
+    <div className={`page-wrapper space-y-6 ${!parserResult && !isAnalyzing ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''}`}>
       {/* ─── HEADER ─── */}
       <div className="flex items-center gap-4 mb-2">
         <div className="icon-circle">
