@@ -191,7 +191,7 @@ export interface CanonicalPromoKB {
   // ===============================
   reward_item_description?: string | null;
   claim_url?: string | null;
-  claim_platform?: 'auto' | 'livechat' | 'whatsapp' | 'telegram' | 'form' | 'apk' | null;
+  claim_platform?: 'auto' | 'livechat' | 'whatsapp' | 'telegram' | 'form' | 'apk' | 'dashboard' | null;
   proof_required?: boolean;
   proof_type?: 'screenshot' | 'bill_share' | 'social_post' | 'none';
   proof_destination?: 'livechat' | 'whatsapp' | 'telegram' | 'facebook' | 'none';
