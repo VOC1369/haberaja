@@ -56,26 +56,41 @@ function findControl(mechanics: MechanicNode[], controlType: string): MechanicNo
  * Slot 1 — reward_label
  * Combines reward_form + calculation basis for business-accurate label.
  */
-function buildRewardLabel(rewardForm: string | undefined, calcBasis: string | undefined): string | null {
-  if (!rewardForm) return null;
+function buildRewardLabel(rewardForm: string | undefined, calcBasis?: string): string | null {
+  // Normalisasi alias reward_form
+  const rf = (() => {
+    const r = (rewardForm || '').toLowerCase().trim();
+    // Alias normalization — semua variant credit/balance → canonical
+    if (['balance_credit', 'credit_game', 'credit_balance'].includes(r)) return 'bonus_credit';
+    if (['balance', 'saldo', 'bonus_balance'].includes(r)) return 'bonus_balance';
+    if (['commission', 'commission_balance'].includes(r)) return 'commission';
+    return r;
+  })();
 
-  const rf = rewardForm.toLowerCase();
+  const basis = (calcBasis || '').toLowerCase().trim();
 
-  if (rf === 'bonus_balance' || rf === 'bonus_credit') {
-    if (calcBasis === 'deposit') return 'Bonus deposit';
-    if (calcBasis === 'loss') return 'Cashback';
+  // Mapping rf + basis → human label
+  if (['bonus_balance', 'bonus_credit'].includes(rf)) {
+    if (basis === 'loss' || basis === 'winlose') return 'Cashback';
+    if (basis === 'deposit') return 'Bonus deposit';
+    if (basis === 'turnover') return 'Rollingan';
     return 'Bonus';
   }
-  if (rf === 'rebate' || rf === 'cashback' || rf === 'commission') {
-    if (calcBasis === 'turnover') return 'Rollingan';
-    if (calcBasis === 'loss') return 'Cashback';
+  if (['rebate', 'cashback'].includes(rf)) {
+    if (basis === 'turnover') return 'Rollingan';
     return 'Cashback';
   }
+  if (rf === 'commission') return 'Komisi';
   if (rf === 'freespin') return 'Freespin';
   if (rf === 'physical_reward') return 'Hadiah';
+  if (rf === 'percentage_of_loss') return 'Cashback';
 
-  // Unmapped — capitalize
-  return rf.charAt(0).toUpperCase() + rf.slice(1);
+  // Fallback: capitalize tapi bersihkan underscore
+  if (!rf) return null;
+  return rf.replace(/_/g, ' ')
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
 }
 
 /**
