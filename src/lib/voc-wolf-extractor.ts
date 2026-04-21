@@ -5330,6 +5330,7 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     id: string;
     tier_label: string;
     min_downline: number;
+    _min_downline_source?: 'extracted' | 'fallback';
     commission_percentage: number;
     winlose?: number;
     cashback_deduction?: number;
