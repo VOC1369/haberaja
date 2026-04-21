@@ -32,11 +32,12 @@ export type AIContentBlock =
   | { type: "text"; text: string }
   | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
 
-export async function callAI({ type, messages, system = undefined, temperature = 0 }: {
+export async function callAI({ type, messages, system = undefined, temperature = 0, signal }: {
   type: AIProxyType;
   messages: Array<{ role: "user" | "assistant"; content: string | AIContentBlock[] }>;
   system?: string;
   temperature?: number;
+  signal?: AbortSignal;
 }) {
   const response = await fetch(AI_PROXY_URL, {
     method: "POST",
@@ -46,6 +47,7 @@ export async function callAI({ type, messages, system = undefined, temperature =
       "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
     },
     body: JSON.stringify({ type, messages, system, temperature }),
+    signal,
   });
 
   if (!response.ok) {

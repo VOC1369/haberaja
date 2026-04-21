@@ -447,11 +447,14 @@ export function ParserDataSection() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzeElapsedMs, setAnalyzeElapsedMs] = useState(0);
   const [parserResult, setParserResult] = useState<ParserResult | null>(null);
   const [gapFills, setGapFills] = useState<Record<string, string>>({});
 
   const screenshotInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ─── Derived state ───────────────────────────────────
   const hasInput = useMemo(() => {
@@ -520,9 +523,39 @@ export function ParserDataSection() {
     return () => window.removeEventListener("paste", handlePaste);
   }, [activeTab, screenshotFile, isAnalyzing]);
 
+  // ─── Cancel handler ─────────────────────────────────
+  const handleCancelAnalyze = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (elapsedTimerRef.current) {
+      clearInterval(elapsedTimerRef.current);
+      elapsedTimerRef.current = null;
+    }
+    setIsAnalyzing(false);
+    setAnalyzeElapsedMs(0);
+    toast.info("Analisis dibatalkan");
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    };
+  }, []);
+
   // ─── Analyze handler ─────────────────────────────────
   const handleAnalyze = useCallback(async () => {
     if (!hasInput) return;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const startedAt = Date.now();
+    setAnalyzeElapsedMs(0);
+    elapsedTimerRef.current = setInterval(() => {
+      setAnalyzeElapsedMs(Date.now() - startedAt);
+    }, 100);
     setIsAnalyzing(true);
     setParserResult(null);
     setGapFills({});
@@ -570,6 +603,7 @@ export function ParserDataSection() {
         system: PARSER_SYSTEM_PROMPT,
         messages: [{ role: "user", content: contentBlocks }],
         temperature: 0,
+        signal: controller.signal,
       });
 
       const parsed = extractJSON<ParserResult>(response);
@@ -614,6 +648,13 @@ export function ParserDataSection() {
       setParserResult(normalized);
       toast.success("Analisis selesai");
     } catch (err) {
+      // User cancelled — silent (toast already shown by handleCancelAnalyze)
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
+      if ((err as Error)?.name === "AbortError") {
+        return;
+      }
       // Specific AI errors already toast-handled in ai-client
       if (
         err instanceof AICreditsExhaustedError ||
@@ -628,6 +669,11 @@ export function ParserDataSection() {
         });
       }
     } finally {
+      if (elapsedTimerRef.current) {
+        clearInterval(elapsedTimerRef.current);
+        elapsedTimerRef.current = null;
+      }
+      abortControllerRef.current = null;
       setIsAnalyzing(false);
     }
   }, [activeTab, hasInput, inputText, screenshotFile, uploadedFile]);
@@ -828,33 +874,77 @@ export function ParserDataSection() {
           </TabsContent>
         </Tabs>
 
-        {/* CTA */}
-        <div className="mt-6 flex items-center gap-3">
-          <Button
-            variant="golden"
-            size="lg"
-            onClick={handleAnalyze}
-            disabled={!hasInput || isAnalyzing}
-            className="flex-1"
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Sedang menganalisis...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Analisis dengan Parser AI
-              </>
-            )}
-          </Button>
-          {parserResult && !isAnalyzing && (
-            <Button variant="outline" size="lg" onClick={handleReset}>
-              Reset
+        {/* CTA / Loading panel */}
+        {isAnalyzing ? (
+          <div className="mt-6 rounded-xl border border-border bg-muted/40 p-5 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="relative h-10 w-10 rounded-full bg-button-hover/15 flex items-center justify-center shrink-0">
+                  <Loader2 className="h-5 w-5 text-button-hover animate-spin" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-foreground">Sedang menganalisis…</div>
+                  <div className="text-xs text-muted-foreground">
+                    Parser AI sedang memproses input. Estimasi 5–15 detik.
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="text-sm font-mono tabular-nums text-foreground" aria-live="polite">
+                  {(() => {
+                    const totalSec = Math.floor(analyzeElapsedMs / 1000);
+                    const mm = String(Math.floor(totalSec / 60)).padStart(2, "0");
+                    const ss = String(totalSec % 60).padStart(2, "0");
+                    return `${mm}:${ss}`;
+                  })()}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelAnalyze}
+                  className="rounded-full"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Batal
+                </Button>
+              </div>
+            </div>
+
+            {/* Indeterminate shimmer bar */}
+            <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div className="parser-shimmer absolute inset-y-0 w-1/3 rounded-full bg-button-hover" />
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 flex items-center gap-3">
+            <Button
+              variant="golden"
+              size="lg"
+              onClick={handleAnalyze}
+              disabled={!hasInput}
+              className="flex-1"
+            >
+              <Sparkles className="h-4 w-4" />
+              Analisis dengan Parser AI
             </Button>
-          )}
-        </div>
+            {parserResult && (
+              <Button variant="outline" size="lg" onClick={handleReset}>
+                Reset
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Local keyframes for indeterminate shimmer (scoped to this component) */}
+        <style>{`
+          @keyframes parser-shimmer-slide {
+            0%   { left: -33%; }
+            100% { left: 100%; }
+          }
+          .parser-shimmer {
+            animation: parser-shimmer-slide 1.4s ease-in-out infinite;
+          }
+        `}</style>
       </Card>
 
       {/* ════════════════════════════════════════════════════ */}
