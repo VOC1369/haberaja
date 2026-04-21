@@ -11,7 +11,7 @@
  * Tidak ada direct call ke Anthropic. Tidak ada sessionStorage handoff.
  */
 
-import { useState, useRef, useMemo, useCallback } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import {
   FileSearch,
   FileText,
@@ -444,6 +444,7 @@ export function ParserDataSection() {
   const [activeTab, setActiveTab] = useState<"text" | "file">("text");
   const [inputText, setInputText] = useState("");
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [parserResult, setParserResult] = useState<ParserResult | null>(null);
@@ -464,6 +465,60 @@ export function ParserDataSection() {
       .filter(g => g.severity === "required")
       .filter(g => !gapFills[g.field] || gapFills[g.field].trim() === "").length;
   }, [parserResult, gapFills]);
+
+  // ─── Drag & Drop handlers ───────────────────────────
+  const handleScreenshotDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAnalyzing) setIsDragOver(true);
+  }, [isAnalyzing]);
+
+  const handleScreenshotDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleScreenshotDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    if (isAnalyzing) return;
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.warning("Hanya file gambar yang diizinkan", {
+        description: `File "${file.name}" bukan format image.`,
+      });
+      return;
+    }
+    setScreenshotFile(file);
+  }, [isAnalyzing]);
+
+  // ─── Paste handler (Ctrl+V / Cmd+V) ─────────────────
+  useEffect(() => {
+    if (activeTab !== "text" || screenshotFile || isAnalyzing) return;
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            setScreenshotFile(file);
+            toast.success("Screenshot dari clipboard ditambahkan");
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [activeTab, screenshotFile, isAnalyzing]);
 
   // ─── Analyze handler ─────────────────────────────────
   const handleAnalyze = useCallback(async () => {
@@ -672,15 +727,29 @@ export function ParserDataSection() {
                 }}
               />
               {!screenshotFile ? (
-                <button
-                  type="button"
-                  onClick={() => screenshotInputRef.current?.click()}
-                  disabled={isAnalyzing}
-                  className="w-full p-4 border-2 border-dashed border-border rounded-xl bg-muted/0 hover:border-button-hover hover:text-button-hover text-muted-foreground transition-colors flex items-center justify-center gap-3"
+                <div
+                  onDragOver={handleScreenshotDragOver}
+                  onDragLeave={handleScreenshotDragLeave}
+                  onDrop={handleScreenshotDrop}
                 >
-                  <ImageIcon className="h-5 w-5" />
-                  <span className="text-sm font-medium">Tambah screenshot (opsional)</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => screenshotInputRef.current?.click()}
+                    disabled={isAnalyzing}
+                    className={`w-full p-4 border-2 border-dashed rounded-xl transition-colors flex items-center justify-center gap-3 ${
+                      isDragOver
+                        ? "border-solid border-button-hover bg-button-hover/10 text-button-hover"
+                        : "border-border bg-muted/0 hover:border-button-hover hover:text-button-hover text-muted-foreground"
+                    }`}
+                  >
+                    <ImageIcon className="h-5 w-5 pointer-events-none" />
+                    <span className="text-sm font-medium pointer-events-none">
+                      {isDragOver
+                        ? "Lepaskan untuk upload"
+                        : "Drag & drop, paste (Ctrl+V), atau klik untuk upload screenshot"}
+                    </span>
+                  </button>
+                </div>
               ) : (
                 <div className="p-4 bg-muted rounded-xl border border-border flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
