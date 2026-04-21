@@ -6752,7 +6752,15 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     status: 'draft',
     geo_restriction: 'indonesia',  // Default wilayah Indonesia
     require_apk: lockedFields?.require_apk ?? false,
-    // promo_risk_level: di-derive oleh deriveRiskLevel() di deriveCanonicalProjection()
+    // promo_risk_level: carry-over dari extracted (sudah di-derive oleh deriveRiskLevel() di deriveCanonicalProjection())
+    promo_risk_level: (() => {
+      const extracted_risk = (extracted as any).promo_risk_level;
+      const VALID = ['no', 'low', 'medium', 'high'] as const;
+      if (extracted_risk && VALID.includes(extracted_risk)) {
+        return extracted_risk as 'no' | 'low' | 'medium' | 'high';
+      }
+      return undefined; // biarkan toV31Row fallback handle
+    })(),
 
     // Admin Fee (untuk Referral Bonus)
     admin_fee_enabled: false,

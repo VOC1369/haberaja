@@ -661,7 +661,32 @@ function toV31Row(
     valid_until_unlimited: (p.valid_until_unlimited as boolean) ?? true,
     geo_restriction: (p.geo_restriction as string) || 'indonesia',
     platform_access: (p.platform_access as string) || 'semua',
-    promo_risk_level: (p.promo_risk_level as string) || 'medium',
+    promo_risk_level: (() => {
+      if (p.promo_risk_level &&
+          ['no','low','medium','high'].includes(p.promo_risk_level as string)) {
+        return p.promo_risk_level as string;
+      }
+      // Fallback: derive dari mechanics jika tersedia
+      const mechanics = (p._mechanics_v31 as any[]) || [];
+      if (mechanics.length > 0) {
+        const claimM = mechanics.find((m: any) => m.mechanic_type === 'claim');
+        const proofRequired = claimM?.data?.proof_required;
+        const promoType = (p.promo_type as string) || '';
+        const isManual = claimM?.data?.claim_method === 'manual' ||
+          (claimM?.data?.claim_channels || []).some(
+            (c: string) => ['livechat','whatsapp','wa'].includes(c.toLowerCase())
+          );
+        if (
+          (isManual && proofRequired) ||
+          ['referral','wd bonus','bonus wd'].some(
+            t => promoType.toLowerCase().includes(t)
+          )
+        ) return 'high';
+        if (promoType.toLowerCase().includes('deposit')) return 'medium';
+        if (!isManual && !proofRequired) return 'low';
+      }
+      return 'medium'; // ultimate fallback
+    })(),
     mechanics,
     adjudication,
     canonical_projection,
