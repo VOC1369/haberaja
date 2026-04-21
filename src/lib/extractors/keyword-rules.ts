@@ -792,6 +792,8 @@ export const KEYWORD_RULES: KeywordRule[] = [
       /dapat\s+freechip/i,
     ],
     category: 'A',
+    archetype: 'formula_based',
+    reason: 'APK DOWNLOAD → Acquisition Event Program (one-time fixed bonus)',
     defaults: {
       reward_mode: 'fixed',
       trigger_event: 'APK Download',
