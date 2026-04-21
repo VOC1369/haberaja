@@ -158,6 +158,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   
   const scrollBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Cancel handler — flips UI loading off; in-flight request resolves silently
+  const handleCancelExtract = () => {
+    abortControllerRef.current?.abort();
+    setIsExtracting(false);
+    toast.info("Ekstraksi dibatalkan");
+  };
 
   // ============================================
   // SESSION RESTORE (SILENT - Toast Only)
