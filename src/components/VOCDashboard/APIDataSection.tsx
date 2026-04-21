@@ -24,7 +24,7 @@ export function APIDataSection({ form, onSave }: APIDataSectionProps) {
   const debounceValue = form.watch("apiData.debounceSeconds") ?? 3;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="page-wrapper space-y-6">
       {/* API Keys Card */}
       <Card className="p-6">
         <div className="flex items-center gap-3 mb-6">
