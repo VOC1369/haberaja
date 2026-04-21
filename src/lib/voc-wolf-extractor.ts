@@ -7122,10 +7122,29 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       dataWithLockedFields.require_apk = lockedFields.require_apk;
     }
     if (lockedFields.reward_amount !== undefined) {
-      dataWithLockedFields.reward_amount = lockedFields.reward_amount;
+      // ✅ APK flat-value guard: jika locked = null tapi apkBonusRange.min sudah ada,
+      // preserve nilai dari line 5698 — jangan timpa dengan null
+      if (
+        lockedFields.reward_amount === null &&
+        isApkLikePromo &&
+        apkBonusRange?.min
+      ) {
+        // preserve apkBonusRange.min (no-op)
+      } else {
+        dataWithLockedFields.reward_amount = lockedFields.reward_amount;
+      }
     }
     if (lockedFields.max_bonus !== undefined) {
-      dataWithLockedFields.max_bonus = lockedFields.max_bonus;
+      // ✅ APK flat-value guard: same pattern untuk max_bonus
+      if (
+        lockedFields.max_bonus === null &&
+        isApkLikePromo &&
+        apkBonusRange?.max
+      ) {
+        // preserve apkBonusRange.max (no-op)
+      } else {
+        dataWithLockedFields.max_bonus = lockedFields.max_bonus;
+      }
     }
     if (lockedFields.max_claim !== undefined) {
       dataWithLockedFields.max_claim = lockedFields.max_claim;
