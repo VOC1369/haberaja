@@ -1048,14 +1048,20 @@ export function ParserDataSection() {
             )}
           </TabsContent>
 
-          {/* Tab switcher — placed below inputs, above CTA (Grok-style) */}
+          {/* Tab switcher — Grok-style: separate badge pills, not a single container */}
           <div className="flex justify-center mt-6">
-            <TabsList>
-              <TabsTrigger value="text" className="gap-2">
+            <TabsList className="h-auto bg-transparent p-0 gap-2">
+              <TabsTrigger
+                value="text"
+                className="gap-2 h-9 px-4 rounded-full bg-muted border border-border text-muted-foreground data-[state=active]:bg-button-hover data-[state=active]:text-button-hover-foreground data-[state=active]:border-transparent data-[state=active]:shadow-md"
+              >
                 <FileText className="h-4 w-4" />
                 Teks &amp; URL
               </TabsTrigger>
-              <TabsTrigger value="file" className="gap-2">
+              <TabsTrigger
+                value="file"
+                className="gap-2 h-9 px-4 rounded-full bg-muted border border-border text-muted-foreground data-[state=active]:bg-button-hover data-[state=active]:text-button-hover-foreground data-[state=active]:border-transparent data-[state=active]:shadow-md"
+              >
                 <Upload className="h-4 w-4" />
                 Upload File
               </TabsTrigger>
