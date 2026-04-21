@@ -1522,30 +1522,31 @@ function GapItem({
       <div>
         {hasOptions ? (
           <>
-            <RadioGroup
-              value={selectedValue}
-              onValueChange={setSelectedValue}
-              className="space-y-2"
-            >
+            <div className="space-y-2 mt-2">
               {inlineOptions.map((opt, idx) => {
-                const id = `${gap.field}-opt-${idx}`;
                 const isSelected = selectedValue === opt;
                 return (
-                  <label
-                    key={id}
-                    htmlFor={id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedValue(opt)}
+                    className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                       isSelected
                         ? "bg-button-hover/10 border-button-hover"
-                        : "border-transparent hover:bg-muted"
+                        : "border-border hover:bg-muted/50"
                     }`}
                   >
-                    <RadioGroupItem value={opt} id={id} />
-                    <span className="text-sm text-foreground">{opt}</span>
-                  </label>
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5 ${
+                        isSelected ? "border-button-hover" : "border-muted-foreground"
+                      }`}
+                    >
+                      {isSelected && <div className="w-2 h-2 rounded-full bg-button-hover" />}
+                    </div>
+                    <span className="text-sm text-foreground leading-relaxed">{opt}</span>
+                  </div>
                 );
               })}
-            </RadioGroup>
+            </div>
 
             {selectedValue && (
               <div className="mt-3 space-y-1">
