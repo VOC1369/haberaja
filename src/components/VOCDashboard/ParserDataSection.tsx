@@ -466,6 +466,60 @@ export function ParserDataSection() {
       .filter(g => !gapFills[g.field] || gapFills[g.field].trim() === "").length;
   }, [parserResult, gapFills]);
 
+  // ─── Drag & Drop handlers ───────────────────────────
+  const handleScreenshotDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isAnalyzing) setIsDragOver(true);
+  }, [isAnalyzing]);
+
+  const handleScreenshotDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleScreenshotDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    if (isAnalyzing) return;
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.warning("Hanya file gambar yang diizinkan", {
+        description: `File "${file.name}" bukan format image.`,
+      });
+      return;
+    }
+    setScreenshotFile(file);
+  }, [isAnalyzing]);
+
+  // ─── Paste handler (Ctrl+V / Cmd+V) ─────────────────
+  useEffect(() => {
+    if (activeTab !== "text" || screenshotFile || isAnalyzing) return;
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            setScreenshotFile(file);
+            toast.success("Screenshot dari clipboard ditambahkan");
+            e.preventDefault();
+            return;
+          }
+        }
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [activeTab, screenshotFile, isAnalyzing]);
+
   // ─── Analyze handler ─────────────────────────────────
   const handleAnalyze = useCallback(async () => {
     if (!hasInput) return;
