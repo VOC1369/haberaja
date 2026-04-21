@@ -1705,7 +1705,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
           {/* PROCESSING STATE — matches ParserDataSection style */}
           {isExtracting && (
-            <div className="rounded-xl border border-border bg-muted/40 p-5 space-y-4">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+              <div className="rounded-xl border border-border bg-muted/40 p-5 space-y-4 w-full max-w-3xl pointer-events-auto shadow-xl">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative h-10 w-10 rounded-full bg-button-hover/15 flex items-center justify-center shrink-0">
@@ -1754,6 +1755,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   animation: pseudo-shimmer-slide 1.4s ease-in-out infinite;
                 }
               `}</style>
+              </div>
             </div>
           )}
 
