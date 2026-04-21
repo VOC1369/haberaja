@@ -6902,6 +6902,13 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     })() : '',  // ✅ INERT: "" for non-referral promos
     referral_admin_fee_enabled: isReferralMultiTier,
     referral_admin_fee_percentage: isReferralMultiTier ? 20 : null,  // ✅ INERT: null for non-referral
+
+    // Referral Distribusi & Klaim (autofill dari mechanics, hanya untuk referral)
+    referral_distribution_frequency: isReferralMultiTier ? referralDistributionFreq : '',
+    referral_claim_method: isReferralMultiTier ? referralClaimMethod : '',
+    referral_claim_platforms: isReferralMultiTier ? referralClaimPlatforms : [],
+    referral_proof_required: isReferralMultiTier ? referralProofRequired : false,
+    referral_proof_notes: isReferralMultiTier ? referralProofNotes : '',
     
     // Override for referral multi-tier: switch to tier mode with referral archetype
     // AUTHORITY INVERSION: Only apply when mechanics is NOT authoritative
