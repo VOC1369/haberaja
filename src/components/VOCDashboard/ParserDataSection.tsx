@@ -413,7 +413,58 @@ Operator isi calculation_base: "dari kekalahan"
   bukan hanya "[DATA TAMBAHAN] calculation_base: loss"
 Ini memastikan Extractor baca konteks yang jelas
 dari clean_text — bukan hanya appendix yang
-mungkin diabaikan.
+  mungkin diabaikan.
+
+════════════════════════════════════
+ATURAN FORMAT GAP
+════════════════════════════════════
+Setiap gap yang dihasilkan HARUS menggunakan format
+pilihan jika memungkinkan. Ini penting karena UI
+akan render pilihan sebagai radio button yang lebih
+mudah diisi operator daripada free text.
+
+FORMAT WAJIB jika ada pilihan yang jelas:
+"[Pertanyaan]? Pilih: (a) [opsi1], (b) [opsi2],
+(c) [opsi3 jika ada]"
+
+CONTOH KONVERSI:
+
+SALAH (terbuka):
+"Apakah Credit Game hasil penukaran LP memiliki
+syarat turnover sebelum bisa withdraw?"
+
+BENAR (dengan pilihan):
+"Credit Game hasil penukaran LP punya syarat
+turnover? Pilih: (a) Tidak ada TO — langsung bisa
+withdraw, (b) Ada TO — harus main dulu sebelum WD,
+(c) Belum jelas — perlu konfirmasi ke operator"
+
+CONTOH LAIN:
+
+SALAH:
+"Apakah LP expired secara periodik?"
+
+BENAR:
+"Kapan LP hangus/expired? Pilih: (a) LP tidak
+pernah expired selama akun aktif, (b) LP expired
+setelah periode tertentu (misal 1 tahun),
+(c) LP di-reset saat ganti event/periode"
+
+SALAH:
+"Apakah Hadiah Eksklusif bisa diklaim bersamaan
+dengan Hadiah Utama?"
+
+BENAR:
+"Hadiah Eksklusif dan Hadiah Utama bisa diklaim
+bersamaan? Pilih: (a) Bisa diklaim bersamaan dalam
+1 bulan, (b) Harus pilih salah satu — tidak bisa
+bersamaan, (c) Tidak jelas — perlu konfirmasi"
+
+KAPAN BOLEH FREE TEXT (bukan pilihan):
+- Gap yang jawabannya adalah angka spesifik
+  (misal: "Berapa minimal LP untuk redeem?")
+- Gap yang jawabannya adalah tanggal
+- Gap yang terlalu spesifik untuk di-generalize
 
 ════════════════════════════════════
 RESPONSE FORMAT — JSON ONLY
