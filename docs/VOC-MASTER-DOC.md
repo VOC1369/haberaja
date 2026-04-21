@@ -135,6 +135,22 @@ Status: PENDING — tidak dikerjakan sekarang.
     - Fix 1: mapExtractedToPromoFormData sekarang copy promo_risk_level
     - Fix 2: toV31Row punya fallback derivation dari mechanics
       (high untuk referral/wd bonus, medium untuk deposit, low untuk auto+no-proof)
+22. Fix generatePromoSummary() untuk non-referral (session Apr 21)
+    - buildRewardLabel() diperluas dengan alias normalization
+    - balance_credit / credit_game / credit_balance → bonus_credit
+    - bonus_credit + loss → "Cashback" (sebelumnya "Bonus")
+    - calcBasis chain diperluas: calculation_basis → calculation_base → basis
+    - promo_type fallback hint untuk label generic ("Bonus" → "Cashback"/"Rollingan"/dll)
+    - 14/14 tests pass
+23. Fix primary_claim_method + primary_claim_platform NON-referral (session Apr 21)
+    - Field name mismatch: claimM.data.method → claimM.data.claim_method
+    - claim_channels[] (array) sekarang dibaca benar, ambil index 0 lowercase
+    - Fallback chain 4-level: mechanics → root form → contact_channel → ''
+24. Fix turnover_multiplier 4-level fallback (session Apr 21)
+    - Priority 1: controlData.turnover_multiplier (format baru)
+    - Priority 2: controlData.turnover_requirement (format lama extractor)
+    - Priority 3: PromoFormData root (turnover_rule string "8x" atau turnover_multiplier number)
+    - Priority 4: subcategories[0].turnover_rule (formula mode)
 
 ### Verified Working (tested dengan real promo)
 
@@ -145,6 +161,8 @@ Status: PENDING — tidak dikerjakan sekarang.
 - promo_name ter-extract dari image ✅
 - Min Turnover ter-extract dari image ✅
 - ambiguity flagging bekerja (m_claim_1 ambiguity: true dengan reason) ✅
+- Referral LAUTAN77 (multi-tier komisi) ✅
+- Garansi Uang Kembali 100% (cashback flat) ✅
 
 ### Not Yet Tested
 
