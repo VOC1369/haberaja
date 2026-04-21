@@ -5379,6 +5379,51 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     console.log('[Extractor] Referral tiers extracted with DERIVED fields set to null (Calculator Contract)');
   }
 
+  // ── AUTOFILL Distribusi & Klaim Komisi dari mechanics ────────────
+  const distributionM = (extracted._mechanics_v31 as any[])?.find(
+    (m: any) => m.mechanic_type === 'distribution'
+  );
+  const claimMForReferral = (extracted._mechanics_v31 as any[])?.find(
+    (m: any) => m.mechanic_type === 'claim'
+  );
+
+  const referralDistributionFreq: 'harian' | 'mingguan' | 'bulanan' | 'per_transaksi' = (() => {
+    const freq = (distributionM?.data?.distribution_frequency
+      || distributionM?.data?.distribution_timing
+      || '') as string;
+    if (!freq) return 'mingguan'; // default referral
+    const f = freq.toLowerCase();
+    if (f.includes('harian') || f === 'daily') return 'harian';
+    if (f.includes('mingguan') || f === 'weekly') return 'mingguan';
+    if (f.includes('bulanan') || f === 'monthly') return 'bulanan';
+    if (f.includes('per_transaksi') || f.includes('transaction')) return 'per_transaksi';
+    return 'mingguan';
+  })();
+
+  const referralClaimMethod: 'otomatis' | 'manual' = (() => {
+    const method = (claimMForReferral?.data?.claim_method || claimMForReferral?.data?.method || '') as string;
+    if (['manual', 'manual_verification', 'manual_first_then_auto', 'cs_request'].includes(method)) {
+      return 'manual';
+    }
+    return 'otomatis'; // default
+  })();
+
+  const referralClaimPlatforms: string[] = (() => {
+    const channels = (claimMForReferral?.data?.claim_channels
+      || claimMForReferral?.data?.channels
+      || []) as string[];
+    return (channels || []).map((c: string) => (c || '').toLowerCase()).filter(Boolean);
+  })();
+
+  const referralProofRequired: boolean = claimMForReferral?.data?.proof_required === true;
+
+  const referralProofNotes: string = (() => {
+    if (!referralProofRequired) return '';
+    return (claimMForReferral?.data?.proof_type
+      || claimMForReferral?.data?.proof_description
+      || 'Informasi media penyebaran link referral wajib diberikan pada pencairan pertama') as string;
+  })();
+
   // ============================================
   // DEPOSIT BONUS TIER CONVERTER
   // Convert subcategories[] → depositTiers[] when mode=tier and tier_archetype=level
