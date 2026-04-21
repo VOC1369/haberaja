@@ -2400,7 +2400,9 @@ const deriveCanonicalProjection = (parsed: any): void => {
     game_types: parsed.subcategories?.[0]?.game_types || [],
     game_providers: parsed.subcategories?.[0]?.game_providers || [],
     game_exclusions: [],
-    intent_category: parsed.intent_category || null,
+    intent_category: parsed.intent_category
+      || extractedIntentFromMechanics(mechanics)
+      || null,
     target_segment: parsed.target_user === 'all' ? 'Semua' : (parsed.target_user || 'Semua')
   };
 
@@ -4279,6 +4281,22 @@ function extractedIntentFromMechanics(mechanics: any): string | null {
     m?.data?.user_segment === 'new_member'
   );
   if (hasNewMember) return 'Acquisition';
+
+  // New member eligibility — alternative keys/values = Acquisition
+  const hasNewMemberAlt = mechanics.some(m =>
+    m?.mechanic_type === 'eligibility' && (
+      m?.data?.user_eligibility === 'new_member_only' ||
+      m?.data?.user_segment === 'new_member_only'
+    )
+  );
+  if (hasNewMemberAlt) return 'Acquisition';
+
+  // First deposit trigger = Acquisition
+  const hasFirstDeposit = mechanics.some(m =>
+    m?.mechanic_type === 'trigger' &&
+    m?.data?.trigger_event === 'first_deposit'
+  );
+  if (hasFirstDeposit) return 'Acquisition';
 
   // Referral trigger = Acquisition
   const hasReferral = mechanics.some(m =>
