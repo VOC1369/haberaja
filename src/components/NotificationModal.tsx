@@ -147,9 +147,9 @@ export function NotificationModal() {
             </p>
           )}
 
-          {/* OK button — golden, rounded-full (sec. 5) */}
+          {/* OK button — golden, rounded-full, aligned with headline text */}
           {!isAutoDismiss && (
-            <div className="mt-6 flex justify-end">
+            <div className="mt-6 pl-14">
               <button
                 autoFocus
                 onClick={handleClose}
