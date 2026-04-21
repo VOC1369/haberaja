@@ -33,6 +33,8 @@ RESOLVED:
 - promo_summary selalu null → FIXED (session Apr 20)
 - primary_claim_method null untuk referral → FIXED (session Apr 20)
 - promo_summary kosong di Form Wizard canonical → FIXED (session Apr 20)
+- primary_claim_method / primary_claim_platform kosong di referral → FIXED (session Apr 21)
+- promo_risk_level tidak carry-over dari extraction ke PromoFormData → FIXED (session Apr 21)
 
 REMAINING MINOR:
 
@@ -45,17 +47,16 @@ PENDING MAJOR:
 - Form Wizard → Supabase flow belum diverifikasi end-to-end
 - Validation engine belum di-wire ke Publish button
 
-CANONICAL PROJECTION GAPS (updated Apr 20):
+CANONICAL PROJECTION GAPS (updated Apr 21):
 
 - main_reward_percent: tidak tier-aware, ambil calculation pertama saja
   Fix: iterate subcategories[] → format "min% – max%"
-- primary_claim_method / primary_claim_platform: kosong di referral
-  Root cause: tidak ada UI field untuk claim_method di referral branch Step3Reward
-  Fix: tambah UI field + wire ke canonical (next session)
-- promo_risk_level di Form Wizard canonical = "medium" hardcoded
-  Root cause: toV31Row tidak pakai deriveRiskLevel()
-  Perlu audit apakah promo_risk_level dari extracted data ter-carry ke PromoFormData
 - promo_summary tidak ada di UI Step 4 untuk review/edit
+- referral_proof_notes autofill mengambil field name (e.g. "media_penyebaran_info")
+  bukan deskripsi human-friendly
+  Root cause: claimM.data.proof_type berisi machine key, bukan natural language
+  Fix: tambah proof_type → human text mapping di mapExtractedToPromoFormData
+       (atau minta LLM output proof_description sebagai sentence)
 
 ## Decisions Locked
 
