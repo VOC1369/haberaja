@@ -109,8 +109,38 @@ const PARSER_SYSTEM_PROMPT = `Kamu adalah VOC Parser AI — layer pre-processing
    - target_user (new_member/all/vip)
    - clean_text (string — teks S&K yang sudah dibersihkan dari noise marketing)
 
-4. GAP DETECT: Field mana yang TIDAK BISA ditentukan?
-   Kategorikan: WAJIB (blocker — tipe/basis/nilai bonus tidak ada) atau OPSIONAL (provider/payout/TO tidak disebut → ada default).
+4. GAP DETECT — LANDASAN: JSON SCHEMA
+
+   Schema yang harus ter-isi per promo:
+   - promo_name (string)
+   - promo_type (string)
+   - calculation_base (loss|turnover|deposit)
+   - calculation_value (number — persentase bonus)
+   - max_bonus (number | null jika unlimited)
+   - max_bonus_unlimited (boolean)
+   - turnover_requirement (number | null jika tidak ada)
+   - game_types (array — slot/casino/sports/arcade/dll)
+   - claim_method (auto|manual|website|whatsapp)
+   - target_user (new_member|all|vip)
+
+   ATURAN KETAT:
+   - Masukkan field ke gaps[] HANYA JIKA field tersebut null/undefined/kosong di output promos[].
+   - JANGAN masukkan field ke gaps[] jika sudah berhasil di-extract di promos[], meskipun kamu tidak 100% yakin.
+   - Cross-check: setiap gap.field HARUS tidak ada nilainya di promos[0][gap.field].
+   - Jika field memiliki default yang reasonable (mis. game_types = ["semua"] jika tidak disebutkan), gunakan default tersebut dan JANGAN masukkan ke gaps.
+
+   Severity:
+   WAJIB (required) — tanpa ini extraction akan gagal:
+   - promo_type tidak terdeteksi sama sekali
+   - calculation_base tidak bisa ditentukan
+   - calculation_value null DAN tidak ada petunjuk apapun
+
+   OPSIONAL (optional) — bisa di-default:
+   - game_types kosong → default ["semua"]
+   - claim_method null → default "auto"
+   - target_user null → default "all"
+   - max_bonus null → default null (unlimited)
+   - turnover_requirement null → default null (tidak ada TO)
 
 RESPONSE FORMAT — JSON ONLY, TANPA markdown wrapper, TANPA teks penjelasan di luar JSON:
 {
@@ -316,6 +346,31 @@ export function ParserDataSection() {
         is_marketing_only: !!parsed.is_marketing_only,
         general_kb_suggestion: parsed.general_kb_suggestion ?? null,
       };
+
+      // ════════════════════════════════════════════════════
+      // FIX: Filter gaps yang field-nya sudah ter-populate di promo
+      // Landasan: JSON schema, bukan interpretasi LLM
+      // ════════════════════════════════════════════════════
+      const isEmptyValue = (val: unknown): boolean => {
+        if (val === null || val === undefined) return true;
+        if (typeof val === "string" && val.trim() === "") return true;
+        if (Array.isArray(val) && val.length === 0) return true;
+        return false;
+      };
+
+      if (normalized.status === "gabungan" && normalized.promos.length > 1) {
+        // Gabungan: drop gap hanya jika SEMUA promo punya nilainya
+        normalized.gaps = normalized.gaps.filter((gap) =>
+          normalized.promos.every((p) => isEmptyValue((p as any)[gap.field]))
+        );
+      } else {
+        const firstPromo = normalized.promos[0];
+        if (firstPromo) {
+          normalized.gaps = normalized.gaps.filter((gap) =>
+            isEmptyValue((firstPromo as any)[gap.field])
+          );
+        }
+      }
 
       setParserResult(normalized);
       toast.success("Analisis selesai");
