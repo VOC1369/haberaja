@@ -574,26 +574,23 @@ async function fileToBase64(file: File): Promise<{ data: string; mime: string }>
 // ════════════════════════════════════════════════════
 
 export function ParserDataSection() {
-  const [activeTab, setActiveTab] = useState<"text" | "file">("text");
   const [inputText, setInputText] = useState("");
-  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeElapsedMs, setAnalyzeElapsedMs] = useState(0);
   const [parserResult, setParserResult] = useState<ParserResult | null>(null);
   const [gapFills, setGapFills] = useState<Record<string, string>>({});
 
   const screenshotInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ─── Derived state ───────────────────────────────────
+  const MAX_SCREENSHOTS = 5;
   const hasInput = useMemo(() => {
-    if (activeTab === "text") return inputText.trim().length > 0 || !!screenshotFile;
-    return !!uploadedFile;
-  }, [activeTab, inputText, screenshotFile, uploadedFile]);
+    return inputText.trim().length > 0 || screenshotFiles.length > 0;
+  }, [inputText, screenshotFiles]);
 
   const requiredGapsUnfilled = useMemo(() => {
     if (!parserResult) return 0;
