@@ -727,15 +727,29 @@ export function ParserDataSection() {
                 }}
               />
               {!screenshotFile ? (
-                <button
-                  type="button"
-                  onClick={() => screenshotInputRef.current?.click()}
-                  disabled={isAnalyzing}
-                  className="w-full p-4 border-2 border-dashed border-border rounded-xl bg-muted/0 hover:border-button-hover hover:text-button-hover text-muted-foreground transition-colors flex items-center justify-center gap-3"
+                <div
+                  onDragOver={handleScreenshotDragOver}
+                  onDragLeave={handleScreenshotDragLeave}
+                  onDrop={handleScreenshotDrop}
                 >
-                  <ImageIcon className="h-5 w-5" />
-                  <span className="text-sm font-medium">Tambah screenshot (opsional)</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => screenshotInputRef.current?.click()}
+                    disabled={isAnalyzing}
+                    className={`w-full p-4 border-2 border-dashed rounded-xl transition-colors flex items-center justify-center gap-3 ${
+                      isDragOver
+                        ? "border-solid border-button-hover bg-button-hover/10 text-button-hover"
+                        : "border-border bg-muted/0 hover:border-button-hover hover:text-button-hover text-muted-foreground"
+                    }`}
+                  >
+                    <ImageIcon className="h-5 w-5 pointer-events-none" />
+                    <span className="text-sm font-medium pointer-events-none">
+                      {isDragOver
+                        ? "Lepaskan untuk upload"
+                        : "Drag & drop, paste (Ctrl+V), atau klik untuk upload screenshot"}
+                    </span>
+                  </button>
+                </div>
               ) : (
                 <div className="p-4 bg-muted rounded-xl border border-border flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
