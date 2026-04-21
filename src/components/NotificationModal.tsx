@@ -155,7 +155,7 @@ export function NotificationModal() {
               <button
                 autoFocus
                 onClick={handleClose}
-                className="w-full h-10 rounded-full text-sm font-semibold bg-button-hover text-button-hover-foreground hover:bg-button-hover/90 transition-colors active:scale-95"
+                className="w-full h-10 rounded-full text-sm font-semibold bg-button-hover text-button-hover-foreground hover:bg-button-hover/90 transition-colors active:scale-95 outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0"
               >
                 OK
               </button>
