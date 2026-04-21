@@ -1278,15 +1278,27 @@ function StructuredDataCard({
                       </span>
                     )}
                   </div>
-                  <Button
-                    variant="golden"
-                    size="sm"
-                    onClick={() => onCopyCleanText(promo)}
-                    className="shrink-0"
-                  >
-                    <Copy className="h-4 w-4" />
-                    Copy Clean Text
-                  </Button>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <Button
+                      variant="golden"
+                      size="sm"
+                      onClick={() => onCopyCleanText(promo)}
+                      disabled={requiredGapsUnfilled > 0}
+                      className={
+                        requiredGapsUnfilled > 0
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copy Clean Text
+                    </Button>
+                    {requiredGapsUnfilled > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Lengkapi {requiredGapsUnfilled} data wajib terlebih dahulu
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -1301,10 +1313,12 @@ function GapReportCard({
   gaps,
   fills,
   onFillChange,
+  onConfirm,
 }: {
   gaps: ParserGap[];
   fills: Record<string, string>;
   onFillChange: (field: string, value: string) => void;
+  onConfirm: () => void;
 }) {
   const [open, setOpen] = useState(true);
   const requiredCount = gaps.filter(g => g.severity === "required").length;
