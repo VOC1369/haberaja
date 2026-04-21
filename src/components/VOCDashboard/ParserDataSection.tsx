@@ -971,41 +971,42 @@ export function ParserDataSection() {
             }}
           />
 
-          {/* Attached screenshot preview chip */}
-          {screenshotFile && (
-            <div className="mx-5 mb-2 inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 border border-border">
-              <ImageIcon className="h-3.5 w-3.5 text-button-hover" />
-              <span className="text-xs text-foreground truncate max-w-[200px]">
-                {screenshotFile.name}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {(screenshotFile.size / 1024).toFixed(0)} KB
-              </span>
-              <button
-                type="button"
-                onClick={() => setScreenshotFile(null)}
-                disabled={isAnalyzing}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-
           {/* Bottom action bar inside field */}
-          <div className="flex items-center justify-between px-3 pb-3 pt-3">
-            {/* Attach button (left) */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => screenshotInputRef.current?.click()}
-              disabled={isAnalyzing}
-              className="h-9 w-9 rounded-full bg-muted hover:bg-muted/80 text-foreground"
-              title="Lampirkan screenshot"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-3">
+            {/* Left cluster: Attach button + attached file chip */}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => screenshotInputRef.current?.click()}
+                disabled={isAnalyzing}
+                className="h-9 w-9 rounded-full bg-muted hover:bg-muted/80 text-foreground shrink-0"
+                title="Lampirkan screenshot"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+
+              {screenshotFile && (
+                <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 border border-border min-w-0">
+                  <ImageIcon className="h-3.5 w-3.5 text-button-hover shrink-0" />
+                  <span className="text-xs text-foreground truncate max-w-[200px]">
+                    {screenshotFile.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    {(screenshotFile.size / 1024).toFixed(0)} KB
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setScreenshotFile(null)}
+                    disabled={isAnalyzing}
+                    className="text-muted-foreground hover:text-foreground shrink-0"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Submit arrow (right) */}
             <Button
@@ -1014,7 +1015,7 @@ export function ParserDataSection() {
               size="icon"
               onClick={handleAnalyze}
               disabled={!hasInput || isAnalyzing}
-              className="h-9 w-9 rounded-full"
+              className="h-9 w-9 rounded-full shrink-0"
               title="Analisis (⌘/Ctrl + Enter)"
             >
               <ArrowUp className="h-4 w-4" />
