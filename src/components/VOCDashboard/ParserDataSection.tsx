@@ -1359,6 +1359,17 @@ function GapReportCard({
                 onChange={v => onFillChange(gap.field, v)}
               />
             ))}
+
+            <Button
+              variant="golden"
+              className="w-full mt-4"
+              onClick={onConfirm}
+              disabled={
+                Object.keys(fills).filter(k => fills[k]?.trim() !== "").length === 0
+              }
+            >
+              ✓ Konfirmasi & Perbarui Data
+            </Button>
           </div>
         </CollapsibleContent>
       </Card>
