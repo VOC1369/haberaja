@@ -842,7 +842,7 @@ export function ParserDataSection() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Parser Data</h1>
           <p className="text-sm text-muted-foreground">
-            AI-powered pre-processor — validasi, struktur & deteksi gap sebelum extraction.
+            VOC Wolf — validasi, struktur & deteksi gap sebelum extraction.
           </p>
         </div>
       </div>
@@ -995,9 +995,9 @@ export function ParserDataSection() {
                   <Loader2 className="h-5 w-5 text-button-hover animate-spin" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-foreground">Sedang menganalisis…</div>
+                  <div className="text-sm font-semibold text-foreground">VOC Wolf sedang menganalisis…</div>
                   <div className="text-xs text-muted-foreground">
-                    Parser AI sedang memproses input. Estimasi 5–15 detik.
+                    VOC Wolf Parser sedang memproses input. Estimasi 5–15 detik.
                   </div>
                 </div>
               </div>
@@ -1037,7 +1037,7 @@ export function ParserDataSection() {
               className="flex-1"
             >
               <Sparkles className="h-4 w-4" />
-              Analisis dengan Parser AI
+              Analisis dengan VOC Wolf Parser
             </Button>
             {parserResult && (
               <Button variant="outline" size="lg" onClick={handleReset}>
@@ -1360,16 +1360,32 @@ function GapReportCard({
               />
             ))}
 
-            <Button
-              variant="golden"
-              className="w-full mt-4"
-              onClick={onConfirm}
-              disabled={
-                Object.keys(fills).filter(k => fills[k]?.trim() !== "").length === 0
-              }
-            >
-              ✓ Konfirmasi & Perbarui Data
-            </Button>
+            {(() => {
+              const isConfirmDisabled = gaps
+                .filter(g => g.severity === "required")
+                .some(g => !fills[g.field] || fills[g.field].trim() === "");
+              return (
+                <>
+                  <Button
+                    className={
+                      isConfirmDisabled
+                        ? "w-full mt-4 bg-muted text-foreground/50 cursor-not-allowed hover:bg-muted"
+                        : "w-full mt-4"
+                    }
+                    variant={isConfirmDisabled ? "secondary" : "golden"}
+                    onClick={onConfirm}
+                    disabled={isConfirmDisabled}
+                  >
+                    ✓ Konfirmasi & Perbarui Data
+                  </Button>
+                  {isConfirmDisabled && (
+                    <p className="text-xs text-center text-muted-foreground mt-2">
+                      Lengkapi data wajib di atas untuk mengaktifkan
+                    </p>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </CollapsibleContent>
       </Card>
