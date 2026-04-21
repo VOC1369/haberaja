@@ -43,6 +43,8 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/lib/notify";
 import { callAI, extractJSON, AICreditsExhaustedError, AIRateLimitError, AIOverloadedError } from "@/lib/ai-client";
 import type { AIContentBlock } from "@/lib/ai-client";
@@ -1422,6 +1424,14 @@ function GapReportCard({
   );
 }
 
+// Parse "(a) ... (b) ... (c) ..." options from a gap label.
+// Returns the option text (without the "(a)" prefix); empty array if <2 options.
+function parseGapOptions(label: string): string[] {
+  const matches = label.match(/\([a-z]\)\s+([^(]+)/g);
+  if (!matches || matches.length < 2) return [];
+  return matches.map(m => m.replace(/^\([a-z]\)\s+/, "").trim().replace(/[,;.\s]+$/, ""));
+}
+
 function GapItem({
   gap,
   value,
@@ -1434,7 +1444,29 @@ function GapItem({
   const isRequired = gap.severity === "required";
   const dotClass = isRequired ? "bg-destructive" : "bg-warning";
 
-  // Use Select for known enums; Input for free text
+  // Parse inline "(a) … (b) …" options out of the label
+  const inlineOptions = parseGapOptions(gap.label);
+  const hasOptions = inlineOptions.length >= 2;
+  const questionPart = gap.label.includes("Pilih:")
+    ? gap.label.split("Pilih:")[0].trim()
+    : gap.label;
+
+  // Local state for radio selection + optional note
+  const [selectedValue, setSelectedValue] = useState("");
+  const [additionalNote, setAdditionalNote] = useState("");
+
+  // Sync radio + note → parent onChange
+  useEffect(() => {
+    if (!hasOptions) return;
+    if (!selectedValue) return;
+    const combined = additionalNote.trim()
+      ? `${selectedValue} — ${additionalNote.trim()}`
+      : selectedValue;
+    onChange(combined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedValue, additionalNote, hasOptions]);
+
+  // Fallback enum-driven Select for legacy gap fields
   const enumOptions: Record<string, { value: string; label: string }[]> = {
     calculation_base: [
       { value: "loss", label: "Kekalahan (Loss)" },
@@ -1453,8 +1485,7 @@ function GapItem({
       { value: "whatsapp", label: "WhatsApp" },
     ],
   };
-
-  const options = enumOptions[gap.field];
+  const selectOptions = enumOptions[gap.field];
 
   return (
     <div className="bg-muted rounded-lg p-4 space-y-3">
@@ -1462,7 +1493,9 @@ function GapItem({
         <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${dotClass}`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-foreground">{gap.label}</span>
+            <span className="text-sm font-medium text-foreground">
+              {hasOptions ? questionPart : gap.label}
+            </span>
             <Badge
               className={
                 isRequired
@@ -1483,13 +1516,54 @@ function GapItem({
       </div>
 
       <div>
-        {options ? (
+        {hasOptions ? (
+          <>
+            <RadioGroup
+              value={selectedValue}
+              onValueChange={setSelectedValue}
+              className="space-y-2"
+            >
+              {inlineOptions.map((opt, idx) => {
+                const id = `${gap.field}-opt-${idx}`;
+                const isSelected = selectedValue === opt;
+                return (
+                  <label
+                    key={id}
+                    htmlFor={id}
+                    className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer transition-colors ${
+                      isSelected
+                        ? "bg-button-hover/10 border-button-hover"
+                        : "border-border hover:border-button-hover/50"
+                    }`}
+                  >
+                    <RadioGroupItem value={opt} id={id} className="mt-0.5" />
+                    <span className="text-sm text-foreground">{opt}</span>
+                  </label>
+                );
+              })}
+            </RadioGroup>
+
+            {selectedValue && (
+              <div className="mt-3 space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Catatan tambahan (opsional)
+                </Label>
+                <Textarea
+                  value={additionalNote}
+                  onChange={e => setAdditionalNote(e.target.value)}
+                  placeholder="Tambahkan konteks jika diperlukan..."
+                  className="min-h-[60px] rounded-lg text-sm"
+                />
+              </div>
+            )}
+          </>
+        ) : selectOptions ? (
           <Select value={value} onValueChange={onChange}>
             <SelectTrigger className="rounded-lg bg-background">
               <SelectValue placeholder="Pilih..." />
             </SelectTrigger>
             <SelectContent>
-              {options.map(opt => (
+              {selectOptions.map(opt => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </SelectItem>
