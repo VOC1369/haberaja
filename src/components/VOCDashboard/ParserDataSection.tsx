@@ -819,13 +819,12 @@ export function ParserDataSection() {
       abortControllerRef.current = null;
       setIsAnalyzing(false);
     }
-  }, [activeTab, hasInput, inputText, screenshotFile, uploadedFile]);
+  }, [hasInput, inputText, screenshotFiles]);
 
   // ─── Reset ───────────────────────────────────────────
   const handleReset = () => {
     setInputText("");
-    setScreenshotFile(null);
-    setUploadedFile(null);
+    setScreenshotFiles([]);
     setParserResult(null);
     setGapFills({});
   };
@@ -947,15 +946,31 @@ export function ParserDataSection() {
               : "border-border hover:border-border/80"
           }`}
         >
-          {/* Hidden file input */}
+          {/* Hidden file input — multiple */}
           <input
             ref={screenshotInputRef}
             type="file"
             accept="image/*"
+            multiple
             className="hidden"
             onChange={e => {
-              const f = e.target.files?.[0];
-              if (f) setScreenshotFile(f);
+              const picked = Array.from(e.target.files ?? []).filter(f => f.type.startsWith("image/"));
+              if (picked.length > 0) {
+                setScreenshotFiles(prev => {
+                  if (prev.length >= MAX_SCREENSHOTS) {
+                    toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`);
+                    return prev;
+                  }
+                  const room = MAX_SCREENSHOTS - prev.length;
+                  const toAdd = picked.slice(0, room);
+                  if (picked.length > room) {
+                    toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`, {
+                      description: `${picked.length - room} file dilewati.`,
+                    });
+                  }
+                  return [...prev, ...toAdd];
+                });
+              }
               if (e.target) e.target.value = "";
             }}
           />
@@ -967,7 +982,7 @@ export function ParserDataSection() {
             placeholder={
               isDragOver
                 ? "Lepaskan untuk upload screenshot…"
-                : "Paste teks S&K, URL promo, drop screenshot, atau Ctrl+V…"
+                : `Paste teks S&K, URL promo, drop screenshot, atau Ctrl+V… (maks. ${MAX_SCREENSHOTS} gambar)`
             }
             className="min-h-40 max-h-80 resize-none border-0 bg-transparent px-5 pt-5 pb-4 focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin-custom"
             disabled={isAnalyzing}
@@ -979,40 +994,77 @@ export function ParserDataSection() {
             }}
           />
 
+          {/* Thumbnail grid (when screenshots attached) */}
+          {screenshotFiles.length > 0 && (
+            <div className="px-3 pb-2 space-y-2">
+              <div className="grid grid-cols-3 gap-2">
+                {screenshotFiles.map((file, idx) => (
+                  <div
+                    key={`${file.name}-${idx}`}
+                    className="relative aspect-video rounded-lg overflow-hidden border border-border bg-muted group"
+                  >
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={`Screenshot ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                      <p className="text-xs text-white truncate">
+                        {file.name || `Screenshot ${idx + 1}`}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setScreenshotFiles(prev => prev.filter((_, i) => i !== idx))
+                      }
+                      disabled={isAnalyzing}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                      aria-label={`Hapus screenshot ${idx + 1}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {screenshotFiles.length < MAX_SCREENSHOTS && (
+                <button
+                  type="button"
+                  onClick={() => screenshotInputRef.current?.click()}
+                  disabled={isAnalyzing}
+                  className="w-full p-2 border border-dashed border-border rounded-lg text-xs text-muted-foreground hover:border-button-hover hover:text-button-hover transition-colors flex items-center justify-center gap-2"
+                >
+                  <ImagePlus className="h-3 w-3" />
+                  Tambah screenshot ({screenshotFiles.length}/{MAX_SCREENSHOTS})
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Bottom action bar inside field */}
           <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-3">
-            {/* Left cluster: Attach button + attached file chip */}
+            {/* Left cluster: Attach button + counter */}
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={() => screenshotInputRef.current?.click()}
-                disabled={isAnalyzing}
+                disabled={isAnalyzing || screenshotFiles.length >= MAX_SCREENSHOTS}
                 className="h-9 w-9 rounded-full bg-muted hover:bg-muted/80 text-foreground shrink-0"
-                title="Lampirkan screenshot"
+                title={
+                  screenshotFiles.length >= MAX_SCREENSHOTS
+                    ? `Maksimal ${MAX_SCREENSHOTS} screenshot`
+                    : "Lampirkan screenshot"
+                }
               >
                 <Plus className="h-4 w-4" />
               </Button>
 
-              {screenshotFile && (
-                <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 border border-border min-w-0">
-                  <ImageIcon className="h-3.5 w-3.5 text-button-hover shrink-0" />
-                  <span className="text-xs text-foreground truncate max-w-[200px]">
-                    {screenshotFile.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {(screenshotFile.size / 1024).toFixed(0)} KB
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setScreenshotFile(null)}
-                    disabled={isAnalyzing}
-                    className="text-muted-foreground hover:text-foreground shrink-0"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+              {screenshotFiles.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {screenshotFiles.length}/{MAX_SCREENSHOTS} screenshot
+                </span>
               )}
             </div>
 
