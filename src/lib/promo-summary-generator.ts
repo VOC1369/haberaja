@@ -280,6 +280,7 @@ export function generatePromoSummary(
   const capAmount = calc?.data.cap_amount as number | undefined;
   const fixedAmount = (
     reward?.data.reward_amount_fixed ??
+    reward?.data.reward_amount ??
     reward?.data.amount ??
     calc?.data.amount
   ) as number | undefined;
@@ -287,6 +288,26 @@ export function generatePromoSummary(
 
   // Build slots
   let rewardLabel = buildRewardLabel(rewardForm, calcBasis);
+
+  // Detect APK dari trigger mechanic jika label masih generic
+  if ((!rewardLabel || rewardLabel === 'Bonus') &&
+      !rewardLabel?.includes('APK')) {
+    const triggerMech = mechanics.find(
+      m => m.mechanic_type === 'trigger'
+    );
+    const triggerEvent = (
+      (triggerMech?.data?.trigger_event as string | undefined) ||
+      (triggerMech?.data?.event as string | undefined) ||
+      ''
+    ).toLowerCase();
+    if (
+      triggerEvent.includes('apk') ||
+      triggerEvent.includes('download') ||
+      triggerEvent === 'apk_download'
+    ) {
+      rewardLabel = 'Bonus APK';
+    }
+  }
 
   // Fallback: gunakan promo_type dari context sebagai hint
   if ((!rewardLabel || rewardLabel === 'Bonus') && context?.promo_type) {
