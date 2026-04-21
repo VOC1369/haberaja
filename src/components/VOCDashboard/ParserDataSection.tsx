@@ -43,7 +43,7 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/lib/notify";
 import { callAI, extractJSON, AICreditsExhaustedError, AIRateLimitError, AIOverloadedError } from "@/lib/ai-client";
@@ -1522,31 +1522,23 @@ function GapItem({
       <div>
         {hasOptions ? (
           <>
-            <div className="space-y-2 mt-2">
+            <RadioGroup
+              value={selectedValue}
+              onValueChange={setSelectedValue}
+              className="space-y-2 mt-2"
+            >
               {inlineOptions.map((opt, idx) => {
-                const isSelected = selectedValue === opt;
+                const id = `${gap.field}-opt-${idx}`;
                 return (
-                  <div
-                    key={idx}
-                    onClick={() => setSelectedValue(opt)}
-                    className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                      isSelected
-                        ? "bg-button-hover/10 border-transparent"
-                        : "border-border hover:bg-muted/50"
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5 ${
-                        isSelected ? "border-transparent" : "border-muted-foreground"
-                      }`}
-                    >
-                      {isSelected && <div className="w-2 h-2 rounded-full bg-button-hover" />}
-                    </div>
-                    <span className="text-sm text-foreground leading-relaxed">{opt}</span>
+                  <div key={idx} className="flex items-center space-x-2">
+                    <RadioGroupItem value={opt} id={id} />
+                    <Label htmlFor={id} className="cursor-pointer font-normal text-sm text-foreground">
+                      {opt}
+                    </Label>
                   </div>
                 );
               })}
-            </div>
+            </RadioGroup>
 
             {selectedValue && (
               <div className="mt-3 space-y-1">
