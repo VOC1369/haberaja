@@ -1493,7 +1493,7 @@ function GapItem({
 
   return (
     <div className="bg-muted rounded-lg p-4 space-y-3">
-      <div className="mb-3 space-y-2">
+      <div className="mb-3">
         <div className="flex items-center gap-2 flex-wrap">
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dotClass}`} />
           <span className="text-sm font-medium text-foreground leading-none">
@@ -1509,9 +1509,9 @@ function GapItem({
             {isRequired ? "WAJIB" : "OPSIONAL"}
           </Badge>
         </div>
-        <div className="text-sm text-muted-foreground">{gap.reason}</div>
+        <div className="text-sm text-muted-foreground mt-2">{gap.reason}</div>
         {gap.default_value && (
-          <div className="text-xs text-muted-foreground">
+          <div className="text-xs text-muted-foreground mt-1">
             Default jika dikosongkan: <span className="text-foreground">{gap.default_value}</span>
           </div>
         )}
