@@ -842,7 +842,7 @@ export function ParserDataSection() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Parser Data</h1>
           <p className="text-sm text-muted-foreground">
-            AI-powered pre-processor — validasi, struktur & deteksi gap sebelum extraction.
+            VOC Wolf — validasi, struktur & deteksi gap sebelum extraction.
           </p>
         </div>
       </div>
