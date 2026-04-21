@@ -15,7 +15,6 @@ import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import {
   FileSearch,
   FileText,
-  Upload,
   Image as ImageIcon,
   Loader2,
   CheckCircle2,
@@ -25,10 +24,10 @@ import {
   Copy,
   ChevronDown,
   X,
-  Sparkles,
   Info,
   Plus,
   ArrowUp,
+  ImagePlus,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,6 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -576,26 +574,23 @@ async function fileToBase64(file: File): Promise<{ data: string; mime: string }>
 // ════════════════════════════════════════════════════
 
 export function ParserDataSection() {
-  const [activeTab, setActiveTab] = useState<"text" | "file">("text");
   const [inputText, setInputText] = useState("");
-  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeElapsedMs, setAnalyzeElapsedMs] = useState(0);
   const [parserResult, setParserResult] = useState<ParserResult | null>(null);
   const [gapFills, setGapFills] = useState<Record<string, string>>({});
 
   const screenshotInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ─── Derived state ───────────────────────────────────
+  const MAX_SCREENSHOTS = 5;
   const hasInput = useMemo(() => {
-    if (activeTab === "text") return inputText.trim().length > 0 || !!screenshotFile;
-    return !!uploadedFile;
-  }, [activeTab, inputText, screenshotFile, uploadedFile]);
+    return inputText.trim().length > 0 || screenshotFiles.length > 0;
+  }, [inputText, screenshotFiles]);
 
   const requiredGapsUnfilled = useMemo(() => {
     if (!parserResult) return 0;
@@ -622,20 +617,35 @@ export function ParserDataSection() {
     e.stopPropagation();
     setIsDragOver(false);
     if (isAnalyzing) return;
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
+    const dropped = Array.from(e.dataTransfer.files ?? []);
+    if (dropped.length === 0) return;
+    const images = dropped.filter(f => f.type.startsWith("image/"));
+    const rejected = dropped.length - images.length;
+    if (rejected > 0) {
       toast.warning("Hanya file gambar yang diizinkan", {
-        description: `File "${file.name}" bukan format image.`,
+        description: `${rejected} file bukan format image dan dilewati.`,
       });
-      return;
     }
-    setScreenshotFile(file);
+    if (images.length === 0) return;
+    setScreenshotFiles(prev => {
+      if (prev.length >= MAX_SCREENSHOTS) {
+        toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`);
+        return prev;
+      }
+      const room = MAX_SCREENSHOTS - prev.length;
+      const toAdd = images.slice(0, room);
+      if (images.length > room) {
+        toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`, {
+          description: `${images.length - room} file dilewati.`,
+        });
+      }
+      return [...prev, ...toAdd];
+    });
   }, [isAnalyzing]);
 
   // ─── Paste handler (Ctrl+V / Cmd+V) ─────────────────
   useEffect(() => {
-    if (activeTab !== "text" || screenshotFile || isAnalyzing) return;
+    if (isAnalyzing) return;
 
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -645,8 +655,14 @@ export function ParserDataSection() {
         if (item.type.startsWith("image/")) {
           const file = item.getAsFile();
           if (file) {
-            setScreenshotFile(file);
-            toast.success("Screenshot dari clipboard ditambahkan");
+            setScreenshotFiles(prev => {
+              if (prev.length >= MAX_SCREENSHOTS) {
+                toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`);
+                return prev;
+              }
+              toast.success("Screenshot dari clipboard ditambahkan");
+              return [...prev, file];
+            });
             e.preventDefault();
             return;
           }
@@ -656,7 +672,7 @@ export function ParserDataSection() {
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [activeTab, screenshotFile, isAnalyzing]);
+  }, [isAnalyzing]);
 
   // ─── Cancel handler ─────────────────────────────────
   const handleCancelAnalyze = useCallback(() => {
@@ -696,35 +712,27 @@ export function ParserDataSection() {
     setGapFills({});
 
     try {
-      // Build content blocks (text + optional image)
+      // Build content blocks (text + optional images)
       const contentBlocks: AIContentBlock[] = [];
 
-      if (activeTab === "text") {
-        if (inputText.trim()) {
-          contentBlocks.push({ type: "text", text: inputText.trim() });
-        }
-        if (screenshotFile) {
-          const { data, mime } = await fileToBase64(screenshotFile);
+      // Text first
+      if (inputText.trim()) {
+        contentBlocks.push({ type: "text", text: inputText.trim() });
+      }
+
+      // Then all screenshots with context
+      if (screenshotFiles.length > 0) {
+        contentBlocks.push({
+          type: "text",
+          text: `Berikut ${screenshotFiles.length} screenshot promo yang perlu dianalisis. Susun informasi dari semua gambar secara komprehensif:`,
+        });
+        for (const file of screenshotFiles) {
+          const { data, mime } = await fileToBase64(file);
           contentBlocks.push({
             type: "image",
             source: { type: "base64", media_type: mime, data },
           });
         }
-      } else if (uploadedFile) {
-        // Image file → vision; PDF → unsupported here, ask text paste
-        if (uploadedFile.type === "application/pdf") {
-          toast.warning("Format PDF belum didukung", {
-            description: "Sementara silakan copy-paste teks dari PDF ke tab 'Teks & URL'.",
-          });
-          setIsAnalyzing(false);
-          return;
-        }
-        const { data, mime } = await fileToBase64(uploadedFile);
-        contentBlocks.push({ type: "text", text: "Analisis konten promo dari gambar berikut:" });
-        contentBlocks.push({
-          type: "image",
-          source: { type: "base64", media_type: mime, data },
-        });
       }
 
       if (contentBlocks.length === 0) {
@@ -811,13 +819,12 @@ export function ParserDataSection() {
       abortControllerRef.current = null;
       setIsAnalyzing(false);
     }
-  }, [activeTab, hasInput, inputText, screenshotFile, uploadedFile]);
+  }, [hasInput, inputText, screenshotFiles]);
 
   // ─── Reset ───────────────────────────────────────────
   const handleReset = () => {
     setInputText("");
-    setScreenshotFile(null);
-    setUploadedFile(null);
+    setScreenshotFiles([]);
     setParserResult(null);
     setGapFills({});
   };
@@ -939,15 +946,31 @@ export function ParserDataSection() {
               : "border-border hover:border-border/80"
           }`}
         >
-          {/* Hidden file input */}
+          {/* Hidden file input — multiple */}
           <input
             ref={screenshotInputRef}
             type="file"
             accept="image/*"
+            multiple
             className="hidden"
             onChange={e => {
-              const f = e.target.files?.[0];
-              if (f) setScreenshotFile(f);
+              const picked = Array.from(e.target.files ?? []).filter(f => f.type.startsWith("image/"));
+              if (picked.length > 0) {
+                setScreenshotFiles(prev => {
+                  if (prev.length >= MAX_SCREENSHOTS) {
+                    toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`);
+                    return prev;
+                  }
+                  const room = MAX_SCREENSHOTS - prev.length;
+                  const toAdd = picked.slice(0, room);
+                  if (picked.length > room) {
+                    toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`, {
+                      description: `${picked.length - room} file dilewati.`,
+                    });
+                  }
+                  return [...prev, ...toAdd];
+                });
+              }
               if (e.target) e.target.value = "";
             }}
           />
@@ -959,7 +982,7 @@ export function ParserDataSection() {
             placeholder={
               isDragOver
                 ? "Lepaskan untuk upload screenshot…"
-                : "Paste teks S&K, URL promo, drop screenshot, atau Ctrl+V…"
+                : `Paste teks S&K, URL promo, drop screenshot, atau Ctrl+V… (maks. ${MAX_SCREENSHOTS} gambar)`
             }
             className="min-h-40 max-h-80 resize-none border-0 bg-transparent px-5 pt-5 pb-4 focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin-custom"
             disabled={isAnalyzing}
@@ -971,40 +994,77 @@ export function ParserDataSection() {
             }}
           />
 
+          {/* Thumbnail grid (when screenshots attached) */}
+          {screenshotFiles.length > 0 && (
+            <div className="px-3 pb-2 space-y-2">
+              <div className="grid grid-cols-3 gap-2">
+                {screenshotFiles.map((file, idx) => (
+                  <div
+                    key={`${file.name}-${idx}`}
+                    className="relative aspect-video rounded-lg overflow-hidden border border-border bg-muted group"
+                  >
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={`Screenshot ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                      <p className="text-xs text-white truncate">
+                        {file.name || `Screenshot ${idx + 1}`}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setScreenshotFiles(prev => prev.filter((_, i) => i !== idx))
+                      }
+                      disabled={isAnalyzing}
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                      aria-label={`Hapus screenshot ${idx + 1}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {screenshotFiles.length < MAX_SCREENSHOTS && (
+                <button
+                  type="button"
+                  onClick={() => screenshotInputRef.current?.click()}
+                  disabled={isAnalyzing}
+                  className="w-full p-2 border border-dashed border-border rounded-lg text-xs text-muted-foreground hover:border-button-hover hover:text-button-hover transition-colors flex items-center justify-center gap-2"
+                >
+                  <ImagePlus className="h-3 w-3" />
+                  Tambah screenshot ({screenshotFiles.length}/{MAX_SCREENSHOTS})
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Bottom action bar inside field */}
           <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-3">
-            {/* Left cluster: Attach button + attached file chip */}
+            {/* Left cluster: Attach button + counter */}
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 onClick={() => screenshotInputRef.current?.click()}
-                disabled={isAnalyzing}
+                disabled={isAnalyzing || screenshotFiles.length >= MAX_SCREENSHOTS}
                 className="h-9 w-9 rounded-full bg-muted hover:bg-muted/80 text-foreground shrink-0"
-                title="Lampirkan screenshot"
+                title={
+                  screenshotFiles.length >= MAX_SCREENSHOTS
+                    ? `Maksimal ${MAX_SCREENSHOTS} screenshot`
+                    : "Lampirkan screenshot"
+                }
               >
                 <Plus className="h-4 w-4" />
               </Button>
 
-              {screenshotFile && (
-                <div className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1.5 border border-border min-w-0">
-                  <ImageIcon className="h-3.5 w-3.5 text-button-hover shrink-0" />
-                  <span className="text-xs text-foreground truncate max-w-[200px]">
-                    {screenshotFile.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {(screenshotFile.size / 1024).toFixed(0)} KB
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setScreenshotFile(null)}
-                    disabled={isAnalyzing}
-                    className="text-muted-foreground hover:text-foreground shrink-0"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+              {screenshotFiles.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {screenshotFiles.length}/{MAX_SCREENSHOTS} screenshot
+                </span>
               )}
             </div>
 
