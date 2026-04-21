@@ -1031,16 +1031,15 @@ export function ParserDataSection() {
           <div className="mt-6 flex items-center gap-3">
             <Button
               variant="golden"
-              size="lg"
               onClick={handleAnalyze}
               disabled={!hasInput}
-              className="flex-1"
+              className="flex-1 h-11 px-6 gap-2"
             >
               <Sparkles className="h-4 w-4" />
               Analisis dengan VOC Wolf Parser
             </Button>
             {parserResult && (
-              <Button variant="outline" size="lg" onClick={handleReset}>
+              <Button variant="outline" onClick={handleReset} className="h-11 px-6 gap-2">
                 Reset
               </Button>
             )}
