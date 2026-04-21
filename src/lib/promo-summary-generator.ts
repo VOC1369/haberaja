@@ -84,6 +84,9 @@ function buildRewardLabel(rewardForm: string | undefined, calcBasis?: string): s
   if (rf === 'freespin') return 'Freespin';
   if (rf === 'physical_reward') return 'Hadiah';
   if (rf === 'percentage_of_loss') return 'Cashback';
+  if (rf === 'credit_game') return basis === 'loss' ? 'Cashback' : 'Bonus';
+  if (rf === 'uang_tunai') return 'Bonus Tunai';
+  if (rf === 'hadiah_fisik') return 'Hadiah';
 
   // Fallback: capitalize tapi bersihkan underscore
   if (!rf) return null;
@@ -275,7 +278,11 @@ export function generatePromoSummary(
   ) as string | undefined;
   const percentage = calc?.data.percentage as number | undefined;
   const capAmount = calc?.data.cap_amount as number | undefined;
-  const fixedAmount = (reward?.data.amount ?? calc?.data.amount) as number | undefined;
+  const fixedAmount = (
+    reward?.data.reward_amount_fixed ??
+    reward?.data.amount ??
+    calc?.data.amount
+  ) as number | undefined;
   const triggerEvent = trigger?.data.event as string | undefined;
 
   // Build slots
@@ -292,6 +299,8 @@ export function generatePromoSummary(
       rewardLabel = 'Bonus deposit';
     } else if (pt.includes('referral')) {
       rewardLabel = 'Komisi referral';
+    } else if (pt.includes('apk') || pt.includes('download') || pt.includes('unduh')) {
+      rewardLabel = 'Bonus APK';
     } else if (pt.includes('freechip')) {
       rewardLabel = 'Freechip';
     }
