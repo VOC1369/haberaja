@@ -342,13 +342,19 @@ JIKA status = "valid" → promos harus tepat 1 elemen.`;
 const FIELD_LABELS: Record<string, string> = {
   promo_name: "Nama Promo",
   promo_type: "Tipe Promo",
+  reward_type_hint: "Hint Tipe Reward",
   calculation_value: "Nilai Bonus",
   max_bonus: "Max Bonus",
+  min_deposit: "Minimal Deposit",
   calculation_base: "Basis Perhitungan",
-  turnover_requirement: "Turnover Requirement",
+  has_turnover: "Ada Turnover?",
+  turnover_requirement: "Syarat Turnover",
+  is_tiered: "Promo Bertier?",
   game_types: "Game Type",
   claim_method: "Cara Klaim",
   target_user: "Target User",
+  parse_confidence: "Confidence Parser",
+  ambiguity_flags: "Flag Ambiguitas",
 };
 
 const TARGET_USER_LABEL: Record<string, string> = {
@@ -376,23 +382,41 @@ function formatPromoFieldValue(promo: ParsedPromo, key: string): string {
       return promo.promo_name || "—";
     case "promo_type":
       return promo.promo_type || "—";
+    case "reward_type_hint":
+      return promo.reward_type_hint || "—";
     case "calculation_value":
       return promo.calculation_value != null ? `${promo.calculation_value}%` : "—";
     case "max_bonus":
-      if (promo.max_bonus_unlimited) return "Unlimited";
+      if (promo.max_bonus_unlimited === true) return "Unlimited";
       return promo.max_bonus != null ? `Rp ${promo.max_bonus.toLocaleString("id-ID")}` : "—";
+    case "min_deposit":
+      return promo.min_deposit != null ? `Rp ${promo.min_deposit.toLocaleString("id-ID")}` : "—";
     case "calculation_base":
       return promo.calculation_base ? CALC_BASE_LABEL[promo.calculation_base] ?? promo.calculation_base : "—";
+    case "has_turnover":
+      if (promo.has_turnover === true) return "Ya";
+      if (promo.has_turnover === false) return "Tidak";
+      return "—";
     case "turnover_requirement":
-      return promo.turnover_requirement != null ? `${promo.turnover_requirement}x` : "Tidak ada TO";
+      return promo.turnover_requirement != null ? `${promo.turnover_requirement}x` : "—";
+    case "is_tiered":
+      if (promo.is_tiered === true) return "Ya (multi-tier)";
+      if (promo.is_tiered === false) return "Tidak";
+      return "—";
     case "game_types":
-      return promo.game_types.length > 0
+      return promo.game_types && promo.game_types.length > 0
         ? promo.game_types.map(g => g.charAt(0).toUpperCase() + g.slice(1).replace("_", " ")).join(", ")
         : "—";
     case "claim_method":
       return promo.claim_method ? CLAIM_METHOD_LABEL[promo.claim_method] ?? promo.claim_method : "—";
     case "target_user":
-      return TARGET_USER_LABEL[promo.target_user] ?? promo.target_user;
+      return promo.target_user ? TARGET_USER_LABEL[promo.target_user] ?? promo.target_user : "—";
+    case "parse_confidence":
+      return promo.parse_confidence != null ? `${(promo.parse_confidence * 100).toFixed(0)}%` : "—";
+    case "ambiguity_flags":
+      return promo.ambiguity_flags && promo.ambiguity_flags.length > 0
+        ? promo.ambiguity_flags.join(", ")
+        : "Tidak ada";
     default:
       return "—";
   }
