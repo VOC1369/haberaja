@@ -1255,15 +1255,15 @@ function StructuredDataCard({
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {fieldKeys.map(key => (
-                    <div key={key} className="bg-muted rounded-lg p-4">
-                      <div className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">
+                    <div key={key} className="bg-muted rounded-lg p-3">
+                      <span className="text-muted-foreground text-xs block mb-1">
                         {FIELD_LABELS[key]}
-                      </div>
-                      <div className="text-sm text-foreground font-medium break-words">
+                      </span>
+                      <span className="text-foreground font-medium break-words">
                         {formatPromoFieldValue(promo, key)}
-                      </div>
+                      </span>
                     </div>
                   ))}
                 </div>
