@@ -1,6 +1,12 @@
 /**
  * NotificationModal — Global Modal Notification
- * Uses design system tokens ONLY. No hardcoded colors.
+ *
+ * STRICT alignment ke design system v1.1 (locked):
+ * - rounded-xl (modal), rounded-full (button CTA)
+ * - p-6 padding (24px standard, no banned values)
+ * - bg-card, border-border (NO opacity variations)
+ * - Title text-foreground, status color hanya pada icon
+ * - Icon pakai .icon-circle utility (gold tint default) atau status-color circle
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -8,56 +14,39 @@ import { notificationBus, type NotificationPayload, type NotificationType } from
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 // ============================================
-// Per-type semantic config — design tokens only
+// Per-type config — design tokens only, NO opacity variants
 // ============================================
 
 const CONFIG: Record<NotificationType, {
   icon: React.ComponentType<{ className?: string }>;
-  iconClass: string;
-  titleClass: string;
-  borderVar: string;
-  bgVar: string;
-  buttonVar: string;
+  iconColor: string;     // text color for the icon SVG itself
+  iconBg: string;        // bg of the icon circle (uses solid token, no /opacity)
+  buttonClass: string;   // CTA button (always rounded-full)
 }> = {
   success: {
     icon: CheckCircle2,
-    iconClass: 'text-[hsl(var(--success))]',
-    titleClass: 'text-[hsl(var(--success))]',
-    borderVar: 'border-[hsl(var(--success)_/_0.35)]',
-    bgVar: 'bg-[hsl(var(--card))]',
-    buttonVar: 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:opacity-90',
+    iconColor: 'text-success-foreground',
+    iconBg: 'bg-success',
+    buttonClass: 'bg-success text-success-foreground hover:opacity-90',
   },
   error: {
     icon: XCircle,
-    iconClass: 'text-[hsl(var(--destructive))]',
-    titleClass: 'text-[hsl(var(--destructive))]',
-    borderVar: 'border-[hsl(var(--destructive)_/_0.35)]',
-    bgVar: 'bg-[hsl(var(--card))]',
-    buttonVar: 'bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] hover:opacity-90',
+    iconColor: 'text-destructive-foreground',
+    iconBg: 'bg-destructive',
+    buttonClass: 'bg-destructive text-destructive-foreground hover:opacity-90',
   },
   warning: {
     icon: AlertTriangle,
-    iconClass: 'text-[hsl(var(--warning))]',
-    titleClass: 'text-[hsl(var(--warning))]',
-    borderVar: 'border-[hsl(var(--warning)_/_0.35)]',
-    bgVar: 'bg-[hsl(var(--card))]',
-    buttonVar: 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] hover:opacity-90',
+    iconColor: 'text-warning-foreground',
+    iconBg: 'bg-warning',
+    buttonClass: 'bg-warning text-warning-foreground hover:opacity-90',
   },
   info: {
     icon: Info,
-    iconClass: 'text-[hsl(var(--muted-foreground))]',
-    titleClass: 'text-foreground',
-    borderVar: 'border-border',
-    bgVar: 'bg-[hsl(var(--card))]',
-    buttonVar: 'bg-[hsl(var(--button-hover))] text-[hsl(var(--button-hover-foreground))] hover:opacity-90',
+    iconColor: 'text-button-hover-foreground',
+    iconBg: 'bg-button-hover',
+    buttonClass: 'bg-button-hover text-button-hover-foreground hover:opacity-90',
   },
-};
-
-const TYPE_LABEL: Record<NotificationType, string> = {
-  success: 'Berhasil',
-  error: 'Terjadi Kesalahan',
-  warning: 'Peringatan',
-  info: 'Informasi',
 };
 
 interface QueueItem extends NotificationPayload {
@@ -95,7 +84,7 @@ export function NotificationModal() {
     setTimeout(() => setCurrent(null), 200);
   }, []);
 
-  // Auto-dismiss if duration is set (info progress notifications)
+  // Auto-dismiss when duration is set (progress UI)
   useEffect(() => {
     if (!visible || !current) return;
     if (current.duration && current.duration > 0) {
@@ -120,7 +109,6 @@ export function NotificationModal() {
 
   const cfg = CONFIG[current.type];
   const Icon = cfg.icon;
-  const label = TYPE_LABEL[current.type];
   const isAutoDismiss = !!(current.duration && current.duration > 0);
 
   return (
@@ -133,7 +121,7 @@ export function NotificationModal() {
         onClick={!isAutoDismiss ? handleClose : undefined}
       />
 
-      {/* Modal */}
+      {/* Modal — rounded-xl, bg-card, border-border, p-6 (design system locked) */}
       <div
         role="alertdialog"
         aria-modal="true"
@@ -145,11 +133,7 @@ export function NotificationModal() {
           ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}
         `}
       >
-        <div className={`
-          relative rounded-2xl border shadow-2xl px-7 py-6
-          ${cfg.bgVar} ${cfg.borderVar}
-          backdrop-blur-xl
-        `}>
+        <div className="relative rounded-xl border border-border bg-card shadow-xl p-6">
           {/* Close X button — hide on auto-dismiss */}
           {!isAutoDismiss && (
             <button
@@ -161,45 +145,40 @@ export function NotificationModal() {
             </button>
           )}
 
-          {/* Icon + type label */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`rounded-full p-2 bg-muted border ${cfg.borderVar}`}>
-              <Icon className={`w-6 h-6 ${cfg.iconClass}`} />
+          {/* Icon + Title row */}
+          <div className="flex items-start gap-4 pr-6">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${cfg.iconBg}`}>
+              <Icon className={`h-5 w-5 ${cfg.iconColor}`} />
             </div>
-            <span className={`text-xs font-semibold uppercase tracking-wider ${cfg.iconClass} opacity-80`}>
-              {label}
-            </span>
+            <div className="flex-1 min-w-0 pt-1">
+              <p id="notif-title" className="text-base font-semibold leading-snug text-foreground">
+                {current.title}
+              </p>
+              {current.description && (
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
+                  {current.description}
+                </p>
+              )}
+            </div>
           </div>
-
-          {/* Title */}
-          <p id="notif-title" className={`text-base font-semibold leading-snug mb-1 ${cfg.titleClass}`}>
-            {current.title}
-          </p>
-
-          {/* Description */}
-          {current.description && (
-            <p className="text-sm text-muted-foreground mt-1 mb-4 leading-relaxed">
-              {current.description}
-            </p>
-          )}
 
           {/* Queue indicator */}
           {queue.length > 0 && (
-            <p className="text-xs text-muted-foreground mb-3">
+            <p className="text-xs text-muted-foreground mt-4">
               +{queue.length} notifikasi menunggu
             </p>
           )}
 
-          {/* OK button — hide on auto-dismiss */}
+          {/* OK button — rounded-full, hide on auto-dismiss */}
           {!isAutoDismiss && (
-            <div className="mt-5 flex justify-end">
+            <div className="mt-6 flex justify-end">
               <button
                 autoFocus
                 onClick={handleClose}
                 className={`
-                  px-6 py-2 rounded-xl text-sm font-semibold
+                  px-6 py-2 rounded-full text-sm font-semibold
                   transition-all duration-150 active:scale-95
-                  ${cfg.buttonVar}
+                  ${cfg.buttonClass}
                 `}
               >
                 OK
@@ -211,7 +190,7 @@ export function NotificationModal() {
           {isAutoDismiss && (
             <div className="mt-4 h-0.5 bg-border rounded-full overflow-hidden">
               <div
-                className={`h-full ${cfg.iconClass} bg-current rounded-full`}
+                className={`h-full ${cfg.iconBg} rounded-full`}
                 style={{
                   animation: `shrink ${current.duration}ms linear forwards`,
                 }}
