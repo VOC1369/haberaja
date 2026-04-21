@@ -995,9 +995,9 @@ export function ParserDataSection() {
                   <Loader2 className="h-5 w-5 text-button-hover animate-spin" />
                 </div>
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold text-foreground">Sedang menganalisis…</div>
+                  <div className="text-sm font-semibold text-foreground">VOC Wolf sedang menganalisis…</div>
                   <div className="text-xs text-muted-foreground">
-                    Parser AI sedang memproses input. Estimasi 5–15 detik.
+                    VOC Wolf Parser sedang memproses input. Estimasi 5–15 detik.
                   </div>
                 </div>
               </div>
