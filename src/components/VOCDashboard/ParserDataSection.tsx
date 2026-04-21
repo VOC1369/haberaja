@@ -1493,30 +1493,28 @@ function GapItem({
 
   return (
     <div className="bg-muted rounded-lg p-4 space-y-3">
-      <div className="flex items-start gap-2 mb-3">
-        <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-[5px] ${dotClass}`} />
-        <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-foreground">
-              {hasOptions ? questionPart : gap.label}
-            </span>
-            <Badge
-              className={
-                isRequired
-                  ? "bg-destructive/20 text-destructive border border-destructive/30"
-                  : "bg-warning/20 text-warning border border-warning/30"
-              }
-            >
-              {isRequired ? "WAJIB" : "OPSIONAL"}
-            </Badge>
-          </div>
-          <div className="text-sm text-muted-foreground">{gap.reason}</div>
-          {gap.default_value && (
-            <div className="text-xs text-muted-foreground">
-              Default jika dikosongkan: <span className="text-foreground">{gap.default_value}</span>
-            </div>
-          )}
+      <div className="mb-3 space-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${dotClass}`} />
+          <span className="text-sm font-medium text-foreground leading-none">
+            {hasOptions ? questionPart : gap.label}
+          </span>
+          <Badge
+            className={
+              isRequired
+                ? "bg-destructive/20 text-destructive border border-destructive/30 leading-none"
+                : "bg-warning/20 text-warning border border-warning/30 leading-none"
+            }
+          >
+            {isRequired ? "WAJIB" : "OPSIONAL"}
+          </Badge>
         </div>
+        <div className="text-sm text-muted-foreground">{gap.reason}</div>
+        {gap.default_value && (
+          <div className="text-xs text-muted-foreground">
+            Default jika dikosongkan: <span className="text-foreground">{gap.default_value}</span>
+          </div>
+        )}
       </div>
 
       <div>
