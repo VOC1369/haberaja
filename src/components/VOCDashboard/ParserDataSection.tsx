@@ -1429,7 +1429,10 @@ function GapReportCard({
 function parseGapOptions(label: string): string[] {
   const matches = label.match(/\([a-z]\)\s+([^(]+)/g);
   if (!matches || matches.length < 2) return [];
-  return matches.map(m => m.replace(/^\([a-z]\)\s+/, "").trim().replace(/[,;.\s]+$/, ""));
+  return matches.map(m => {
+    const text = m.replace(/^\([a-z]\)\s+/, "").trim().replace(/[,;.\s]+$/, "");
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  });
 }
 
 function GapItem({
