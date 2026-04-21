@@ -990,7 +990,8 @@ export function ParserDataSection() {
             className="min-h-40 max-h-80 resize-none border-0 bg-transparent px-5 pt-5 pb-4 focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin-custom"
             disabled={isAnalyzing}
             onKeyDown={e => {
-              if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && hasInput && !isAnalyzing) {
+              // Enter = submit; Shift+Enter = newline
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && hasInput && !isAnalyzing) {
                 e.preventDefault();
                 handleAnalyze();
               }
