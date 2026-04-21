@@ -1208,8 +1208,22 @@ export function ParserDataSection() {
       {/* SECTION 2: HASIL PARSER                              */}
       {/* ════════════════════════════════════════════════════ */}
 
-      {parserResult && (
+      {parserResult && !isAnalyzing && (
         <>
+          {/* Header bar — Reset action */}
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-xs text-muted-foreground">
+              Wolfclaw menggunakan AI dan bisa melakukan kesalahan. Pastikan lakukan pengecekan ganda.
+            </p>
+            <Button
+              variant="outline"
+              onClick={handleReset}
+              className="h-9 px-4 gap-2 rounded-full shrink-0"
+            >
+              Reset
+            </Button>
+          </div>
+
           {/* 2A — STATUS BADGE */}
           <StatusCard result={parserResult} />
 
