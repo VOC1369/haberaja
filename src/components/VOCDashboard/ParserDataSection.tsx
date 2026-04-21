@@ -1531,13 +1531,13 @@ function GapItem({
                     onClick={() => setSelectedValue(opt)}
                     className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                       isSelected
-                        ? "bg-button-hover/10 border-button-hover"
+                        ? "bg-button-hover/10 border-transparent"
                         : "border-border hover:bg-muted/50"
                     }`}
                   >
                     <div
                       className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5 ${
-                        isSelected ? "border-button-hover" : "border-muted-foreground"
+                        isSelected ? "border-transparent" : "border-muted-foreground"
                       }`}
                     >
                       {isSelected && <div className="w-2 h-2 rounded-full bg-button-hover" />}
