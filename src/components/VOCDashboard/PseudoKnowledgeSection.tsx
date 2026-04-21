@@ -1575,35 +1575,25 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           
           {/* INPUT SECTION - Unified Design */}
           {!extractedPromo && !isExtracting && (
-            <Card className="form-card">
-              {/* Header */}
-              <div className="text-center mb-8">
-                <div className="icon-circle w-16 h-16 mx-auto mb-4">
-                  <Sparkles className="icon-circle-icon w-8 h-8" />
-                </div>
+            <Card className="p-8">
+              {/* Header — vertically stacked & centered (mirror Parser) */}
+              <div className="flex flex-col items-center text-center gap-3 mb-8">
+                <img
+                  src={wolfclawIcon}
+                  alt="Wolfclaw"
+                  className="h-12 w-12 rounded-xl"
+                />
                 <h2 className="text-2xl font-semibold text-foreground">Promo Extractor</h2>
-                <p className="text-muted-foreground mt-2">
+                <p className="text-sm text-muted-foreground max-w-md">
                   Paste link, HTML, atau drop screenshot — AI akan mengekstrak ke format Knowledge Base.
                 </p>
-              </div>
-
-              {/* API Status Badge */}
-              <div className="flex justify-center mb-6">
-                <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                <Badge variant="outline" className="bg-success/10 text-success border-success/30 mt-1">
                   <span className="w-2 h-2 rounded-full bg-success mr-2" />
                   VOC AI Knowledge
                 </Badge>
               </div>
 
-              {/* Hint Text - Updated for Hybrid mode */}
-              {!imagePreview && !currentInput && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground/70 mb-8">
-                  <Lightbulb className="w-4 h-4" />
-                  <span>Untuk hasil terbaik: paste S&K + upload screenshot (mode HYBRID)</span>
-                </div>
-              )}
-
-              {/* Hybrid Mode Indicator */}
+              {/* Hybrid Mode Indicator (runtime indicator — kept) */}
               {imagePreview && currentInput.trim().length > 50 && (
                 <div className="flex items-center justify-center gap-2 mb-4">
                   <Badge className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400">
@@ -1637,30 +1627,18 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 </div>
               )}
 
-              {/* Unified Input Bar */}
-              <div 
-                className={`
-                  relative flex items-end gap-2 p-2 rounded-xl border-2
-                  transition-all duration-200
-                  ${isDragOver 
-                    ? 'border-button-hover bg-button-hover/5' 
-                    : 'border-border bg-muted/30'
-                  }
-                `}
+              {/* ─── UNIFIED INPUT FIELD (Parser-style) ─── */}
+              <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
+                className={`relative rounded-2xl border bg-background transition-colors ${
+                  isDragOver
+                    ? "border-button-hover bg-button-hover/5"
+                    : "border-border hover:border-border/80"
+                }`}
               >
-                {/* Attachment Button */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex-shrink-0 text-muted-foreground hover:text-foreground"
-                  title="Upload image"
-                >
-                  <Paperclip className="w-5 h-5" />
-                </Button>
+                {/* Hidden file input */}
                 <input 
                   type="file" 
                   ref={fileInputRef}
@@ -1668,35 +1646,60 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   onChange={handleImageUpload}
                   className="hidden"
                 />
-                
+
                 {/* Textarea */}
                 <Textarea
                   value={currentInput}
                   onChange={(e) => setCurrentInput(e.target.value)}
                   onPaste={handlePaste}
                   onKeyDown={handleKeyDown}
-                  placeholder="Paste link promo atau konten promo..."
-                  className="flex-1 min-h-[44px] max-h-[200px] resize-none border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                  rows={1}
+                  placeholder={
+                    isDragOver
+                      ? "Lepaskan untuk upload screenshot…"
+                      : "Paste link promo atau konten promo..."
+                  }
+                  className="min-h-40 max-h-80 resize-none border-0 bg-transparent px-5 pt-5 pb-4 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  disabled={isExtracting}
                 />
-                
-                {/* Send Button */}
-                <Button
-                  variant="golden"
-                  size="icon"
-                  onClick={handleExtract}
-                  disabled={isExtracting || (!currentInput.trim() && !imageBase64)}
-                  className="flex-shrink-0 rounded-full"
-                  title="Ekstrak promo"
-                >
-                  <Send className="w-5 h-5" />
-                </Button>
+
+                {/* Bottom action bar inside field */}
+                <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-3">
+                  {/* Left: attach button */}
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isExtracting}
+                      className="h-9 w-9 rounded-full bg-muted hover:bg-muted/80 text-foreground shrink-0"
+                      title="Lampirkan screenshot"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Right: submit arrow */}
+                  <Button
+                    type="button"
+                    variant="golden"
+                    size="icon"
+                    onClick={handleExtract}
+                    disabled={isExtracting || (!currentInput.trim() && !imageBase64)}
+                    className="h-9 w-9 rounded-full shrink-0"
+                    title="Ekstrak promo (Enter)"
+                  >
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
-              {/* Helper Text */}
-              <p className="text-xs text-muted-foreground text-center mt-3">
-                Tekan Enter untuk mengirim, Shift+Enter untuk baris baru
-              </p>
+              {/* Disclaimer — same as Parser */}
+              <div className="mt-6">
+                <p className="text-xs text-muted-foreground">
+                  Wolfclaw menggunakan AI dan bisa melakukan kesalahan. Pastikan lakukan pengecekan ganda.
+                </p>
+              </div>
             </Card>
           )}
 
