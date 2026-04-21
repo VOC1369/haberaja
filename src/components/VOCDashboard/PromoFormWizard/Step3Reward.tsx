@@ -4574,6 +4574,144 @@ export function Step3Reward({ data, onChange, isEditingFromReview, onSaveAndRetu
                   </div>
                 );
               })()}
+
+              {/* ── Section 3: Distribusi & Klaim Komisi ── */}
+              <div className="space-y-4 mt-6">
+                <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider">
+                  Distribusi & Klaim Komisi
+                </h3>
+
+                {/* Field 1: Frekuensi Distribusi */}
+                <div className="space-y-2">
+                  <Label>Kapan Komisi Dibagikan?</Label>
+                  <Select
+                    value={data.referral_distribution_frequency || ''}
+                    onValueChange={(val) =>
+                      onChange({ ...data, referral_distribution_frequency: val as PromoFormData['referral_distribution_frequency'] })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih frekuensi distribusi..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="harian">Harian</SelectItem>
+                      <SelectItem value="mingguan">Mingguan</SelectItem>
+                      <SelectItem value="bulanan">Bulanan</SelectItem>
+                      <SelectItem value="per_transaksi">Per Transaksi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Komisi akan otomatis masuk ke saldo member sesuai jadwal ini
+                  </p>
+                </div>
+
+                {/* Field 2: Metode Klaim */}
+                <div className="space-y-2">
+                  <Label>Cara Member Klaim Komisi</Label>
+                  <RadioGroup
+                    value={data.referral_claim_method || ''}
+                    onValueChange={(val) =>
+                      onChange({ ...data, referral_claim_method: val as PromoFormData['referral_claim_method'] })
+                    }
+                    className="space-y-2"
+                  >
+                    <div className="flex items-start space-x-3 p-3 rounded-lg border border-border hover:border-amber-400/50 transition-colors">
+                      <RadioGroupItem value="otomatis" id="claim-auto" className="mt-0.5" />
+                      <div>
+                        <Label htmlFor="claim-auto" className="cursor-pointer font-medium">
+                          Otomatis
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Komisi langsung masuk ke saldo member tanpa perlu klaim manual
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3 p-3 rounded-lg border border-border hover:border-amber-400/50 transition-colors">
+                      <RadioGroupItem value="manual" id="claim-manual" className="mt-0.5" />
+                      <div>
+                        <Label htmlFor="claim-manual" className="cursor-pointer font-medium">
+                          Manual via CS
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Member perlu menghubungi CS untuk mencairkan komisi
+                        </p>
+                      </div>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {/* Field 3: Platform Klaim (conditional - hanya jika manual) */}
+                {data.referral_claim_method === 'manual' && (
+                  <div className="space-y-2">
+                    <Label>Hubungi CS Via</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Pilih semua platform yang bisa digunakan member untuk klaim
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {['Dashboard', 'Livechat', 'WhatsApp', 'Telegram'].map((platform) => {
+                        const val = platform.toLowerCase();
+                        const selected = (data.referral_claim_platforms || []).includes(val);
+                        return (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => {
+                              const current = data.referral_claim_platforms || [];
+                              const updated = selected
+                                ? current.filter((p) => p !== val)
+                                : [...current, val];
+                              onChange({ ...data, referral_claim_platforms: updated });
+                            }}
+                            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                              selected
+                                ? 'bg-amber-400/20 border-amber-400 text-amber-400'
+                                : 'border-border text-muted-foreground hover:border-amber-400/50'
+                            }`}
+                          >
+                            {platform}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Field 4: Perlu Bukti? */}
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border">
+                  <div>
+                    <Label className="font-medium">
+                      Wajib Upload Bukti Saat Klaim?
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Aktifkan jika member harus kirim bukti sebelum komisi dicairkan
+                    </p>
+                  </div>
+                  <Switch
+                    checked={data.referral_proof_required || false}
+                    onCheckedChange={(val) =>
+                      onChange({ ...data, referral_proof_required: val })
+                    }
+                  />
+                </div>
+
+                {/* Field 5: Catatan Bukti (conditional - hanya jika proof required) */}
+                {data.referral_proof_required && (
+                  <div className="space-y-2">
+                    <Label>Keterangan Bukti yang Diperlukan</Label>
+                    <Textarea
+                      value={data.referral_proof_notes || ''}
+                      onChange={(e) =>
+                        onChange({ ...data, referral_proof_notes: e.target.value })
+                      }
+                      placeholder="Contoh: Informasi media penyebaran link referral wajib diberikan pada pencairan pertama..."
+                      className="min-h-[80px]"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Informasi ini akan ditampilkan ke member saat mereka mengajukan klaim komisi
+                    </p>
+                  </div>
+                )}
+              </div>
             </>
           )}
           {data.tier_archetype === 'level' && (

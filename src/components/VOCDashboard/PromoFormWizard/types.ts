@@ -543,6 +543,13 @@ export interface PromoFormData {
   referral_admin_fee_enabled: boolean;    // toggle on/off
   referral_admin_fee_percentage: number;  // Admin fee percentage value
 
+  // Referral Distribution & Claim (Section 3 — UI fields)
+  referral_distribution_frequency?: 'harian' | 'mingguan' | 'bulanan' | 'per_transaksi' | '';
+  referral_claim_method?: 'otomatis' | 'manual' | '';
+  referral_claim_platforms?: string[];      // multi-select: dashboard/livechat/whatsapp/telegram
+  referral_proof_required?: boolean;
+  referral_proof_notes?: string;
+
   // Step 4 - Template Pesan AI (saved to PersonaBinding, not PKB)
   response_template_offer: string;
   response_template_requirement: string;
@@ -652,7 +659,7 @@ export interface PromoFormData {
 
   // Claim URL & Platform
   claim_url?: string | null;
-  claim_platform?: 'auto' | 'livechat' | 'whatsapp' | 'telegram' | 'form' | 'apk' | null;
+  claim_platform?: 'auto' | 'livechat' | 'whatsapp' | 'telegram' | 'form' | 'apk' | 'dashboard' | null;
 
   // Physical reward detail
   reward_item_description?: string | null;

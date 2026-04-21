@@ -515,16 +515,34 @@ function buildCanonicalProjectionFromMechanics(
   // 2. p.claim_method
   // 3. p.contact_channel (if enabled)
   // ============================================
-  const resolvedClaimMethod: string =
-    (claimM?.data?.method as string) ||
-    (p.claim_method as string) ||
-    ((p.contact_channel_enabled && p.contact_channel) ? (p.contact_channel as string) : '') ||
-    '';
+  const resolvedClaimMethod: string = (() => {
+    // Priority 1: field baru dari UI referral
+    if (p.tier_archetype === 'referral') {
+      const ref = (p as any).referral_claim_method as string | undefined;
+      if (ref) return ref;
+    }
+    // Priority 2: dari mechanics + form fallback
+    return (
+      (claimM?.data?.method as string) ||
+      (p.claim_method as string) ||
+      ((p.contact_channel_enabled && p.contact_channel) ? (p.contact_channel as string) : '') ||
+      ''
+    );
+  })();
 
-  const resolvedClaimPlatform: string =
-    (claimM?.data?.platform as string) ||
-    (p.claim_platform as string) ||
-    '';
+  const resolvedClaimPlatform: string = (() => {
+    // Priority 1: field baru dari UI referral (multi-select, ambil pertama)
+    if (p.tier_archetype === 'referral') {
+      const platforms = ((p as any).referral_claim_platforms as string[] | undefined) || [];
+      if (platforms[0]) return platforms[0];
+    }
+    // Priority 2: dari mechanics + form fallback
+    return (
+      (claimM?.data?.platform as string) ||
+      (p.claim_platform as string) ||
+      ''
+    );
+  })();
 
   const cp: CanonicalProjection = {
     promo_summary: (() => {
