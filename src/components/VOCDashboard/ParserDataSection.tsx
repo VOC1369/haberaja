@@ -997,22 +997,22 @@ export function ParserDataSection() {
             }}
           />
 
-          {/* Thumbnail grid (when screenshots attached) */}
+          {/* Thumbnail row (when screenshots attached) */}
           {screenshotFiles.length > 0 && (
             <div className="px-3 pb-2 space-y-2">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {screenshotFiles.map((file, idx) => (
                   <div
                     key={`${file.name}-${idx}`}
-                    className="relative aspect-video rounded-lg overflow-hidden border border-border bg-muted group"
+                    className="relative w-[110px] aspect-video rounded-md overflow-hidden border border-border bg-muted group"
                   >
                     <img
                       src={URL.createObjectURL(file)}
                       alt={`Screenshot ${idx + 1}`}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
-                      <p className="text-xs text-white truncate">
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
+                      <p className="text-[10px] leading-tight text-white truncate">
                         {file.name || `Screenshot ${idx + 1}`}
                       </p>
                     </div>
@@ -1022,25 +1022,25 @@ export function ParserDataSection() {
                         setScreenshotFiles(prev => prev.filter((_, i) => i !== idx))
                       }
                       disabled={isAnalyzing}
-                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                      className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] leading-none"
                       aria-label={`Hapus screenshot ${idx + 1}`}
                     >
                       ×
                     </button>
                   </div>
                 ))}
+                {screenshotFiles.length < MAX_SCREENSHOTS && (
+                  <button
+                    type="button"
+                    onClick={() => screenshotInputRef.current?.click()}
+                    disabled={isAnalyzing}
+                    className="w-[110px] aspect-video border border-dashed border-border rounded-md text-[10px] text-muted-foreground hover:border-button-hover hover:text-button-hover transition-colors flex flex-col items-center justify-center gap-1"
+                  >
+                    <ImagePlus className="h-3 w-3" />
+                    <span>Tambah ({screenshotFiles.length}/{MAX_SCREENSHOTS})</span>
+                  </button>
+                )}
               </div>
-              {screenshotFiles.length < MAX_SCREENSHOTS && (
-                <button
-                  type="button"
-                  onClick={() => screenshotInputRef.current?.click()}
-                  disabled={isAnalyzing}
-                  className="w-full p-2 border border-dashed border-border rounded-lg text-xs text-muted-foreground hover:border-button-hover hover:text-button-hover transition-colors flex items-center justify-center gap-2"
-                >
-                  <ImagePlus className="h-3 w-3" />
-                  Tambah screenshot ({screenshotFiles.length}/{MAX_SCREENSHOTS})
-                </button>
-              )}
             </div>
           )}
 
