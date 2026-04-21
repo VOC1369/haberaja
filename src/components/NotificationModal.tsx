@@ -111,7 +111,7 @@ export function NotificationModal() {
           ${visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}
         `}
       >
-        <div className="relative rounded-xl border border-border bg-card shadow-xl p-6">
+        <div className="relative rounded-xl border border-border bg-card shadow-xl p-6 text-center">
           {/* Close X button — hide on auto-dismiss */}
           {!isAutoDismiss && (
             <button
@@ -123,22 +123,24 @@ export function NotificationModal() {
             </button>
           )}
 
-          {/* Icon + Title row — uses .icon-circle utility (sec. 4 / sec. 9) */}
-          <div className="flex items-start gap-4 pr-6">
+          {/* Icon centered on top */}
+          <div className="flex justify-center mb-4">
             <div className="icon-circle">
               <Icon className="icon-circle-icon" />
             </div>
-            <div className="flex-1 min-w-0 pt-1.5">
-              <p id="notif-title" className="text-base font-semibold leading-snug text-foreground">
-                {current.title}
-              </p>
-              {current.description && (
-                <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-                  {current.description}
-                </p>
-              )}
-            </div>
           </div>
+
+          {/* Title centered */}
+          <p id="notif-title" className="text-base font-semibold leading-snug text-foreground">
+            {current.title}
+          </p>
+
+          {/* Description centered */}
+          {current.description && (
+            <p className="text-sm text-muted-foreground mt-2 leading-relaxed max-w-sm mx-auto">
+              {current.description}
+            </p>
+          )}
 
           {/* Queue indicator */}
           {queue.length > 0 && (
@@ -147,13 +149,13 @@ export function NotificationModal() {
             </p>
           )}
 
-          {/* OK button — golden, rounded-full, aligned with headline text */}
+          {/* OK button — golden, full-width, centered */}
           {!isAutoDismiss && (
-            <div className="mt-6 pl-14">
+            <div className="mt-6">
               <button
                 autoFocus
                 onClick={handleClose}
-                className="px-6 h-10 rounded-full text-sm font-semibold bg-button-hover text-button-hover-foreground hover:bg-button-hover/90 transition-colors active:scale-95"
+                className="w-full h-10 rounded-full text-sm font-semibold bg-button-hover text-button-hover-foreground hover:bg-button-hover/90 transition-colors active:scale-95"
               >
                 OK
               </button>
