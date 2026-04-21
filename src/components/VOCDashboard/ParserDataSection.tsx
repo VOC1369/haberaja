@@ -537,6 +537,8 @@ export function ParserDataSection() {
         if (val === null || val === undefined) return true;
         if (typeof val === "string" && val.trim() === "") return true;
         if (Array.isArray(val) && val.length === 0) return true;
+        if (typeof val === "boolean") return false; // boolean false bukan empty
+        if (typeof val === "number") return false;  // 0 bukan empty
         return false;
       };
 
