@@ -5646,7 +5646,9 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
     })(),
     intent_category: (() => {
       const keywordDefaults = getDefaultsFromKeywords(extracted.promo_name, extracted.promo_type);
-      return (keywordDefaults?.intent_category as string) || 'Retention';
+      return (keywordDefaults?.intent_category as string) ||
+        extractedIntentFromMechanics(llmMechanics) ||
+        'Retention';
     })(),
     target_segment: targetUserMap[extracted.target_user?.toLowerCase()] || 'Semua',
     trigger_event: (() => {
