@@ -1016,22 +1016,23 @@ export function ParserDataSection() {
           {/* 2A — STATUS BADGE */}
           <StatusCard result={parserResult} />
 
-          {/* 2B — DATA TERSTRUKTUR (per promo) */}
+          {/* 2B — GAP REPORT (operator harus baca gap dulu) */}
+          {parserResult.gaps.length > 0 && (
+            <GapReportCard
+              gaps={parserResult.gaps}
+              fills={gapFills}
+              onFillChange={(field, value) => setGapFills(prev => ({ ...prev, [field]: value }))}
+              onConfirm={handleConfirmGapFills}
+            />
+          )}
+
+          {/* 2C — DATA TERSTRUKTUR (per promo) */}
           {parserResult.promos.length > 0 && (
             <StructuredDataCard
               promos={parserResult.promos}
               status={parserResult.status}
               onCopyCleanText={handleCopyCleanText}
               requiredGapsUnfilled={requiredGapsUnfilled}
-            />
-          )}
-
-          {/* 2C — GAP REPORT */}
-          {parserResult.gaps.length > 0 && (
-            <GapReportCard
-              gaps={parserResult.gaps}
-              fills={gapFills}
-              onFillChange={(field, value) => setGapFills(prev => ({ ...prev, [field]: value }))}
             />
           )}
 
