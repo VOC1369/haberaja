@@ -7373,6 +7373,18 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   }
 
   // ============================================
+  // PHASE 1: CARRY-FORWARD canonical_projection dari Pseudo Preview
+  // deriveCanonicalProjection() menulis hasilnya ke (parsed as any).canonical_projection.
+  // Simpan ke form state agar toV31Row() bisa REUSE preview tanpa rebuild,
+  // sehingga operator review = data yang tersimpan di DB.
+  // ============================================
+  const previewCanonical = (extracted as any).canonical_projection;
+  if (previewCanonical && typeof previewCanonical === 'object') {
+    (finalData as any)._canonical_projection = previewCanonical;
+    console.log('[mapExtracted] _canonical_projection carried forward from preview');
+  }
+
+  // ============================================
   // AUTHORITY TRACE LOG — Which path determined mode/tier_archetype?
   // ============================================
   console.log('[AUTHORITY TRACE]', {

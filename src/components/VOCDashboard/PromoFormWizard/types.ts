@@ -694,6 +694,16 @@ export interface PromoFormData {
   }>;
   _mechanics_source?: 'llm' | 'derived';
   _mechanics_v31_dirty?: boolean;
+
+  // =============================================
+  // PREVIEW CANONICAL PROJECTION (Phase 1)
+  // Hasil canonical_projection yang dibangun oleh Pseudo Extractor
+  // (deriveCanonicalProjection di voc-wolf-extractor.ts).
+  // Disimpan di form state agar toV31Row() bisa REUSE persis apa yang
+  // operator review di preview, tanpa rebuild dari scratch.
+  // Type-only import — di-erase saat compile, tidak menimbulkan circular runtime.
+  // =============================================
+  _canonical_projection?: import('@/lib/promo-storage').CanonicalProjection;
 }
 
 

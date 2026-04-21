@@ -697,7 +697,21 @@ function toV31Row(
   const adjudication = defaultAdjudication();
   adjudication.status = 'resolved'; // Form data = already human-reviewed
 
-  const canonical_projection = buildCanonicalProjectionFromMechanics(mechanics, promo);
+  // ============================================
+  // PHASE 2: REUSE preview canonical_projection bila tersedia.
+  // Normal flow: builder preview (deriveCanonicalProjection) = source of truth.
+  // Fallback: buildCanonicalProjectionFromMechanics() hanya jika preview absent.
+  // Ini mencegah divergence antara apa yang operator review vs apa yang tersimpan.
+  // CATATAN: promo_risk_level, meta, timestamps tetap di row-level — tidak masuk
+  // canonical_projection. Tidak ada merge field — full reuse atau full rebuild.
+  // ============================================
+  const previewCanonical = (p._canonical_projection as CanonicalProjection | undefined);
+  const canonical_projection = (previewCanonical && typeof previewCanonical === 'object')
+    ? previewCanonical
+    : buildCanonicalProjectionFromMechanics(mechanics, promo);
+  console.log(`[toV31Row] canonical_projection source: ${
+    (previewCanonical && typeof previewCanonical === 'object') ? 'preview-reuse' : 'storage-rebuild-fallback'
+  }`);
   const query_hints = defaultQueryHints();
   const meta: PromoMeta = {
     ...defaultMeta(createdBy),
