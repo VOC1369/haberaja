@@ -516,32 +516,37 @@ function buildCanonicalProjectionFromMechanics(
   // 3. p.contact_channel (if enabled)
   // ============================================
   const resolvedClaimMethod: string = (() => {
-    // Priority 1: field baru dari UI referral
+    // Priority 1: field UI referral
     if (p.tier_archetype === 'referral') {
       const ref = (p as any).referral_claim_method as string | undefined;
       if (ref) return ref;
     }
-    // Priority 2: dari mechanics + form fallback
-    return (
-      (claimM?.data?.method as string) ||
-      (p.claim_method as string) ||
-      ((p.contact_channel_enabled && p.contact_channel) ? (p.contact_channel as string) : '') ||
-      ''
-    );
+    // Priority 2: dari mechanics — pakai field name yang benar
+    const claimData = claimM?.data as any;
+    if (claimData?.claim_method) return claimData.claim_method as string;
+    // Priority 3: dari PromoFormData root
+    if (p.claim_method) return p.claim_method as string;
+    // Priority 4: contact_channel jika enabled
+    if (p.contact_channel_enabled && p.contact_channel) {
+      return p.contact_channel as string;
+    }
+    return '';
   })();
 
   const resolvedClaimPlatform: string = (() => {
-    // Priority 1: field baru dari UI referral (multi-select, ambil pertama)
+    // Priority 1: field UI referral (multi-select, ambil pertama)
     if (p.tier_archetype === 'referral') {
-      const platforms = ((p as any).referral_claim_platforms as string[] | undefined) || [];
+      const platforms = ((p as any).referral_claim_platforms as string[]) || [];
       if (platforms[0]) return platforms[0];
     }
-    // Priority 2: dari mechanics + form fallback
-    return (
-      (claimM?.data?.platform as string) ||
-      (p.claim_platform as string) ||
-      ''
-    );
+    // Priority 2: dari mechanics — claim_channels[] (array), ambil index 0
+    const claimData = claimM?.data as any;
+    if (claimData?.claim_channels?.length > 0) {
+      return (claimData.claim_channels[0] as string).toLowerCase();
+    }
+    // Priority 3: dari PromoFormData root
+    if (p.claim_platform) return p.claim_platform as string;
+    return '';
   })();
 
   const cp: CanonicalProjection = {
@@ -580,6 +585,18 @@ function buildCanonicalProjectionFromMechanics(
         if (generated) return generated;
       }
 
+      // Priority 4: generate dari mechanics langsung (cashback flat, rollingan, dll)
+      // Tidak butuh subcategories — generator baca dari mechanics[]
+      if (mechanics.length > 0) {
+        const ctx: PromoSummaryContext = {
+          tier_archetype: (p.tier_archetype as string) || undefined,
+          promo_type: (p.promo_type as string) || undefined,
+          subcategories: [],
+        };
+        const generated = generatePromoSummary(mechanics as any, ctx);
+        if (generated && generated.trim()) return generated;
+      }
+
       return '';
     })(),
     main_trigger: (triggerM?.data?.event as string) || (p.trigger_event as string) || '',
@@ -587,7 +604,34 @@ function buildCanonicalProjectionFromMechanics(
     main_reward_percent: resolvedRewardPercent,
     max_bonus: resolvedMaxBonus,
     payout_direction: resolvedPayoutDirection,
-    turnover_multiplier: (controlM?.data?.turnover_multiplier as number) ?? null,
+    turnover_multiplier: (() => {
+      const controlData = controlM?.data as any;
+      // Priority 1: turnover_multiplier langsung (format baru)
+      if (typeof controlData?.turnover_multiplier === 'number') {
+        return controlData.turnover_multiplier;
+      }
+      // Priority 2: turnover_requirement (format lama extractor)
+      if (typeof controlData?.turnover_requirement === 'number') {
+        return controlData.turnover_requirement;
+      }
+      // Priority 3: dari PromoFormData root fields
+      // turnover_rule bisa berupa string "8x" atau number
+      const rawRule = (p as any).turnover_rule ?? (p as any).turnover_multiplier;
+      if (rawRule !== undefined && rawRule !== null && rawRule !== '') {
+        const parsed = typeof rawRule === 'number'
+          ? rawRule
+          : parseFloat(String(rawRule).replace(/[^0-9.]/g, ''));
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
+      // Priority 4: dari subcategories[0].turnover_rule (formula mode)
+      const subsLocal = (p.subcategories as any[]) || [];
+      if (subsLocal.length > 0 && subsLocal[0].turnover_rule) {
+        const parsed = parseFloat(String(subsLocal[0].turnover_rule)
+          .replace(/[^0-9.]/g, ''));
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
+      return null;
+    })(),
     turnover_basis: (controlM?.data?.turnover_basis as string) || (p.turnover_basis as string) || '',
     primary_claim_method: resolvedClaimMethod,
     primary_claim_platform: resolvedClaimPlatform,
