@@ -46,6 +46,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/lib/notify";
 import { callAI, extractJSON, AICreditsExhaustedError, AIRateLimitError, AIOverloadedError } from "@/lib/ai-client";
 import type { AIContentBlock } from "@/lib/ai-client";
+import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 
 // ════════════════════════════════════════════════════
 // TYPES — must match AI JSON response schema
@@ -920,9 +921,11 @@ export function ParserDataSection() {
       <Card className="p-8">
         {/* Header — vertically stacked & centered */}
         <div className="flex flex-col items-center text-center gap-3 mb-8">
-          <div className="icon-circle">
-            <FileSearch className="icon-circle-icon" />
-          </div>
+          <img
+            src={wolfclawIcon}
+            alt="Wolfclaw"
+            className="h-12 w-12 rounded-xl"
+          />
           <h1 className="text-2xl font-semibold text-foreground">Smart Data Parser</h1>
           <p className="text-sm text-muted-foreground max-w-md">
             Teknologi AI terdepan kami, dirancang untuk berpikir strategis, akurasi tinggi, dan eksekusi efektif.
