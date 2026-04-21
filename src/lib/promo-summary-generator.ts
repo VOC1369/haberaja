@@ -267,14 +267,35 @@ export function generatePromoSummary(
 
   // Source values
   const rewardForm = reward?.data.reward_form as string | undefined;
-  const calcBasis = (calc?.data.calculation_basis ?? calc?.data.basis) as string | undefined;
+  const calcBasis = (
+    calc?.data?.calculation_basis ??
+    calc?.data?.calculation_base ??
+    calc?.data?.basis ??
+    undefined
+  ) as string | undefined;
   const percentage = calc?.data.percentage as number | undefined;
   const capAmount = calc?.data.cap_amount as number | undefined;
   const fixedAmount = (reward?.data.amount ?? calc?.data.amount) as number | undefined;
   const triggerEvent = trigger?.data.event as string | undefined;
 
   // Build slots
-  const rewardLabel = buildRewardLabel(rewardForm, calcBasis);
+  let rewardLabel = buildRewardLabel(rewardForm, calcBasis);
+
+  // Fallback: gunakan promo_type dari context sebagai hint
+  if ((!rewardLabel || rewardLabel === 'Bonus') && context?.promo_type) {
+    const pt = (context.promo_type || '').toLowerCase();
+    if (pt.includes('cashback') || pt.includes('loss')) {
+      rewardLabel = 'Cashback';
+    } else if (pt.includes('rollingan') || pt.includes('turnover')) {
+      rewardLabel = 'Rollingan';
+    } else if (pt.includes('deposit bonus') || pt.includes('welcome')) {
+      rewardLabel = 'Bonus deposit';
+    } else if (pt.includes('referral')) {
+      rewardLabel = 'Komisi referral';
+    } else if (pt.includes('freechip')) {
+      rewardLabel = 'Freechip';
+    }
+  }
   const isCurrency = !rewardForm || !['freespin', 'physical_reward'].includes(rewardForm.toLowerCase());
   const valueSummary = buildValueSummary(percentage, capAmount, fixedAmount, isCurrency);
   const basisOrTrigger = buildBasisOrTrigger(calcBasis, triggerEvent, rewardLabel);
