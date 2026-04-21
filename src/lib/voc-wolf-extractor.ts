@@ -5380,10 +5380,10 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
   }
 
   // ── AUTOFILL Distribusi & Klaim Komisi dari mechanics ────────────
-  const distributionM = (extracted._mechanics_v31 as any[])?.find(
+  const distributionM = ((extracted as any)._mechanics_v31 as any[] | undefined)?.find(
     (m: any) => m.mechanic_type === 'distribution'
   );
-  const claimMForReferral = (extracted._mechanics_v31 as any[])?.find(
+  const claimMForReferral = ((extracted as any)._mechanics_v31 as any[] | undefined)?.find(
     (m: any) => m.mechanic_type === 'claim'
   );
 
