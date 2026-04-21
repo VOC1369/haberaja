@@ -523,9 +523,39 @@ export function ParserDataSection() {
     return () => window.removeEventListener("paste", handlePaste);
   }, [activeTab, screenshotFile, isAnalyzing]);
 
+  // ─── Cancel handler ─────────────────────────────────
+  const handleCancelAnalyze = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    if (elapsedTimerRef.current) {
+      clearInterval(elapsedTimerRef.current);
+      elapsedTimerRef.current = null;
+    }
+    setIsAnalyzing(false);
+    setAnalyzeElapsedMs(0);
+    toast.info("Analisis dibatalkan");
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    };
+  }, []);
+
   // ─── Analyze handler ─────────────────────────────────
   const handleAnalyze = useCallback(async () => {
     if (!hasInput) return;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const startedAt = Date.now();
+    setAnalyzeElapsedMs(0);
+    elapsedTimerRef.current = setInterval(() => {
+      setAnalyzeElapsedMs(Date.now() - startedAt);
+    }, 100);
     setIsAnalyzing(true);
     setParserResult(null);
     setGapFills({});
