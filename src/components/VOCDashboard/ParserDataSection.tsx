@@ -916,7 +916,7 @@ export function ParserDataSection() {
           <div className="icon-circle">
             <FileSearch className="icon-circle-icon" />
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">Parser Data</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Smart Data Parser</h1>
           <p className="text-sm text-muted-foreground max-w-md">
             Teknologi AI terdepan kami, dirancang untuk berpikir strategis, akurasi tinggi, dan eksekusi efektif.
           </p>
