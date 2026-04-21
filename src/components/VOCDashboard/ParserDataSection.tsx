@@ -1023,10 +1023,6 @@ export function ParserDataSection() {
           </div>
         </div>
 
-        {/* AI disclaimer notice */}
-        <p className="text-xs text-muted-foreground text-right mt-2">
-          Wolfclaw menggunakan AI dan bisa melakukan kesalahan. Pastikan lakukan pengecekan ganda.
-        </p>
 
         {/* Loading panel — submit button now lives inside the field */}
         {isAnalyzing && (
