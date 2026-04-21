@@ -1698,22 +1698,57 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             </Card>
           )}
 
-          {/* PROCESSING STATE */}
+          {/* PROCESSING STATE — matches ParserDataSection style */}
           {isExtracting && (
-            <div className="flex items-center justify-between p-6 bg-card border border-border rounded-xl">
-              <div className="flex items-center gap-3">
-                <Loader2 className="w-6 h-6 animate-spin text-button-hover" />
-                <span className="text-foreground font-medium">Mengekstrak promo...</span>
+            <div className="rounded-xl border border-border bg-muted/40 p-5 space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative h-10 w-10 rounded-full bg-button-hover/15 flex items-center justify-center shrink-0">
+                    <Loader2 className="h-5 w-5 text-button-hover animate-spin" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-foreground">VOC Wolf sedang mengekstrak…</div>
+                    <div className="text-xs text-muted-foreground">
+                      Memproses mechanics dan canonical projection. Estimasi 30–60 detik.
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="text-sm font-mono tabular-nums text-foreground" aria-live="polite">
+                    {(() => {
+                      const totalSec = Math.floor(extractionElapsedMs / 1000);
+                      const mm = String(Math.floor(totalSec / 60)).padStart(2, "0");
+                      const ss = String(totalSec % 60).padStart(2, "0");
+                      return `${mm}:${ss}`;
+                    })()}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelExtract}
+                    className="rounded-full"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Batal
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-base font-semibold tabular-nums text-foreground bg-muted/50 px-3 py-1 rounded-md border border-border">
-                  ⏱ {`${String(Math.floor(extractionElapsedMs / 60000)).padStart(2, '0')}:${String(Math.floor((extractionElapsedMs % 60000) / 1000)).padStart(2, '0')}.${String(Math.floor((extractionElapsedMs % 1000) / 100))}`}
-                </span>
-                <Badge variant="outline" className="bg-success/10 text-success border-success/30">
-                  <span className="w-2 h-2 rounded-full bg-success mr-2" />
-                  VOC AI Knowledge
-                </Badge>
+
+              {/* Indeterminate shimmer bar */}
+              <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div className="pseudo-shimmer absolute inset-y-0 w-1/3 rounded-full bg-button-hover" />
               </div>
+
+              {/* Local keyframes scoped to this component */}
+              <style>{`
+                @keyframes pseudo-shimmer-slide {
+                  0%   { left: -33%; }
+                  100% { left: 100%; }
+                }
+                .pseudo-shimmer {
+                  animation: pseudo-shimmer-slide 1.4s ease-in-out infinite;
+                }
+              `}</style>
             </div>
           )}
 
