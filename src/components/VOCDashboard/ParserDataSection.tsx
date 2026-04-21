@@ -967,181 +967,191 @@ export function ParserDataSection() {
   // ════════════════════════════════════════════════════
 
   return (
-    <div className={`page-wrapper space-y-6 ${!parserResult && !isAnalyzing ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''}`}>
-      {/* ─── SECTION 1: INPUT AREA (header + tabs in one card) ─── */}
-      <Card className="p-8">
-        {/* Header — vertically stacked & centered */}
-        <div className="flex flex-col items-center text-center gap-3 mb-8">
-          <img
-            src={wolfclawIcon}
-            alt="Wolfclaw"
-            className="h-12 w-12 rounded-xl"
-          />
-          <h1 className="text-2xl font-semibold text-foreground">Smart Data Parser</h1>
-          <p className="text-sm text-muted-foreground max-w-md">
-            Teknologi AI terdepan kami, dirancang untuk berpikir strategis, akurasi tinggi, dan eksekusi efektif.
-          </p>
-          <Badge variant="outline" className="bg-success/10 text-success border-success/30 mt-1">
-            <span className="w-2 h-2 rounded-full bg-success mr-2" />
-            Wolfclaw AI
-          </Badge>
-        </div>
+    <div className={`page-wrapper relative space-y-6 ${!parserResult && !isAnalyzing ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''}`}>
+      {/* ─── SECTION 1: INPUT AREA — hidden saat loading / ada hasil ─── */}
+      {!parserResult && !isAnalyzing && (
+        <Card className="p-8">
+          {/* Header — vertically stacked & centered */}
+          <div className="flex flex-col items-center text-center gap-3 mb-8">
+            <img
+              src={wolfclawIcon}
+              alt="Wolfclaw"
+              className="h-12 w-12 rounded-xl"
+            />
+            <h1 className="text-2xl font-semibold text-foreground">Smart Data Parser</h1>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Teknologi AI terdepan kami, dirancang untuk berpikir strategis, akurasi tinggi, dan eksekusi efektif.
+            </p>
+            <Badge variant="outline" className="bg-success/10 text-success border-success/30 mt-1">
+              <span className="w-2 h-2 rounded-full bg-success mr-2" />
+              Wolfclaw AI
+            </Badge>
+          </div>
 
-        {/* ─── UNIFIED INPUT FIELD (Grok-style) ───
-            Single area accepts text + screenshot via type / paste / drag-drop.
-            + button (left) = attach image. ↑ button (right) = submit. */}
-        <div
-          onDragOver={handleScreenshotDragOver}
-          onDragLeave={handleScreenshotDragLeave}
-          onDrop={handleScreenshotDrop}
-          className={`relative rounded-2xl border bg-background transition-colors ${
-            isDragOver
-              ? "border-button-hover bg-button-hover/5"
-              : "border-border hover:border-border/80"
-          }`}
-        >
-          {/* Hidden file input — multiple */}
-          <input
-            ref={screenshotInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={e => {
-              const picked = Array.from(e.target.files ?? []).filter(f => f.type.startsWith("image/"));
-              if (picked.length > 0) {
-                setScreenshotFiles(prev => {
-                  if (prev.length >= MAX_SCREENSHOTS) {
-                    toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`);
-                    return prev;
-                  }
-                  const room = MAX_SCREENSHOTS - prev.length;
-                  const toAdd = picked.slice(0, room);
-                  if (picked.length > room) {
-                    toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`, {
-                      description: `${picked.length - room} file dilewati.`,
-                    });
-                  }
-                  return [...prev, ...toAdd];
-                });
-              }
-              if (e.target) e.target.value = "";
-            }}
-          />
-
-          {/* Textarea */}
-          <Textarea
-            value={inputText}
-            onChange={e => setInputText(e.target.value)}
-            placeholder={
+          {/* ─── UNIFIED INPUT FIELD (Grok-style) ───
+              Single area accepts text + screenshot via type / paste / drag-drop.
+              + button (left) = attach image. ↑ button (right) = submit. */}
+          <div
+            onDragOver={handleScreenshotDragOver}
+            onDragLeave={handleScreenshotDragLeave}
+            onDrop={handleScreenshotDrop}
+            className={`relative rounded-2xl border bg-background transition-colors ${
               isDragOver
-                ? "Lepaskan untuk upload screenshot…"
-                : "Silahkan paste image dan text disini. Sisanya Wolfclaw akan handle...."
-            }
-            className="min-h-40 max-h-80 resize-none border-0 bg-transparent px-5 pt-5 pb-4 focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin-custom"
-            disabled={isAnalyzing}
-            onKeyDown={e => {
-              // Enter = submit; Shift+Enter = newline
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && hasInput && !isAnalyzing) {
-                e.preventDefault();
-                handleAnalyze();
-              }
-            }}
-          />
+                ? "border-button-hover bg-button-hover/5"
+                : "border-border hover:border-border/80"
+            }`}
+          >
+            {/* Hidden file input — multiple */}
+            <input
+              ref={screenshotInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={e => {
+                const picked = Array.from(e.target.files ?? []).filter(f => f.type.startsWith("image/"));
+                if (picked.length > 0) {
+                  setScreenshotFiles(prev => {
+                    if (prev.length >= MAX_SCREENSHOTS) {
+                      toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`);
+                      return prev;
+                    }
+                    const room = MAX_SCREENSHOTS - prev.length;
+                    const toAdd = picked.slice(0, room);
+                    if (picked.length > room) {
+                      toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`, {
+                        description: `${picked.length - room} file dilewati.`,
+                      });
+                    }
+                    return [...prev, ...toAdd];
+                  });
+                }
+                if (e.target) e.target.value = "";
+              }}
+            />
 
-          {/* Thumbnail row (when screenshots attached) */}
-          {screenshotFiles.length > 0 && (
-            <div className="px-3 pb-2 space-y-2">
-              <div className="flex flex-wrap gap-2">
-                {screenshotFiles.map((file, idx) => (
-                  <div
-                    key={`${file.name}-${idx}`}
-                    className="relative w-[110px] aspect-video rounded-md overflow-hidden border border-border bg-muted group"
-                  >
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={`Screenshot ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
-                      <p className="text-[10px] leading-tight text-white truncate">
-                        {file.name || `Screenshot ${idx + 1}`}
-                      </p>
+            {/* Textarea */}
+            <Textarea
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              placeholder={
+                isDragOver
+                  ? "Lepaskan untuk upload screenshot…"
+                  : "Silahkan paste image dan text disini. Sisanya Wolfclaw akan handle...."
+              }
+              className="min-h-40 max-h-80 resize-none border-0 bg-transparent px-5 pt-5 pb-4 focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin-custom"
+              disabled={isAnalyzing}
+              onKeyDown={e => {
+                // Enter = submit; Shift+Enter = newline
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && hasInput && !isAnalyzing) {
+                  e.preventDefault();
+                  handleAnalyze();
+                }
+              }}
+            />
+
+            {/* Thumbnail row (when screenshots attached) */}
+            {screenshotFiles.length > 0 && (
+              <div className="px-3 pb-2 space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {screenshotFiles.map((file, idx) => (
+                    <div
+                      key={`${file.name}-${idx}`}
+                      className="relative w-[110px] aspect-video rounded-md overflow-hidden border border-border bg-muted group"
+                    >
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Screenshot ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
+                        <p className="text-[10px] leading-tight text-white truncate">
+                          {file.name || `Screenshot ${idx + 1}`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setScreenshotFiles(prev => prev.filter((_, i) => i !== idx))
+                        }
+                        disabled={isAnalyzing}
+                        className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] leading-none"
+                        aria-label={`Hapus screenshot ${idx + 1}`}
+                      >
+                        ×
+                      </button>
                     </div>
+                  ))}
+                  {screenshotFiles.length < MAX_SCREENSHOTS && (
                     <button
                       type="button"
-                      onClick={() =>
-                        setScreenshotFiles(prev => prev.filter((_, i) => i !== idx))
-                      }
+                      onClick={() => screenshotInputRef.current?.click()}
                       disabled={isAnalyzing}
-                      className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] leading-none"
-                      aria-label={`Hapus screenshot ${idx + 1}`}
+                      className="w-[110px] aspect-video border border-dashed border-border rounded-md text-[10px] text-muted-foreground hover:border-button-hover hover:text-button-hover transition-colors flex flex-col items-center justify-center gap-1"
                     >
-                      ×
+                      <ImagePlus className="h-3 w-3" />
+                      <span>Tambah ({screenshotFiles.length}/{MAX_SCREENSHOTS})</span>
                     </button>
-                  </div>
-                ))}
-                {screenshotFiles.length < MAX_SCREENSHOTS && (
-                  <button
-                    type="button"
-                    onClick={() => screenshotInputRef.current?.click()}
-                    disabled={isAnalyzing}
-                    className="w-[110px] aspect-video border border-dashed border-border rounded-md text-[10px] text-muted-foreground hover:border-button-hover hover:text-button-hover transition-colors flex flex-col items-center justify-center gap-1"
-                  >
-                    <ImagePlus className="h-3 w-3" />
-                    <span>Tambah ({screenshotFiles.length}/{MAX_SCREENSHOTS})</span>
-                  </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Bottom action bar inside field */}
+            <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-3">
+              {/* Left cluster: Attach button + counter */}
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => screenshotInputRef.current?.click()}
+                  disabled={isAnalyzing || screenshotFiles.length >= MAX_SCREENSHOTS}
+                  className="h-9 w-9 rounded-full bg-muted hover:bg-muted/80 text-foreground shrink-0"
+                  title={
+                    screenshotFiles.length >= MAX_SCREENSHOTS
+                      ? `Maksimal ${MAX_SCREENSHOTS} screenshot`
+                      : "Lampirkan screenshot"
+                  }
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+
+                {screenshotFiles.length > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    {screenshotFiles.length}/{MAX_SCREENSHOTS} screenshot
+                  </span>
                 )}
               </div>
-            </div>
-          )}
 
-          {/* Bottom action bar inside field */}
-          <div className="flex items-center justify-between gap-2 px-3 pb-3 pt-3">
-            {/* Left cluster: Attach button + counter */}
-            <div className="flex items-center gap-2 min-w-0 flex-1">
+              {/* Submit arrow (right) */}
               <Button
                 type="button"
-                variant="ghost"
+                variant="golden"
                 size="icon"
-                onClick={() => screenshotInputRef.current?.click()}
-                disabled={isAnalyzing || screenshotFiles.length >= MAX_SCREENSHOTS}
-                className="h-9 w-9 rounded-full bg-muted hover:bg-muted/80 text-foreground shrink-0"
-                title={
-                  screenshotFiles.length >= MAX_SCREENSHOTS
-                    ? `Maksimal ${MAX_SCREENSHOTS} screenshot`
-                    : "Lampirkan screenshot"
-                }
+                onClick={handleAnalyze}
+                disabled={!hasInput || isAnalyzing}
+                className="h-9 w-9 rounded-full shrink-0"
+                title="Analisis (⌘/Ctrl + Enter)"
               >
-                <Plus className="h-4 w-4" />
+                <ArrowUp className="h-4 w-4" />
               </Button>
-
-              {screenshotFiles.length > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  {screenshotFiles.length}/{MAX_SCREENSHOTS} screenshot
-                </span>
-              )}
             </div>
-
-            {/* Submit arrow (right) */}
-            <Button
-              type="button"
-              variant="golden"
-              size="icon"
-              onClick={handleAnalyze}
-              disabled={!hasInput || isAnalyzing}
-              className="h-9 w-9 rounded-full shrink-0"
-              title="Analisis (⌘/Ctrl + Enter)"
-            >
-              <ArrowUp className="h-4 w-4" />
-            </Button>
           </div>
-        </div>
 
+          {/* Disclaimer */}
+          <div className="mt-6">
+            <p className="text-xs text-muted-foreground">
+              Wolfclaw menggunakan AI dan bisa melakukan kesalahan. Pastikan lakukan pengecekan ganda.
+            </p>
+          </div>
+        </Card>
+      )}
 
-        {/* Loading panel — submit button now lives inside the field */}
-        {isAnalyzing && (
-          <div className="mt-6 rounded-xl border border-border bg-muted/40 p-5 space-y-4">
+      {/* ─── PROCESSING STATE — solo overlay centered (mirror Pseudo) ─── */}
+      {isAnalyzing && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+          <div className="rounded-xl border border-border bg-muted/40 p-5 space-y-4 w-full max-w-3xl pointer-events-auto">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="relative h-10 w-10 rounded-full bg-button-hover/15 flex items-center justify-center shrink-0">
@@ -1180,44 +1190,40 @@ export function ParserDataSection() {
               <div className="parser-shimmer absolute inset-y-0 w-1/3 rounded-full bg-button-hover" />
             </div>
           </div>
-        )}
 
-        {/* Disclaimer (left) + Reset button (right, only when result exists) */}
-        {!isAnalyzing && (
-          <div className="mt-6 flex items-start justify-between gap-4">
-            <p className="text-xs text-muted-foreground">
-              Wolfclaw menggunakan AI dan bisa melakukan kesalahan. Pastikan lakukan pengecekan ganda.
-            </p>
-            {parserResult && (
-              <Button
-                variant="outline"
-                onClick={handleReset}
-                className="h-9 px-4 gap-2 rounded-full shrink-0"
-              >
-                Reset
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Local keyframes for indeterminate shimmer (scoped to this component) */}
-        <style>{`
-          @keyframes parser-shimmer-slide {
-            0%   { left: -33%; }
-            100% { left: 100%; }
-          }
-          .parser-shimmer {
-            animation: parser-shimmer-slide 1.4s ease-in-out infinite;
-          }
-        `}</style>
-      </Card>
+          {/* Local keyframes for indeterminate shimmer */}
+          <style>{`
+            @keyframes parser-shimmer-slide {
+              0%   { left: -33%; }
+              100% { left: 100%; }
+            }
+            .parser-shimmer {
+              animation: parser-shimmer-slide 1.4s ease-in-out infinite;
+            }
+          `}</style>
+        </div>
+      )}
 
       {/* ════════════════════════════════════════════════════ */}
       {/* SECTION 2: HASIL PARSER                              */}
       {/* ════════════════════════════════════════════════════ */}
 
-      {parserResult && (
+      {parserResult && !isAnalyzing && (
         <>
+          {/* Header bar — Reset action */}
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-xs text-muted-foreground">
+              Wolfclaw menggunakan AI dan bisa melakukan kesalahan. Pastikan lakukan pengecekan ganda.
+            </p>
+            <Button
+              variant="outline"
+              onClick={handleReset}
+              className="h-9 px-4 gap-2 rounded-full shrink-0"
+            >
+              Reset
+            </Button>
+          </div>
+
           {/* 2A — STATUS BADGE */}
           <StatusCard result={parserResult} />
 
