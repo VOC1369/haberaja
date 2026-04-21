@@ -25,6 +25,7 @@ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/component
 import { subCategories } from "./SubCategoryTabs";
 import { ticketSubCategories } from "./TicketSubCategories";
 import { knowledgeBaseSubCategories } from "./KnowledgeBaseSubCategories";
+import { toast } from "sonner";
 
 export interface MainSection {
   key: string;
@@ -76,6 +77,10 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
   };
 
   const handleKnowledgeSubCategoryClick = (key: string) => {
+    if (key === "parserData") {
+      toast("Coming Soon — Parser Data sedang dalam pengembangan");
+      return;
+    }
     onSectionChange("knowledgeBase");
     onKnowledgeCategoryChange(key);
   };
