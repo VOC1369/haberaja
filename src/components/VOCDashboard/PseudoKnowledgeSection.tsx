@@ -1571,7 +1571,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   return (
     <div className="relative flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
-        <div className={`p-6 pb-20 max-w-5xl mx-auto ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
+        <div className={`page-wrapper p-6 pb-20 ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
           
           {/* INPUT SECTION - Unified Design */}
           {!extractedPromo && !isExtracting && (

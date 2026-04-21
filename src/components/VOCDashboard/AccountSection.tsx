@@ -18,7 +18,7 @@ export function AccountSection({ form, onSave }: AccountSectionProps) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="page-wrapper">
       <Card className="p-6">
         <div className="flex items-center gap-3 mb-6">
           <User className="h-6 w-6 text-button-hover" />
