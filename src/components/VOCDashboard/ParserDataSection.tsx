@@ -1020,8 +1020,8 @@ export function ParserDataSection() {
           </div>
         </div>
 
-        {/* CTA / Loading panel */}
-        {isAnalyzing ? (
+        {/* Loading panel — submit button now lives inside the field */}
+        {isAnalyzing && (
           <div className="mt-6 rounded-xl border border-border bg-muted/40 p-5 space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
@@ -1061,22 +1061,14 @@ export function ParserDataSection() {
               <div className="parser-shimmer absolute inset-y-0 w-1/3 rounded-full bg-button-hover" />
             </div>
           </div>
-        ) : (
-          <div className="mt-6 flex items-center gap-3">
-            <Button
-              variant="golden"
-              onClick={handleAnalyze}
-              disabled={!hasInput}
-              className="flex-1 h-11 px-6 gap-2"
-            >
-              <Sparkles className="h-4 w-4" />
-              Analisis dengan VOC Wolf Parser
+        )}
+
+        {/* Reset button (only when we already have a result) */}
+        {!isAnalyzing && parserResult && (
+          <div className="mt-6 flex justify-end">
+            <Button variant="outline" onClick={handleReset} className="h-9 px-4 gap-2 rounded-full">
+              Reset
             </Button>
-            {parserResult && (
-              <Button variant="outline" onClick={handleReset} className="h-11 px-6 gap-2">
-                Reset
-              </Button>
-            )}
           </div>
         )}
 
