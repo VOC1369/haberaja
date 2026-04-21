@@ -1429,7 +1429,10 @@ function GapReportCard({
 function parseGapOptions(label: string): string[] {
   const matches = label.match(/\([a-z]\)\s+([^(]+)/g);
   if (!matches || matches.length < 2) return [];
-  return matches.map(m => m.replace(/^\([a-z]\)\s+/, "").trim().replace(/[,;.\s]+$/, ""));
+  return matches.map(m => {
+    const text = m.replace(/^\([a-z]\)\s+/, "").trim().replace(/[,;.\s]+$/, "");
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  });
 }
 
 function GapItem({
@@ -1490,7 +1493,7 @@ function GapItem({
   return (
     <div className="bg-muted rounded-lg p-4 space-y-3">
       <div className="flex items-start gap-3">
-        <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 ${dotClass}`} />
+        <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${dotClass}`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-foreground">
@@ -1530,13 +1533,13 @@ function GapItem({
                   <label
                     key={id}
                     htmlFor={id}
-                    className={`flex items-start gap-3 border rounded-lg p-3 cursor-pointer transition-colors ${
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
                       isSelected
                         ? "bg-button-hover/10 border-button-hover"
-                        : "border-border hover:border-button-hover/50"
+                        : "border-transparent hover:bg-muted"
                     }`}
                   >
-                    <RadioGroupItem value={opt} id={id} className="mt-0.5" />
+                    <RadioGroupItem value={opt} id={id} />
                     <span className="text-sm text-foreground">{opt}</span>
                   </label>
                 );
