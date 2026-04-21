@@ -2388,8 +2388,10 @@ const deriveCanonicalProjection = (parsed: any): void => {
     main_reward_percent: calculation?.data?.percentage || null,
     max_bonus: control?.data?.max_bonus_cap || null,
     payout_direction: calculation?.data?.payout_direction || null,
-    turnover_multiplier: control?.data?.turnover_requirement || null,
-    turnover_basis: control?.data?.turnover_basis || null,
+    turnover_multiplier: turnoverControl?.data?.turnover_multiplier
+      ?? turnoverControl?.data?.turnover_requirement
+      ?? null,
+    turnover_basis: turnoverControl?.data?.turnover_basis ?? null,
     primary_claim_method: claim?.data?.claim_method || null,
     primary_claim_platform: claim?.data?.claim_channels?.[0] || null,
     proof_required: claim?.data?.proof_required ?? false,
