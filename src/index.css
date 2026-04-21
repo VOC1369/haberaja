@@ -1,7 +1,62 @@
-@import url("https://fonts.cdnfonts.com/css/circular-std");
-@import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap");
+/* ====================================================================
+ * CIRCULAR STD — LOCAL FONT FACES (single font family for entire app)
+ * ==================================================================== */
+@font-face {
+  font-family: 'Circular Std';
+  src: url('/fonts/Circular_Std_Book.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Circular Std';
+  src: url('/fonts/Circular_Std_Book_Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Circular Std';
+  src: url('/fonts/Circular_Std_Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Circular Std';
+  src: url('/fonts/Circular_Std_Medium_Italic.woff') format('woff');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Circular Std';
+  src: url('/fonts/Circular_Std_Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Circular Std';
+  src: url('/fonts/Circular_Std_Bold_Italic.woff') format('woff');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Circular Std';
+  src: url('/fonts/Circular_Std_Black.woff') format('woff');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Circular Std';
+  src: url('/fonts/Circular_Std_Black_Italic.woff') format('woff');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
 
 @tailwind base;
 @tailwind components;
@@ -199,10 +254,10 @@ body {
     --purple: 280 65% 55%;
     --purple-foreground: 0 0% 100%;
 
-    /* ========== FONT FAMILIES ========== */
-    --font-sans: 'Circular Std', 'Circular', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-serif: 'Lora', ui-serif, Georgia, serif;
-    --font-mono: 'Space Mono', ui-monospace, monospace;
+    /* ========== FONT FAMILIES (Circular Std ONLY) ========== */
+    --font-sans: 'Circular Std', sans-serif;
+    --font-serif: 'Circular Std', sans-serif;
+    --font-mono: 'Circular Std', sans-serif;
 
     /* ========== GLASS EFFECTS ========== */
     --glass-bg: hsla(0, 0%, 20%, 0.7);
@@ -423,9 +478,9 @@ body {
     font-family: var(--font-sans) !important;
   }
   
-  /* Exception untuk monospace elements - gunakan IBM Plex Mono */
+  /* Force Circular Std even on code/mono elements */
   code, pre, kbd, samp, .font-mono {
-    font-family: 'IBM Plex Mono', Consolas, Menlo, Monaco, 'Courier New', monospace !important;
+    font-family: var(--font-sans) !important;
   }
 
   body {
