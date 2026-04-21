@@ -2361,7 +2361,14 @@ const deriveCanonicalProjection = (parsed: any): void => {
   const trigger = mechanics.find(m => m.mechanic_type === 'trigger');
   const calculation = mechanics.find(m => m.mechanic_type === 'calculation');
   const reward = mechanics.find(m => m.mechanic_type === 'reward');
-  const control = mechanics.find(m => m.mechanic_type === 'control');
+  const controls = mechanics.filter(m => m.mechanic_type === 'control');
+  const primaryControl = controls[0] || null;
+  const turnoverControl = controls.find(c =>
+    c?.data?.turnover_multiplier != null ||
+    c?.data?.turnover_requirement != null ||
+    c?.data?.turnover_basis != null
+  ) || null;
+  const control = primaryControl;
   const claim = mechanics.find(m => m.mechanic_type === 'claim');
 
   parsed.canonical_projection = {
