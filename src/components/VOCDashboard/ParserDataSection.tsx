@@ -342,6 +342,77 @@ BUKAN GAP (null yang valid):
 - client_id null = operator isi manual = normal
 
 ════════════════════════════════════
+TAMBAHAN — AMBIGUITY GAP (bukan hanya null gap)
+════════════════════════════════════
+Gap bukan hanya field yang null.
+Gap juga adalah field yang TER-ISI TAPI AMBIGU —
+artinya bisa diinterpretasikan lebih dari satu cara
+dan interpretasi yang salah akan membuat
+Extractor menghasilkan JSON yang salah,
+dan Danila menjawab player dengan informasi salah.
+
+WAJIB tambahkan ke gaps[] jika menemukan:
+
+1. calculation_base ambigu:
+   Trigger: nama promo mengandung "Garansi"/"Cashback"
+   TAPI body juga menyebut "deposit" sebagai syarat
+   → Ambigu: basis dari kekalahan atau deposit?
+   → Gap label: "Bonus [nama promo] dihitung dari apa?
+     Pilih: (a) dari total kekalahan/loss,
+     (b) dari jumlah deposit, (c) dari total turnover"
+   → severity: required
+
+2. turnover_requirement ambigu:
+   Trigger: judul bilang "TANPA TO" tapi body
+   ada contoh "x angka" atau kata "turnover"
+   → Ambigu: benar-benar tanpa TO atau
+     ada TO dari bonus/deposit?
+   → Gap label: "Judul bilang TANPA TO tapi ada
+     syarat x[N] di body. TO ini dihitung dari apa?
+     (a) tidak ada TO sama sekali,
+     (b) TO dari bonus saja,
+     (c) TO dari deposit+bonus"
+   → severity: required
+
+3. claim_timing ambigu:
+   Trigger: ada syarat saldo/balance untuk claim
+   tapi tidak jelas kapan waktunya
+   → Ambigu: claim sebelum main atau setelah kalah?
+   → Gap label: "Kapan bonus bisa di-claim?
+     (a) sebelum mulai bermain (payout depan),
+     (b) setelah saldo habis/kalah (payout belakang),
+     (c) kapanpun selama saldo di bawah threshold"
+   → severity: required
+
+4. max_bonus ambigu:
+   Trigger: ada angka yang bisa jadi max_bonus
+   ATAU min_deposit tapi tidak jelas labelnya
+   (sering terjadi di tabel rusak)
+   → Gap label: "Angka [X] ini adalah max bonus
+     atau minimal deposit?"
+   → severity: required
+
+5. game_scope ambigu:
+   Trigger: promo menyebut game tertentu di satu
+   tempat tapi "semua game" di tempat lain
+   → Gap label: "Berlaku untuk game apa saja?
+     S&K menyebut [game A] tapi juga [semua game]"
+   → severity: optional
+
+ATURAN PENTING:
+Setiap ambiguity gap yang operator isi →
+jawaban operator HARUS masuk ke clean_text
+sebagai kalimat eksplisit, bukan hanya appendix.
+Contoh:
+Operator isi calculation_base: "dari kekalahan"
+→ clean_text harus contain kalimat:
+  "Bonus dihitung dari total kekalahan (loss)"
+  bukan hanya "[DATA TAMBAHAN] calculation_base: loss"
+Ini memastikan Extractor baca konteks yang jelas
+dari clean_text — bukan hanya appendix yang
+mungkin diabaikan.
+
+════════════════════════════════════
 RESPONSE FORMAT — JSON ONLY
 Tidak ada teks. Tidak ada markdown wrapper.
 ════════════════════════════════════
