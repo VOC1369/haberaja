@@ -934,13 +934,19 @@ function StructuredDataCard({
   const fieldKeys: (keyof typeof FIELD_LABELS)[] = [
     "promo_name",
     "promo_type",
+    "reward_type_hint",
+    "calculation_base",
     "calculation_value",
     "max_bonus",
-    "calculation_base",
+    "min_deposit",
+    "has_turnover",
     "turnover_requirement",
+    "is_tiered",
     "game_types",
     "claim_method",
     "target_user",
+    "parse_confidence",
+    "ambiguity_flags",
   ];
 
   return (
