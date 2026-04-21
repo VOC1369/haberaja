@@ -1023,10 +1023,6 @@ export function ParserDataSection() {
           </div>
         </div>
 
-        {/* AI disclaimer notice */}
-        <p className="text-xs text-muted-foreground text-right mt-2">
-          Wolfclaw menggunakan AI dan bisa melakukan kesalahan. Pastikan lakukan pengecekan ganda.
-        </p>
 
         {/* Loading panel — submit button now lives inside the field */}
         {isAnalyzing && (
@@ -1071,12 +1067,21 @@ export function ParserDataSection() {
           </div>
         )}
 
-        {/* Reset button (only when we already have a result) */}
-        {!isAnalyzing && parserResult && (
-          <div className="mt-6 flex justify-end">
-            <Button variant="outline" onClick={handleReset} className="h-9 px-4 gap-2 rounded-full">
-              Reset
-            </Button>
+        {/* Disclaimer (left) + Reset button (right, only when result exists) */}
+        {!isAnalyzing && (
+          <div className="mt-6 flex items-start justify-between gap-4">
+            <p className="text-xs text-muted-foreground">
+              Wolfclaw menggunakan AI dan bisa melakukan kesalahan. Pastikan lakukan pengecekan ganda.
+            </p>
+            {parserResult && (
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                className="h-9 px-4 gap-2 rounded-full shrink-0"
+              >
+                Reset
+              </Button>
+            )}
           </div>
         )}
 
