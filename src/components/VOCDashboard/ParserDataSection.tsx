@@ -11,7 +11,7 @@
  * Tidak ada direct call ke Anthropic. Tidak ada sessionStorage handoff.
  */
 
-import { useState, useRef, useMemo, useCallback } from "react";
+import { useState, useRef, useMemo, useCallback, useEffect } from "react";
 import {
   FileSearch,
   FileText,
