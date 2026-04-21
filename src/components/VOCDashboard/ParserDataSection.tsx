@@ -776,8 +776,60 @@ export function ParserDataSection() {
     }
   };
 
-  // ════════════════════════════════════════════════════
-  // RENDER
+  // ─── Confirm gap fills → update parserResult ─────────
+  const handleConfirmGapFills = () => {
+    const filledEntries = Object.entries(gapFills).filter(([, v]) => v && v.trim() !== "");
+    if (filledEntries.length === 0) return;
+
+    setParserResult(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev };
+
+      if (updated.promos[0]) {
+        const promo = { ...updated.promos[0] };
+        const evidenceMap = { ...(promo.source_evidence_map || {}) };
+
+        filledEntries.forEach(([field, rawValue]) => {
+          const value = rawValue.trim();
+          if (field in promo) {
+            // Coerce to existing field type
+            const current = (promo as unknown as Record<string, unknown>)[field];
+            let coerced: unknown = value;
+            if (typeof current === "number" || current === null) {
+              const num = Number(value.replace(/[^\d.-]/g, ""));
+              if (!Number.isNaN(num) && value.match(/^-?[\d.,\s]+$/)) {
+                coerced = num;
+              }
+            }
+            if (typeof current === "boolean") {
+              coerced = /^(true|ya|yes|1)$/i.test(value);
+            }
+            (promo as unknown as Record<string, unknown>)[field] = coerced;
+          } else {
+            evidenceMap[field] = [value];
+          }
+        });
+
+        promo.source_evidence_map = evidenceMap;
+        updated.promos = [promo, ...updated.promos.slice(1)];
+      }
+
+      // Remove gaps that have been filled
+      updated.gaps = updated.gaps.filter(gap => {
+        const filled = gapFills[gap.field]?.trim();
+        return !filled;
+      });
+
+      return updated;
+    });
+
+    // Clear local fills for removed gaps
+    setGapFills({});
+
+    toast.success("Data diperbarui", {
+      description: "Promo siap di-extract.",
+    });
+  };
   // ════════════════════════════════════════════════════
 
   return (
@@ -1016,22 +1068,23 @@ export function ParserDataSection() {
           {/* 2A — STATUS BADGE */}
           <StatusCard result={parserResult} />
 
-          {/* 2B — DATA TERSTRUKTUR (per promo) */}
+          {/* 2B — GAP REPORT (operator harus baca gap dulu) */}
+          {parserResult.gaps.length > 0 && (
+            <GapReportCard
+              gaps={parserResult.gaps}
+              fills={gapFills}
+              onFillChange={(field, value) => setGapFills(prev => ({ ...prev, [field]: value }))}
+              onConfirm={handleConfirmGapFills}
+            />
+          )}
+
+          {/* 2C — DATA TERSTRUKTUR (per promo) */}
           {parserResult.promos.length > 0 && (
             <StructuredDataCard
               promos={parserResult.promos}
               status={parserResult.status}
               onCopyCleanText={handleCopyCleanText}
               requiredGapsUnfilled={requiredGapsUnfilled}
-            />
-          )}
-
-          {/* 2C — GAP REPORT */}
-          {parserResult.gaps.length > 0 && (
-            <GapReportCard
-              gaps={parserResult.gaps}
-              fills={gapFills}
-              onFillChange={(field, value) => setGapFills(prev => ({ ...prev, [field]: value }))}
             />
           )}
 
@@ -1225,15 +1278,27 @@ function StructuredDataCard({
                       </span>
                     )}
                   </div>
-                  <Button
-                    variant="golden"
-                    size="sm"
-                    onClick={() => onCopyCleanText(promo)}
-                    className="shrink-0"
-                  >
-                    <Copy className="h-4 w-4" />
-                    Copy Clean Text
-                  </Button>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <Button
+                      variant="golden"
+                      size="sm"
+                      onClick={() => onCopyCleanText(promo)}
+                      disabled={requiredGapsUnfilled > 0}
+                      className={
+                        requiredGapsUnfilled > 0
+                          ? "opacity-50 cursor-not-allowed"
+                          : ""
+                      }
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copy Clean Text
+                    </Button>
+                    {requiredGapsUnfilled > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Lengkapi {requiredGapsUnfilled} data wajib terlebih dahulu
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -1248,10 +1313,12 @@ function GapReportCard({
   gaps,
   fills,
   onFillChange,
+  onConfirm,
 }: {
   gaps: ParserGap[];
   fills: Record<string, string>;
   onFillChange: (field: string, value: string) => void;
+  onConfirm: () => void;
 }) {
   const [open, setOpen] = useState(true);
   const requiredCount = gaps.filter(g => g.severity === "required").length;
@@ -1292,6 +1359,17 @@ function GapReportCard({
                 onChange={v => onFillChange(gap.field, v)}
               />
             ))}
+
+            <Button
+              variant="golden"
+              className="w-full mt-4"
+              onClick={onConfirm}
+              disabled={
+                Object.keys(fills).filter(k => fills[k]?.trim() !== "").length === 0
+              }
+            >
+              ✓ Konfirmasi & Perbarui Data
+            </Button>
           </div>
         </CollapsibleContent>
       </Card>
