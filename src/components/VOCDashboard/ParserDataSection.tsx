@@ -967,7 +967,7 @@ export function ParserDataSection() {
   // ════════════════════════════════════════════════════
 
   return (
-    <div className={`page-wrapper relative space-y-6 ${!parserResult && !isAnalyzing ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''}`}>
+    <div className={`page-wrapper relative space-y-6 ${!parserResult ? 'min-h-[calc(100vh-160px)]' : ''} ${!parserResult && !isAnalyzing ? 'flex flex-col justify-center' : ''}`}>
       {/* ─── SECTION 1: INPUT AREA — hidden saat loading / ada hasil ─── */}
       {!parserResult && !isAnalyzing && (
         <Card className="p-8">
