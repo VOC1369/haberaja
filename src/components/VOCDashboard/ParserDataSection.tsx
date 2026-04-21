@@ -982,7 +982,7 @@ export function ParserDataSection() {
             placeholder={
               isDragOver
                 ? "Lepaskan untuk upload screenshot…"
-                : `Paste teks S&K, URL promo, drop screenshot, atau Ctrl+V… (maks. ${MAX_SCREENSHOTS} gambar)`
+                : "Silahkan paste image dan text disini. Sisanya Wolfclaw akan handle...."
             }
             className="min-h-40 max-h-80 resize-none border-0 bg-transparent px-5 pt-5 pb-4 focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin-custom"
             disabled={isAnalyzing}
