@@ -5152,9 +5152,14 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
       }
     }
     
-    // Pattern 3: Industry-standard fallback — Tier 1 = 1 downline, then 5, 10, 15...
-    // Changed from (tierIndex+1)*5 to avoid Tier 1 = 5 (usually wrong)
-    return tierIndex === 0 ? 1 : tierIndex * 5;
+    // Pattern 3: NO evidence found — return 0 to signal human review required
+    // Previous behavior (tierIndex===0?1:tierIndex*5) silently fabricated values
+    console.warn(
+      `[Referral Mapping] min_downline fallback triggered for tier ${tierIndex} — ` +
+      `no evidence found in sub_name, minimum_base, or terms_conditions. ` +
+      `Setting to 0. Human review required.`
+    );
+    return 0;
   };
 
   // ============================================
@@ -5352,6 +5357,16 @@ export function mapExtractedToPromoFormData(extracted: ExtractedPromo, source?: 
         id: generateUUID(),
         tier_label: sub.sub_name || `Tier ${idx + 1}`,
         min_downline: extractMinDownline(sub, extracted.terms_conditions, idx),
+        _min_downline_source: (() => {
+          // Re-check apakah nilai berasal dari extraction atau fallback
+          const fromSubName = /(\d+)\s*(id|member|downline)/i.test(sub.sub_name || '');
+          const fromMinBase = typeof sub.minimum_base === 'number' && sub.minimum_base > 0;
+          const fromTerms = (extracted.terms_conditions || []).some(
+            t => /(\d+)\s*(id|member|downline)/i.test(t)
+          );
+          if (fromSubName || fromMinBase || fromTerms) return 'extracted';
+          return 'fallback';
+        })(),
         commission_percentage: commissionResult.value,
         
         // === RULE FIELDS (from promo table - source of truth) ===
