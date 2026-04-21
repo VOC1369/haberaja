@@ -2,6 +2,7 @@ import { GeneralKnowledgeSection } from "./GeneralKnowledgeSection";
 import { PromoKnowledgeSection } from "./PromoKnowledgeSection";
 import { BehavioralKnowledgeSection } from "./BehavioralKnowledgeSection";
 import { PseudoKnowledgeSection } from "./PseudoKnowledgeSection";
+import { ParserDataSection } from "./ParserDataSection";
 import type { KnowledgeCategory } from "@/pages/Dashboard";
 
 interface KnowledgeBaseSectionProps {
@@ -11,6 +12,10 @@ interface KnowledgeBaseSectionProps {
 }
 
 export function KnowledgeBaseSection({ activeCategory, forceResetKey, onNavigateToPromo }: KnowledgeBaseSectionProps) {
+  if (activeCategory === "parserData") {
+    return <ParserDataSection />;
+  }
+
   if (activeCategory === "general") {
     return <GeneralKnowledgeSection />;
   }

@@ -77,10 +77,6 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
   };
 
   const handleKnowledgeSubCategoryClick = (key: string) => {
-    if (key === "parserData") {
-      toast("Coming Soon — Parser Data sedang dalam pengembangan");
-      return;
-    }
     onSectionChange("knowledgeBase");
     onKnowledgeCategoryChange(key);
   };
