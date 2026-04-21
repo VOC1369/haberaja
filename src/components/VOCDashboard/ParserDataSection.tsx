@@ -959,7 +959,7 @@ export function ParserDataSection() {
                 ? "Lepaskan untuk upload screenshot…"
                 : "Paste teks S&K, URL promo, drop screenshot, atau Ctrl+V…"
             }
-            className="min-h-40 max-h-80 resize-none border-0 bg-transparent px-5 pt-5 pb-2 focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin-custom"
+            className="min-h-40 max-h-80 resize-none border-0 bg-transparent px-5 pt-5 pb-4 focus-visible:ring-0 focus-visible:ring-offset-0 scrollbar-thin-custom"
             disabled={isAnalyzing}
             onKeyDown={e => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && hasInput && !isAnalyzing) {
@@ -991,7 +991,7 @@ export function ParserDataSection() {
           )}
 
           {/* Bottom action bar inside field */}
-          <div className="flex items-center justify-between px-3 pb-3 pt-1">
+          <div className="flex items-center justify-between px-3 pb-3 pt-3">
             {/* Attach button (left) */}
             <Button
               type="button"
