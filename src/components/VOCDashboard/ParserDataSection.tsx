@@ -1360,16 +1360,32 @@ function GapReportCard({
               />
             ))}
 
-            <Button
-              variant="golden"
-              className="w-full mt-4"
-              onClick={onConfirm}
-              disabled={
-                Object.keys(fills).filter(k => fills[k]?.trim() !== "").length === 0
-              }
-            >
-              ✓ Konfirmasi & Perbarui Data
-            </Button>
+            {(() => {
+              const isConfirmDisabled = gaps
+                .filter(g => g.severity === "required")
+                .some(g => !fills[g.field] || fills[g.field].trim() === "");
+              return (
+                <>
+                  <Button
+                    className={
+                      isConfirmDisabled
+                        ? "w-full mt-4 bg-muted text-foreground/50 cursor-not-allowed hover:bg-muted"
+                        : "w-full mt-4"
+                    }
+                    variant={isConfirmDisabled ? "secondary" : "golden"}
+                    onClick={onConfirm}
+                    disabled={isConfirmDisabled}
+                  >
+                    ✓ Konfirmasi & Perbarui Data
+                  </Button>
+                  {isConfirmDisabled && (
+                    <p className="text-xs text-center text-muted-foreground mt-2">
+                      Lengkapi data wajib di atas untuk mengaktifkan
+                    </p>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </CollapsibleContent>
       </Card>
