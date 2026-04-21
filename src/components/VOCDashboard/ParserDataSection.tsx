@@ -444,6 +444,7 @@ export function ParserDataSection() {
   const [activeTab, setActiveTab] = useState<"text" | "file">("text");
   const [inputText, setInputText] = useState("");
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [parserResult, setParserResult] = useState<ParserResult | null>(null);
