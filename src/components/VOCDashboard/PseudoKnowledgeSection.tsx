@@ -13,8 +13,10 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { 
   Send, Sparkles, Loader2, FileText, ExternalLink, CheckCircle2, 
   AlertTriangle, Copy, XCircle, AlertCircle, ChevronDown,
-  X, RotateCcw, Terminal, HelpCircle, Paperclip, Lightbulb, Ban, Info
+  X, RotateCcw, Terminal, HelpCircle, Paperclip, Lightbulb, Ban, Info,
+  Plus, ArrowUp
 } from "lucide-react";
+import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { formatGameTypeLabel, formatProvidersDisplay } from "@/lib/promo-display";
 import { Button } from "@/components/ui/button";
