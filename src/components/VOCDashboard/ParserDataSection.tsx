@@ -43,7 +43,7 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 import { Label } from "@/components/ui/label";
 import { toast } from "@/lib/notify";
 import { callAI, extractJSON, AICreditsExhaustedError, AIRateLimitError, AIOverloadedError } from "@/lib/ai-client";
@@ -1493,9 +1493,9 @@ function GapItem({
 
   return (
     <div className="bg-muted rounded-lg p-4 space-y-3">
-      <div className="flex items-start gap-3">
-        <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${dotClass}`} />
-        <div className="flex-1 min-w-0">
+      <div className="flex items-start gap-2 mb-3">
+        <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-[5px] ${dotClass}`} />
+        <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium text-foreground">
               {hasOptions ? questionPart : gap.label}
@@ -1510,9 +1510,9 @@ function GapItem({
               {isRequired ? "WAJIB" : "OPSIONAL"}
             </Badge>
           </div>
-          <div className="text-sm text-muted-foreground mt-1">{gap.reason}</div>
+          <div className="text-sm text-muted-foreground">{gap.reason}</div>
           {gap.default_value && (
-            <div className="text-xs text-muted-foreground mt-1">
+            <div className="text-xs text-muted-foreground">
               Default jika dikosongkan: <span className="text-foreground">{gap.default_value}</span>
             </div>
           )}
@@ -1522,30 +1522,31 @@ function GapItem({
       <div>
         {hasOptions ? (
           <>
-            <RadioGroup
-              value={selectedValue}
-              onValueChange={setSelectedValue}
-              className="space-y-2"
-            >
+            <div className="space-y-2 mt-2">
               {inlineOptions.map((opt, idx) => {
-                const id = `${gap.field}-opt-${idx}`;
                 const isSelected = selectedValue === opt;
                 return (
-                  <label
-                    key={id}
-                    htmlFor={id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedValue(opt)}
+                    className={`flex items-start space-x-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                       isSelected
                         ? "bg-button-hover/10 border-button-hover"
-                        : "border-transparent hover:bg-muted"
+                        : "border-border hover:bg-muted/50"
                     }`}
                   >
-                    <RadioGroupItem value={opt} id={id} />
-                    <span className="text-sm text-foreground">{opt}</span>
-                  </label>
+                    <div
+                      className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5 ${
+                        isSelected ? "border-button-hover" : "border-muted-foreground"
+                      }`}
+                    >
+                      {isSelected && <div className="w-2 h-2 rounded-full bg-button-hover" />}
+                    </div>
+                    <span className="text-sm text-foreground leading-relaxed">{opt}</span>
+                  </div>
                 );
               })}
-            </RadioGroup>
+            </div>
 
             {selectedValue && (
               <div className="mt-3 space-y-1">
