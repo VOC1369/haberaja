@@ -617,20 +617,35 @@ export function ParserDataSection() {
     e.stopPropagation();
     setIsDragOver(false);
     if (isAnalyzing) return;
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
+    const dropped = Array.from(e.dataTransfer.files ?? []);
+    if (dropped.length === 0) return;
+    const images = dropped.filter(f => f.type.startsWith("image/"));
+    const rejected = dropped.length - images.length;
+    if (rejected > 0) {
       toast.warning("Hanya file gambar yang diizinkan", {
-        description: `File "${file.name}" bukan format image.`,
+        description: `${rejected} file bukan format image dan dilewati.`,
       });
-      return;
     }
-    setScreenshotFile(file);
+    if (images.length === 0) return;
+    setScreenshotFiles(prev => {
+      if (prev.length >= MAX_SCREENSHOTS) {
+        toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`);
+        return prev;
+      }
+      const room = MAX_SCREENSHOTS - prev.length;
+      const toAdd = images.slice(0, room);
+      if (images.length > room) {
+        toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`, {
+          description: `${images.length - room} file dilewati.`,
+        });
+      }
+      return [...prev, ...toAdd];
+    });
   }, [isAnalyzing]);
 
   // ─── Paste handler (Ctrl+V / Cmd+V) ─────────────────
   useEffect(() => {
-    if (activeTab !== "text" || screenshotFile || isAnalyzing) return;
+    if (isAnalyzing) return;
 
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -640,8 +655,14 @@ export function ParserDataSection() {
         if (item.type.startsWith("image/")) {
           const file = item.getAsFile();
           if (file) {
-            setScreenshotFile(file);
-            toast.success("Screenshot dari clipboard ditambahkan");
+            setScreenshotFiles(prev => {
+              if (prev.length >= MAX_SCREENSHOTS) {
+                toast.warning(`Maksimal ${MAX_SCREENSHOTS} screenshot`);
+                return prev;
+              }
+              toast.success("Screenshot dari clipboard ditambahkan");
+              return [...prev, file];
+            });
             e.preventDefault();
             return;
           }
@@ -651,7 +672,7 @@ export function ParserDataSection() {
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [activeTab, screenshotFile, isAnalyzing]);
+  }, [isAnalyzing]);
 
   // ─── Cancel handler ─────────────────────────────────
   const handleCancelAnalyze = useCallback(() => {
