@@ -20,6 +20,8 @@ import {
   CheckCircle2,
   XCircle,
   Zap,
+  AlertTriangle,
+  Copy,
   ChevronDown,
   X,
   Info,
@@ -31,6 +33,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
