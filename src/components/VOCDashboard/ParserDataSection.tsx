@@ -923,16 +923,18 @@ export function ParserDataSection() {
         </div>
 
         <Tabs value={activeTab} onValueChange={v => setActiveTab(v as "text" | "file")}>
-          <TabsList className="mb-6 mx-auto">
-            <TabsTrigger value="text" className="gap-2">
-              <FileText className="h-4 w-4" />
-              Teks &amp; URL
-            </TabsTrigger>
-            <TabsTrigger value="file" className="gap-2">
-              <Upload className="h-4 w-4" />
-              Upload File
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex justify-center mb-6">
+            <TabsList>
+              <TabsTrigger value="text" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Teks &amp; URL
+              </TabsTrigger>
+              <TabsTrigger value="file" className="gap-2">
+                <Upload className="h-4 w-4" />
+                Upload File
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* TAB 1 — TEKS & URL */}
           <TabsContent value="text" className="space-y-6 mt-0">
