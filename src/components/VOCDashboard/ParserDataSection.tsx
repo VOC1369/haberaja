@@ -1089,7 +1089,7 @@ export function ParserDataSection() {
 
           {/* Bukan promo → suggestion only */}
           {parserResult.status === "bukan_promo" && (
-            <Card className="p-6 border-l-4 border-l-warning">
+            <Card className="p-6">
               <div className="flex items-start gap-3">
                 <Info className="h-5 w-5 text-warning shrink-0 mt-0.5" />
                 <div className="space-y-1">
@@ -1119,7 +1119,7 @@ function StatusCard({ result }: { result: ParserResult }) {
   if (result.status === "valid") {
     const promo = result.promos[0];
     return (
-      <Card className="p-6 border-l-4 border-l-success">
+      <Card className="p-6">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center shrink-0">
             <CheckCircle2 className="h-5 w-5 text-success" />
@@ -1142,7 +1142,7 @@ function StatusCard({ result }: { result: ParserResult }) {
 
   if (result.status === "bukan_promo") {
     return (
-      <Card className="p-6 border-l-4 border-l-destructive">
+      <Card className="p-6">
         <div className="flex items-start gap-4">
           <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
             <XCircle className="h-5 w-5 text-destructive" />
@@ -1162,7 +1162,7 @@ function StatusCard({ result }: { result: ParserResult }) {
 
   // gabungan
   return (
-    <Card className="p-6 border-l-4 border-l-warning">
+    <Card className="p-6">
       <div className="flex items-start gap-4">
         <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
           <Zap className="h-5 w-5 text-warning" />
