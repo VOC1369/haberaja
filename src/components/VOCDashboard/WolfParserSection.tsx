@@ -89,6 +89,36 @@ const FIELD_KEYS: Array<keyof ParsedPromo> = [
   "ambiguity_flags",
 ];
 
+// Human-readable label per field (Title Case) — mirror Extractor label style.
+const FIELD_LABELS: Record<keyof ParsedPromo, string> = {
+  promo_name: "Nama Promo",
+  promo_type: "Tipe Promo",
+  client_id: "Client",
+  target_user: "Target User",
+  valid_from: "Valid From",
+  valid_until: "Valid Until",
+  platform_access: "Platform",
+  geo_restriction: "Geo Restriction",
+  min_deposit: "Min Deposit",
+  max_bonus: "Max Bonus",
+  max_bonus_unlimited: "Max Bonus Unlimited",
+  has_turnover: "Ada Turnover",
+  is_tiered: "Tiered",
+  reward_type_hint: "Reward Type",
+  calculation_basis: "Calculation Basis",
+  calculation_value: "Calculation Value",
+  turnover_requirement: "Turnover Requirement",
+  claim_method: "Claim Method",
+  game_types: "Jenis Game",
+  game_exclusions: "Blacklist Game",
+  parse_confidence: "Parse Confidence",
+  ambiguity_flags: "Ambiguity Flags",
+  source_evidence_map: "Evidence Map",
+  value_status_map: "Value Status",
+  needs_operator_fill_map: "Needs Fill",
+  clean_text: "Clean Text",
+};
+
 export function WolfParserSection() {
   const [inputText, setInputText] = useState("");
   const [parserOutput, setParserOutput] = useState<ParserOutput | null>(null);
@@ -901,16 +931,19 @@ function StructuredDataCard({ promo }: { promo: ParsedPromo }) {
         <CollapsibleContent>
           <div className="p-6 pt-4 border-t border-border space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {FIELD_KEYS.map((key) => (
-                <div key={key} className="bg-muted rounded-lg p-3">
-                  <span className="text-muted-foreground text-xs block mb-1 font-mono">
-                    {key}
-                  </span>
-                  <span className="text-foreground font-medium break-words text-sm">
-                    {formatFieldValue(promo[key])}
-                  </span>
-                </div>
-              ))}
+              {FIELD_KEYS.map((key) => {
+                const rendered = renderParserValue(key, promo[key]);
+                return (
+                  <div key={key} className="bg-muted rounded-lg p-3">
+                    <span className="text-muted-foreground text-xs block mb-1">
+                      {FIELD_LABELS[key] ?? key}
+                    </span>
+                    <span className={`break-words text-sm ${rendered.className}`}>
+                      {rendered.text}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </CollapsibleContent>
@@ -1029,6 +1062,93 @@ function formatFieldValue(value: unknown): string {
   if (typeof value === "number") return String(value);
   if (typeof value === "string") return value || "—";
   return JSON.stringify(value);
+}
+
+/**
+ * Renderer value untuk Parser RESULT card — mirror visual contract Extractor:
+ *   - empty/null/"-"   → "Tidak Disebutkan", muted italic
+ *   - numeric Rupiah   → "Rp X.XXX", min_deposit foreground / max_bonus golden
+ *   - confidence       → "NN%", golden semibold
+ *   - boolean          → "Ya" success / "Tidak" muted-foreground
+ *   - arrays kosong    → "Tidak Ada", muted italic
+ *   - arrays terisi    → joined comma, foreground medium
+ *   - ambiguity_flags  → warning bila ada
+ */
+function renderParserValue(
+  key: keyof ParsedPromo,
+  value: unknown,
+): { text: string; className: string } {
+  const empty = { text: "Tidak Disebutkan", className: "text-muted-foreground/60 italic" };
+
+  if (value === null || value === undefined || value === "") return empty;
+
+  // Arrays
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      if (key === "ambiguity_flags") {
+        return { text: "Tidak Ada", className: "text-muted-foreground" };
+      }
+      return { text: "Tidak Ada", className: "text-muted-foreground/60 italic" };
+    }
+    const joined = value.map((v) => String(v)).join(", ");
+    if (key === "ambiguity_flags") {
+      return { text: joined, className: "text-warning font-medium" };
+    }
+    if (key === "game_exclusions") {
+      return { text: joined, className: "text-destructive font-medium" };
+    }
+    return { text: joined, className: "text-foreground font-medium" };
+  }
+
+  // Booleans
+  if (typeof value === "boolean") {
+    return value
+      ? { text: "Ya", className: "text-success font-semibold" }
+      : { text: "Tidak", className: "text-muted-foreground font-medium" };
+  }
+
+  // Numeric — Rupiah / Confidence / generic
+  if (typeof value === "number") {
+    if (key === "parse_confidence") {
+      const pct = value <= 1 ? Math.round(value * 100) : Math.round(value);
+      return { text: `${pct}%`, className: "text-button-hover font-semibold" };
+    }
+    if (key === "min_deposit") {
+      return {
+        text: `Rp ${value.toLocaleString("id-ID")}`,
+        className: "text-foreground font-medium",
+      };
+    }
+    if (key === "max_bonus" || key === "calculation_value" || key === "turnover_requirement") {
+      return {
+        text:
+          key === "calculation_value"
+            ? String(value)
+            : `Rp ${value.toLocaleString("id-ID")}`,
+        className: "text-button-hover font-semibold",
+      };
+    }
+    return { text: String(value), className: "text-foreground font-medium" };
+  }
+
+  // Strings
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === "-" || /^tidak[_\s]?disebutkan$/i.test(trimmed)) {
+      return empty;
+    }
+    // Pretty-print snake_case enum-ish strings to Title Case (label only, value preserved)
+    const display = /^[a-z0-9_]+$/i.test(trimmed)
+      ? trimmed
+          .split("_")
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(" ")
+      : trimmed;
+    return { text: display, className: "text-foreground font-medium" };
+  }
+
+  return { text: JSON.stringify(value), className: "text-foreground font-medium" };
 }
 
 function handleAIError(err: unknown) {
