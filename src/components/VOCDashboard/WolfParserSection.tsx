@@ -489,13 +489,6 @@ export function WolfParserSection() {
               Wolfclaw menggunakan AI dan bisa melakukan kesalahan. Pastikan
               lakukan pengecekan ganda.
             </p>
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              className="h-9 px-4 gap-2 rounded-full shrink-0"
-            >
-              Reset
-            </Button>
           </div>
 
           {parserOutput.gaps.length > 0 && (
@@ -513,11 +506,49 @@ export function WolfParserSection() {
 
           <CleanTextCard
             cleanText={parserOutput.parsed_promo.clean_text}
-            onCopy={handleCopyCleanText}
           />
 
-          <ParserJSONCard output={parserOutput} onCopy={handleCopyJSON} />
+          <ParserJSONCard output={parserOutput} />
         </>
+      )}
+
+      {/* FIXED ACTION BAR — pattern from PseudoKnowledgeSection (Extractor) */}
+      {parserOutput && !isAnalyzing && (
+        <div className="footer-bar">
+          <div className="footer-bar-content">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                className="h-11 px-6 gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Restart
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-3" />
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={handleCopyCleanText}
+                className="h-11 px-4 gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                Copy Clean Text
+              </Button>
+              <Button
+                onClick={handleCopyJSON}
+                variant="golden"
+                className="h-11 px-6 gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                Copy JSON Parser
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
