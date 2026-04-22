@@ -819,7 +819,11 @@ function GapItem({
                 setSelectedOpt(v);
                 setDetailValue("");
               }}
-              className="space-y-2 mt-2"
+              className={
+                effectiveOptions.length >= 4
+                  ? "grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 mt-2"
+                  : "space-y-2 mt-2"
+              }
             >
               {effectiveOptions.map((opt, idx) => {
                 const id = `${gap.field}-opt-${idx}`;
@@ -830,8 +834,12 @@ function GapItem({
                       htmlFor={id}
                       className="cursor-pointer font-normal text-sm text-foreground"
                     >
-                      {opt}
+                      {formatOptionLabel(opt)}
                     </Label>
+                  </div>
+                );
+              })}
+            </RadioGroup>
                   </div>
                 );
               })}
