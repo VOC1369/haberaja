@@ -907,31 +907,77 @@ export function ParserDataSection() {
       // Schema foundation v1: pass-through field additive secara optional-safe.
       // Parser TIDAK boleh crash jika LLM tidak mengirim value_status_map /
       // needs_operator_fill_map / reason_type / evidence_snippet / rationale.
-      const normalizedPromos = (Array.isArray(parsed.promos) ? parsed.promos : []).map((p: any) => ({
-        ...p,
-        value_status_map:
-          p && typeof p.value_status_map === "object" && p.value_status_map !== null
-            ? p.value_status_map
-            : undefined,
-        needs_operator_fill_map:
-          p && typeof p.needs_operator_fill_map === "object" && p.needs_operator_fill_map !== null
-            ? p.needs_operator_fill_map
-            : undefined,
-      }));
+      // F8: invalid shape tetap di-downgrade ke undefined (fail-soft) tapi
+      // emit console.warn agar contract violation dari LLM tidak silent.
+      const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+        typeof v === "object" && v !== null && !Array.isArray(v);
 
-      const normalizedGaps = (Array.isArray(parsed.gaps) ? parsed.gaps : []).map((g: any) => ({
-        ...g,
-        reason_type:
-          g && typeof g.reason_type === "string" &&
-          (g.reason_type === "ambiguous" ||
-            g.reason_type === "required_missing" ||
-            g.reason_type === "optional_missing")
-            ? g.reason_type
-            : undefined,
-        evidence_snippet:
-          g && typeof g.evidence_snippet === "string" ? g.evidence_snippet : undefined,
-        rationale: g && typeof g.rationale === "string" ? g.rationale : undefined,
-      }));
+      const normalizedPromos = (Array.isArray(parsed.promos) ? parsed.promos : []).map((p: any) => {
+        let valueStatusMap: Record<string, unknown> | undefined;
+        if (p && p.value_status_map !== undefined) {
+          if (isPlainObject(p.value_status_map)) {
+            valueStatusMap = p.value_status_map;
+          } else {
+            console.warn("[Parser] Invalid value_status_map shape", p.value_status_map);
+          }
+        }
+
+        let needsOperatorFillMap: Record<string, unknown> | undefined;
+        if (p && p.needs_operator_fill_map !== undefined) {
+          if (isPlainObject(p.needs_operator_fill_map)) {
+            needsOperatorFillMap = p.needs_operator_fill_map;
+          } else {
+            console.warn("[Parser] Invalid needs_operator_fill_map shape", p.needs_operator_fill_map);
+          }
+        }
+
+        return {
+          ...p,
+          value_status_map: valueStatusMap,
+          needs_operator_fill_map: needsOperatorFillMap,
+        };
+      });
+
+      const normalizedGaps = (Array.isArray(parsed.gaps) ? parsed.gaps : []).map((g: any) => {
+        let reasonType: "ambiguous" | "required_missing" | "optional_missing" | undefined;
+        if (g && g.reason_type !== undefined) {
+          if (
+            typeof g.reason_type === "string" &&
+            (g.reason_type === "ambiguous" ||
+              g.reason_type === "required_missing" ||
+              g.reason_type === "optional_missing")
+          ) {
+            reasonType = g.reason_type;
+          } else {
+            console.warn("[Parser] Invalid gap.reason_type", g.reason_type);
+          }
+        }
+
+        let evidenceSnippet: string | undefined;
+        if (g && g.evidence_snippet !== undefined) {
+          if (typeof g.evidence_snippet === "string") {
+            evidenceSnippet = g.evidence_snippet;
+          } else {
+            console.warn("[Parser] Invalid gap.evidence_snippet", g.evidence_snippet);
+          }
+        }
+
+        let rationale: string | undefined;
+        if (g && g.rationale !== undefined) {
+          if (typeof g.rationale === "string") {
+            rationale = g.rationale;
+          } else {
+            console.warn("[Parser] Invalid gap.rationale", g.rationale);
+          }
+        }
+
+        return {
+          ...g,
+          reason_type: reasonType,
+          evidence_snippet: evidenceSnippet,
+          rationale: rationale,
+        };
+      });
 
       const normalized: ParserResult = {
         status: parsed.status ?? "bukan_promo",
