@@ -594,12 +594,12 @@ function GapReportCard({
             </div>
             <div className="flex items-center gap-2">
               {requiredCount > 0 && (
-                <Badge className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive border-0">
+                <Badge className="h-auto px-3 py-1 text-xs font-semibold rounded-full border-0 bg-rose-500/15 text-rose-400 hover:bg-rose-500/15">
                   {requiredCount} Wajib
                 </Badge>
               )}
               {optionalCount > 0 && (
-                <Badge className="rounded-full bg-warning text-warning-foreground hover:bg-warning border-0">
+                <Badge className="h-auto px-3 py-1 text-xs font-semibold rounded-full border-0 bg-amber-500/15 text-amber-400 hover:bg-amber-500/15">
                   {optionalCount} Opsional
                 </Badge>
               )}
