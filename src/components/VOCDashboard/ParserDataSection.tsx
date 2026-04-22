@@ -526,7 +526,13 @@ Tidak ada teks. Tidak ada markdown wrapper.
       },
       "ambiguity_flags": ["string"],
       "parse_confidence": "number 0.0-1.0",
-      "clean_text": "string — S&K bersih tanpa noise UI"
+      "clean_text": "string — S&K bersih tanpa noise UI",
+      "value_status_map": {
+        "field_name": "explicit | ambiguous | not_stated | not_applicable"
+      },
+      "needs_operator_fill_map": {
+        "field_name": "boolean"
+      }
     }
   ],
   "gaps": [
@@ -535,7 +541,10 @@ Tidak ada teks. Tidak ada markdown wrapper.
       "label": "string — Bahasa Indonesia",
       "severity": "required | optional",
       "reason": "string — kenapa tidak bisa ditentukan",
-      "default_value": "string | null"
+      "default_value": "string | null",
+      "reason_type": "ambiguous | required_missing | optional_missing",
+      "evidence_snippet": "string — kutipan dari teks (kosong jika not_stated)",
+      "rationale": "string — kenapa kamu putuskan ini ambigu/missing"
     }
   ],
   "is_marketing_only": "boolean",
@@ -544,7 +553,72 @@ Tidak ada teks. Tidak ada markdown wrapper.
 
 JIKA status = "bukan_promo" → promos boleh [].
 JIKA status = "gabungan" → promos harus >= 2.
-JIKA status = "valid" → promos tepat 1 elemen.`;
+JIKA status = "valid" → promos tepat 1 elemen.
+
+════════════════════════════════════
+ATURAN value_status_map (additive, WAJIB diisi)
+════════════════════════════════════
+Untuk SETIAP field nullable di bawah ini, beri label status semantik:
+promo_name, promo_type, target_user, valid_from, valid_until,
+platform_access, geo_restriction, min_deposit, max_bonus,
+max_bonus_unlimited, has_turnover, is_tiered, reward_type_hint,
+calculation_base, calculation_value, turnover_requirement,
+claim_method, game_types, game_exclusions.
+
+Definisi status:
+- "explicit"       → nilai eksplisit di sumber, evidence ada
+- "ambiguous"      → nilai bisa di-isi tapi multi-tafsir / konflik
+- "not_stated"     → tidak disebutkan sama sekali di sumber
+- "not_applicable" → memang tidak relevan untuk promo ini
+                     (mis. turnover_requirement untuk rollingan)
+
+Aturan konsistensi:
+- Jika field punya nilai non-null → status WAJIB "explicit" atau "ambiguous"
+- Jika field null DAN tidak ada di sumber → "not_stated"
+- Jika field null DAN konteks mechanic-nya tidak butuh → "not_applicable"
+- JANGAN tulis "explicit" tanpa source_evidence_map entry untuk field itu.
+
+════════════════════════════════════
+ATURAN needs_operator_fill_map (additive, WAJIB diisi)
+════════════════════════════════════
+Untuk SETIAP field yang masuk value_status_map, set boolean:
+- true  → operator HARUS isi sebelum extractor jalan
+- false → tidak perlu intervensi operator
+
+Aturan tegas (jangan dilanggar):
+- status "explicit"        → false
+- status "not_applicable"  → false
+- status "ambiguous"       → true  (selalu)
+- status "not_stated"      → true HANYA jika field termasuk required
+                             untuk mechanic terdeteksi (lihat STEP 4
+                             "REQUIRED gap"). Selain itu false.
+
+Konsistensi dengan gaps[]:
+- Setiap field dengan needs_operator_fill_map = true HARUS muncul di gaps[].
+- Setiap entri gaps[] HARUS punya field yang juga ada di
+  needs_operator_fill_map dengan nilai true.
+
+════════════════════════════════════
+ATURAN gaps[] enriched (additive)
+════════════════════════════════════
+Selain field lama (field, label, severity, reason, default_value),
+WAJIB tambahkan:
+
+- reason_type:
+    "ambiguous"         → field punya nilai/sinyal tapi multi-tafsir
+    "required_missing"  → field null + critical untuk mechanic ini
+    "optional_missing"  → field null + non-critical, operator boleh skip
+
+- evidence_snippet:
+    Jika reason_type = "ambiguous" → kutip teks pemicu ambiguitas
+    (mis. "TANPA TO ... x10 dari bonus").
+    Jika reason_type = "*_missing" → string kosong "".
+
+- rationale:
+    1 kalimat singkat kenapa kamu putuskan ini gap
+    (mis. "Judul bilang TANPA TO tapi body sebut x10").
+
+Field lama TIDAK boleh dihilangkan.`;
 
 // ════════════════════════════════════════════════════
 // HELPERS
@@ -830,11 +904,40 @@ export function ParserDataSection() {
       const parsed = extractJSON<ParserResult>(response);
 
       // Defensive normalization
+      // Schema foundation v1: pass-through field additive secara optional-safe.
+      // Parser TIDAK boleh crash jika LLM tidak mengirim value_status_map /
+      // needs_operator_fill_map / reason_type / evidence_snippet / rationale.
+      const normalizedPromos = (Array.isArray(parsed.promos) ? parsed.promos : []).map((p: any) => ({
+        ...p,
+        value_status_map:
+          p && typeof p.value_status_map === "object" && p.value_status_map !== null
+            ? p.value_status_map
+            : undefined,
+        needs_operator_fill_map:
+          p && typeof p.needs_operator_fill_map === "object" && p.needs_operator_fill_map !== null
+            ? p.needs_operator_fill_map
+            : undefined,
+      }));
+
+      const normalizedGaps = (Array.isArray(parsed.gaps) ? parsed.gaps : []).map((g: any) => ({
+        ...g,
+        reason_type:
+          g && typeof g.reason_type === "string" &&
+          (g.reason_type === "ambiguous" ||
+            g.reason_type === "required_missing" ||
+            g.reason_type === "optional_missing")
+            ? g.reason_type
+            : undefined,
+        evidence_snippet:
+          g && typeof g.evidence_snippet === "string" ? g.evidence_snippet : undefined,
+        rationale: g && typeof g.rationale === "string" ? g.rationale : undefined,
+      }));
+
       const normalized: ParserResult = {
         status: parsed.status ?? "bukan_promo",
         reason: parsed.reason ?? "",
-        promos: Array.isArray(parsed.promos) ? parsed.promos : [],
-        gaps: Array.isArray(parsed.gaps) ? parsed.gaps : [],
+        promos: normalizedPromos,
+        gaps: normalizedGaps,
         is_marketing_only: !!parsed.is_marketing_only,
         general_kb_suggestion: parsed.general_kb_suggestion ?? null,
       };
