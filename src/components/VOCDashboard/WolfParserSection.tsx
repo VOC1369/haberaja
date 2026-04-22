@@ -624,6 +624,72 @@ function GapReportCard({
   );
 }
 
+// ────────────────────────────────────────────────────
+// FIELD_OPTION_REGISTRY — UI fallback (presentation only).
+// Tidak mengubah engine contract. Hanya inject opsi default
+// kalau LLM kirim gap.options kosong.
+// detailType: opsi yang trigger input tambahan.
+//   "date"   → date input
+//   "number" → numeric input
+// ────────────────────────────────────────────────────
+type DetailType = "date" | "number";
+interface OptionRegistry {
+  options: string[];
+  /** opsi tertentu → tipe input detail tambahan */
+  detail?: Record<string, DetailType>;
+}
+
+const FIELD_OPTION_REGISTRY: Record<string, OptionRegistry> = {
+  valid_from: {
+    options: [
+      "hari_ini",
+      "besok",
+      "tanggal_tertentu",
+      "x_hari_lalu",
+      "tidak_disebutkan",
+    ],
+    detail: { tanggal_tertentu: "date", x_hari_lalu: "number" },
+  },
+  valid_until: {
+    options: [
+      "tidak_terbatas",
+      "tanggal_tertentu",
+      "x_hari_dari_mulai",
+      "tidak_disebutkan",
+    ],
+    detail: { tanggal_tertentu: "date", x_hari_dari_mulai: "number" },
+  },
+  target_user: {
+    options: ["new_member", "all", "vip", "existing_member", "tidak_disebutkan"],
+  },
+  claim_method: {
+    options: ["auto", "manual", "tidak_disebutkan"],
+  },
+  platform_access: {
+    options: ["web", "mobile", "apk", "semua_platform", "tidak_disebutkan"],
+  },
+  has_turnover: {
+    options: ["ya", "tidak", "tidak_disebutkan"],
+  },
+  is_tiered: {
+    options: ["ya", "tidak", "tidak_disebutkan"],
+  },
+  max_bonus_unlimited: {
+    options: ["ya", "tidak", "tidak_disebutkan"],
+  },
+  calculation_basis: {
+    options: ["deposit", "loss", "turnover", "tidak_disebutkan"],
+  },
+  reward_type_hint: {
+    options: [
+      "percentage",
+      "fixed_amount",
+      "percentage_range",
+      "tidak_disebutkan",
+    ],
+  },
+};
+
 function GapItem({
   gap,
   value,
@@ -636,7 +702,41 @@ function GapItem({
   const isRequired =
     gap.gap_type === "required_missing" || gap.gap_type === "ambiguous";
   const dotClass = isRequired ? "bg-destructive" : "bg-warning";
-  const hasOptions = gap.options.length >= 1;
+
+  // Effective options: pakai opsi LLM kalau ada, fallback ke registry UI.
+  const registry = FIELD_OPTION_REGISTRY[gap.field];
+  const effectiveOptions: string[] =
+    gap.options.length > 0 ? gap.options : registry?.options ?? [];
+  const hasOptions = effectiveOptions.length > 0;
+
+  // Local state untuk radio + detail input.
+  const [selectedOpt, setSelectedOpt] = useState("");
+  const [detailValue, setDetailValue] = useState("");
+  const [textValue, setTextValue] = useState(value);
+
+  const detailType: DetailType | undefined =
+    selectedOpt && registry?.detail?.[selectedOpt];
+
+  // Sync radio + detail → parent (human-readable format).
+  useEffect(() => {
+    if (!hasOptions) return;
+    if (!selectedOpt) {
+      onChange("");
+      return;
+    }
+    const trimmed = detailValue.trim();
+    const combined =
+      detailType && trimmed ? `${selectedOpt} (${trimmed})` : selectedOpt;
+    onChange(combined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOpt, detailValue, hasOptions]);
+
+  // Sync text-only → parent.
+  useEffect(() => {
+    if (hasOptions) return;
+    onChange(textValue);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textValue, hasOptions]);
 
   return (
     <div className="bg-muted rounded-lg px-6 py-4 space-y-3">
@@ -665,30 +765,54 @@ function GapItem({
 
       <div>
         {hasOptions ? (
-          <RadioGroup
-            value={value}
-            onValueChange={onChange}
-            className="space-y-2 mt-2"
-          >
-            {gap.options.map((opt, idx) => {
-              const id = `${gap.field}-opt-${idx}`;
-              return (
-                <div key={idx} className="flex items-center space-x-2">
-                  <RadioGroupItem value={opt} id={id} />
-                  <Label
-                    htmlFor={id}
-                    className="cursor-pointer font-normal text-sm text-foreground"
-                  >
-                    {opt}
-                  </Label>
-                </div>
-              );
-            })}
-          </RadioGroup>
+          <>
+            <RadioGroup
+              value={selectedOpt}
+              onValueChange={(v) => {
+                setSelectedOpt(v);
+                setDetailValue("");
+              }}
+              className="space-y-2 mt-2"
+            >
+              {effectiveOptions.map((opt, idx) => {
+                const id = `${gap.field}-opt-${idx}`;
+                return (
+                  <div key={idx} className="flex items-center space-x-2">
+                    <RadioGroupItem value={opt} id={id} />
+                    <Label
+                      htmlFor={id}
+                      className="cursor-pointer font-normal text-sm text-foreground"
+                    >
+                      {opt}
+                    </Label>
+                  </div>
+                );
+              })}
+            </RadioGroup>
+
+            {detailType && (
+              <div className="mt-3 space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  {detailType === "date"
+                    ? "Tanggal (opsional)"
+                    : "Jumlah hari (opsional)"}
+                </Label>
+                <Input
+                  type={detailType === "date" ? "date" : "number"}
+                  value={detailValue}
+                  onChange={(e) => setDetailValue(e.target.value)}
+                  placeholder={
+                    detailType === "date" ? "YYYY-MM-DD" : "Contoh: 7"
+                  }
+                  className="rounded-lg bg-background"
+                />
+              </div>
+            )}
+          </>
         ) : (
           <Input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
             placeholder="Isi nilai..."
             className="rounded-lg bg-background"
           />
