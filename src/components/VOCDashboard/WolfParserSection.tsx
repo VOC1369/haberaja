@@ -781,24 +781,25 @@ function GapItem({
 
   return (
     <div className="bg-muted rounded-lg px-6 py-4 space-y-3">
-      <div className="mb-3">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
           <div
             className={`w-2 h-2 rounded-full flex-shrink-0 ${dotClass}`}
           />
-          <span className="text-sm font-medium text-foreground leading-none">
+          <span className="text-sm font-medium text-foreground leading-snug">
             {gap.question}
           </span>
-          <Badge
-            className={
-              isRequired
-                ? "bg-destructive/20 text-destructive border border-destructive/30 leading-none"
-                : "bg-warning/20 text-warning border border-warning/30 leading-none"
-            }
-          >
-            {isRequired ? "WAJIB" : "OPSIONAL"}
-          </Badge>
         </div>
+        <Badge
+          className={
+            "flex-shrink-0 " +
+            (isRequired
+              ? "bg-destructive/20 text-destructive border border-destructive/30 leading-none"
+              : "bg-warning/20 text-warning border border-warning/30 leading-none")
+          }
+        >
+          {isRequired ? "WAJIB" : "OPSIONAL"}
+        </Badge>
       </div>
 
       <div>
