@@ -145,6 +145,19 @@ Format: { "<field_name>": "<kutipan literal dari raw text>" }
 - Hanya field yang punya basis tekstual yang masuk.
 - Field null TIDAK masuk map.
 
+CLAUSE WAJIB DIPERTAHANKAN (jika muncul di teks):
+Berikut clause yang TIDAK BOLEH hilang dari clean_text DAN harus dicatat di
+source_evidence_map (boleh di bawah field yang relevan, mis. "calculation_basis"
+atau "game_exclusions"):
+- "safety bet"
+- "opposite betting" / "dua sisi"
+- "other sports"
+- "bonus hunter"
+- "kesamaan IP" / "same IP"
+- indikasi kecurangan / fraud
+- hak operator cancel / reject / batalkan
+Membuang clause ini = pelanggaran kontrak parser.
+
 ================================================================
 value_status_map
 ================================================================
