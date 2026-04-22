@@ -1038,7 +1038,7 @@ function ParserJSONCard({
         <CollapsibleContent>
           <div className="p-6 pt-4 border-t border-border space-y-4">
             <div className="bg-muted rounded-lg p-4 max-h-[600px] overflow-auto">
-              <pre className="text-xs font-mono text-foreground">
+              <pre className="text-xs font-mono text-foreground whitespace-pre-wrap break-all">
                 {jsonString}
               </pre>
             </div>
