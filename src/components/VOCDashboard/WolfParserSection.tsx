@@ -485,13 +485,6 @@ export function WolfParserSection() {
       {/* ─── HASIL PARSER ─── */}
       {parserOutput && !isAnalyzing && (
         <>
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-xs text-muted-foreground">
-              Wolfclaw menggunakan AI dan bisa melakukan kesalahan. Pastikan
-              lakukan pengecekan ganda.
-            </p>
-          </div>
-
           {parserOutput.gaps.length > 0 && (
             <GapReportCard
               gaps={parserOutput.gaps}
