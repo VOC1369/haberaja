@@ -39,8 +39,8 @@ describe("wolf-parser-validator", () => {
     warnSpy.mockRestore();
   });
 
-  it("1. empty input -> full V0.9 shape", () => {
-    const out = validateAndNormalize({}, "initial");
+  it("1. empty input -> full V0.9 shape (mode=refine bypasses Rule 4)", () => {
+    const out = validateAndNormalize({}, "refine");
     expect(out.schema_version).toBe("0.9");
     expect(out.parsed_promo.promo_name).toBeNull();
     expect(out.parsed_promo.game_types).toEqual([]);
@@ -60,7 +60,7 @@ describe("wolf-parser-validator", () => {
   it("3. valid_from='hari_ini' -> null", () => {
     const out = validateAndNormalize(
       resolvedPromo({ valid_from: "hari_ini" }),
-      "initial",
+      "refine",
     );
     expect(out.parsed_promo.valid_from).toBeNull();
   });
@@ -68,7 +68,7 @@ describe("wolf-parser-validator", () => {
   it("4. valid_until='unlimited' -> null", () => {
     const out = validateAndNormalize(
       resolvedPromo({ valid_until: "unlimited" }),
-      "initial",
+      "refine",
     );
     expect(out.parsed_promo.valid_until).toBeNull();
   });
