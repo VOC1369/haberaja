@@ -613,7 +613,7 @@ function GapReportCard({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="p-6 pt-4 border-t border-border space-y-4">
+          <div className="p-6 pt-4 border-t border-border space-y-6">
             {gaps.map((gap, idx) => (
               <GapItem
                 key={`${gap.field}-${idx}`}
@@ -816,12 +816,18 @@ function GapItem({
             >
               {effectiveOptions.map((opt, idx) => {
                 const id = `${gap.field}-opt-${idx}`;
+                const isSelected = selectedOpt === opt;
                 return (
-                  <div key={idx} className="flex items-center space-x-2">
+                  <div key={idx} className="flex items-center space-x-2 group">
                     <RadioGroupItem value={opt} id={id} />
                     <Label
                       htmlFor={id}
-                      className="cursor-pointer font-normal text-sm text-foreground"
+                      className={
+                        "cursor-pointer font-normal text-sm transition-colors group-hover:text-foreground/90 " +
+                        (isSelected
+                          ? "text-foreground font-medium"
+                          : "text-muted-foreground")
+                      }
                     >
                       {formatOptionLabel(opt)}
                     </Label>
