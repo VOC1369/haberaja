@@ -792,13 +792,13 @@ function GapItem({
         </div>
         <Badge
           className={
-            "flex-shrink-0 " +
+            "flex-shrink-0 rounded-full border-0 " +
             (isRequired
-              ? "bg-destructive/20 text-destructive border border-destructive/30 leading-none"
-              : "bg-warning/20 text-warning border border-warning/30 leading-none")
+              ? "bg-destructive text-destructive-foreground hover:bg-destructive"
+              : "bg-warning text-warning-foreground hover:bg-warning")
           }
         >
-          {isRequired ? "WAJIB" : "OPSIONAL"}
+          {isRequired ? "Wajib" : "Opsional"}
         </Badge>
       </div>
 
