@@ -421,7 +421,7 @@ export function WolfParserSection() {
 
       {/* ─── PROCESSING STATE ─── */}
       {isAnalyzing && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div className="fixed left-[var(--sidebar-width)] right-0 top-[57px] bottom-0 z-50 flex items-center justify-center p-4 pointer-events-none">
           <div className="rounded-xl border border-border bg-muted/40 p-5 space-y-4 w-full max-w-3xl pointer-events-auto">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3 min-w-0">
