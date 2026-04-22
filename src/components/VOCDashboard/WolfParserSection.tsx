@@ -1066,30 +1066,55 @@ function formatFieldValue(value: unknown): string {
 }
 
 /**
- * Renderer value untuk Parser RESULT card — mirror visual contract Extractor:
- *   - empty/null/"-"   → "Tidak Disebutkan", muted italic
- *   - numeric Rupiah   → "Rp X.XXX", min_deposit foreground / max_bonus golden
- *   - confidence       → "NN%", golden semibold
- *   - boolean          → "Ya" success / "Tidak" muted-foreground
- *   - arrays kosong    → "Tidak Ada", muted italic
- *   - arrays terisi    → joined comma, foreground medium
- *   - ambiguity_flags  → warning bila ada
+ * Renderer value untuk Parser RESULT card.
+ *
+ * Membaca KOMBINASI: value + value_status_map untuk membedakan:
+ *   - explicit / ambiguous / not_stated / not_applicable
+ *
+ * Display rules:
+ *   - null + not_applicable → "Tidak Relevan" (muted, NON-italic)
+ *   - null + ambiguous      → "Ambigu" (warning)
+ *   - null + not_stated/?   → "Tidak Disebutkan" (muted italic)
+ *   - boolean true/false    → "Ya" / "Tidak"
+ *   - "hari_ini"            → "Hari Ini"
+ *   - "tidak_terbatas"      → "Tidak Terbatas"
+ *   - client_id             → preserve original casing (e.g. "SLOT25")
+ *   - snake_case enum       → Title Case
+ *   - array kosong          → "-"
+ *   - array isi             → join comma
  */
+type ValueStatus = "explicit" | "ambiguous" | "not_stated" | "not_applicable";
+
+const STRING_LABEL_MAP: Record<string, string> = {
+  hari_ini: "Hari Ini",
+  tidak_terbatas: "Tidak Terbatas",
+  tidak_disebutkan: "Tidak Disebutkan",
+};
+
 function renderParserValue(
   key: keyof ParsedPromo,
   value: unknown,
+  status?: ValueStatus | string,
 ): { text: string; className: string } {
-  const empty = { text: "Tidak Disebutkan", className: "text-muted-foreground/60 italic" };
+  const notStated = { text: "Tidak Disebutkan", className: "text-muted-foreground/60 italic" };
+  const notApplicable = { text: "Tidak Relevan", className: "text-muted-foreground" };
+  const ambiguous = { text: "Ambigu", className: "text-warning font-medium" };
 
-  if (value === null || value === undefined || value === "") return empty;
+  // Null / undefined / empty string → resolve via value_status_map
+  if (value === null || value === undefined || value === "") {
+    if (status === "not_applicable") return notApplicable;
+    if (status === "ambiguous") return ambiguous;
+    return notStated;
+  }
 
   // Arrays
   if (Array.isArray(value)) {
     if (value.length === 0) {
+      if (status === "not_applicable") return notApplicable;
       if (key === "ambiguity_flags") {
         return { text: "Tidak Ada", className: "text-muted-foreground" };
       }
-      return { text: "Tidak Ada", className: "text-muted-foreground/60 italic" };
+      return { text: "-", className: "text-muted-foreground/60 italic" };
     }
     const joined = value.map((v) => String(v)).join(", ");
     if (key === "ambiguity_flags") {
@@ -1101,7 +1126,7 @@ function renderParserValue(
     return { text: joined, className: "text-foreground font-medium" };
   }
 
-  // Booleans
+  // Booleans → "Ya" / "Tidak"
   if (typeof value === "boolean") {
     return value
       ? { text: "Ya", className: "text-success font-semibold" }
@@ -1135,10 +1160,24 @@ function renderParserValue(
   // Strings
   if (typeof value === "string") {
     const trimmed = value.trim();
-    if (!trimmed || trimmed === "-" || /^tidak[_\s]?disebutkan$/i.test(trimmed)) {
-      return empty;
+    if (!trimmed || trimmed === "-") {
+      if (status === "not_applicable") return notApplicable;
+      if (status === "ambiguous") return ambiguous;
+      return notStated;
     }
-    // Pretty-print snake_case enum-ish strings to Title Case (label only, value preserved)
+
+    // Preserve original casing for brand/identifier fields
+    if (key === "client_id" || key === "promo_name") {
+      return { text: trimmed, className: "text-foreground font-medium" };
+    }
+
+    // Direct semantic-label map (operator answers / enums)
+    const lower = trimmed.toLowerCase();
+    if (STRING_LABEL_MAP[lower]) {
+      return { text: STRING_LABEL_MAP[lower], className: "text-foreground font-medium" };
+    }
+
+    // Pretty-print snake_case enum-ish strings to Title Case
     const display = /^[a-z0-9_]+$/i.test(trimmed)
       ? trimmed
           .split("_")
