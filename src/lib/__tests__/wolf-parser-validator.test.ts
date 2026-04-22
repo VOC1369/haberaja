@@ -140,7 +140,7 @@ describe("wolf-parser-validator", () => {
       "initial",
     );
     expect(
-      (out.parsed_promo as Record<string, unknown>).rogue_field,
+      (out.parsed_promo as unknown as Record<string, unknown>).rogue_field,
     ).toBeUndefined();
   });
 
