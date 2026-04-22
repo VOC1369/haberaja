@@ -55,6 +55,21 @@ import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 type ParserStatus = "valid" | "bukan_promo" | "gabungan";
 type GapSeverity = "required" | "optional";
 
+// Schema foundation v1 — additive only.
+// Tujuan: ruang struktural untuk status nilai per field,
+// keputusan operator-fill, dan metadata gap yang lebih jujur.
+// Belum di-wire ke prompt / rendering / flow.
+export type ValueStatus =
+  | "explicit"        // nilai eksplisit di sumber
+  | "ambiguous"       // nilai ada tapi multi-tafsir
+  | "not_stated"      // tidak disebutkan di sumber
+  | "not_applicable"; // memang tidak relevan untuk promo ini
+
+export type GapReasonType =
+  | "ambiguous"
+  | "required_missing"
+  | "optional_missing";
+
 interface ParsedPromo {
   // IDENTITY
   promo_name: string | null;
