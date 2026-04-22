@@ -22,24 +22,93 @@ ATURAN KERAS
 ================================================================
 RULE PENGISIAN PER FIELD
 ================================================================
-- promo_type: isi HANYA jika eksplisit di teks (kata kunci muncul:
-  "deposit bonus", "cashback", "rollingan", "referral", "freebet", dll).
-  Jika harus disimpulkan dari struktur → null + gap "ambiguous".
-- platform_access: doc V0.9 BELUM mengunci enum. Default null + gap.
-  JANGAN ngarang value seperti "apk_only", "web_only", dll.
-- turnover_requirement: SCALAR (angka) atau null. JANGAN object.
-  Jika basis turnover ambigu → angka tetap diisi, basis masuk gap terpisah.
-- calculation_basis: enum bebas dari teks ("deposit", "loss", "turnover", "bet").
-  Hanya jika eksplisit. Selain itu null + gap.
-- min_deposit, max_bonus, calculation_value, turnover_requirement: angka murni.
-  Konversi "100rb"→100000, "2jt"→2000000, "10%"→10, "8x"→8.
-- max_bonus_unlimited: true HANYA jika teks menyebut "unlimited"/"tanpa batas".
-- has_turnover: true jika ada kata "TO"/"turnover"/"WD setelah TO".
-- is_tiered: true jika ada range ("5-15%") atau multi-level.
-- reward_type_hint: "percentage" | "percentage_range" | "fixed_amount" | "free_spin"
-  | "freebet" | dll — bebas, dari teks.
-- game_types: array string lowercase ("slot", "live_casino", "sportsbook", dll).
-- game_exclusions: array string lowercase. Snake_case untuk multi-word.
+
+PRINSIP UMUM:
+- Meaning over keyword. Context over first number.
+- Null lebih baik daripada salah isi.
+- Evidence-only. Tidak boleh menebak dari luar teks.
+
+— promo_type —
+Isi HANYA jika eksplisit di teks (kata kunci muncul:
+"deposit bonus", "cashback", "rollingan", "referral", "freebet", dll).
+Jika harus disimpulkan dari struktur → null + gap "ambiguous".
+
+— client_id —
+Jika brand/operator disebut eksplisit di teks (mis. "SLOT25", "member SLOT25",
+"DI BOLA88"), isi nama brand sebagaimana ditulis (uppercase asli).
+Jika tidak disebut → null. JANGAN tebak dari luar teks.
+
+— target_user —
+Gunakan HANYA enum resmi: "all" | "new_member" | "existing_member" | "vip".
+Mapping:
+- "semua member" / "untuk semua" / "all member" → "all"
+- "member baru" / "new member" / "pendaftaran baru" → "new_member"
+- "member lama" / "existing" → "existing_member"
+- "vip" / "tier vip" → "vip"
+JANGAN bikin value seperti "all_members", "everyone", "member_all".
+Jika tidak ada → null + gap.
+
+— platform_access —
+Doc V0.9 BELUM mengunci enum. Default null + gap.
+JANGAN ngarang value seperti "apk_only", "web_only".
+
+— min_deposit —
+Isi HANYA jika konteks JELAS merujuk ke deposit.
+Trigger valid (kata pemicu dalam jarak ≤6 kata dari angka):
+"deposit", "depo", "setor", "setoran".
+JANGAN isi min_deposit jika kata pemicunya:
+- "kekalahan" / "kalah" / "loss" / "rugi"  → ini min_loss semantics; biarkan null,
+  catat angka di source_evidence_map["calculation_basis"] dan clean_text.
+- "taruhan" / "bet" / "turnover" / "TO" / "putaran" → biarkan null.
+Prinsip: field harus sesuai makna, bukan sekadar angka pertama yang muncul.
+
+— max_bonus / calculation_value / turnover_requirement —
+Angka murni atau null. Konversi "100rb"→100000, "2jt"→2000000, "10%"→10, "8x"→8.
+turnover_requirement WAJIB scalar. Kalau ambigu basis → angka tetap diisi,
+basis masuk gap terpisah. JANGAN ganti jadi object.
+
+— max_bonus_unlimited —
+true HANYA jika teks menyebut "unlimited"/"tanpa batas".
+
+— has_turnover —
+true jika ada kata "TO" / "turnover" / "WD setelah TO" / "syarat turnover".
+
+— is_tiered —
+true jika ada range ("5-15%") atau multi-level.
+
+— reward_type_hint —
+"percentage" | "percentage_range" | "fixed_amount" | "free_spin" | "freebet" — bebas, dari teks.
+
+— calculation_basis —
+Gunakan HANYA enum resmi: "deposit" | "loss" | "turnover".
+Mapping keyword Indonesia:
+- "deposit" / "depo" / "setor"            → "deposit"
+- "kekalahan" / "kalah" / "loss" / "rugi" → "loss"
+- "turnover" / "TO" / "putaran"           → "turnover"
+JANGAN keluarkan enum baru seperti "bet" / "taruhan" / "wager" — itu evidence saja.
+Jika tidak eksplisit → null + gap.
+
+— claim_method —
+Mapping:
+- "dikreditkan" / "dikredit" / "otomatis masuk" / "auto credit" / "langsung masuk" → "auto"
+- "klaim ke CS" / "hubungi admin" / "request bonus" / "claim manual"              → "manual"
+Jika tidak cukup jelas → null + gap.
+
+— game_types —
+Array string lowercase ("slot", "live_casino", "sportsbook", dll).
+BOLEH diisi dari JUDUL promo jika eksplisit menyebut scope game
+(mis. "Cashback Sportsbook 5%" → ["sportsbook"]),
+syarat: tidak dibantah body, dan cukup jelas.
+
+— game_exclusions —
+Array string lowercase, snake_case untuk multi-word.
+HANYA untuk game-scope exclusion:
+- "other sports" → "other_sports"
+- "selain slot"  → semua non-slot di-exclude
+- "tidak berlaku live casino" → "live_casino"
+BUKAN untuk forbidden betting pattern. Pola taruhan terlarang seperti
+"safety bet", "opposite betting", "dua sisi" → JANGAN masuk game_exclusions.
+Pertahankan di clean_text + catat di source_evidence_map.
 
 ================================================================
 source_evidence_map
@@ -54,10 +123,15 @@ value_status_map
 ================================================================
 Enum: "explicit" | "ambiguous" | "not_stated" | "not_applicable"
 - "explicit": nilai langsung disebut di teks.
-- "ambiguous": disebut tapi tidak jelas / ada beberapa interpretasi.
+- "ambiguous": disebut tapi tidak jelas / multi-interpretasi.
 - "not_stated": sama sekali tidak disebut.
-- "not_applicable": tidak relevan untuk jenis promo ini.
-Wajib diisi untuk semua field yang relevan.
+- "not_applicable": tidak relevan untuk jenis promo ini
+  (contoh: min_deposit pada promo cashback berbasis loss → "not_applicable").
+WAJIB ada entry untuk SETIAP field di parsed_promo yang relevan untuk
+jenis promo ini. Tidak boleh hanya mengisi field yang Anda confident.
+Minimal untuk semua promo: promo_name, promo_type, client_id, target_user,
+calculation_basis, calculation_value, claim_method, game_types,
+game_exclusions, has_turnover, valid_from, valid_until.
 
 ================================================================
 needs_operator_fill_map
@@ -74,7 +148,7 @@ Array string nama field yang ambigu. Cocokkan dengan value_status "ambiguous".
 ================================================================
 gaps[]
 ================================================================
-Setiap field yang null/ambigu WAJIB punya entry di gaps[].
+Setiap field yang null/ambigu DAN relevan WAJIB punya entry di gaps[].
 Shape:
 {
   "field": "<nama field>",
@@ -87,11 +161,32 @@ required_missing: field penting tidak disebut sama sekali.
 optional_missing: field opsional tidak disebut.
 ambiguous:        disebut tapi tidak jelas.
 
+LARANGAN GAP PALSU:
+- JANGAN buat gap untuk min_deposit kalau promo berbasis loss/turnover.
+  Tandai value_status_map[min_deposit] = "not_applicable" dan SKIP gap.
+- JANGAN buat gap untuk field yang sudah explicit.
+- JANGAN buat gap untuk field yang not_applicable.
+
 ================================================================
 clean_text
 ================================================================
-Versi promo yang dibersihkan. Format kalimat lengkap, mudah dibaca,
-angka dalam bentuk integer ("100000" bukan "100rb"), Bahasa Indonesia.
+Versi promo yang dibersihkan dan dirapikan. Bahasa Indonesia, kalimat lengkap,
+angka dalam bentuk integer ("100000" bukan "100rb").
+clean_text adalah CLEAN SUMMARY — bukan raw copy, bukan ringkasan terlalu pendek.
+
+WAJIB pertahankan informasi material berikut bila ada di teks:
+1. cara hitung reward (mis. 5% dari kekalahan)
+2. basis reward (deposit/loss/turnover)
+3. periode perhitungan (mis. Selasa s/d Senin)
+4. jadwal distribusi (mis. dikreditkan setiap Selasa)
+5. syarat minimum utama (mis. minimal kekalahan 500000)
+6. restriction game / scope
+7. forbidden betting pattern (safety bet, opposite betting, dua sisi)
+8. fraud / bonus hunter / kesamaan IP
+9. hak operator cancel/reject/ubah
+10. stacking ("tidak dapat digabungkan dengan promo lain")
+
+Boleh dirapikan. JANGAN hilangkan makna penting.
 
 ================================================================
 CONTRACT OUTPUT (PERSIS INI)
