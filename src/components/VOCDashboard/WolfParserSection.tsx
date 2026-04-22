@@ -32,7 +32,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -228,16 +227,14 @@ export function WolfParserSection() {
   }
 
   return (
-    <div className="relative flex flex-col h-[calc(100vh-120px)]">
-      <ScrollArea className="flex-1">
-        <div
-          className={`page-wrapper p-6 pb-20 ${
-            !parserOutput && !isAnalyzing
-              ? "min-h-[calc(100vh-160px)] flex flex-col justify-center"
-              : ""
-          } space-y-6`}
-        >
-          {/* ─── INPUT AREA — hidden saat loading / ada hasil ─── */}
+    <div
+      className={`page-wrapper p-6 space-y-6 ${
+        !parserOutput && !isAnalyzing
+          ? "min-h-[calc(100vh-160px)] flex flex-col justify-center"
+          : ""
+      }`}
+    >
+      {/* ─── INPUT AREA — hidden saat loading / ada hasil ─── */}
       {!parserOutput && !isAnalyzing && (
         <Card className="p-8">
           {/* Header — vertically stacked & centered */}
@@ -522,8 +519,6 @@ export function WolfParserSection() {
           <ParserJSONCard output={parserOutput} onCopy={handleCopyJSON} />
         </>
       )}
-        </div>
-      </ScrollArea>
     </div>
   );
 }
