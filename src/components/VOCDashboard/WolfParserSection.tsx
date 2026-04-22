@@ -252,8 +252,8 @@ export function WolfParserSection() {
               Teknologi AI terdepan kami, dirancang untuk berpikir strategis,
               akurasi tinggi, dan eksekusi efektif.
             </p>
-            <Badge className="rounded-full bg-success text-success-foreground hover:bg-success border-0 mt-1">
-              <span className="w-2 h-2 rounded-full bg-success-foreground mr-2" />
+            <Badge className="h-auto px-3 py-1 text-xs font-semibold rounded-full border-0 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15 mt-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 mr-2" />
               Wolfclaw AI
             </Badge>
           </div>
