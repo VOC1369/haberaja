@@ -798,9 +798,6 @@ function GapItem({
             {isRequired ? "WAJIB" : "OPSIONAL"}
           </Badge>
         </div>
-        <div className="text-xs font-mono text-muted-foreground/70 mt-2">
-          field: {gap.field} · gap_type: {gap.gap_type}
-        </div>
       </div>
 
       <div>
