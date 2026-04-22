@@ -55,6 +55,21 @@ import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 type ParserStatus = "valid" | "bukan_promo" | "gabungan";
 type GapSeverity = "required" | "optional";
 
+// Schema foundation v1 — additive only.
+// Tujuan: ruang struktural untuk status nilai per field,
+// keputusan operator-fill, dan metadata gap yang lebih jujur.
+// Belum di-wire ke prompt / rendering / flow.
+export type ValueStatus =
+  | "explicit"        // nilai eksplisit di sumber
+  | "ambiguous"       // nilai ada tapi multi-tafsir
+  | "not_stated"      // tidak disebutkan di sumber
+  | "not_applicable"; // memang tidak relevan untuk promo ini
+
+export type GapReasonType =
+  | "ambiguous"
+  | "required_missing"
+  | "optional_missing";
+
 interface ParsedPromo {
   // IDENTITY
   promo_name: string | null;
@@ -91,6 +106,12 @@ interface ParsedPromo {
 
   // OUTPUT
   clean_text: string;
+
+  // ── Schema foundation v1 (additive, optional) ───────
+  // Status semantik per field name (mis. "min_deposit": "not_stated").
+  value_status_map?: Record<string, ValueStatus>;
+  // Field name → true jika operator perlu mengisinya.
+  needs_operator_fill_map?: Record<string, boolean>;
 }
 
 interface ParserGap {
@@ -99,6 +120,11 @@ interface ParserGap {
   severity: GapSeverity;
   reason: string;
   default_value: string | null;
+
+  // ── Schema foundation v1 (additive, optional) ───────
+  reason_type?: GapReasonType;
+  evidence_snippet?: string;
+  rationale?: string;
 }
 
 export interface ParserResult {
