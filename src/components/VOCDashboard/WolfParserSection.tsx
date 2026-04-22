@@ -714,8 +714,9 @@ function GapItem({
   const [detailValue, setDetailValue] = useState("");
   const [textValue, setTextValue] = useState(value);
 
-  const detailType: DetailType | undefined =
-    selectedOpt && registry?.detail?.[selectedOpt];
+  const detailType: DetailType | undefined = selectedOpt
+    ? registry?.detail?.[selectedOpt]
+    : undefined;
 
   // Sync radio + detail → parent (human-readable format).
   useEffect(() => {
