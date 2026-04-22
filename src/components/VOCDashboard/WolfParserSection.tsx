@@ -932,7 +932,8 @@ function StructuredDataCard({ promo }: { promo: ParsedPromo }) {
           <div className="p-6 pt-4 border-t border-border space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {FIELD_KEYS.map((key) => {
-                const rendered = renderParserValue(key, promo[key]);
+                const status = promo.value_status_map?.[key as string];
+                const rendered = renderParserValue(key, promo[key], status);
                 return (
                   <div key={key} className="bg-muted rounded-lg p-3">
                     <span className="text-muted-foreground text-xs block mb-1">
