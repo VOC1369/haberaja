@@ -252,11 +252,8 @@ export function WolfParserSection() {
               Teknologi AI terdepan kami, dirancang untuk berpikir strategis,
               akurasi tinggi, dan eksekusi efektif.
             </p>
-            <Badge
-              variant="outline"
-              className="bg-success/10 text-success border-success/30 mt-1"
-            >
-              <span className="w-2 h-2 rounded-full bg-success mr-2" />
+            <Badge className="rounded-full bg-success text-success-foreground hover:bg-success border-0 mt-1">
+              <span className="w-2 h-2 rounded-full bg-success-foreground mr-2" />
               Wolfclaw AI
             </Badge>
           </div>
@@ -597,12 +594,12 @@ function GapReportCard({
             </div>
             <div className="flex items-center gap-2">
               {requiredCount > 0 && (
-                <Badge className="bg-destructive/20 text-destructive border border-destructive/30">
+                <Badge className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive border-0">
                   {requiredCount} Wajib
                 </Badge>
               )}
               {optionalCount > 0 && (
-                <Badge className="bg-warning/20 text-warning border border-warning/30">
+                <Badge className="rounded-full bg-warning text-warning-foreground hover:bg-warning border-0">
                   {optionalCount} Opsional
                 </Badge>
               )}
@@ -792,13 +789,13 @@ function GapItem({
         </div>
         <Badge
           className={
-            "flex-shrink-0 " +
+            "flex-shrink-0 rounded-full border-0 " +
             (isRequired
-              ? "bg-destructive/20 text-destructive border border-destructive/30 leading-none"
-              : "bg-warning/20 text-warning border border-warning/30 leading-none")
+              ? "bg-destructive text-destructive-foreground hover:bg-destructive"
+              : "bg-warning text-warning-foreground hover:bg-warning")
           }
         >
-          {isRequired ? "WAJIB" : "OPSIONAL"}
+          {isRequired ? "Wajib" : "Opsional"}
         </Badge>
       </div>
 
