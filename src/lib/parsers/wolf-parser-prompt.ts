@@ -123,10 +123,15 @@ value_status_map
 ================================================================
 Enum: "explicit" | "ambiguous" | "not_stated" | "not_applicable"
 - "explicit": nilai langsung disebut di teks.
-- "ambiguous": disebut tapi tidak jelas / ada beberapa interpretasi.
+- "ambiguous": disebut tapi tidak jelas / multi-interpretasi.
 - "not_stated": sama sekali tidak disebut.
-- "not_applicable": tidak relevan untuk jenis promo ini.
-Wajib diisi untuk semua field yang relevan.
+- "not_applicable": tidak relevan untuk jenis promo ini
+  (contoh: min_deposit pada promo cashback berbasis loss → "not_applicable").
+WAJIB ada entry untuk SETIAP field di parsed_promo yang relevan untuk
+jenis promo ini. Tidak boleh hanya mengisi field yang Anda confident.
+Minimal untuk semua promo: promo_name, promo_type, client_id, target_user,
+calculation_basis, calculation_value, claim_method, game_types,
+game_exclusions, has_turnover, valid_from, valid_until.
 
 ================================================================
 needs_operator_fill_map
@@ -143,7 +148,7 @@ Array string nama field yang ambigu. Cocokkan dengan value_status "ambiguous".
 ================================================================
 gaps[]
 ================================================================
-Setiap field yang null/ambigu WAJIB punya entry di gaps[].
+Setiap field yang null/ambigu DAN relevan WAJIB punya entry di gaps[].
 Shape:
 {
   "field": "<nama field>",
@@ -156,11 +161,32 @@ required_missing: field penting tidak disebut sama sekali.
 optional_missing: field opsional tidak disebut.
 ambiguous:        disebut tapi tidak jelas.
 
+LARANGAN GAP PALSU:
+- JANGAN buat gap untuk min_deposit kalau promo berbasis loss/turnover.
+  Tandai value_status_map[min_deposit] = "not_applicable" dan SKIP gap.
+- JANGAN buat gap untuk field yang sudah explicit.
+- JANGAN buat gap untuk field yang not_applicable.
+
 ================================================================
 clean_text
 ================================================================
-Versi promo yang dibersihkan. Format kalimat lengkap, mudah dibaca,
-angka dalam bentuk integer ("100000" bukan "100rb"), Bahasa Indonesia.
+Versi promo yang dibersihkan dan dirapikan. Bahasa Indonesia, kalimat lengkap,
+angka dalam bentuk integer ("100000" bukan "100rb").
+clean_text adalah CLEAN SUMMARY — bukan raw copy, bukan ringkasan terlalu pendek.
+
+WAJIB pertahankan informasi material berikut bila ada di teks:
+1. cara hitung reward (mis. 5% dari kekalahan)
+2. basis reward (deposit/loss/turnover)
+3. periode perhitungan (mis. Selasa s/d Senin)
+4. jadwal distribusi (mis. dikreditkan setiap Selasa)
+5. syarat minimum utama (mis. minimal kekalahan 500000)
+6. restriction game / scope
+7. forbidden betting pattern (safety bet, opposite betting, dua sisi)
+8. fraud / bonus hunter / kesamaan IP
+9. hak operator cancel/reject/ubah
+10. stacking ("tidak dapat digabungkan dengan promo lain")
+
+Boleh dirapikan. JANGAN hilangkan makna penting.
 
 ================================================================
 CONTRACT OUTPUT (PERSIS INI)
