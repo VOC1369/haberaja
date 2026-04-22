@@ -956,7 +956,7 @@ export function ParserDataSection() {
       };
 
       if (normalized.status === "gabungan" && normalized.promos.length > 1) {
-        // Gabungan: drop gap hanya jika SEMUA promo punya nilainya
+        // Gabungan: pertahankan ambiguity gap; selain itu drop gap hanya jika SEMUA promo punya nilainya
         normalized.gaps = normalized.gaps.filter((gap) => {
           if (gap.reason_type === "ambiguous") return true;
           return normalized.promos.every((p) => isEmptyValue((p as any)[gap.field]));
