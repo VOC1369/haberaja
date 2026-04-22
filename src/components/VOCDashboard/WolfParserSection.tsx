@@ -840,10 +840,6 @@ function GapItem({
                 );
               })}
             </RadioGroup>
-                  </div>
-                );
-              })}
-            </RadioGroup>
 
             {detailType && (
               <div className="mt-3 space-y-1">
