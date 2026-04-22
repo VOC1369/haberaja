@@ -904,11 +904,40 @@ export function ParserDataSection() {
       const parsed = extractJSON<ParserResult>(response);
 
       // Defensive normalization
+      // Schema foundation v1: pass-through field additive secara optional-safe.
+      // Parser TIDAK boleh crash jika LLM tidak mengirim value_status_map /
+      // needs_operator_fill_map / reason_type / evidence_snippet / rationale.
+      const normalizedPromos = (Array.isArray(parsed.promos) ? parsed.promos : []).map((p: any) => ({
+        ...p,
+        value_status_map:
+          p && typeof p.value_status_map === "object" && p.value_status_map !== null
+            ? p.value_status_map
+            : undefined,
+        needs_operator_fill_map:
+          p && typeof p.needs_operator_fill_map === "object" && p.needs_operator_fill_map !== null
+            ? p.needs_operator_fill_map
+            : undefined,
+      }));
+
+      const normalizedGaps = (Array.isArray(parsed.gaps) ? parsed.gaps : []).map((g: any) => ({
+        ...g,
+        reason_type:
+          g && typeof g.reason_type === "string" &&
+          (g.reason_type === "ambiguous" ||
+            g.reason_type === "required_missing" ||
+            g.reason_type === "optional_missing")
+            ? g.reason_type
+            : undefined,
+        evidence_snippet:
+          g && typeof g.evidence_snippet === "string" ? g.evidence_snippet : undefined,
+        rationale: g && typeof g.rationale === "string" ? g.rationale : undefined,
+      }));
+
       const normalized: ParserResult = {
         status: parsed.status ?? "bukan_promo",
         reason: parsed.reason ?? "",
-        promos: Array.isArray(parsed.promos) ? parsed.promos : [],
-        gaps: Array.isArray(parsed.gaps) ? parsed.gaps : [],
+        promos: normalizedPromos,
+        gaps: normalizedGaps,
         is_marketing_only: !!parsed.is_marketing_only,
         general_kb_suggestion: parsed.general_kb_suggestion ?? null,
       };
