@@ -613,7 +613,7 @@ function GapReportCard({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="p-6 pt-4 border-t border-border space-y-4">
+          <div className="p-6 pt-4 border-t border-border space-y-6">
             {gaps.map((gap, idx) => (
               <GapItem
                 key={`${gap.field}-${idx}`}
