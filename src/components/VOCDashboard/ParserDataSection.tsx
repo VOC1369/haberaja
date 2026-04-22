@@ -106,6 +106,12 @@ interface ParsedPromo {
 
   // OUTPUT
   clean_text: string;
+
+  // ── Schema foundation v1 (additive, optional) ───────
+  // Status semantik per field name (mis. "min_deposit": "not_stated").
+  value_status_map?: Record<string, ValueStatus>;
+  // Field name → true jika operator perlu mengisinya.
+  needs_operator_fill_map?: Record<string, boolean>;
 }
 
 interface ParserGap {
@@ -114,6 +120,11 @@ interface ParserGap {
   severity: GapSeverity;
   reason: string;
   default_value: string | null;
+
+  // ── Schema foundation v1 (additive, optional) ───────
+  reason_type?: GapReasonType;
+  evidence_snippet?: string;
+  rationale?: string;
 }
 
 export interface ParserResult {
