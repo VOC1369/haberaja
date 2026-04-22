@@ -1492,6 +1492,10 @@ function StatusCard({ result }: { result: ParserResult }) {
             {result.reason && (
               <div className="text-sm text-muted-foreground mt-1">{result.reason}</div>
             )}
+            {/* F2: status transparency (debug-style, additive) */}
+            <div className="text-[11px] font-mono text-muted-foreground/70 mt-1">
+              Source: {result.status_source}
+            </div>
           </div>
         </div>
       </Card>
@@ -1512,6 +1516,10 @@ function StatusCard({ result }: { result: ParserResult }) {
             {result.reason && (
               <div className="text-sm text-muted-foreground mt-1">{result.reason}</div>
             )}
+            {/* F2: status transparency (debug-style, additive) */}
+            <div className="text-[11px] font-mono text-muted-foreground/70 mt-1">
+              Source: {result.status_source}
+            </div>
           </div>
         </div>
       </Card>
@@ -1540,6 +1548,10 @@ function StatusCard({ result }: { result: ParserResult }) {
                 {p.promo_name || `Promo ${i + 1}`}
               </Badge>
             ))}
+          </div>
+          {/* F2: status transparency (debug-style, additive) */}
+          <div className="text-[11px] font-mono text-muted-foreground/70 mt-2">
+            Source: {result.status_source}
           </div>
         </div>
       </div>
@@ -1625,6 +1637,26 @@ function StructuredDataCard({
                     </div>
                   ))}
                 </div>
+
+                {/* F2: additive maps signal (debug-style, low-risk summary) */}
+                {(promo.value_status_map || promo.needs_operator_fill_map) && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono text-muted-foreground/70">
+                    {promo.value_status_map && (
+                      <span>
+                        Value status map: {Object.keys(promo.value_status_map).length} fields
+                      </span>
+                    )}
+                    {promo.needs_operator_fill_map && (
+                      <span>
+                        Operator-fill flags:{" "}
+                        {
+                          Object.values(promo.needs_operator_fill_map).filter(Boolean).length
+                        }{" "}
+                        required
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Copy clean text per promo */}
                 <div className="flex items-center justify-between gap-3 pt-2">
@@ -1842,6 +1874,22 @@ function GapItem({
         {gap.default_value && (
           <div className="text-xs text-muted-foreground mt-1">
             Default jika dikosongkan: <span className="text-foreground">{gap.default_value}</span>
+          </div>
+        )}
+        {/* F2: gap enriched metadata (debug-style, render only when present) */}
+        {gap.reason_type && (
+          <div className="text-[11px] font-mono text-muted-foreground/70 mt-1">
+            reason_type: {gap.reason_type}
+          </div>
+        )}
+        {gap.evidence_snippet && gap.evidence_snippet.trim() !== "" && (
+          <div className="text-[11px] font-mono text-muted-foreground/70 mt-1 break-words">
+            evidence: “{gap.evidence_snippet}”
+          </div>
+        )}
+        {gap.rationale && gap.rationale.trim() !== "" && (
+          <div className="text-[11px] font-mono text-muted-foreground/70 mt-1 break-words">
+            rationale: {gap.rationale}
           </div>
         )}
       </div>
