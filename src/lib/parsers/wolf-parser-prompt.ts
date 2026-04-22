@@ -88,9 +88,14 @@ Prinsip: field harus sesuai makna, bukan sekadar angka pertama yang muncul.
 Angka murni atau null. Konversi "100rb"→100000, "2jt"→2000000, "10%"→10, "8x"→8.
 turnover_requirement WAJIB scalar. Kalau ambigu basis → angka tetap diisi,
 basis masuk gap terpisah. JANGAN ganti jadi object.
+Jika max_bonus tidak disebut di teks → null. JANGAN diisi 0. JANGAN diisi unlimited.
 
 — max_bonus_unlimited —
-true HANYA jika teks menyebut "unlimited"/"tanpa batas".
+true HANYA jika teks menyebut literal: "unlimited" / "tanpa batas" /
+"tanpa batas maksimum" / "no max bonus".
+false HANYA jika teks menyebut angka batas eksplisit (mis. "maks bonus Rp 5.000.000").
+Jika tidak disebut sama sekali → null.
+TIDAK DISEBUT ≠ UNLIMITED. Jangan asumsi default true/false.
 
 — has_turnover —
 true jika ada kata "TO" / "turnover" / "WD setelah TO" / "syarat turnover".
