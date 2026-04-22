@@ -89,6 +89,36 @@ const FIELD_KEYS: Array<keyof ParsedPromo> = [
   "ambiguity_flags",
 ];
 
+// Human-readable label per field (Title Case) — mirror Extractor label style.
+const FIELD_LABELS: Record<keyof ParsedPromo, string> = {
+  promo_name: "Nama Promo",
+  promo_type: "Tipe Promo",
+  client_id: "Client",
+  target_user: "Target User",
+  valid_from: "Valid From",
+  valid_until: "Valid Until",
+  platform_access: "Platform",
+  geo_restriction: "Geo Restriction",
+  min_deposit: "Min Deposit",
+  max_bonus: "Max Bonus",
+  max_bonus_unlimited: "Max Bonus Unlimited",
+  has_turnover: "Ada Turnover",
+  is_tiered: "Tiered",
+  reward_type_hint: "Reward Type",
+  calculation_basis: "Calculation Basis",
+  calculation_value: "Calculation Value",
+  turnover_requirement: "Turnover Requirement",
+  claim_method: "Claim Method",
+  game_types: "Jenis Game",
+  game_exclusions: "Blacklist Game",
+  parse_confidence: "Parse Confidence",
+  ambiguity_flags: "Ambiguity Flags",
+  source_evidence_map: "Evidence Map",
+  value_status_map: "Value Status",
+  needs_operator_fill_map: "Needs Fill",
+  clean_text: "Clean Text",
+};
+
 export function WolfParserSection() {
   const [inputText, setInputText] = useState("");
   const [parserOutput, setParserOutput] = useState<ParserOutput | null>(null);
