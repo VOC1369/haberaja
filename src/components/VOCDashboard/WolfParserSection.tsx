@@ -231,7 +231,7 @@ export function WolfParserSection() {
       className={`page-wrapper p-6 space-y-6 relative ${
         !parserOutput
           ? "min-h-[calc(100vh-220px)] flex flex-col justify-center"
-          : ""
+          : "pb-20"
       }`}
     >
       {/* ─── INPUT AREA — hidden saat loading / ada hasil ─── */}
