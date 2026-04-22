@@ -53,6 +53,7 @@ import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 // ════════════════════════════════════════════════════
 
 type ParserStatus = "valid" | "bukan_promo" | "gabungan";
+type StatusSource = "model" | "fallback";
 type GapSeverity = "required" | "optional";
 
 // Schema foundation v1 — additive only.
@@ -129,6 +130,7 @@ interface ParserGap {
 
 export interface ParserResult {
   status: ParserStatus;
+  status_source: StatusSource;
   reason: string;
   promos: ParsedPromo[];
   gaps: ParserGap[];
@@ -979,8 +981,27 @@ export function ParserDataSection() {
         };
       });
 
+      // ── F5: Parser status transparency ──────────────────
+      const VALID_STATUSES = ["valid", "bukan_promo", "gabungan"] as const;
+      const rawStatus = parsed?.status;
+      const isValidStatus =
+        typeof rawStatus === "string" &&
+        (VALID_STATUSES as readonly string[]).includes(rawStatus);
+      const effectiveStatus: ParserStatus = isValidStatus
+        ? (rawStatus as ParserStatus)
+        : "bukan_promo";
+      const statusSource: StatusSource = isValidStatus ? "model" : "fallback";
+
+      if (statusSource === "fallback") {
+        console.warn(
+          "[Parser] Status fallback used — LLM response may be invalid",
+          rawStatus
+        );
+      }
+
       const normalized: ParserResult = {
-        status: parsed.status ?? "bukan_promo",
+        status: effectiveStatus,
+        status_source: statusSource,
         reason: parsed.reason ?? "",
         promos: normalizedPromos,
         gaps: normalizedGaps,
