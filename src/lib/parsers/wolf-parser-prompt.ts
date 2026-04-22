@@ -201,9 +201,16 @@ required_missing: field penting tidak disebut sama sekali.
 optional_missing: field opsional tidak disebut.
 ambiguous:        disebut tapi tidak jelas.
 
+ATURAN WAJIB GAPS:
+- Jika ada field PENTING yang null/ambigu, gaps[] TIDAK BOLEH KOSONG.
+- Field penting yang wajib di-gap kalau null: valid_from, valid_until,
+  max_bonus, max_bonus_unlimited (jika tidak disebut), claim_method
+  (jika tidak jelas), target_user (jika tidak disebut).
+- Field dengan status "not_applicable" TIDAK masuk gaps.
+
 LARANGAN GAP PALSU:
-- JANGAN buat gap untuk min_deposit kalau promo berbasis loss/turnover.
-  Tandai value_status_map[min_deposit] = "not_applicable" dan SKIP gap.
+- JANGAN buat gap untuk min_deposit kalau promo berbasis loss/turnover
+  → tandai value_status_map[min_deposit] = "not_applicable" dan SKIP gap.
 - JANGAN buat gap untuk field yang sudah explicit.
 - JANGAN buat gap untuk field yang not_applicable.
 
