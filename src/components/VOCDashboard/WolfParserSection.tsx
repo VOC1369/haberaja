@@ -722,6 +722,20 @@ const FIELD_OPTION_REGISTRY: Record<string, OptionRegistry> = {
   },
 };
 
+function formatOptionLabel(raw: string): string {
+  if (!raw) return raw;
+  // Preserve combined "value (detail)" — only format the value part.
+  const match = raw.match(/^([^\s(]+)(\s*\(.*\))?$/);
+  const base = match ? match[1] : raw;
+  const rest = match && match[2] ? match[2] : "";
+  const formatted = base
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+  return formatted + rest;
+}
+
 function GapItem({
   gap,
   value,
