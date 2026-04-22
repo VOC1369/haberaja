@@ -252,8 +252,8 @@ export function WolfParserSection() {
               Teknologi AI terdepan kami, dirancang untuk berpikir strategis,
               akurasi tinggi, dan eksekusi efektif.
             </p>
-            <Badge className="rounded-full bg-success text-success-foreground hover:bg-success border-0 mt-1">
-              <span className="w-2 h-2 rounded-full bg-success-foreground mr-2" />
+            <Badge className="h-auto px-3 py-1 text-xs font-semibold rounded-full border-0 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/15 mt-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 mr-2" />
               Wolfclaw AI
             </Badge>
           </div>
@@ -594,12 +594,12 @@ function GapReportCard({
             </div>
             <div className="flex items-center gap-2">
               {requiredCount > 0 && (
-                <Badge className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive border-0">
+                <Badge className="h-auto px-3 py-1 text-xs font-semibold rounded-full border-0 bg-rose-500/15 text-rose-400 hover:bg-rose-500/15">
                   {requiredCount} Wajib
                 </Badge>
               )}
               {optionalCount > 0 && (
-                <Badge className="rounded-full bg-warning text-warning-foreground hover:bg-warning border-0">
+                <Badge className="h-auto px-3 py-1 text-xs font-semibold rounded-full border-0 bg-amber-500/15 text-amber-400 hover:bg-amber-500/15">
                   {optionalCount} Opsional
                 </Badge>
               )}
@@ -789,10 +789,10 @@ function GapItem({
         </div>
         <Badge
           className={
-            "flex-shrink-0 rounded-full border-0 " +
+            "flex-shrink-0 h-auto px-3 py-1 text-xs font-semibold rounded-full border-0 " +
             (isRequired
-              ? "bg-destructive text-destructive-foreground hover:bg-destructive"
-              : "bg-warning text-warning-foreground hover:bg-warning")
+              ? "bg-rose-500/15 text-rose-400 hover:bg-rose-500/15"
+              : "bg-amber-500/15 text-amber-400 hover:bg-amber-500/15")
           }
         >
           {isRequired ? "Wajib" : "Opsional"}
