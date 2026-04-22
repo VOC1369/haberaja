@@ -691,8 +691,8 @@ function formatPromoFieldValue(promo: ParsedPromo, key: string): string {
       if (promo.is_tiered === false) return "Tidak";
       return "—";
     case "game_types":
-      return promo.game_types && promo.game_types.length > 0
-        ? promo.game_types.map(g => g.charAt(0).toUpperCase() + g.slice(1).replace("_", " ")).join(", ")
+      return Array.isArray(promo.game_types) && promo.game_types.length > 0
+        ? promo.game_types.map(g => typeof g === "string" ? g.charAt(0).toUpperCase() + g.slice(1).replace("_", " ") : String(g)).join(", ")
         : "—";
     case "claim_method":
       return promo.claim_method ? CLAIM_METHOD_LABEL[promo.claim_method] ?? promo.claim_method : "—";
@@ -701,7 +701,7 @@ function formatPromoFieldValue(promo: ParsedPromo, key: string): string {
     case "parse_confidence":
       return promo.parse_confidence != null ? `${(promo.parse_confidence * 100).toFixed(0)}%` : "—";
     case "ambiguity_flags":
-      return promo.ambiguity_flags && promo.ambiguity_flags.length > 0
+      return Array.isArray(promo.ambiguity_flags) && promo.ambiguity_flags.length > 0
         ? promo.ambiguity_flags.join(", ")
         : "Tidak ada";
     default:
