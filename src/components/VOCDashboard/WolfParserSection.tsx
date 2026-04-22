@@ -776,28 +776,33 @@ function GapItem({
     gap.options.length > 0 ? gap.options : registry?.options ?? [];
   const hasOptions = effectiveOptions.length > 0;
 
-  // Local state untuk radio + detail input.
+  // Local state untuk radio + detail input + catatan bebas.
   const [selectedOpt, setSelectedOpt] = useState("");
   const [detailValue, setDetailValue] = useState("");
+  const [noteValue, setNoteValue] = useState("");
   const [textValue, setTextValue] = useState(value);
 
   const detailType: DetailType | undefined = selectedOpt
     ? registry?.detail?.[selectedOpt]
     : undefined;
 
-  // Sync radio + detail → parent (human-readable format).
+  // Sync radio + detail + note → parent (human-readable format).
   useEffect(() => {
     if (!hasOptions) return;
     if (!selectedOpt) {
       onChange("");
       return;
     }
-    const trimmed = detailValue.trim();
-    const combined =
-      detailType && trimmed ? `${selectedOpt} (${trimmed})` : selectedOpt;
+    const trimmedDetail = detailValue.trim();
+    const trimmedNote = noteValue.trim();
+    const base =
+      detailType && trimmedDetail
+        ? `${selectedOpt} (${trimmedDetail})`
+        : selectedOpt;
+    const combined = trimmedNote ? `${base} — ${trimmedNote}` : base;
     onChange(combined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOpt, detailValue, hasOptions]);
+  }, [selectedOpt, detailValue, noteValue, hasOptions]);
 
   // Sync text-only → parent.
   useEffect(() => {
@@ -837,6 +842,7 @@ function GapItem({
               onValueChange={(v) => {
                 setSelectedOpt(v);
                 setDetailValue("");
+                setNoteValue("");
               }}
               className={
                 effectiveOptions.length >= 4
@@ -881,6 +887,21 @@ function GapItem({
                     detailType === "date" ? "YYYY-MM-DD" : "Contoh: 7"
                   }
                   className="rounded-lg bg-background"
+                />
+              </div>
+            )}
+
+            {selectedOpt && (
+              <div className="mt-3 space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  Catatan / Memo (opsional)
+                </Label>
+                <Textarea
+                  value={noteValue}
+                  onChange={(e) => setNoteValue(e.target.value)}
+                  placeholder="Tambahkan catatan atau konteks tambahan..."
+                  rows={2}
+                  className="rounded-lg bg-background resize-none"
                 />
               </div>
             )}
