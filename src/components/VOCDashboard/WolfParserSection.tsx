@@ -591,26 +591,27 @@ function GapReportCard({
           >
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-5 w-5 text-warning" />
-              <div>
-                <div className="text-base font-medium text-foreground">
-                  Data yang Perlu Dilengkapi
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {requiredCount > 0 && (
-                    <span className="text-destructive">
-                      {requiredCount} wajib
-                    </span>
-                  )}
-                  {requiredCount > 0 && optionalCount > 0 && <span> • </span>}
-                  {optionalCount > 0 && <span>{optionalCount} opsional</span>}
-                </div>
+              <div className="text-base font-medium text-foreground">
+                Data yang Perlu Dilengkapi
               </div>
             </div>
-            <ChevronDown
-              className={`h-5 w-5 text-muted-foreground transition-transform ${
-                open ? "rotate-180" : ""
-              }`}
-            />
+            <div className="flex items-center gap-2">
+              {requiredCount > 0 && (
+                <Badge className="bg-destructive/20 text-destructive border border-destructive/30">
+                  {requiredCount} Wajib
+                </Badge>
+              )}
+              {optionalCount > 0 && (
+                <Badge className="bg-warning/20 text-warning border border-warning/30">
+                  {optionalCount} Opsional
+                </Badge>
+              )}
+              <ChevronDown
+                className={`h-5 w-5 text-muted-foreground transition-transform ml-1 ${
+                  open ? "rotate-180" : ""
+                }`}
+              />
+            </div>
           </button>
         </CollapsibleTrigger>
 
