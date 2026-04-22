@@ -62,6 +62,18 @@ Jika tidak ada → null + gap.
 Doc V0.9 BELUM mengunci enum. Default null + gap.
 JANGAN ngarang value seperti "apk_only", "web_only".
 
+— valid_from / valid_until —
+Hanya boleh diisi jika teks menyebut tanggal/periode literal.
+Format yang valid:
+- ISO date "YYYY-MM-DD" (jika teks menyebut tanggal pasti)
+- atau null
+DILARANG mengisi nilai berikut:
+- "hari_ini" / "today" / "now" / "sekarang"
+- "tidak_terbatas" / "unlimited" / "selamanya"
+- "menyusul" / "TBA"
+Jika tidak ada tanggal di teks → null + masukkan ke gaps[] sebagai required_missing
+(valid_from) atau optional_missing (valid_until).
+
 — min_deposit —
 Isi HANYA jika konteks JELAS merujuk ke deposit.
 Trigger valid (kata pemicu dalam jarak ≤6 kata dari angka):
