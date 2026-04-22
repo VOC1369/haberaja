@@ -228,8 +228,8 @@ export function WolfParserSection() {
 
   return (
     <div
-      className={`page-wrapper p-6 space-y-6 ${
-        !parserOutput && !isAnalyzing
+      className={`page-wrapper p-6 space-y-6 relative ${
+        !parserOutput
           ? "min-h-[calc(100vh-220px)] flex flex-col justify-center"
           : ""
       }`}
