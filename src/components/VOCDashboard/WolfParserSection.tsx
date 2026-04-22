@@ -722,6 +722,20 @@ const FIELD_OPTION_REGISTRY: Record<string, OptionRegistry> = {
   },
 };
 
+function formatOptionLabel(raw: string): string {
+  if (!raw) return raw;
+  // Preserve combined "value (detail)" — only format the value part.
+  const match = raw.match(/^([^\s(]+)(\s*\(.*\))?$/);
+  const base = match ? match[1] : raw;
+  const rest = match && match[2] ? match[2] : "";
+  const formatted = base
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+  return formatted + rest;
+}
+
 function GapItem({
   gap,
   value,
@@ -805,7 +819,11 @@ function GapItem({
                 setSelectedOpt(v);
                 setDetailValue("");
               }}
-              className="space-y-2 mt-2"
+              className={
+                effectiveOptions.length >= 4
+                  ? "grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 mt-2"
+                  : "space-y-2 mt-2"
+              }
             >
               {effectiveOptions.map((opt, idx) => {
                 const id = `${gap.field}-opt-${idx}`;
@@ -816,7 +834,7 @@ function GapItem({
                       htmlFor={id}
                       className="cursor-pointer font-normal text-sm text-foreground"
                     >
-                      {opt}
+                      {formatOptionLabel(opt)}
                     </Label>
                   </div>
                 );
