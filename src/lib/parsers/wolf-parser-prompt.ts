@@ -98,13 +98,33 @@ Jika tidak disebut sama sekali → null.
 TIDAK DISEBUT ≠ UNLIMITED. Jangan asumsi default true/false.
 
 — has_turnover —
-true jika ada kata "TO" / "turnover" / "WD setelah TO" / "syarat turnover".
+true HANYA jika teks eksplisit menyebut: "TO" / "turnover" /
+"syarat turnover" / "WD setelah TO" / frasa literal setara.
+false HANYA jika teks eksplisit menyebut: "tanpa turnover" /
+"tanpa TO" / "no turnover" / frasa literal setara.
+Jika tidak disebut sama sekali → null + status "not_stated".
+DILARANG mengisi false hanya karena teks diam.
+DILARANG menandai false sebagai explicit tanpa bukti literal.
 
 — is_tiered —
-true jika ada range ("5-15%") atau multi-level.
+true HANYA jika teks eksplisit menyebut tier, level, multi-level,
+range bertingkat, atau struktur hadiah berbeda per level/range.
+false HANYA jika teks eksplisit menyebut promo tidak bertingkat /
+satu level / flat.
+Jika tidak disebut sama sekali → null + status "not_stated".
+DILARANG mengisi false karena sekadar tidak menemukan tier.
+DILARANG menandai explicit tanpa bukti literal.
 
 — reward_type_hint —
-"percentage" | "percentage_range" | "fixed_amount" | "free_spin" | "freebet" — bebas, dari teks.
+Isi HANYA jika bentuk reward disebut secara literal di teks.
+Contoh mapping:
+- "%" / "persen"                → "percentage"
+- nominal tetap / nilai tetap      → "fixed_amount"
+- "free spin" / "freespin"       → "free_spin"
+- "freebet" / "free bet"         → "freebet"
+Jika tidak eksplisit → null + status "not_stated".
+DILARANG menebak reward_type_hint dari pola umum promo.
+DILARANG memberi label explicit pada hasil inferensi.
 
 — calculation_basis —
 Gunakan HANYA enum resmi: "deposit" | "loss" | "turnover".
