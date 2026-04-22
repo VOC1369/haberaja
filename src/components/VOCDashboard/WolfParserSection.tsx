@@ -23,6 +23,7 @@ import {
   ImagePlus,
   Loader2,
   Plus,
+  RotateCcw,
   X,
 } from "lucide-react";
 
@@ -907,10 +908,8 @@ function StructuredDataCard({ promo }: { promo: ParsedPromo }) {
 
 function CleanTextCard({
   cleanText,
-  onCopy,
 }: {
   cleanText: string;
-  onCopy: () => void;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -948,12 +947,6 @@ function CleanTextCard({
                 {cleanText || "(kosong)"}
               </pre>
             </div>
-            <div className="flex justify-end">
-              <Button variant="golden" size="sm" onClick={onCopy}>
-                <Copy className="h-4 w-4" />
-                Copy Clean Text
-              </Button>
-            </div>
           </div>
         </CollapsibleContent>
       </Card>
@@ -963,10 +956,8 @@ function CleanTextCard({
 
 function ParserJSONCard({
   output,
-  onCopy,
 }: {
   output: ParserOutput;
-  onCopy: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const jsonString = useMemo(() => JSON.stringify(output, null, 2), [output]);
@@ -1004,12 +995,6 @@ function ParserJSONCard({
               <pre className="text-xs font-mono text-foreground">
                 {jsonString}
               </pre>
-            </div>
-            <div className="flex justify-end">
-              <Button variant="golden" size="sm" onClick={onCopy}>
-                <Copy className="h-4 w-4" />
-                Copy JSON Parser
-              </Button>
             </div>
           </div>
         </CollapsibleContent>
