@@ -1648,11 +1648,11 @@ function StructuredDataCard({
                     )}
                     {promo.needs_operator_fill_map && (
                       <span>
-                        Operator-fill flags:{" "}
+                        Needs operator input:{" "}
                         {
                           Object.values(promo.needs_operator_fill_map).filter(Boolean).length
                         }{" "}
-                        required
+                        fields
                       </span>
                     )}
                   </div>
