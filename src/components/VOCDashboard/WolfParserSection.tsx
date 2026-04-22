@@ -230,7 +230,7 @@ export function WolfParserSection() {
     <div
       className={`page-wrapper p-6 space-y-6 ${
         !parserOutput && !isAnalyzing
-          ? "min-h-[calc(100vh-160px)] flex flex-col justify-center"
+          ? "min-h-[calc(100vh-220px)] flex flex-col justify-center"
           : ""
       }`}
     >
