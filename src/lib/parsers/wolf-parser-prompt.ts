@@ -389,7 +389,7 @@ NOT IN GAPS (skip karena di-handle via grouping):
 - Output akan divalidasi runtime; field illegal akan di-drop, gap miss akan dilempar error.
 
 Mulai parsing sekarang.
-\`;
+`;
 
 // ============================================================================
 // MODE 2 — PARSER LENGKAPI DATA & ANALISA GABUNGAN
