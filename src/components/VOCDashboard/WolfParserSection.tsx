@@ -119,12 +119,18 @@ const FIELD_LABELS: Record<keyof ParsedPromo, string> = {
   clean_text: "Clean Text",
 };
 
+type AnswerEntry = {
+  radio_value: string;
+  memo: string;
+};
+
 export function WolfParserSection() {
   const [inputText, setInputText] = useState("");
   const [parserOutput, setParserOutput] = useState<ParserOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeElapsedMs, setAnalyzeElapsedMs] = useState(0);
-  const [gapAnswers, setGapAnswers] = useState<Record<string, string>>({});
+  const [gapAnswers, setGapAnswers] = useState<Record<string, AnswerEntry>>({});
+  const [residualNotice, setResidualNotice] = useState<string | null>(null);
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -186,6 +192,7 @@ export function WolfParserSection() {
   async function handleAnalyze() {
     if (!hasInput || isAnalyzing) return;
     setIsAnalyzing(true);
+    setResidualNotice(null);
     try {
       const result = await runWolfParser(inputText);
       setParserOutput(result);
@@ -210,12 +217,30 @@ export function WolfParserSection() {
 
   async function handleConfirmGapFills() {
     if (!parserOutput) return;
+
+    // Validate: minimal radio_value dipilih untuk gap wajib
+    const requiredGaps = parserOutput.gaps.filter(
+      (g) => g.gap_type === "required_missing" || g.gap_type === "ambiguous",
+    );
+    const incomplete = requiredGaps.filter(
+      (g) => !gapAnswers[g.field]?.radio_value,
+    );
+    if (incomplete.length > 0) {
+      toast.warning("Belum ada jawaban", {
+        description:
+          "Pilih jawaban untuk: " +
+          incomplete.map((g) => g.field).join(", "),
+      });
+      return;
+    }
+
     const payload: OperatorAnswer[] = parserOutput.gaps
+      .filter((g) => gapAnswers[g.field]?.radio_value)
       .map((g) => ({
         field: g.field,
-        value: (gapAnswers[g.field] ?? "").trim(),
-      }))
-      .filter((a) => a.value.length > 0);
+        radio_value: gapAnswers[g.field]?.radio_value ?? "",
+        memo: gapAnswers[g.field]?.memo ?? "",
+      }));
 
     if (!payload.length) {
       toast.warning("Belum ada jawaban", {
@@ -225,6 +250,7 @@ export function WolfParserSection() {
     }
 
     setIsAnalyzing(true);
+    setResidualNotice(null);
     try {
       const result = await applyOperatorAnswers(parserOutput, payload, inputText);
       setParserOutput(result);
@@ -233,7 +259,13 @@ export function WolfParserSection() {
           description: "Semua gap terjawab.",
         });
       } else {
+        // RULE B.1 — Honest residual gap dari Mode 2.
+        // Stay di stage "questions" (parserOutput preserved, gaps[] residual
+        // di-render ulang). Reset answers untuk gap baru.
         setGapAnswers({});
+        setResidualNotice(
+          "Wolfclaw butuh klarifikasi tambahan. Mohon isi pertanyaan berikut.",
+        );
         toast.info("Masih ada gap", {
           description: `${result.gaps.length} pertanyaan tersisa.`,
         });
@@ -245,16 +277,34 @@ export function WolfParserSection() {
     }
   }
 
-  function handleCopyJSON() {
+  async function handleCopyJSON() {
     if (!parserOutput) return;
-    navigator.clipboard.writeText(JSON.stringify(parserOutput, null, 2));
-    toast.success("Parser JSON disalin");
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(parserOutput, null, 2));
+      toast.success("Parser JSON disalin");
+    } catch (err) {
+      console.error("[clipboard] copy failed:", err);
+      toast.error("Gagal copy ke clipboard", {
+        description:
+          "Browser mungkin block clipboard access. Silakan copy manual.",
+      });
+    }
   }
 
-  function handleCopyCleanText() {
+  async function handleCopyCleanText() {
     if (!parserOutput) return;
-    navigator.clipboard.writeText(parserOutput.parsed_promo.clean_text || "");
-    toast.success("Clean text disalin");
+    try {
+      await navigator.clipboard.writeText(
+        parserOutput.parsed_promo.clean_text || "",
+      );
+      toast.success("Clean text disalin");
+    } catch (err) {
+      console.error("[clipboard] copy failed:", err);
+      toast.error("Gagal copy ke clipboard", {
+        description:
+          "Browser mungkin block clipboard access. Silakan copy manual.",
+      });
+    }
   }
 
   return (
@@ -516,8 +566,9 @@ export function WolfParserSection() {
             <GapReportCard
               gaps={parserOutput.gaps}
               fills={gapAnswers}
-              onFillChange={(field, value) =>
-                setGapAnswers((prev) => ({ ...prev, [field]: value }))
+              residualNotice={residualNotice}
+              onFillChange={(field, entry) =>
+                setGapAnswers((prev) => ({ ...prev, [field]: entry }))
               }
               onConfirm={handleConfirmGapFills}
             />
@@ -582,12 +633,14 @@ export function WolfParserSection() {
 function GapReportCard({
   gaps,
   fills,
+  residualNotice,
   onFillChange,
   onConfirm,
 }: {
   gaps: Gap[];
-  fills: Record<string, string>;
-  onFillChange: (field: string, value: string) => void;
+  fills: Record<string, AnswerEntry>;
+  residualNotice: string | null;
+  onFillChange: (field: string, entry: AnswerEntry) => void;
   onConfirm: () => void;
 }) {
   const [open, setOpen] = useState(true);
@@ -604,8 +657,8 @@ function GapReportCard({
   const isConfirmDisabled =
     requiredGaps.length > 0 &&
     requiredGaps.some((g) => {
-      const val = fills[g.field];
-      return !val || val.trim().length < 1;
+      const entry = fills[g.field];
+      return !entry?.radio_value || entry.radio_value.trim().length < 1;
     });
 
   return (
@@ -644,12 +697,18 @@ function GapReportCard({
 
         <CollapsibleContent>
           <div className="p-6 pt-4 border-t border-border space-y-6">
+            {residualNotice && (
+              <div className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+                {residualNotice}
+              </div>
+            )}
+
             {gaps.map((gap, idx) => (
               <GapItem
                 key={`${gap.field}-${idx}`}
                 gap={gap}
-                value={fills[gap.field] ?? ""}
-                onChange={(v) => onFillChange(gap.field, v)}
+                entry={fills[gap.field] ?? { radio_value: "", memo: "" }}
+                onChange={(entry) => onFillChange(gap.field, entry)}
               />
             ))}
 
@@ -759,12 +818,12 @@ function formatOptionLabel(raw: string): string {
 
 function GapItem({
   gap,
-  value,
+  entry,
   onChange,
 }: {
   gap: Gap;
-  value: string;
-  onChange: (v: string) => void;
+  entry: AnswerEntry;
+  onChange: (entry: AnswerEntry) => void;
 }) {
   const isRequired =
     gap.gap_type === "required_missing" || gap.gap_type === "ambiguous";
@@ -776,38 +835,47 @@ function GapItem({
     gap.options.length > 0 ? gap.options : registry?.options ?? [];
   const hasOptions = effectiveOptions.length > 0;
 
-  // Local state untuk radio + detail input + catatan bebas.
+  // Local state untuk radio + detail input + memo.
+  // Reset ketika entry direset oleh parent (residual gap flow).
   const [selectedOpt, setSelectedOpt] = useState("");
   const [detailValue, setDetailValue] = useState("");
-  const [noteValue, setNoteValue] = useState("");
-  const [textValue, setTextValue] = useState(value);
+  const [memoValue, setMemoValue] = useState("");
+  const [textValue, setTextValue] = useState("");
+
+  // Sync turun: kalau parent reset entry → bersihkan lokal.
+  useEffect(() => {
+    if (!entry.radio_value && !entry.memo) {
+      setSelectedOpt("");
+      setDetailValue("");
+      setMemoValue("");
+      setTextValue("");
+    }
+  }, [entry.radio_value, entry.memo]);
 
   const detailType: DetailType | undefined = selectedOpt
     ? registry?.detail?.[selectedOpt]
     : undefined;
 
-  // Sync radio + detail + note → parent (human-readable format).
+  // Sync radio + detail → parent.radio_value, memo → parent.memo.
   useEffect(() => {
     if (!hasOptions) return;
     if (!selectedOpt) {
-      onChange("");
+      onChange({ radio_value: "", memo: memoValue.trim() });
       return;
     }
     const trimmedDetail = detailValue.trim();
-    const trimmedNote = noteValue.trim();
-    const base =
+    const radioValue =
       detailType && trimmedDetail
         ? `${selectedOpt} (${trimmedDetail})`
         : selectedOpt;
-    const combined = trimmedNote ? `${base} — ${trimmedNote}` : base;
-    onChange(combined);
+    onChange({ radio_value: radioValue, memo: memoValue.trim() });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOpt, detailValue, noteValue, hasOptions]);
+  }, [selectedOpt, detailValue, memoValue, hasOptions]);
 
-  // Sync text-only → parent.
+  // Sync text-only → parent (radio_value = textValue, memo = "").
   useEffect(() => {
     if (hasOptions) return;
-    onChange(textValue);
+    onChange({ radio_value: textValue.trim(), memo: "" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textValue, hasOptions]);
 
@@ -842,7 +910,6 @@ function GapItem({
               onValueChange={(v) => {
                 setSelectedOpt(v);
                 setDetailValue("");
-                setNoteValue("");
               }}
               className={
                 effectiveOptions.length >= 4
@@ -891,28 +958,40 @@ function GapItem({
               </div>
             )}
 
-            {selectedOpt && (
-              <div className="mt-3 space-y-1">
-                <Label className="text-xs text-muted-foreground">
-                  Catatan / Memo (opsional)
-                </Label>
-                <Textarea
-                  value={noteValue}
-                  onChange={(e) => setNoteValue(e.target.value)}
-                  placeholder="Tambahkan catatan atau konteks tambahan..."
-                  rows={2}
-                  className="rounded-lg bg-background resize-none"
-                />
-              </div>
-            )}
+            <div className="mt-3 space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Catatan / Memo (opsional)
+              </Label>
+              <Textarea
+                value={memoValue}
+                onChange={(e) => setMemoValue(e.target.value)}
+                placeholder="Tambahan detail jika perlu (mis. tanggal spesifik, konteks promo, dll). Wolfclaw akan analisa memo bersama radio pilihan kamu."
+                rows={2}
+                className="rounded-lg bg-background resize-none"
+              />
+            </div>
           </>
         ) : (
-          <Input
-            value={textValue}
-            onChange={(e) => setTextValue(e.target.value)}
-            placeholder="Isi nilai..."
-            className="rounded-lg bg-background"
-          />
+          <>
+            <Input
+              value={textValue}
+              onChange={(e) => setTextValue(e.target.value)}
+              placeholder="Isi nilai..."
+              className="rounded-lg bg-background"
+            />
+            <div className="mt-3 space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Catatan / Memo (opsional)
+              </Label>
+              <Textarea
+                value={memoValue}
+                onChange={(e) => setMemoValue(e.target.value)}
+                placeholder="Tambahan detail jika perlu. Wolfclaw akan analisa memo bersama jawaban kamu."
+                rows={2}
+                className="rounded-lg bg-background resize-none"
+              />
+            </div>
+          </>
         )}
       </div>
     </div>
