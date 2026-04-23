@@ -55,13 +55,14 @@ import type {
   Gap,
   OperatorAnswer,
 } from "@/lib/parsers/wolf-parser-types";
+import { filesToImageBlocks } from "@/lib/parsers/image-encoder";
 import {
   AICreditsExhaustedError,
   AIRateLimitError,
   AIOverloadedError,
 } from "@/lib/ai-client";
 
-const MAX_SCREENSHOTS = 4;
+const MAX_SCREENSHOTS = 5;
 
 // Field order untuk grid Data Terstruktur — nama field PERSIS V0.9 contract.
 const FIELD_KEYS: Array<keyof ParsedPromo> = [
@@ -134,6 +135,7 @@ export function WolfParserSection() {
   const [gapAnswers, setGapAnswers] = useState<Record<string, AnswerEntry>>({});
   const [residualNotice, setResidualNotice] = useState<string | null>(null);
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
+  const [gapScreenshotFiles, setGapScreenshotFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
 
   const screenshotInputRef = useRef<HTMLInputElement | null>(null);
@@ -189,6 +191,7 @@ export function WolfParserSection() {
     setParserOutput(null);
     setGapAnswers({});
     setScreenshotFiles([]);
+    setGapScreenshotFiles([]);
   }
 
   async function handleAnalyze() {
@@ -196,7 +199,8 @@ export function WolfParserSection() {
     setIsAnalyzing(true);
     setResidualNotice(null);
     try {
-      const result = await runWolfParser(inputText);
+      const imageBlocks = await filesToImageBlocks(screenshotFiles);
+      const result = await runWolfParser(inputText, null, imageBlocks);
       setParserOutput(result);
       setGapAnswers({});
       toast.success("Parser selesai", {
