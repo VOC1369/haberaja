@@ -441,6 +441,17 @@ function normalizeParsedPromo(raw: unknown): ParsedPromo {
       case "ambiguity_flags":
         out[key] = coerceStringArray(v);
         break;
+      case "game_types_human":
+      case "game_exclusions_human":
+        // string[] | null — preserve null intent; coerce arrays defensively.
+        if (v === null || v === undefined) {
+          out[key] = null;
+        } else if (Array.isArray(v)) {
+          out[key] = coerceStringArray(v);
+        } else {
+          out[key] = null;
+        }
+        break;
       case "source_evidence_map":
         out.source_evidence_map = coerceEvidenceMap(v);
         break;
@@ -497,6 +508,9 @@ export function validateAndNormalize(
   if (mode === "refine") {
     applyRule7Mode2EvidenceGuardrail(out);
   }
+
+  // Rule 8 — both modes (defensive shape coercion for _human fields)
+  applyRule8HumanFieldShape(out.parsed_promo);
 
   return out;
 }
