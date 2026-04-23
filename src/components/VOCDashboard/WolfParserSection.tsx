@@ -1191,6 +1191,13 @@ const STRING_LABEL_MAP: Record<string, string> = {
   tidak_disebutkan: "Tidak Disebutkan",
 };
 
+const NULL_EXPLICIT_LABELS: Record<string, string> = {
+  valid_until: "Berlaku Selamanya",
+  max_bonus: "Unlimited",
+};
+
+const NULL_EXPLICIT_DEFAULT = "Sudah Dikonfirmasi";
+
 function renderParserValue(
   key: keyof ParsedPromo,
   value: unknown,
@@ -1204,6 +1211,14 @@ function renderParserValue(
   if (value === null || value === undefined || value === "") {
     if (status === "not_applicable") return notApplicable;
     if (status === "ambiguous") return ambiguous;
+
+    // Rule D.9 — Jenis 2 (Open-ended) + Jenis 3 (Unlimited):
+    // null + "explicit" = operator CONFIRMED value (not missing data)
+    if (status === "explicit") {
+      const label = NULL_EXPLICIT_LABELS[key as string] || NULL_EXPLICIT_DEFAULT;
+      return { text: label, className: "text-emerald-400 font-medium" };
+    }
+
     return notStated;
   }
 
