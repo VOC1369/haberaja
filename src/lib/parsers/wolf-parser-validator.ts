@@ -318,7 +318,14 @@ function applyRule2ForbiddenEvidence(p: ParsedPromo): void {
 }
 
 // ---------------------------------------------------------------------------
-// Rule 4 — Gaps Integrity (Mode 1)
+// Rule 4 — Gap Shape & Quality Guard (Mode 1)
+//
+// Reasoning-native policy: parser decides which gaps to emit based on raw
+// text evidence, not a hardcoded universal critical-field list. This rule
+// now enforces SHAPE (every gap object must be well-formed) and emits
+// observability WARNINGS when generic template patterns leak through —
+// which would indicate the LLM regressed to schema-driven boilerplate
+// instead of reasoning from raw text.
 // ---------------------------------------------------------------------------
 
 function isFieldUnresolved(p: ParsedPromo, field: keyof ParsedPromo): boolean {
@@ -330,13 +337,49 @@ function isFieldUnresolved(p: ParsedPromo, field: keyof ParsedPromo): boolean {
 }
 
 function applyRule4GapsIntegrity(out: ParserOutput): void {
-  if (out.gaps.length > 0) return;
-  const unresolved = CRITICAL_FIELDS_MODE1.filter((f) =>
-    isFieldUnresolved(out.parsed_promo, f),
-  );
-  if (unresolved.length > 0) {
-    throw new Error(
-      `gaps missing for critical unresolved fields: ${unresolved.join(", ")}`,
+  // Shape + quality audit per gap.
+  // (coerceGaps already drops malformed entries; this is defense-in-depth +
+  // observability for template-regression detection.)
+  for (const g of out.gaps) {
+    if (!g.field || g.field.trim().length === 0) {
+      console.warn(
+        `[wolf-parser-validator] Rule 4: gap with empty field detected`,
+      );
+    }
+    if (!g.question || g.question.trim().length === 0) {
+      console.warn(
+        `[wolf-parser-validator] Rule 4: gap "${g.field}" has empty question`,
+      );
+      continue;
+    }
+    if (!Array.isArray(g.options) || g.options.length === 0) {
+      console.warn(
+        `[wolf-parser-validator] Rule 4: gap "${g.field}" has empty options array`,
+      );
+    }
+    // Quality heuristic: very short questions are almost always generic.
+    if (g.question.trim().length < GENERIC_QUESTION_MIN_LENGTH) {
+      console.warn(
+        `[wolf-parser-validator] Generic template question detected — possible reasoning gap (field="${g.field}", question="${g.question}")`,
+      );
+      continue;
+    }
+    // Pattern heuristic: known template phrasings.
+    const matched = GENERIC_TEMPLATE_PATTERNS.find((re) => re.test(g.question));
+    if (matched) {
+      console.warn(
+        `[wolf-parser-validator] Generic template question detected — possible reasoning gap (field="${g.field}", pattern=${matched})`,
+      );
+    }
+  }
+
+  // Cross-check: ambiguous fields without any gaps signals incomplete reasoning.
+  const ambiguousFields = Object.entries(out.parsed_promo.value_status_map)
+    .filter(([, status]) => status === "ambiguous")
+    .map(([f]) => f);
+  if (ambiguousFields.length > 0 && out.gaps.length === 0) {
+    console.warn(
+      `[wolf-parser-validator] Ambiguous fields without gaps — possible LLM reasoning incomplete (fields: ${ambiguousFields.join(", ")})`,
     );
   }
 }
