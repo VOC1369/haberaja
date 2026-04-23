@@ -92,13 +92,23 @@ const FORBIDDEN_EVIDENCE_PREFIXES_MODE1 = [
 
 const OPERATOR_EVIDENCE_PREFIXES = ["operator_confirmed:", "operator_memo:"];
 
-const CRITICAL_FIELDS_MODE1: Array<keyof ParsedPromo> = [
-  "valid_from",
-  "valid_until",
-  "max_bonus",
-  "max_bonus_unlimited",
-  "has_turnover",
+// NOTE: CRITICAL_FIELDS_MODE1 removed (reasoning-native gap policy).
+// Universal critical-field enforcement contradicts the reasoning-first
+// principle: parser decides which fields need clarification based on raw
+// text evidence, not schema position. See Section E of Mode 1 prompt.
+
+// Generic template patterns that indicate the LLM fell back to schema-driven
+// boilerplate instead of reasoning from raw text evidence. These are warned
+// (never thrown) so observability captures regression without breaking flow.
+const GENERIC_TEMPLATE_PATTERNS = [
+  /apakah promo ini memiliki/i,
+  /kapan promo ini/i,
+  /berapa maksimal bonus untuk promo ini/i,
+  /berapa minimal deposit untuk promo ini/i,
+  /platform apa saja yang/i,
 ];
+
+const GENERIC_QUESTION_MIN_LENGTH = 20;
 
 const VALID_GAP_TYPES = new Set<GapType>([
   "required_missing",
