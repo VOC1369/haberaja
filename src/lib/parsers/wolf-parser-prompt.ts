@@ -691,17 +691,154 @@ Rule ini HANYA untuk dismissal literal "Tidak Disebutkan".
 Operator yang JAWAB dengan info konkret apapun (selamanya, unlimited,
 nominal, dll) BUKAN scope Rule D.5 — pakai Rule D.9 untuk null semantics.
 
-### Rule D.6 — Re-Generate clean_text
+### Rule D.6 — Re-Generate clean_text (COMBINATION FORMAT)
 
-Setelah semua field ter-update, \`clean_text\` WAJIB di-REGENERATE DARI NOL.
+clean_text = JEMBATAN KE EXTRACTOR. Extractor tidak punya akses
+raw text asli — hanya JSON structured + clean_text.
+Info yang drop di clean_text = DATA LOSS PERMANEN.
 
-Aturan \`clean_text\` Mode 2:
-- Satu paragraf rapi Bahasa Indonesia
-- WAJIB include semua info BARU dari operator answers
-- WAJIB preserve T&C lengkap dari raw text
-- BOLEH natural language (connective, grammar, gabung field)
-- DILARANG tambah fakta yang tidak ada di JSON / raw text / operator input
-- Konsisten dengan JSON
+clean_text WAJIB KOMBINASI 2 LAYER dengan format struktur:
+
+====================================================================
+FORMAT WAJIB
+====================================================================
+
+clean_text terdiri dari 2 bagian:
+
+1. PROSE PARAGRAPH (Layer 1)
+   - Natural language paragraph Bahasa Indonesia
+   - Integrate STRUCTURED FACTS dari 26 field JSON + operator answers
+   - Boleh connective, grammar halus, gabung multi-field
+   - Natural untuk operator baca
+
+2. "Detail Tambahan:" — NUMBERED LIST (Layer 2)
+   - Section header PERSIS: "Detail Tambahan:"
+   - Numbered list (1., 2., 3., ...)
+   - NO emoji, NO icon, NO bullet character (•) — hanya angka
+   - Format per entry: "[info] — [category label]"
+   - Separator em-dash (—)
+   - Category label: Bahasa Indonesia atau English sesuai natural
+     (mix OK)
+   - Berisi info dari raw text di luar scope 26 field structured
+
+====================================================================
+CONTOH TEMPLATE (IKUTI POLA INI)
+====================================================================
+
+Untuk Cashback SLOT25 dengan full operator answers, format yang benar:
+
+Promo Cashback Sportsbook 5% dari SLOT25 berlaku untuk semua member
+mulai 23 April 2026 dan berlaku selamanya. Promo dapat diakses melalui
+desktop dan mobile, khusus untuk wilayah Indonesia. Minimal deposit
+IDR 10.000. Bonus cashback dihitung dari total kekalahan. Tidak ada
+batas maksimal bonus (unlimited) dan tidak ada syarat turnover.
+
+Detail Tambahan:
+1. Minimal kekalahan IDR 500.000 — loss threshold
+2. Periode perhitungan: Selasa hingga Senin — calculation period
+3. Kredit cashback: setiap hari Selasa otomatis — claim schedule
+4. Tidak dapat digabungkan dengan promo lainnya — stackability
+5. Taruhan dua sisi (safety bet/opposite betting) dilarang — anti-fraud
+6. Bermain di Other Sports tidak mendapat cashback — game exclusion
+7. Bonus hunter dan kesamaan IP = bonus ditarik — anti-abuse
+8. SLOT25 berhak mengubah/membatalkan promo tanpa pemberitahuan — operator rights
+9. Syarat dan ketentuan umum berlaku — T&C reference
+
+====================================================================
+ATURAN LAYER 1 (PROSE PARAGRAPH)
+====================================================================
+
+Integrate dari 26 field JSON (mana yang relevan):
+- promo_name, promo_type, client_id, target_user
+- valid_from, valid_until
+- platform_access, geo_restriction
+- min_deposit, max_bonus, max_bonus_unlimited
+- has_turnover (kalau false → "tidak ada syarat turnover")
+- calculation_basis, calculation_value, reward_type_hint
+- game_types (kalau ada + human context)
+
+Tidak perlu list semua field — integrate natural sesuai relevansi.
+Layer 1 TIDAK perlu detail passthrough (timing, threshold, restrictions)
+— itu Layer 2.
+
+====================================================================
+ATURAN LAYER 2 (DETAIL TAMBAHAN)
+====================================================================
+
+WAJIB masuk Detail Tambahan — info dari raw text yang DI LUAR
+scope 26 field structured:
+
+Timing Mechanics:
+- Periode perhitungan (mis. "Selasa hingga Senin")
+- Claim schedule (mis. "setiap Selasa otomatis")
+- Distribution window
+
+Eligibility Threshold (di luar min_deposit):
+- Loss threshold (mis. "Minimal kekalahan Rp500.000")
+- Qualifying bet amount
+- Minimum turnover qualifier
+
+Restriction Clauses:
+- Stackability ("tidak dapat digabung dengan promo lain")
+- Betting pattern restriction (safety bet, opposite betting)
+- Game category exclusion detail
+
+Anti-Fraud / Anti-Abuse:
+- Bonus hunter clause
+- IP/device similarity rules
+- Manipulation clauses
+
+Operator Rights:
+- Modification rights ("berhak mengubah tanpa pemberitahuan")
+- Cancellation rights
+
+References:
+- T&C umum reference
+- Policy links
+
+Setiap info passthrough yang ADA di raw text WAJIB muncul di
+Detail Tambahan.
+
+DILARANG drop karena:
+- "Sudah implied" → TIDAK, harus explicit
+- "Tidak penting" → TIDAK, Extractor decide yang penting
+- "Sudah ada di JSON" → SALAH, Layer 2 BUKAN di JSON
+- "Optimize length" → TIDAK, lossless priority
+
+====================================================================
+CATEGORY LABEL GUIDELINE
+====================================================================
+
+Category label bebas Bahasa Indonesia atau English, pilih natural:
+
+Common labels:
+- loss threshold / batas kekalahan
+- calculation period / periode perhitungan
+- claim schedule / jadwal kredit
+- stackability / kombinasi promo
+- anti-fraud
+- anti-abuse
+- game exclusion / pengecualian game
+- operator rights / hak operator
+- T&C reference / referensi syarat
+- eligibility qualifier
+- distribution rule
+
+Format entry: "[info konkret dari raw text] — [category label]"
+
+====================================================================
+ATURAN UMUM CLEAN_TEXT
+====================================================================
+
+- WAJIB include semua info dari operator answers (Mode 2 update)
+- WAJIB preserve ALL info from raw text (di Layer 1 atau Layer 2)
+- DILARANG tambah fakta yang TIDAK ADA di JSON/raw text/operator input
+- DILARANG paraphrase agresif yang menghilangkan makna
+- DILARANG skip info karena "sudah ada di JSON"
+- JSON dan clean_text WAJIB konsisten
+
+Target: clean_text LOSSLESS = textual representation lengkap
+dari raw text + operator answers, dengan struktur jelas untuk Extractor.
 
 ### Rule D.7 — Field Explicit Mode 1 BOLEH Dikoreksi
 
