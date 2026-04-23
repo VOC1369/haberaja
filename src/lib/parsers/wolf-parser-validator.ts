@@ -157,6 +157,8 @@ function emptyOutput(): ParserOutput {
     schema_version: "0.9",
     parsed_promo: emptyParsedPromo(),
     gaps: [],
+    _preparser: null,
+    captured_lines: [],
   };
 }
 
