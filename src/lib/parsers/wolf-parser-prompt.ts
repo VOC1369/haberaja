@@ -148,6 +148,145 @@ JIKA TIDAK YAKIN 100% → JANGAN DERIVE → ASK.
 
 ---
 
+### D.11 — Human-Readable Enrichment (REASONING + GAP-BASED)
+
+Field \`game_types\` dan \`game_exclusions\` sekarang punya pasangan
+human-readable: \`game_types_human\` dan \`game_exclusions_human\`.
+
+Tujuan: downstream consumer (Extractor, Danila) dapat CONTEXT MEANING,
+bukan cuma code mentah.
+
+**PRINSIP:**
+
+Kamu Sonnet 4.5 dengan reasoning capability.
+Kalau raw text DEFINE kategori → resolve.
+Kalau raw text TIDAK DEFINE → JADIIN GAP.
+JANGAN halusinasi context dari domain knowledge global.
+
+====================================================================
+KONDISI A — Raw text DEFINE kategori
+====================================================================
+
+Raw text kasih definisi eksplisit tentang makna kategori.
+
+Contoh raw text:
+  "Promo berlaku untuk SPORTSBOOK (pertandingan sports real seperti
+  Liga Inggris, tennis). Tidak berlaku untuk OTHER SPORTS (virtual
+  sports seperti PES, FIFA)."
+
+Output:
+  game_types: ["sportsbook"]
+  game_types_human: ["Pertandingan sports real seperti Liga Inggris, tennis"]
+  value_status_map.game_types_human: "explicit"
+  source_evidence_map.game_types_human: [
+    "SPORTSBOOK (pertandingan sports real seperti Liga Inggris, tennis)"
+  ]
+
+  game_exclusions: ["other_sports"]
+  game_exclusions_human: ["Virtual sports seperti PES, FIFA"]
+  value_status_map.game_exclusions_human: "explicit"
+  source_evidence_map.game_exclusions_human: [
+    "OTHER SPORTS (virtual sports seperti PES, FIFA)"
+  ]
+
+Tidak ada gap untuk _human field.
+
+====================================================================
+KONDISI B — Raw text SEBUT kategori tapi TIDAK DEFINE
+====================================================================
+
+Raw text cuma kasih label kategori (capitalized atau biasa) tanpa
+definisi. WAJIB JADIIN GAP. Operator = source of truth brand.
+
+Contoh raw text (case Cashback SLOT25):
+  "CASHBACK SPORTSBOOK 5% ... taruhan di OTHER SPORTS."
+
+Output Mode 1:
+  game_types: ["sportsbook"]
+  game_types_human: null
+  value_status_map.game_types_human: "not_stated"
+  needs_operator_fill_map.game_types_human: true
+
+  game_exclusions: ["other_sports"]
+  game_exclusions_human: null
+  value_status_map.game_exclusions_human: "not_stated"
+  needs_operator_fill_map.game_exclusions_human: true
+
+Gaps (tambah 2 entry, satu per kategori ambigu):
+\`\`\`json
+{
+  "field": "game_types_human",
+  "gap_type": "required_missing",
+  "question": "Apa yang dimaksud dengan kategori 'SPORTSBOOK' di SLOT25? Jelaskan context specific brand.",
+  "options": [
+    "Sebutkan definisi spesifik (tulis di memo)",
+    "Tidak Disebutkan"
+  ]
+}
+
+{
+  "field": "game_exclusions_human",
+  "gap_type": "required_missing",
+  "question": "Apa yang dimaksud dengan kategori 'OTHER SPORTS' di SLOT25? Jelaskan context specific brand.",
+  "options": [
+    "Sebutkan definisi spesifik (tulis di memo)",
+    "Tidak Disebutkan"
+  ]
+}
+\`\`\`
+
+WAJIB interpolate question:
+- Label kategori aktual (e.g., "SPORTSBOOK", "OTHER SPORTS")
+- Brand dari client_id (e.g., "SLOT25")
+
+====================================================================
+KONDISI C — Array kosong
+====================================================================
+
+Kalau game_types atau game_exclusions = [] (tidak ada kategori),
+_human field juga [] dengan status not_applicable.
+
+Output:
+  game_exclusions: []
+  game_exclusions_human: []
+  value_status_map.game_exclusions_human: "not_applicable"
+
+====================================================================
+POLICY KONSERVATIF (DI-LOCK)
+====================================================================
+
+Istilah umum seperti "sportsbook", "casino", "slot" TETAP jadi gap
+kalau raw text tidak define.
+
+JANGAN assume "sportsbook = real match betting" — itu domain knowledge
+global. Mungkin di brand tertentu "sportsbook" punya definisi khusus.
+
+Operator = brand expert. Operator yang validate.
+
+Rule: "Lebih baik operator jawab 1 gap extra daripada AI sok tau."
+
+====================================================================
+ATURAN ABSOLUTE
+====================================================================
+
+1. DILARANG halusinasi:
+   - "other_sports = PES/FIFA" tanpa raw text sebut = HALUSINASI
+   - Domain knowledge umum → TIDAK BOLEH
+   - Assumption dari capitalization → TIDAK BOLEH
+
+2. DILARANG partial resolve:
+   - Kalau 2 item di game_exclusions, resolve SEMUA atau gap SEMUA
+
+3. DILARANG skip field:
+   - Setiap item di game_types/game_exclusions WAJIB ada
+     correspondence di _human (resolved, null+gap, atau [] kalau array kosong)
+
+4. Evidence cukup → resolve (Kondisi A)
+   Evidence tidak cukup → gap (Kondisi B)
+   ZERO halusinasi.
+
+---
+
 ## SECTION E — GAP GROUPING RULE (PENTING)
 
 Setelah semua field dievaluasi (FINAL/ASK), GABUNGKAN pertanyaan yang berkaitan
@@ -240,7 +379,9 @@ Return JSON ParserOutput V0.9 PERSIS bentuk ini:
     "turnover_requirement": null,
     "claim_method": null,
     "game_types": [],
+    "game_types_human": null,
     "game_exclusions": [],
+    "game_exclusions_human": null,
     "source_evidence_map": {},
     "ambiguity_flags": [],
     "parse_confidence": null,
