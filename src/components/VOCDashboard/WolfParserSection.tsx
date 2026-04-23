@@ -633,12 +633,14 @@ export function WolfParserSection() {
 function GapReportCard({
   gaps,
   fills,
+  residualNotice,
   onFillChange,
   onConfirm,
 }: {
   gaps: Gap[];
-  fills: Record<string, string>;
-  onFillChange: (field: string, value: string) => void;
+  fills: Record<string, AnswerEntry>;
+  residualNotice: string | null;
+  onFillChange: (field: string, entry: AnswerEntry) => void;
   onConfirm: () => void;
 }) {
   const [open, setOpen] = useState(true);
@@ -655,8 +657,8 @@ function GapReportCard({
   const isConfirmDisabled =
     requiredGaps.length > 0 &&
     requiredGaps.some((g) => {
-      const val = fills[g.field];
-      return !val || val.trim().length < 1;
+      const entry = fills[g.field];
+      return !entry?.radio_value || entry.radio_value.trim().length < 1;
     });
 
   return (
@@ -695,12 +697,18 @@ function GapReportCard({
 
         <CollapsibleContent>
           <div className="p-6 pt-4 border-t border-border space-y-6">
+            {residualNotice && (
+              <div className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+                {residualNotice}
+              </div>
+            )}
+
             {gaps.map((gap, idx) => (
               <GapItem
                 key={`${gap.field}-${idx}`}
                 gap={gap}
-                value={fills[gap.field] ?? ""}
-                onChange={(v) => onFillChange(gap.field, v)}
+                entry={fills[gap.field] ?? { radio_value: "", memo: "" }}
+                onChange={(entry) => onFillChange(gap.field, entry)}
               />
             ))}
 
