@@ -585,6 +585,9 @@ export function WolfParserSection() {
                 setGapAnswers((prev) => ({ ...prev, [field]: entry }))
               }
               onConfirm={handleConfirmGapFills}
+              gapScreenshotFiles={gapScreenshotFiles}
+              onGapScreenshotsChange={setGapScreenshotFiles}
+              carriedScreenshotCount={screenshotFiles.length}
             />
           )}
 
@@ -650,14 +653,21 @@ function GapReportCard({
   residualNotice,
   onFillChange,
   onConfirm,
+  gapScreenshotFiles,
+  onGapScreenshotsChange,
+  carriedScreenshotCount,
 }: {
   gaps: Gap[];
   fills: Record<string, AnswerEntry>;
   residualNotice: string | null;
   onFillChange: (field: string, entry: AnswerEntry) => void;
   onConfirm: () => void;
+  gapScreenshotFiles: File[];
+  onGapScreenshotsChange: (files: File[]) => void;
+  carriedScreenshotCount: number;
 }) {
   const [open, setOpen] = useState(true);
+  const gapInputRef = useRef<HTMLInputElement | null>(null);
   const requiredCount = gaps.filter(
     (g) => g.gap_type === "required_missing" || g.gap_type === "ambiguous",
   ).length;
@@ -674,6 +684,9 @@ function GapReportCard({
       const entry = fills[g.field];
       return !entry?.radio_value || entry.radio_value.trim().length < 1;
     });
+
+  const totalAvailable = carriedScreenshotCount + gapScreenshotFiles.length;
+  const remaining = MAX_SCREENSHOTS - totalAvailable;
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -725,6 +738,91 @@ function GapReportCard({
                 onChange={(entry) => onFillChange(gap.field, entry)}
               />
             ))}
+
+            {/* Visual evidence upload (optional) */}
+            <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-foreground">
+                    Lampirkan gambar tambahan (opsional)
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {carriedScreenshotCount > 0
+                      ? `${carriedScreenshotCount} gambar dari Mode 1 otomatis ikut. `
+                      : ""}
+                    Tambah screenshot baru kalau ada info di tab/halaman lain.
+                  </p>
+                </div>
+                <input
+                  ref={gapInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const picked = Array.from(e.target.files ?? []).filter((f) =>
+                      f.type.startsWith("image/"),
+                    );
+                    if (picked.length === 0) return;
+                    if (remaining <= 0) {
+                      toast.warning(`Maksimal ${MAX_SCREENSHOTS} gambar total`);
+                      if (e.target) e.target.value = "";
+                      return;
+                    }
+                    onGapScreenshotsChange([
+                      ...gapScreenshotFiles,
+                      ...picked.slice(0, remaining),
+                    ]);
+                    if (e.target) e.target.value = "";
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => gapInputRef.current?.click()}
+                  disabled={remaining <= 0}
+                  className="gap-2 shrink-0"
+                >
+                  <ImagePlus className="h-3.5 w-3.5" />
+                  Tambah ({totalAvailable}/{MAX_SCREENSHOTS})
+                </Button>
+              </div>
+
+              {gapScreenshotFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {gapScreenshotFiles.map((file, idx) => (
+                    <div
+                      key={`${file.name}-${idx}`}
+                      className="relative w-[110px] aspect-video rounded-md overflow-hidden border border-border bg-muted group"
+                    >
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Gap screenshot ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
+                        <p className="text-[10px] leading-tight text-white truncate">
+                          {file.name || `Screenshot ${idx + 1}`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onGapScreenshotsChange(
+                            gapScreenshotFiles.filter((_, i) => i !== idx),
+                          )
+                        }
+                        className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] leading-none"
+                        aria-label={`Hapus gap screenshot ${idx + 1}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <Button
               className={
