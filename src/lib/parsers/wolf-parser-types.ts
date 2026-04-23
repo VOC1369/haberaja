@@ -40,7 +40,9 @@ export interface ParsedPromo {
   turnover_requirement: number | null;
   claim_method: string | null;
   game_types: string[];
+  game_types_human: string[] | null;
   game_exclusions: string[];
+  game_exclusions_human: string[] | null;
   source_evidence_map: Record<string, string[]>;
   ambiguity_flags: string[];
   parse_confidence: number | null;

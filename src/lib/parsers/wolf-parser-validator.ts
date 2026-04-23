@@ -346,6 +346,8 @@ function applyRule7Mode2EvidenceGuardrail(out: ParserOutput): void {
       field === "ambiguity_flags" ||
       field === "game_types" ||
       field === "game_exclusions" ||
+      field === "game_types_human" ||
+      field === "game_exclusions_human" ||
       field === "clean_text" ||
       field === "parse_confidence"
     ) {
@@ -362,6 +364,27 @@ function applyRule7Mode2EvidenceGuardrail(out: ParserOutput): void {
         `[wolf-parser-validator] Rule 7: field "${String(field)}" resolved in mode=refine but no evidence recorded`,
       );
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rule 8 — Human Field Shape Check
+//
+// game_types_human and game_exclusions_human must be string[] | null.
+// If shape is invalid (anything else), defensively coerce to null.
+// ---------------------------------------------------------------------------
+
+function applyRule8HumanFieldShape(p: ParsedPromo): void {
+  for (const key of ["game_types_human", "game_exclusions_human"] as const) {
+    const v = p[key];
+    if (v === null) continue;
+    if (Array.isArray(v) && v.every((item) => typeof item === "string")) {
+      continue;
+    }
+    console.warn(
+      `[wolf-parser-validator] Rule 8: invalid shape for ${key}, coerced to null`,
+    );
+    p[key] = null;
   }
 }
 
