@@ -566,8 +566,9 @@ export function WolfParserSection() {
             <GapReportCard
               gaps={parserOutput.gaps}
               fills={gapAnswers}
-              onFillChange={(field, value) =>
-                setGapAnswers((prev) => ({ ...prev, [field]: value }))
+              residualNotice={residualNotice}
+              onFillChange={(field, entry) =>
+                setGapAnswers((prev) => ({ ...prev, [field]: entry }))
               }
               onConfirm={handleConfirmGapFills}
             />
