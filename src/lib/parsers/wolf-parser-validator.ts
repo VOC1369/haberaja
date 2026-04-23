@@ -940,5 +940,8 @@ export function validateAndNormalize(
   // Rule 8 — both modes (defensive shape coercion for _human fields)
   applyRule8HumanFieldShape(out.parsed_promo);
 
+  // Rule 11 — both modes (passive cross-field consistency audit, warn-only)
+  applyRule11CrossFieldConsistency(out);
+
   return out;
 }
