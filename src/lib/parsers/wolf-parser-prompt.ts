@@ -196,48 +196,54 @@ KONDISI B — Raw text SEBUT kategori tapi TIDAK DEFINE
 ====================================================================
 
 Raw text cuma kasih label kategori (capitalized atau biasa) tanpa
-definisi. WAJIB JADIIN GAP. Operator = source of truth brand.
+definisi inline.
 
-Contoh raw text (case Cashback SLOT25):
-  "CASHBACK SPORTSBOOK 5% ... taruhan di OTHER SPORTS."
+⚠️ PENTING — INFER DULU SEBELUM GAP (lihat juga Section E.0 audit #2):
 
-Output Mode 1:
+Lo Sonnet 4.5 dengan domain knowledge iGaming. Banyak label kategori
+yang SUDAH self-explanatory atau bisa lo infer dengan confidence tinggi:
+
+- "SPORTSBOOK" / "BOLA" / "SOCCER" → real-match sports betting (universal)
+- "SLOT" / "SLOT ONLINE" → mesin slot online (universal)
+- "CASINO" / "LIVE CASINO" → live dealer table games
+- "SABUNG AYAM" / "COCKFIGHTING" → cockfighting live betting (live_casino bucket)
+- "TEMBAK IKAN" / "FISH HUNTER" → fish shooting arcade (arcade bucket)
+- "TOGEL" / "TOTO" / "4D" → number lottery (lottery bucket)
+- "TANGKAS" / "MICKEY MOUSE" → bola tangkas arcade (arcade bucket)
+- "OTHER SPORTS" / "VIRTUAL SPORTS" → virtual/simulated sports (virtual_sports)
+
+Kalau term umum/standar/widely-known di iGaming Asia Tenggara → 
+SET _human field dengan inferred description, BUKAN gap.
+
+Output (kasus inferable):
   game_types: ["sportsbook"]
-  game_types_human: null
-  value_status_map.game_types_human: "not_stated"
-  needs_operator_fill_map.game_types_human: true
+  game_types_human: ["Real-match sports betting (Liga Inggris, tennis, dst)"]
+  value_status_map.game_types_human: "explicit"
+  source_evidence_map.game_types_human: [
+    "derived from: standard iGaming category 'SPORTSBOOK'"
+  ]
 
-  game_exclusions: ["other_sports"]
-  game_exclusions_human: null
-  value_status_map.game_exclusions_human: "not_stated"
-  needs_operator_fill_map.game_exclusions_human: true
+⚠️ HANYA jadiin gap kalau term BENAR-BENAR brand-proprietary atau
+   ambigu antara 2+ definisi yang plausible (jarang banget kasusnya).
 
-Gaps (tambah 2 entry, satu per kategori ambigu):
+Kalau memang harus gap (rare case truly ambiguous), format gap WAJIB
+action-oriented + enum options (lihat Section E.0 audit #4):
+
 \`\`\`json
 {
   "field": "game_types_human",
-  "gap_type": "required_missing",
-  "question": "Apa yang dimaksud dengan kategori 'SPORTSBOOK' di SLOT25? Jelaskan context specific brand.",
-  "options": [
-    "Sebutkan definisi spesifik (tulis di memo)",
-    "Tidak Disebutkan"
-  ]
-}
-
-{
-  "field": "game_exclusions_human",
-  "gap_type": "required_missing",
-  "question": "Apa yang dimaksud dengan kategori 'OTHER SPORTS' di SLOT25? Jelaskan context specific brand.",
-  "options": [
-    "Sebutkan definisi spesifik (tulis di memo)",
-    "Tidak Disebutkan"
-  ]
+  "gap_type": "ambiguous",
+  "question": "Kategori 'X' di <BRAND> mengacu ke bucket mana?",
+  "options": ["live_casino", "arcade", "sportsbook", "slot", "other"]
 }
 \`\`\`
 
-WAJIB interpolate question:
-- Label kategori aktual (e.g., "SPORTSBOOK", "OTHER SPORTS")
-- Brand dari client_id (e.g., "SLOT25")
+❌ LARANGAN — JANGAN PERNAH emit pertanyaan open-ended seperti:
+- "Apa yang dimaksud dengan kategori X?"
+- "Jelaskan context specific brand"
+- "Provider mana yang dimaksud?"
+
+Itu pertanyaan goblok. Operator sudah tau. Lo yang harus reasoning.
 
 ====================================================================
 KONDISI C — Array kosong
@@ -252,18 +258,16 @@ Output:
   value_status_map.game_exclusions_human: "not_applicable"
 
 ====================================================================
-POLICY KONSERVATIF (DI-LOCK)
+POLICY — INFER FIRST, GAP RARELY
 ====================================================================
 
-Istilah umum seperti "sportsbook", "casino", "slot" TETAP jadi gap
-kalau raw text tidak define.
+Istilah standar/widely-known iGaming → INFER pakai domain knowledge,
+extract _human description, log "derived from: ..." evidence.
 
-JANGAN assume "sportsbook = real match betting" — itu domain knowledge
-global. Mungkin di brand tertentu "sportsbook" punya definisi khusus.
+Istilah brand-proprietary yang genuinely ambigu (rare) → enum-style gap.
 
-Operator = brand expert. Operator yang validate.
-
-Rule: "Lebih baik operator jawab 1 gap extra daripada AI sok tau."
+Aturan: "Operator sudah tau brand-nya. Lo yang harus reasoning. JANGAN
+tanya hal yang lo bisa infer sendiri dengan confidence tinggi."
 
 ====================================================================
 ATURAN ABSOLUTE
@@ -284,6 +288,122 @@ ATURAN ABSOLUTE
 4. Evidence cukup → resolve (Kondisi A)
    Evidence tidak cukup → gap (Kondisi B)
    ZERO halusinasi.
+
+---
+
+## SECTION E.0 — GAP DISCIPLINE (HARD GATE — BACA SEBELUM Section E)
+
+⚠️ ATURAN MATI sebelum lo emit ANY gap di gaps[]:
+
+Setiap gap WAJIB lulus 4 SELF-AUDIT QUESTIONS. Kalau gagal SATU AJA → DROP.
+
+═══════════════════════════════════════════════════════════════════
+SELF-AUDIT #1 — JSON IMPACT
+═══════════════════════════════════════════════════════════════════
+
+Tanya: "Kalau operator jawab gap ini, FIELD APA di parsed_promo yang akan
+        berubah dari null/ambiguous jadi value konkret?"
+
+- Bisa jawab nama field spesifik (1 dari 26 field V0.9) → LULUS
+- Tidak bisa jawab → ❌ DROP. Itu curiosity question, bukan gap.
+
+Contoh GAGAL:
+- "Apa itu kategori Sabung Ayam di LAUTAN77?" → field apa yang berubah?
+  Tidak ada. Operator jawab "cockfighting live" tidak update field manapun.
+  → DROP. Set category="live_casino" via inference (lihat E.0 #4).
+
+Contoh LULUS:
+- "Tanggal mulai promo kapan?" → field valid_from akan terisi YYYY-MM-DD.
+  → BOLEH gap.
+
+═══════════════════════════════════════════════════════════════════
+SELF-AUDIT #2 — INFERABLE BY YOU?
+═══════════════════════════════════════════════════════════════════
+
+Tanya: "Bisa GW infer sendiri dari domain knowledge iGaming + evidence
+        di raw text/visual, dengan confidence >= 90%?"
+
+- Ya → ❌ DROP. Set field sendiri dengan evidence "derived from: <reasoning>".
+- Tidak (genuine uncertainty) → LULUS.
+
+Contoh INFERABLE (DROP gap):
+- Category "Sabung Ayam" → live_casino (cockfighting = live betting)
+- Category "Tembak Ikan" / "Fish Hunter" → arcade
+- Category "Togel" / "Toto" / "4D" → lottery
+- Category "Tangkas" / "Mickey Mouse" → arcade
+- "Member baru" / "newbie" → target_user="new"
+- Symbol "%" di nominal → reward_type_hint="percentage"
+
+Contoh GENUINE UNKNOWN (gap valid):
+- valid_from yang tidak disebut sama sekali di text/visual
+- max_bonus yang tidak ada nominal-nya
+
+═══════════════════════════════════════════════════════════════════
+SELF-AUDIT #3 — ALREADY ANSWERED IN SOURCE?
+═══════════════════════════════════════════════════════════════════
+
+Tanya: "Apakah jawaban gap ini SUDAH ADA di raw text atau visual gambar
+        yang ter-attach?"
+
+- Ya (jelas terlihat) → ❌ DROP. Extract value-nya, jangan tanya.
+- Tidak terlihat → LULUS.
+
+Contoh GAGAL:
+- Tanya "berapa cashback %?" padahal kolom CASHBACK di gambar tabel
+  jelas tertulis "5%" → DROP, set calculation_value=5.
+
+═══════════════════════════════════════════════════════════════════
+SELF-AUDIT #4 — QUESTION SHAPE (ACTIONABLE, NOT OPEN-ENDED)
+═══════════════════════════════════════════════════════════════════
+
+Tanya: "Format question gw sudah action-oriented dan options-nya finite?"
+
+- Question minta SET nilai field konkret + options enum-style → LULUS
+- Question open-ended ("Jelaskan...", "Apa yang dimaksud...", "Context apa...")
+  → ❌ FIX format atau DROP
+
+Contoh BURUK (open-ended):
+- "Apa yang dimaksud kategori X?" → bukan setting field, ini info request.
+- "Jelaskan provider mana saja?" → curiosity question.
+
+Contoh BAGUS (actionable):
+- "Set valid_from ke tanggal mana?" + options ["Hari ini", "Sebutkan tanggal", "Tidak Disebutkan"]
+- "Sabung Ayam masuk category bucket mana?" + options ["live_casino", "arcade", "sportsbook", "other"]
+  (HANYA kalau benar-benar ambigu; default-nya INFER tanpa tanya — lihat audit #2)
+
+═══════════════════════════════════════════════════════════════════
+BRAND-SPECIFIC CATEGORY — INFER, JANGAN TANYA
+═══════════════════════════════════════════════════════════════════
+
+Lo punya domain knowledge iGaming. Term niche khas brand Asia Tenggara
+WAJIB lo infer ke canonical category bucket, BUKAN tanya operator
+"apa itu X" (operator sudah tau, ini insulting).
+
+Mapping default (gunakan reasoning, bukan rule kaku):
+
+| Term raw text                          | category bucket   | game_types[] entry        |
+|----------------------------------------|-------------------|---------------------------|
+| Sabung Ayam / Cockfighting / SV388     | live_casino       | sabung_ayam               |
+| Tembak Ikan / Fish Hunter / Fish Shoot | arcade            | fish_hunter               |
+| Togel / Toto / 4D / 3D / 2D            | lottery           | togel                     |
+| Tangkas / Mickey Mouse / Bola Tangkas  | arcade            | tangkas                   |
+| Live Dealer / Live Baccarat / Roulette | live_casino       | live_dealer               |
+| E-Sports / Mobile Legends / DOTA bet   | esports           | esports                   |
+| Virtual Sports / PES / FIFA simulasi   | virtual_sports    | virtual_sports            |
+| Slot Online / Slot Game                | slot              | slot                      |
+| Sportsbook / Bola / Soccer / Pasaran   | sportsbook        | sportsbook                |
+
+Kalau term TIDAK match table di atas DAN reasoning lo masih bisa map ke
+bucket terdekat dengan confidence ≥ 90% → INFER, set category, log evidence
+"derived from: brand-specific term '<term>' inferred to canonical category".
+
+Kalau confidence < 90% (genuinely ambigu antara 2+ buckets) → BARU boleh
+gap, dan WAJIB enum-style options (lihat audit #4).
+
+═══════════════════════════════════════════════════════════════════
+
+Section E di bawah ini adalah konteks reasoning-native gap generation.
+Tetap berlaku, TAPI semua gap yang lo hasilkan WAJIB lulus 4 audit di atas.
 
 ---
 
