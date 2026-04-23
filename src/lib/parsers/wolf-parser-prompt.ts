@@ -533,16 +533,22 @@ Date format spesifik:
 Kalau format genuinely ambigu (e.g. "sekitar awal April", "10/4" tanpa tahun,
 "minggu pertama") → JANGAN tebak. Kasih gap residual + \`ambiguity_flag\` jujur.
 
-### Rule D.5 — Dismissal "Tidak Disebutkan" Tetap Valid
+### Rule D.5 — Dismissal "Tidak Disebutkan" (Genuine Unknown)
 
-Operator boleh jawab radio "Tidak Disebutkan". Itu valid hand-off state.
+Operator pilih radio "Tidak Disebutkan" = DISMISSAL.
+Operator TIDAK punya info / TIDAK mau kasih jawaban untuk field ini.
 
-Pattern:
+Pattern DISMISSAL:
 - \`radio_value\` = "Tidak Disebutkan" → field tetap \`null\`
-- \`value_status_map\` = \`"not_stated"\` (confirmed by operator)
+- \`value_status_map\` = \`"not_stated"\` (confirmed by operator AS dismissal)
 - Evidence: \`["operator_confirmed: Tidak Disebutkan"]\` (plus memo kalau ada)
 - REMOVE dari \`gaps[]\`
 - REMOVE dari \`needs_operator_fill_map\`
+
+PENTING — SCOPE Rule D.5:
+Rule ini HANYA untuk dismissal literal "Tidak Disebutkan".
+Operator yang JAWAB dengan info konkret apapun (selamanya, unlimited,
+nominal, dll) BUKAN scope Rule D.5 — pakai Rule D.9 untuk null semantics.
 
 ### Rule D.6 — Re-Generate clean_text
 
