@@ -449,6 +449,12 @@ function normalizeParsedPromo(raw: unknown): ParsedPromo {
         } else if (Array.isArray(v)) {
           out[key] = coerceStringArray(v);
         } else {
+          console.warn(
+            `[wolf-parser-validator] normalizeParsedPromo: ${key} expected ` +
+            `string[] | null but got ${typeof v} (value: ${JSON.stringify(v)}). ` +
+            `Coerced to null. This indicates LLM emitted wrong shape — ` +
+            `check Mode 2 Rule D.10 compliance.`,
+          );
           out[key] = null;
         }
         break;

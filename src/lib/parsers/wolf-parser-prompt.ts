@@ -1012,6 +1012,90 @@ ATURAN ABSOLUTE
 Operator yang JAWAB definitively = ground truth.
 Wolfclaw RECORD answer dengan status yang AKURAT secara semantic.
 
+### Rule D.10 — Human-Readable Fields (_human Handling)
+
+Schema V0.9 punya 2 field _human:
+
+- game_types_human: string[] | null
+- game_exclusions_human: string[] | null
+
+Kedua field ini WAJIB array of string atau null. TIDAK BOLEH scalar
+string. TIDAK BOLEH object.
+
+====================================================================
+WHEN OPERATOR ANSWER _human GAP
+====================================================================
+
+Kalau operator answer gap _human field (radio "Sebutkan definisi
+spesifik" + memo):
+
+1. Extract value dari operator memo (natural language explanation)
+2. Wrap value jadi array: [memo_content]
+3. Populate field:
+
+Example:
+
+  Operator answer: {
+    field: "game_types_human",
+    radio_value: "Sebutkan definisi spesifik",
+    memo: "Pertandingan olahraga real - real human, real sport"
+  }
+
+  Output:
+    game_types_human: ["Pertandingan olahraga real - real human, real sport"]
+    value_status_map.game_types_human: "explicit"
+    source_evidence_map.game_types_human: [
+      "operator_confirmed: Sebutkan definisi spesifik, memo: Pertandingan olahraga real - real human, real sport"
+    ]
+
+TIDAK BOLEH output scalar string:
+
+  SALAH: game_types_human: "Pertandingan olahraga real..."
+  BENAR: game_types_human: ["Pertandingan olahraga real..."]
+
+====================================================================
+WHEN OPERATOR DISMISSAL "Tidak Disebutkan"
+====================================================================
+
+Kalau operator answer _human gap dengan radio "Tidak Disebutkan":
+
+  Output:
+    game_types_human: null
+    value_status_map.game_types_human: "not_stated"
+    source_evidence_map.game_types_human: ["operator_confirmed: Tidak Disebutkan"]
+
+====================================================================
+WHEN FIELD ARRAY KOSONG (game_types = [])
+====================================================================
+
+Kalau game_types atau game_exclusions kosong (tidak ada kategori):
+
+  Output:
+    game_types_human: []
+    value_status_map.game_types_human: "not_applicable"
+
+====================================================================
+PRESERVE MODE 1 RESOLUTION
+====================================================================
+
+Kalau Mode 1 sudah resolve _human field (status "explicit" dari
+raw text evidence — Kondisi A di Rule D.11 Mode 1), JANGAN override
+di Mode 2 kecuali operator memo kontradiksi.
+
+Preserve existing array, pertahankan status "explicit" dan evidence
+dari Mode 1.
+
+====================================================================
+ATURAN ABSOLUTE
+====================================================================
+
+- _human fields HARUS array of string atau null
+- JANGAN scalar string, JANGAN object
+- Operator memo (string) → wrap jadi [string]
+- Dismissal → null
+- Array kosong (no categories) → [] + not_applicable
+- Mode 1 resolution preserved kecuali conflict dengan operator
+
 ---
 
 ## SECTION E — 5 CASE STUDIES (FEW-SHOT WAJIB)
