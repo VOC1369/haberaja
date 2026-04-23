@@ -818,12 +818,12 @@ function formatOptionLabel(raw: string): string {
 
 function GapItem({
   gap,
-  value,
+  entry,
   onChange,
 }: {
   gap: Gap;
-  value: string;
-  onChange: (v: string) => void;
+  entry: AnswerEntry;
+  onChange: (entry: AnswerEntry) => void;
 }) {
   const isRequired =
     gap.gap_type === "required_missing" || gap.gap_type === "ambiguous";
@@ -835,38 +835,47 @@ function GapItem({
     gap.options.length > 0 ? gap.options : registry?.options ?? [];
   const hasOptions = effectiveOptions.length > 0;
 
-  // Local state untuk radio + detail input + catatan bebas.
+  // Local state untuk radio + detail input + memo.
+  // Reset ketika entry direset oleh parent (residual gap flow).
   const [selectedOpt, setSelectedOpt] = useState("");
   const [detailValue, setDetailValue] = useState("");
-  const [noteValue, setNoteValue] = useState("");
-  const [textValue, setTextValue] = useState(value);
+  const [memoValue, setMemoValue] = useState("");
+  const [textValue, setTextValue] = useState("");
+
+  // Sync turun: kalau parent reset entry → bersihkan lokal.
+  useEffect(() => {
+    if (!entry.radio_value && !entry.memo) {
+      setSelectedOpt("");
+      setDetailValue("");
+      setMemoValue("");
+      setTextValue("");
+    }
+  }, [entry.radio_value, entry.memo]);
 
   const detailType: DetailType | undefined = selectedOpt
     ? registry?.detail?.[selectedOpt]
     : undefined;
 
-  // Sync radio + detail + note → parent (human-readable format).
+  // Sync radio + detail → parent.radio_value, memo → parent.memo.
   useEffect(() => {
     if (!hasOptions) return;
     if (!selectedOpt) {
-      onChange("");
+      onChange({ radio_value: "", memo: memoValue.trim() });
       return;
     }
     const trimmedDetail = detailValue.trim();
-    const trimmedNote = noteValue.trim();
-    const base =
+    const radioValue =
       detailType && trimmedDetail
         ? `${selectedOpt} (${trimmedDetail})`
         : selectedOpt;
-    const combined = trimmedNote ? `${base} — ${trimmedNote}` : base;
-    onChange(combined);
+    onChange({ radio_value: radioValue, memo: memoValue.trim() });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOpt, detailValue, noteValue, hasOptions]);
+  }, [selectedOpt, detailValue, memoValue, hasOptions]);
 
-  // Sync text-only → parent.
+  // Sync text-only → parent (radio_value = textValue, memo = "").
   useEffect(() => {
     if (hasOptions) return;
-    onChange(textValue);
+    onChange({ radio_value: textValue.trim(), memo: "" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textValue, hasOptions]);
 
@@ -901,7 +910,6 @@ function GapItem({
               onValueChange={(v) => {
                 setSelectedOpt(v);
                 setDetailValue("");
-                setNoteValue("");
               }}
               className={
                 effectiveOptions.length >= 4
@@ -950,28 +958,40 @@ function GapItem({
               </div>
             )}
 
-            {selectedOpt && (
-              <div className="mt-3 space-y-1">
-                <Label className="text-xs text-muted-foreground">
-                  Catatan / Memo (opsional)
-                </Label>
-                <Textarea
-                  value={noteValue}
-                  onChange={(e) => setNoteValue(e.target.value)}
-                  placeholder="Tambahkan catatan atau konteks tambahan..."
-                  rows={2}
-                  className="rounded-lg bg-background resize-none"
-                />
-              </div>
-            )}
+            <div className="mt-3 space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Catatan / Memo (opsional)
+              </Label>
+              <Textarea
+                value={memoValue}
+                onChange={(e) => setMemoValue(e.target.value)}
+                placeholder="Tambahan detail jika perlu (mis. tanggal spesifik, konteks promo, dll). Wolfclaw akan analisa memo bersama radio pilihan kamu."
+                rows={2}
+                className="rounded-lg bg-background resize-none"
+              />
+            </div>
           </>
         ) : (
-          <Input
-            value={textValue}
-            onChange={(e) => setTextValue(e.target.value)}
-            placeholder="Isi nilai..."
-            className="rounded-lg bg-background"
-          />
+          <>
+            <Input
+              value={textValue}
+              onChange={(e) => setTextValue(e.target.value)}
+              placeholder="Isi nilai..."
+              className="rounded-lg bg-background"
+            />
+            <div className="mt-3 space-y-1">
+              <Label className="text-xs text-muted-foreground">
+                Catatan / Memo (opsional)
+              </Label>
+              <Textarea
+                value={memoValue}
+                onChange={(e) => setMemoValue(e.target.value)}
+                placeholder="Tambahan detail jika perlu. Wolfclaw akan analisa memo bersama jawaban kamu."
+                rows={2}
+                className="rounded-lg bg-background resize-none"
+              />
+            </div>
+          </>
         )}
       </div>
     </div>
