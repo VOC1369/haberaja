@@ -258,16 +258,24 @@ export function WolfParserSection() {
     setIsAnalyzing(true);
     setResidualNotice(null);
     try {
-      const result = await applyOperatorAnswers(parserOutput, payload, inputText);
+      // Auto-carry Mode 1 screenshots + any new gap-stage screenshots
+      const combinedFiles = [...screenshotFiles, ...gapScreenshotFiles];
+      const imageBlocks = await filesToImageBlocks(combinedFiles);
+      const result = await applyOperatorAnswers(
+        parserOutput,
+        payload,
+        inputText,
+        imageBlocks,
+      );
       setParserOutput(result);
+      // Clear gap-stage uploads after they are sent (Mode 1 stays for next round)
+      setGapScreenshotFiles([]);
       if (result.gaps.length === 0) {
         toast.success("Parser final", {
           description: "Semua gap terjawab.",
         });
       } else {
         // RULE B.1 — Honest residual gap dari Mode 2.
-        // Stay di stage "questions" (parserOutput preserved, gaps[] residual
-        // di-render ulang). Reset answers untuk gap baru.
         setGapAnswers({});
         setResidualNotice(
           "Wolfclaw butuh klarifikasi tambahan. Mohon isi pertanyaan berikut.",
