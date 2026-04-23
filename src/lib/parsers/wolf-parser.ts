@@ -1,8 +1,8 @@
 /**
  * Wolfclaw Parser V0.9 — Engine
  *
- * Mode 1 (RAW TEXT): runWolfParser(rawText, preparser?) → ParserOutput
- * Mode 2 (LENGKAPI DATA): applyOperatorAnswers(prev, answers, rawText) → ParserOutput
+ * Mode 1 (RAW TEXT): runWolfParser(rawText, preparser?, images?) → ParserOutput
+ * Mode 2 (LENGKAPI DATA): applyOperatorAnswers(prev, answers, rawText, images?) → ParserOutput
  *
  * Both modes use Sonnet 4.5 @ temperature 0.2, max_tokens enforced server-side
  * by ai-proxy MODEL_CONFIG.extract.
@@ -14,9 +14,16 @@
  *   prompt context — engine here only plumbs metadata in/out).
  * - When preparser is null, parser falls back to V0.9 flat behavior:
  *   captured_lines stays [] and a warning is logged.
+ *
+ * V0.9 + Multimodal evidence (additive):
+ * - Both modes accept optional `images: AIContentBlock[]` (image/base64).
+ *   When provided, images are attached to the user message AFTER the text
+ *   block. The LLM is instructed to treat image table structure as visual
+ *   authority that can outrank flattened text. Images are ephemeral (not
+ *   persisted) and forwarded as-is to the Anthropic Messages API.
  */
 
-import { callAI, extractJSON } from "@/lib/ai-client";
+import { callAI, extractJSON, type AIContentBlock } from "@/lib/ai-client";
 import {
   WOLF_PARSER_PROMPT_MODE_1,
   WOLF_PARSER_PROMPT_MODE_2,
@@ -27,6 +34,18 @@ import type { PreParserOutput } from "./wolf-preparser-types";
 
 // Convenience re-exports for downstream consumers.
 export type { ParserOutput, OperatorAnswer, PreParserOutput };
+
+// ---------------------------------------------------------------------------
+// Helper — build multimodal user content (text + optional images)
+// ---------------------------------------------------------------------------
+function buildUserContent(
+  text: string,
+  images: AIContentBlock[] | undefined,
+): string | AIContentBlock[] {
+  if (!images || images.length === 0) return text;
+  // Anthropic convention: text block first, then images.
+  return [{ type: "text", text }, ...images];
+}
 
 // ---------------------------------------------------------------------------
 // MODE 1 — Raw text → partial ParserOutput
@@ -42,10 +61,16 @@ export type { ParserOutput, OperatorAnswer, PreParserOutput };
 function buildMode1Message(
   rawText: string,
   preparser: PreParserOutput | null,
+  hasImages: boolean,
 ): string {
   const trimmed = rawText.trim();
+
+  const imageNote = hasImages
+    ? `\n\n==================================================\nSUMBER VISUAL — IMAGE EVIDENCE TER-LAMPIR:\n==================================================\nAda 1+ gambar promo (screenshot) ter-attach setelah text ini.\nGambar adalah VISUAL AUTHORITY: tabel di gambar (kolom + baris)\nKALAHKAN flatten raw text karena struktur kolom preserved di visual.\nCross-reference gambar + text. Kalau visual kontradiksi text, prioritaskan\nvisual + log alasan di reasoning (evidence prefix \`derived from: visual ...\`).\n`
+    : "";
+
   if (!preparser) {
-    return trimmed;
+    return trimmed + imageNote;
   }
   return `==================================================
 SUMBER 1 — RAW PROMO TEXT:
@@ -56,7 +81,7 @@ ${trimmed}
 SUMBER 2 — PREPARSER METADATA (structural reasoning):
 ==================================================
 ${JSON.stringify(preparser, null, 2)}
-
+${imageNote}
 ==================================================
 INSTRUCTION:
 ==================================================
@@ -150,6 +175,9 @@ Tiap item di captured_lines[] WAJIB punya struktur PERSIS ini:
  * @param rawText - raw promo text (must be non-empty / non-whitespace).
  * @param preparser - optional PreParser output to inform parsing strategy.
  *   When null, parser falls back to flat V0.9 behavior.
+ * @param images - optional array of AIContentBlock (image base64) — visual
+ *   evidence ephemerally attached to the LLM call. Treated as visual
+ *   authority that outranks flattened text on table structure conflicts.
  *
  * @throws Error if rawText is empty / whitespace-only.
  * @throws Error if the LLM response is not valid JSON.
@@ -158,6 +186,7 @@ Tiap item di captured_lines[] WAJIB punya struktur PERSIS ini:
 export async function runWolfParser(
   rawText: string,
   preparser: PreParserOutput | null = null,
+  images: AIContentBlock[] = [],
 ): Promise<ParserOutput> {
   if (typeof rawText !== "string" || rawText.trim().length === 0) {
     throw new Error(
@@ -171,7 +200,9 @@ export async function runWolfParser(
     );
   }
 
-  const userMessage = buildMode1Message(rawText, preparser);
+  const hasImages = Array.isArray(images) && images.length > 0;
+  const userText = buildMode1Message(rawText, preparser, hasImages);
+  const userContent = buildUserContent(userText, hasImages ? images : undefined);
 
   const response = await callAI({
     type: "extract",
@@ -180,7 +211,7 @@ export async function runWolfParser(
     messages: [
       {
         role: "user",
-        content: userMessage,
+        content: userContent,
       },
     ],
   });
@@ -224,10 +255,24 @@ function buildRefineMessage(
   prev: ParserOutput,
   answers: OperatorAnswer[],
   rawText: string,
+  hasImages: boolean,
 ): string {
   const today = new Date().toLocaleDateString("en-CA", {
     timeZone: "Asia/Jakarta",
   });
+
+  const imageNote = hasImages
+    ? `\n==================================================
+SUMBER 4 — IMAGE EVIDENCE TER-LAMPIR:
+==================================================
+Ada 1+ gambar promo (screenshot) ter-attach setelah text ini.
+Gambar adalah VISUAL AUTHORITY: tabel di gambar (kolom + baris)
+KALAHKAN flatten raw text karena struktur kolom preserved di visual.
+Cross-reference gambar + text + operator answers. Kalau visual kontradiksi
+text/answer, prioritaskan visual + log alasan di reasoning (evidence prefix
+\`derived from: visual ...\`).
+`
+    : "";
 
   return `TANGGAL HARI INI: ${today}
 TIMEZONE: GMT+7 (Asia/Jakarta — Jakarta/Bangkok/Hanoi)
@@ -246,11 +291,11 @@ ${JSON.stringify(prev, null, 2)}
 SUMBER 3 — OPERATOR ANSWERS:
 ==================================================
 ${JSON.stringify(answers, null, 2)}
-
+${imageNote}
 ==================================================
 TUGAS:
 ==================================================
-Reasoning gabungan 3 sumber. Update JSON. Regenerate clean_text.
+Reasoning gabungan ${hasImages ? "4" : "3"} sumber. Update JSON. Regenerate clean_text.
 Tanggal relative WAJIB berbasis TANGGAL HARI INI di GMT+7.
 Target gaps[] kosong, tapi honest residual ambiguity boleh tetap ada.
 PRESERVE _preparser dan captured_lines apa adanya kalau tidak ada
@@ -260,6 +305,13 @@ informasi baru yang mengubahnya.`;
 /**
  * Combine Mode 1 output + raw text + operator answers into a refined
  * ParserOutput V0.9.
+ *
+ * @param prev - previous Mode 1 ParserOutput.
+ * @param answers - operator answers per gap.
+ * @param rawText - original raw promo text.
+ * @param images - optional array of AIContentBlock (image base64) — visual
+ *   evidence ephemerally attached to the LLM call. Includes original Mode 1
+ *   images (auto-carry) plus any new images uploaded at gap-answering time.
  *
  * @throws Error if prev is invalid (missing/wrong schema_version).
  * @throws Error if answers is not an array.
@@ -271,6 +323,7 @@ export async function applyOperatorAnswers(
   prev: ParserOutput,
   answers: OperatorAnswer[],
   rawText: string,
+  images: AIContentBlock[] = [],
 ): Promise<ParserOutput> {
   if (!prev || prev.schema_version !== "0.9") {
     throw new Error(
@@ -288,13 +341,15 @@ export async function applyOperatorAnswers(
     );
   }
 
-  const userMessage = buildRefineMessage(prev, answers, rawText);
+  const hasImages = Array.isArray(images) && images.length > 0;
+  const userText = buildRefineMessage(prev, answers, rawText, hasImages);
+  const userContent = buildUserContent(userText, hasImages ? images : undefined);
 
   const response = await callAI({
     type: "extract",
     system: WOLF_PARSER_PROMPT_MODE_2,
     temperature: 0.2,
-    messages: [{ role: "user", content: userMessage }],
+    messages: [{ role: "user", content: userContent }],
   });
 
   let raw: unknown;
