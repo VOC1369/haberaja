@@ -63,11 +63,85 @@ INSTRUCTION:
 - Parse parsed_promo (28 fields) parent-level seperti biasa.
 - Hormati _preparser.routing_hints:
   - parse_parent=true → extract parent fields normal.
-  - capture_lines=true → emit captured_lines[] dengan row mentah
-    (line_id, line_type, label, raw_fragment, fields, evidence).
+  - capture_lines=true → emit captured_lines[] dengan row mentah.
   - capture_lines=false → captured_lines: [].
 - Sertakan _preparser apa adanya di output (sibling top-level).
-- JANGAN tambah variant/tier ke parsed_promo.`;
+- JANGAN tambah variant/tier ke parsed_promo.
+
+==================================================
+CAPTURED_LINES SCHEMA (kalau capture_lines=true):
+==================================================
+
+Tiap item di captured_lines[] WAJIB punya struktur PERSIS ini:
+
+\`\`\`json
+{
+  "line_id": "line_1",
+  "line_type": "table_row",
+  "label": "Welcome 50% Casino",
+  "raw_fragment": "Welcome 50% Casino | Min Deposit Rp 50.000 | Max Bonus Rp 5.000.000 | TO 10x",
+  "fields": {
+    "category": "casino",
+    "product_scope": "casino",
+    "min_deposit": 50000,
+    "max_bonus": 5000000,
+    "turnover_requirement": 10,
+    "calculation_value": 50,
+    "reward_type_hint": "percentage"
+  },
+  "source_evidence_map": {
+    "min_deposit": "Min Deposit Rp 50.000",
+    "max_bonus": "Max Bonus Rp 5.000.000",
+    "turnover_requirement": "TO 10x",
+    "calculation_value": "Welcome 50% Casino"
+  },
+  "ambiguity_flags": []
+}
+\`\`\`
+
+### Field rules — PATUHI KETAT:
+
+1. \`line_id\`: string format \`"line_1"\`, \`"line_2"\`, dst (sequential).
+
+2. \`line_type\`: WAJIB salah satu dari 4 enum berikut (TIDAK boleh value lain):
+   - \`"table_row"\` — row dari tabel (Welcome bonus varian, dll)
+   - \`"list_item"\` — item dari bullet list yang punya parameter
+   - \`"threshold"\` — threshold tier (referral 5%/10%/15%, dll)
+   - \`"redeem_option"\` — opsi redeem (loyalty point ladder, dll)
+
+3. \`label\`: string nama/kode row (boleh empty string \`""\` kalau tidak ada
+   label eksplisit, TAPI key wajib ada).
+
+4. \`raw_fragment\`: string potongan raw text asli dari baris ini (verbatim).
+
+5. \`fields\`: object dengan TEPAT 7 keys berikut, TIDAK BOLEH tambah/ubah:
+   - \`category\` (string | null)
+   - \`product_scope\` (string | null)
+   - \`min_deposit\` (number | null)
+   - \`max_bonus\` (number | null)
+   - \`turnover_requirement\` (number | null)
+   - \`calculation_value\` (number | null)
+   - \`reward_type_hint\` (string | null)
+
+   Kalau value tidak diketahui → \`null\` (BUKAN omit, BUKAN string kosong).
+   JANGAN bikin key baru di luar 7 keys di atas.
+   JANGAN improvise struktur \`fields\` atau tambah field extension.
+
+6. \`source_evidence_map\`: \`Record<string, string>\` —
+   - key = nama field (dari 7 keys \`fields\` di atas)
+   - value = evidence location string (POTONGAN raw text, BUKAN array)
+   - Hanya isi key untuk field yang punya evidence; field null skip saja.
+
+7. \`ambiguity_flags\`: \`string[]\` — list ambiguity yang lo deteksi di row
+   ini (boleh \`[]\` kalau clean).
+
+### DROP AMBIGUITY:
+- Kalau lo tidak yakin sama value field, isi \`null\`.
+- JANGAN tebak.
+- JANGAN merge 2 row jadi 1.
+- JANGAN split 1 row jadi 2.
+- Jumlah captured_lines HARUS sama dengan jumlah row aktual di raw text
+  (sesuai \`_preparser.structure.line_count\`).`;
 }
 
 /**
