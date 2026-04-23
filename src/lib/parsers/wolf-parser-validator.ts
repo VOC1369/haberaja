@@ -13,6 +13,19 @@ import type {
   ParserOutput,
   ValueStatus,
 } from "./wolf-parser-types";
+import type {
+  CapturedLine,
+  CapturedLineFields,
+  CapturedLineType,
+  PreParserConflict,
+  PreParserConflictImpact,
+  PreParserOutput,
+  PreParserParseability,
+  PreParserRoutingHints,
+  PreParserShape,
+  PreParserSignals,
+  PreParserStructure,
+} from "./wolf-preparser-types";
 
 // Re-export OperatorAnswer so downstream consumers can import from validator
 // without coupling to the types file directly.
@@ -26,6 +39,8 @@ const ALLOWED_TOP_LEVEL_KEYS = new Set<string>([
   "schema_version",
   "parsed_promo",
   "gaps",
+  "_preparser",
+  "captured_lines",
 ]);
 
 const ALLOWED_PARSED_PROMO_KEYS = new Set<keyof ParsedPromo>([
@@ -142,6 +157,8 @@ function emptyOutput(): ParserOutput {
     schema_version: "0.9",
     parsed_promo: emptyParsedPromo(),
     gaps: [],
+    _preparser: null,
+    captured_lines: [],
   };
 }
 
@@ -476,6 +493,273 @@ function normalizeParsedPromo(raw: unknown): ParsedPromo {
 }
 
 // ---------------------------------------------------------------------------
+// Rule 9 — _preparser shape validation
+//
+// Per Q3 decision A: invalid shape → null + console.warn (NEVER throw).
+// _preparser is sibling metadata; its absence triggers Parser fallback to
+// flat (V0.9) behavior, so coercing to null is the safe degradation path.
+// ---------------------------------------------------------------------------
+
+const VALID_PREPARSER_SHAPES = new Set<PreParserShape>([
+  "single_flat",
+  "single_with_lines",
+  "multi_independent",
+  "invalid",
+]);
+
+const VALID_PREPARSER_PARSEABILITIES = new Set<PreParserParseability>([
+  "clean",
+  "parseable_with_conflicts",
+  "partial",
+  "reject",
+]);
+
+const VALID_CONFLICT_IMPACTS = new Set<PreParserConflictImpact>([
+  "blocks_parse",
+  "degrades_accuracy",
+  "cosmetic",
+]);
+
+function coercePreParserStructure(v: unknown): PreParserStructure {
+  if (!isPlainObject(v)) return { unit_count: 0, line_count: 0 };
+  const unit = coerceNumber(v.unit_count);
+  const line = coerceNumber(v.line_count);
+  return {
+    unit_count: typeof unit === "number" ? unit : 0,
+    line_count: typeof line === "number" ? line : 0,
+  };
+}
+
+function coercePreParserSignals(v: unknown): PreParserSignals | null {
+  if (!isPlainObject(v)) return null;
+  const required = [
+    "has_repeated_lines",
+    "has_shared_rules",
+    "rows_depend_on_parent",
+    "mutually_exclusive_lines",
+  ] as const;
+  for (const k of required) {
+    if (typeof v[k] !== "boolean") return null;
+  }
+  return {
+    has_repeated_lines: v.has_repeated_lines as boolean,
+    has_shared_rules: v.has_shared_rules as boolean,
+    rows_depend_on_parent: v.rows_depend_on_parent as boolean,
+    mutually_exclusive_lines: v.mutually_exclusive_lines as boolean,
+  };
+}
+
+function coercePreParserRoutingHints(
+  v: unknown,
+): PreParserRoutingHints | null {
+  if (!isPlainObject(v)) return null;
+  const required = ["parse_parent", "capture_lines", "needs_review"] as const;
+  for (const k of required) {
+    if (typeof v[k] !== "boolean") return null;
+  }
+  return {
+    parse_parent: v.parse_parent as boolean,
+    capture_lines: v.capture_lines as boolean,
+    needs_review: v.needs_review as boolean,
+  };
+}
+
+function coercePreParserConflicts(v: unknown): PreParserConflict[] {
+  if (!Array.isArray(v)) return [];
+  const out: PreParserConflict[] = [];
+  for (const item of v) {
+    if (!isPlainObject(item)) continue;
+    const type = coerceString(item.type);
+    const impact = item.impact;
+    const detail = coerceString(item.detail);
+    const source_refs = coerceStringArray(item.source_refs);
+    if (
+      type &&
+      typeof impact === "string" &&
+      VALID_CONFLICT_IMPACTS.has(impact as PreParserConflictImpact) &&
+      detail
+    ) {
+      out.push({
+        type,
+        impact: impact as PreParserConflictImpact,
+        source_refs,
+        detail,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Validate & normalize a raw _preparser payload.
+ * Returns null + warns if shape is unrecoverable.
+ */
+export function validatePreParserOutput(raw: unknown): PreParserOutput | null {
+  if (!isPlainObject(raw)) {
+    console.warn(
+      "[wolf-parser-validator] Rule 9: _preparser is not an object, coerced to null",
+    );
+    return null;
+  }
+  const shape = raw.shape;
+  const parseability = raw.parseability;
+  if (
+    typeof shape !== "string" ||
+    !VALID_PREPARSER_SHAPES.has(shape as PreParserShape)
+  ) {
+    console.warn(
+      `[wolf-parser-validator] Rule 9: invalid _preparser.shape (${JSON.stringify(shape)}), coerced to null`,
+    );
+    return null;
+  }
+  if (
+    typeof parseability !== "string" ||
+    !VALID_PREPARSER_PARSEABILITIES.has(
+      parseability as PreParserParseability,
+    )
+  ) {
+    console.warn(
+      `[wolf-parser-validator] Rule 9: invalid _preparser.parseability (${JSON.stringify(parseability)}), coerced to null`,
+    );
+    return null;
+  }
+  const signals = coercePreParserSignals(raw.signals);
+  if (signals === null) {
+    console.warn(
+      "[wolf-parser-validator] Rule 9: _preparser.signals missing required boolean keys, coerced to null",
+    );
+    return null;
+  }
+  const routing_hints = coercePreParserRoutingHints(raw.routing_hints);
+  if (routing_hints === null) {
+    console.warn(
+      "[wolf-parser-validator] Rule 9: _preparser.routing_hints missing required boolean keys, coerced to null",
+    );
+    return null;
+  }
+  const reasoning_summary = coerceString(raw.reasoning_summary);
+  if (!reasoning_summary) {
+    console.warn(
+      "[wolf-parser-validator] Rule 9: _preparser.reasoning_summary empty/missing, coerced to null",
+    );
+    return null;
+  }
+  const conf = coerceNumber(raw.classification_confidence);
+  const classification_confidence =
+    raw.classification_confidence === null
+      ? null
+      : conf !== null && conf >= 0 && conf <= 1
+        ? conf
+        : null;
+
+  return {
+    shape: shape as PreParserShape,
+    parseability: parseability as PreParserParseability,
+    classification_confidence,
+    structure: coercePreParserStructure(raw.structure),
+    signals,
+    conflicts: coercePreParserConflicts(raw.conflicts),
+    routing_hints,
+    reasoning_summary,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Rule 10 — captured_lines shape validation
+//
+// Array of CapturedLine objects. Per spec: warn + coerce to [] when the
+// overall payload is not an array, OR when individual items lack required
+// keys. Individual invalid items are dropped silently (consistent with
+// existing coerceGaps behavior).
+// ---------------------------------------------------------------------------
+
+const VALID_CAPTURED_LINE_TYPES = new Set<CapturedLineType>([
+  "table_row",
+  "list_item",
+  "threshold",
+  "redeem_option",
+]);
+
+function coerceCapturedLineFields(v: unknown): CapturedLineFields {
+  const empty: CapturedLineFields = {
+    category: null,
+    product_scope: null,
+    min_deposit: null,
+    max_bonus: null,
+    turnover_requirement: null,
+    calculation_value: null,
+    reward_type_hint: null,
+  };
+  if (!isPlainObject(v)) return empty;
+  return {
+    category: coerceString(v.category),
+    product_scope: coerceString(v.product_scope),
+    min_deposit: coerceNumber(v.min_deposit),
+    max_bonus: coerceNumber(v.max_bonus),
+    turnover_requirement: coerceNumber(v.turnover_requirement),
+    calculation_value: coerceNumber(v.calculation_value),
+    reward_type_hint: coerceString(v.reward_type_hint),
+  };
+}
+
+function coerceStringEvidenceMap(v: unknown): Record<string, string> {
+  if (!isPlainObject(v)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, val] of Object.entries(v)) {
+    if (typeof val === "string" && val.trim().length > 0) {
+      out[k] = val;
+    }
+  }
+  return out;
+}
+
+function coerceCapturedLines(v: unknown): CapturedLine[] {
+  if (!Array.isArray(v)) {
+    if (v !== undefined && v !== null) {
+      console.warn(
+        "[wolf-parser-validator] Rule 10: captured_lines is not an array, coerced to []",
+      );
+    }
+    return [];
+  }
+  const out: CapturedLine[] = [];
+  for (const item of v) {
+    if (!isPlainObject(item)) {
+      console.warn(
+        "[wolf-parser-validator] Rule 10: captured_lines item not an object, dropped",
+      );
+      continue;
+    }
+    const line_id = coerceString(item.line_id);
+    const line_type = item.line_type;
+    const label = typeof item.label === "string" ? item.label : null;
+    const raw_fragment = coerceString(item.raw_fragment);
+    if (
+      !line_id ||
+      typeof line_type !== "string" ||
+      !VALID_CAPTURED_LINE_TYPES.has(line_type as CapturedLineType) ||
+      label === null ||
+      !raw_fragment
+    ) {
+      console.warn(
+        `[wolf-parser-validator] Rule 10: captured_lines item invalid (line_id=${JSON.stringify(item.line_id)}), dropped`,
+      );
+      continue;
+    }
+    out.push({
+      line_id,
+      line_type: line_type as CapturedLineType,
+      label,
+      raw_fragment,
+      fields: coerceCapturedLineFields(item.fields),
+      source_evidence_map: coerceStringEvidenceMap(item.source_evidence_map),
+      ambiguity_flags: coerceStringArray(item.ambiguity_flags),
+    });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -490,6 +774,16 @@ export function validateAndNormalize(
     out.parsed_promo = normalizeParsedPromo(raw.parsed_promo);
     out.gaps = coerceGaps(raw.gaps);
     // schema_version is always coerced to "0.9" — never trust caller.
+
+    // Rule 9 — _preparser (additive metadata; null if invalid/missing)
+    if (raw._preparser !== undefined && raw._preparser !== null) {
+      out._preparser = validatePreParserOutput(raw._preparser);
+    }
+
+    // Rule 10 — captured_lines (additive metadata; [] if invalid/missing)
+    if (raw.captured_lines !== undefined) {
+      out.captured_lines = coerceCapturedLines(raw.captured_lines);
+    }
   }
 
   // Rule 1
