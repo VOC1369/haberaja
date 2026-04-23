@@ -13,6 +13,19 @@ import type {
   ParserOutput,
   ValueStatus,
 } from "./wolf-parser-types";
+import type {
+  CapturedLine,
+  CapturedLineFields,
+  CapturedLineType,
+  PreParserConflict,
+  PreParserConflictImpact,
+  PreParserOutput,
+  PreParserParseability,
+  PreParserRoutingHints,
+  PreParserShape,
+  PreParserSignals,
+  PreParserStructure,
+} from "./wolf-preparser-types";
 
 // Re-export OperatorAnswer so downstream consumers can import from validator
 // without coupling to the types file directly.
@@ -26,6 +39,8 @@ const ALLOWED_TOP_LEVEL_KEYS = new Set<string>([
   "schema_version",
   "parsed_promo",
   "gaps",
+  "_preparser",
+  "captured_lines",
 ]);
 
 const ALLOWED_PARSED_PROMO_KEYS = new Set<keyof ParsedPromo>([
