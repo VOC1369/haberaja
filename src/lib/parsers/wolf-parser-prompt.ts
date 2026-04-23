@@ -196,48 +196,54 @@ KONDISI B — Raw text SEBUT kategori tapi TIDAK DEFINE
 ====================================================================
 
 Raw text cuma kasih label kategori (capitalized atau biasa) tanpa
-definisi. WAJIB JADIIN GAP. Operator = source of truth brand.
+definisi inline.
 
-Contoh raw text (case Cashback SLOT25):
-  "CASHBACK SPORTSBOOK 5% ... taruhan di OTHER SPORTS."
+⚠️ PENTING — INFER DULU SEBELUM GAP (lihat juga Section E.0 audit #2):
 
-Output Mode 1:
+Lo Sonnet 4.5 dengan domain knowledge iGaming. Banyak label kategori
+yang SUDAH self-explanatory atau bisa lo infer dengan confidence tinggi:
+
+- "SPORTSBOOK" / "BOLA" / "SOCCER" → real-match sports betting (universal)
+- "SLOT" / "SLOT ONLINE" → mesin slot online (universal)
+- "CASINO" / "LIVE CASINO" → live dealer table games
+- "SABUNG AYAM" / "COCKFIGHTING" → cockfighting live betting (live_casino bucket)
+- "TEMBAK IKAN" / "FISH HUNTER" → fish shooting arcade (arcade bucket)
+- "TOGEL" / "TOTO" / "4D" → number lottery (lottery bucket)
+- "TANGKAS" / "MICKEY MOUSE" → bola tangkas arcade (arcade bucket)
+- "OTHER SPORTS" / "VIRTUAL SPORTS" → virtual/simulated sports (virtual_sports)
+
+Kalau term umum/standar/widely-known di iGaming Asia Tenggara → 
+SET _human field dengan inferred description, BUKAN gap.
+
+Output (kasus inferable):
   game_types: ["sportsbook"]
-  game_types_human: null
-  value_status_map.game_types_human: "not_stated"
-  needs_operator_fill_map.game_types_human: true
+  game_types_human: ["Real-match sports betting (Liga Inggris, tennis, dst)"]
+  value_status_map.game_types_human: "explicit"
+  source_evidence_map.game_types_human: [
+    "derived from: standard iGaming category 'SPORTSBOOK'"
+  ]
 
-  game_exclusions: ["other_sports"]
-  game_exclusions_human: null
-  value_status_map.game_exclusions_human: "not_stated"
-  needs_operator_fill_map.game_exclusions_human: true
+⚠️ HANYA jadiin gap kalau term BENAR-BENAR brand-proprietary atau
+   ambigu antara 2+ definisi yang plausible (jarang banget kasusnya).
 
-Gaps (tambah 2 entry, satu per kategori ambigu):
+Kalau memang harus gap (rare case truly ambiguous), format gap WAJIB
+action-oriented + enum options (lihat Section E.0 audit #4):
+
 \`\`\`json
 {
   "field": "game_types_human",
-  "gap_type": "required_missing",
-  "question": "Apa yang dimaksud dengan kategori 'SPORTSBOOK' di SLOT25? Jelaskan context specific brand.",
-  "options": [
-    "Sebutkan definisi spesifik (tulis di memo)",
-    "Tidak Disebutkan"
-  ]
-}
-
-{
-  "field": "game_exclusions_human",
-  "gap_type": "required_missing",
-  "question": "Apa yang dimaksud dengan kategori 'OTHER SPORTS' di SLOT25? Jelaskan context specific brand.",
-  "options": [
-    "Sebutkan definisi spesifik (tulis di memo)",
-    "Tidak Disebutkan"
-  ]
+  "gap_type": "ambiguous",
+  "question": "Kategori 'X' di <BRAND> mengacu ke bucket mana?",
+  "options": ["live_casino", "arcade", "sportsbook", "slot", "other"]
 }
 \`\`\`
 
-WAJIB interpolate question:
-- Label kategori aktual (e.g., "SPORTSBOOK", "OTHER SPORTS")
-- Brand dari client_id (e.g., "SLOT25")
+❌ LARANGAN — JANGAN PERNAH emit pertanyaan open-ended seperti:
+- "Apa yang dimaksud dengan kategori X?"
+- "Jelaskan context specific brand"
+- "Provider mana yang dimaksud?"
+
+Itu pertanyaan goblok. Operator sudah tau. Lo yang harus reasoning.
 
 ====================================================================
 KONDISI C — Array kosong
@@ -252,18 +258,16 @@ Output:
   value_status_map.game_exclusions_human: "not_applicable"
 
 ====================================================================
-POLICY KONSERVATIF (DI-LOCK)
+POLICY — INFER FIRST, GAP RARELY
 ====================================================================
 
-Istilah umum seperti "sportsbook", "casino", "slot" TETAP jadi gap
-kalau raw text tidak define.
+Istilah standar/widely-known iGaming → INFER pakai domain knowledge,
+extract _human description, log "derived from: ..." evidence.
 
-JANGAN assume "sportsbook = real match betting" — itu domain knowledge
-global. Mungkin di brand tertentu "sportsbook" punya definisi khusus.
+Istilah brand-proprietary yang genuinely ambigu (rare) → enum-style gap.
 
-Operator = brand expert. Operator yang validate.
-
-Rule: "Lebih baik operator jawab 1 gap extra daripada AI sok tau."
+Aturan: "Operator sudah tau brand-nya. Lo yang harus reasoning. JANGAN
+tanya hal yang lo bisa infer sendiri dengan confidence tinggi."
 
 ====================================================================
 ATURAN ABSOLUTE
