@@ -192,6 +192,7 @@ export function WolfParserSection() {
   async function handleAnalyze() {
     if (!hasInput || isAnalyzing) return;
     setIsAnalyzing(true);
+    setResidualNotice(null);
     try {
       const result = await runWolfParser(inputText);
       setParserOutput(result);
@@ -216,12 +217,30 @@ export function WolfParserSection() {
 
   async function handleConfirmGapFills() {
     if (!parserOutput) return;
+
+    // Validate: minimal radio_value dipilih untuk gap wajib
+    const requiredGaps = parserOutput.gaps.filter(
+      (g) => g.gap_type === "required_missing" || g.gap_type === "ambiguous",
+    );
+    const incomplete = requiredGaps.filter(
+      (g) => !gapAnswers[g.field]?.radio_value,
+    );
+    if (incomplete.length > 0) {
+      toast.warning("Belum ada jawaban", {
+        description:
+          "Pilih jawaban untuk: " +
+          incomplete.map((g) => g.field).join(", "),
+      });
+      return;
+    }
+
     const payload: OperatorAnswer[] = parserOutput.gaps
+      .filter((g) => gapAnswers[g.field]?.radio_value)
       .map((g) => ({
         field: g.field,
-        value: (gapAnswers[g.field] ?? "").trim(),
-      }))
-      .filter((a) => a.value.length > 0);
+        radio_value: gapAnswers[g.field]?.radio_value ?? "",
+        memo: gapAnswers[g.field]?.memo ?? "",
+      }));
 
     if (!payload.length) {
       toast.warning("Belum ada jawaban", {
@@ -231,6 +250,7 @@ export function WolfParserSection() {
     }
 
     setIsAnalyzing(true);
+    setResidualNotice(null);
     try {
       const result = await applyOperatorAnswers(parserOutput, payload, inputText);
       setParserOutput(result);
@@ -239,7 +259,13 @@ export function WolfParserSection() {
           description: "Semua gap terjawab.",
         });
       } else {
+        // RULE B.1 — Honest residual gap dari Mode 2.
+        // Stay di stage "questions" (parserOutput preserved, gaps[] residual
+        // di-render ulang). Reset answers untuk gap baru.
         setGapAnswers({});
+        setResidualNotice(
+          "Wolfclaw butuh klarifikasi tambahan. Mohon isi pertanyaan berikut.",
+        );
         toast.info("Masih ada gap", {
           description: `${result.gaps.length} pertanyaan tersisa.`,
         });
@@ -251,16 +277,34 @@ export function WolfParserSection() {
     }
   }
 
-  function handleCopyJSON() {
+  async function handleCopyJSON() {
     if (!parserOutput) return;
-    navigator.clipboard.writeText(JSON.stringify(parserOutput, null, 2));
-    toast.success("Parser JSON disalin");
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(parserOutput, null, 2));
+      toast.success("Parser JSON disalin");
+    } catch (err) {
+      console.error("[clipboard] copy failed:", err);
+      toast.error("Gagal copy ke clipboard", {
+        description:
+          "Browser mungkin block clipboard access. Silakan copy manual.",
+      });
+    }
   }
 
-  function handleCopyCleanText() {
+  async function handleCopyCleanText() {
     if (!parserOutput) return;
-    navigator.clipboard.writeText(parserOutput.parsed_promo.clean_text || "");
-    toast.success("Clean text disalin");
+    try {
+      await navigator.clipboard.writeText(
+        parserOutput.parsed_promo.clean_text || "",
+      );
+      toast.success("Clean text disalin");
+    } catch (err) {
+      console.error("[clipboard] copy failed:", err);
+      toast.error("Gagal copy ke clipboard", {
+        description:
+          "Browser mungkin block clipboard access. Silakan copy manual.",
+      });
+    }
   }
 
   return (
