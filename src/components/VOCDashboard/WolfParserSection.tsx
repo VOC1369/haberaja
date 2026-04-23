@@ -119,12 +119,18 @@ const FIELD_LABELS: Record<keyof ParsedPromo, string> = {
   clean_text: "Clean Text",
 };
 
+type AnswerEntry = {
+  radio_value: string;
+  memo: string;
+};
+
 export function WolfParserSection() {
   const [inputText, setInputText] = useState("");
   const [parserOutput, setParserOutput] = useState<ParserOutput | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzeElapsedMs, setAnalyzeElapsedMs] = useState(0);
-  const [gapAnswers, setGapAnswers] = useState<Record<string, string>>({});
+  const [gapAnswers, setGapAnswers] = useState<Record<string, AnswerEntry>>({});
+  const [residualNotice, setResidualNotice] = useState<string | null>(null);
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
 
