@@ -51,10 +51,45 @@ export interface ParsedPromo {
   clean_text: string;
 }
 
+// Re-export PreParser & CapturedLine types so consumers can import the
+// extended ParserOutput shape from a single module without coupling to
+// wolf-preparser-types directly.
+export type {
+  PreParserOutput,
+  PreParserShape,
+  PreParserParseability,
+  PreParserConflictImpact,
+  PreParserStructure,
+  PreParserSignals,
+  PreParserConflict,
+  PreParserRoutingHints,
+  CapturedLine,
+  CapturedLineType,
+  CapturedLineFields,
+} from "./wolf-preparser-types";
+
+import type {
+  PreParserOutput,
+  CapturedLine,
+} from "./wolf-preparser-types";
+
+/**
+ * ParserOutput V0.9 — top-level shape.
+ *
+ * NOTE: schema_version stays "0.9" (Q1 decision B1). The two new sibling
+ * fields (_preparser, captured_lines) are ADDITIVE metadata; existing
+ * consumers that read only parsed_promo + gaps remain unaffected.
+ *
+ * Fallback semantics:
+ * - _preparser = null → Parser treats input as flat (V0.9 behavior).
+ * - captured_lines = []  → no row-level capture performed.
+ */
 export interface ParserOutput {
   schema_version: "0.9";
   parsed_promo: ParsedPromo;
   gaps: Gap[];
+  _preparser: PreParserOutput | null;
+  captured_lines: CapturedLine[];
 }
 
 export interface OperatorAnswer {
