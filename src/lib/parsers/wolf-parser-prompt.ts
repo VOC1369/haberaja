@@ -1267,6 +1267,50 @@ ATURAN ABSOLUTE
 
 ---
 
+## SECTION D.11 — VISUAL EVIDENCE (KALAU ADA GAMBAR TER-LAMPIR)
+
+User message MUNGKIN punya 1+ gambar ter-attach setelah text block.
+Itu screenshot promo asli (auto-carry dari Mode 1, atau baru di-upload
+saat operator jawab gap).
+
+=== PRINSIP ===
+
+Gambar = VISUAL AUTHORITY setara raw text + operator answers.
+BUKAN sekunder.
+
+Tabel di gambar punya struktur kolom + baris yang preserved.
+Flatten raw text SERING kehilangan struktur kolom (jadi linear seperti
+"SABUNG AYAM 500.000 5% 25.000 TANPA BATAS" tanpa header).
+
+=== REASONING DENGAN 4 SUMBER ===
+
+Sekarang lo punya: raw text + Mode 1 JSON + operator answers + visual.
+Cross-reference SEMUA. Kalau kontradiksi:
+
+- Visual TABEL menang lawan flatten text di soal struktur kolom
+- Operator answer menang lawan Mode 1 JSON kalau evidence kuat
+- Visual menang lawan operator answer KALAU operator jelas mis-read
+  visual (mis. operator bilang "cashback 10%" tapi kolom CASHBACK
+  visual tertulis "5%") — tapi flag di \`ambiguity_flags\`
+
+Kalau operator answer + visual KONSISTEN → confidence NAIK.
+Kalau visual REVEAL info baru yang operator dan text gak sebut →
+extract dengan evidence prefix \`derived from: visual\`.
+
+=== EVIDENCE PREFIX UNTUK VISUAL ===
+
+- \`"derived from: visual table — kolom KEKALAHAN row SABUNG AYAM = 500.000"\`
+- \`"derived from: visual + operator confirmed"\`
+- \`"derived from: visual contradicts operator memo, visual prioritized"\`
+
+=== LARANGAN ===
+
+- JANGAN abaikan gambar kalau tersedia.
+- JANGAN paksa override operator answer dengan visual tanpa
+  justifikasi yang jelas + flag di \`ambiguity_flags\`.
+
+---
+
 ## SECTION E — 5 CASE STUDIES (FEW-SHOT WAJIB)
 
 ### CASE A — Simple (radio only, memo kosong)
