@@ -463,6 +463,81 @@ function applyRule8HumanFieldShape(p: ParsedPromo): void {
 }
 
 // ---------------------------------------------------------------------------
+// Rule 11 — Cross-Field Consistency Audit (PASSIVE — warn only)
+//
+// Audit pasif untuk pasangan field yang sering inkonsisten karena LLM
+// gagal cross-field reasoning. NEVER throws, NEVER mutates — hanya log
+// warning supaya regression terdeteksi observability.
+//
+// Filosofi (sesuai Q3 user decision): validator = auditor, bukan
+// co-author. Cross-field reasoning adalah tanggung jawab LLM via prompt
+// Section K.1. Validator hanya alarm kalau outputnya inkonsisten dengan
+// evidence yang tersedia.
+//
+// Pasangan yang di-audit:
+// - calculation_basis="loss" + has_turnover=true tanpa evidence
+//   eksplisit → kemungkinan LLM gagal infer "cashback loss-based
+//   biasanya tidak ada TO".
+// - has_turnover=false + turnover_requirement bukan null → inkonsisten
+//   semantik (tidak ada TO tapi ada nilai TO).
+// - max_bonus_unlimited=true + max_bonus bukan null → inkonsisten
+//   semantik (unlimited tapi ada cap).
+// ---------------------------------------------------------------------------
+
+function evidenceMentions(
+  evidence: string[] | undefined,
+  patterns: RegExp[],
+): boolean {
+  if (!evidence || evidence.length === 0) return false;
+  return evidence.some((e) => patterns.some((re) => re.test(e)));
+}
+
+function applyRule11CrossFieldConsistency(out: ParserOutput): void {
+  const p = out.parsed_promo;
+  const evidence = p.source_evidence_map;
+
+  // Audit 1: basis=loss + has_turnover=true tanpa evidence TO eksplisit.
+  if (p.calculation_basis === "loss" && p.has_turnover === true) {
+    const toEvidence = [
+      ...(evidence.has_turnover ?? []),
+      ...(evidence.turnover_requirement ?? []),
+    ];
+    const hasExplicitTO = evidenceMentions(toEvidence, [
+      /\bTO\b/i,
+      /turnover/i,
+      /putaran/i,
+      /rollover/i,
+      /wagering/i,
+    ]);
+    if (!hasExplicitTO) {
+      console.warn(
+        `[wolf-parser-validator] Rule 11: calculation_basis="loss" + has_turnover=true ` +
+          `tetapi tidak ada evidence eksplisit TO/turnover di raw text. ` +
+          `Kemungkinan LLM gagal cross-field reasoning (cashback loss-based ` +
+          `biasanya tidak ada TO). Verify.`,
+      );
+    }
+  }
+
+  // Audit 2: has_turnover=false + turnover_requirement bukan null.
+  if (p.has_turnover === false && p.turnover_requirement !== null) {
+    console.warn(
+      `[wolf-parser-validator] Rule 11: has_turnover=false tetapi ` +
+        `turnover_requirement=${p.turnover_requirement} (bukan null). ` +
+        `Inkonsisten semantik — verify.`,
+    );
+  }
+
+  // Audit 3: max_bonus_unlimited=true + max_bonus bukan null.
+  if (p.max_bonus_unlimited === true && p.max_bonus !== null) {
+    console.warn(
+      `[wolf-parser-validator] Rule 11: max_bonus_unlimited=true tetapi ` +
+        `max_bonus=${p.max_bonus} (bukan null). Inkonsisten semantik — verify.`,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Rule 3 + 6 — Foreign key drop & turnover_requirement scalar
 // (Both applied during normalization in normalizeParsedPromo)
 // ---------------------------------------------------------------------------
