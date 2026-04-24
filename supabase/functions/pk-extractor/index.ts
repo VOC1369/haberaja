@@ -242,7 +242,7 @@ function getToolSchema() {
           time_window_engine: {
             type: "object",
             properties: {
-              timezone: { type: "string" },
+              timezone: { type: "string", description: "IANA timezone WAJIB. Hanya 'Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura' | ''. JANGAN pakai 'WIB'/'WITA'/'WIT'." },
               offset: { type: "string" },
               open_ended: { type: "boolean" },
             },
