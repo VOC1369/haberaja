@@ -309,6 +309,11 @@ function mergeEnginesIntoRecord(
         ...obj((base.meta_engine as AnyObj).extraction_block),
         extracted_at: new Date().toISOString(),
       },
+      schema_block: {
+        ...obj((base.meta_engine as AnyObj).schema_block),
+        // A.4 — extractor identity stamp (pipeline@model). Authority: client-side bridge.
+        extractor: "pk-extractor@claude-sonnet-4-5",
+      },
     } as AnyObj,
     ai_confidence: aiConfidence,
     // attach field_status as sidecar (preserved through save)
