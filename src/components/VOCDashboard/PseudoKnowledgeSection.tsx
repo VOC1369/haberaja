@@ -134,6 +134,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const [pkRecord, setPkRecord] = useState<PromoKnowledgeRecord | null>(null);
   // STEP 1 — status pk-extractor untuk UX (cegah klik prematur)
   const [pkStatus, setPkStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
+  const [pkElapsedSec, setPkElapsedSec] = useState(0);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
   // Memoized mapped preview (single source of truth for badge + commit)
@@ -262,6 +263,20 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     }, 100);
     return () => clearInterval(interval);
   }, [isExtracting]);
+
+  // PK extractor timer — ticks while pkStatus === "loading"
+  useEffect(() => {
+    if (pkStatus !== "loading") {
+      setPkElapsedSec(0);
+      return;
+    }
+    const startedAt = Date.now();
+    setPkElapsedSec(0);
+    const interval = setInterval(() => {
+      setPkElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
+    }, 250);
+    return () => clearInterval(interval);
+  }, [pkStatus]);
 
   // ============================================
   // IMAGE UPLOAD HANDLERS
@@ -458,6 +473,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       // STEP 1 — paralel call ke pk-extractor (V.09). Tidak blocking utama;
       // hasilnya dipakai untuk Copy JSON / Visual Result / Gunakan Promo.
       // Card body tetap render dari `extractedPromo` (voc-wolf) di Step 1.
+      setPkStatus("loading");
+      setPkRecord(null);
+      const pkStartedAt = Date.now();
       (async () => {
         try {
           const pk = await extractPromoV09({
@@ -467,19 +485,23 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           });
           if (pk.ok && pk.record) {
             setPkRecord(pk.record);
+            setPkStatus("ready");
             console.log("[Step1/PK] pkRecord siap", {
+              elapsed_ms: Date.now() - pkStartedAt,
               record_id: pk.record.record_id,
               promo_name: (pk.record.identity_engine as any)?.promo_block?.promo_name,
               mechanics_items: ((pk.record.mechanics_engine as any)?.items_block?.items ?? []).length,
               has_projection: Object.keys((pk.record.projection_engine as any) ?? {}).length > 0,
             });
           } else {
+            setPkStatus("failed");
             console.warn("[Step1/PK] pk-extractor gagal:", pk.error, pk.message);
-            toast.warning("Ekstraksi V.09 (PK) gagal — Copy JSON akan fallback ke wrapper V.09 lama", {
+            toast.warning("Ekstraksi V.09 (PK) gagal — fallback wrapper V.09 lama aktif", {
               description: pk.message,
             });
           }
         } catch (err) {
+          setPkStatus("failed");
           console.error("[Step1/PK] pk-extractor exception:", err);
         }
       })();
@@ -559,6 +581,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // Clear ALL extraction state
     setExtractedPromo(null);
     setPkRecord(null);
+    setPkStatus("idle");
     setEditHistory([]);
     setEditInput('');        // Reset edit input
     setShowEditHelp(false);  // Reset help visibility
@@ -2004,8 +2027,27 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               </Button>
             </div>
             
-            {/* Center: Empty */}
-            <div className="flex items-center gap-3" />
+            {/* Center: PK V.09 status badge */}
+            <div className="flex items-center gap-3">
+              {pkStatus === "loading" && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-muted/50 text-xs font-medium text-muted-foreground">
+                  <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  PK V.09: ⏳ loading ({pkElapsedSec}s)
+                </div>
+              )}
+              {pkStatus === "ready" && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+                  PK V.09: ✅ siap
+                </div>
+              )}
+              {pkStatus === "failed" && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/30 bg-destructive/10 text-xs font-medium text-destructive">
+                  <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
+                  PK V.09: ❌ gagal — pakai fallback wrapper lama
+                </div>
+              )}
+            </div>
             
             {/* Right: Copy JSON + Visual Result + Primary Action */}
             <div className="flex items-center gap-3">
@@ -2013,17 +2055,30 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={handleCopyJSON}
-                      className="h-11 px-4 gap-2"
-                    >
-                      <Copy className="w-4 h-4" />
-                      Copy JSON
-                    </Button>
+                    <span tabIndex={0}>
+                      <Button
+                        variant="outline"
+                        onClick={handleCopyJSON}
+                        disabled={pkStatus === "loading"}
+                        className="h-11 px-4 gap-2"
+                      >
+                        <Copy className="w-4 h-4" />
+                        {pkStatus === "loading"
+                          ? `⏳ Menyiapkan V.09... ${pkElapsedSec}s`
+                          : pkStatus === "failed"
+                            ? "Copy JSON (fallback)"
+                            : "Copy JSON"}
+                      </Button>
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs">
-                    <p>Salin JSON hasil ekstraksi ke clipboard, dibungkus dengan Json Schema Contract V.09 (meta + data).</p>
+                    <p>
+                      {pkStatus === "loading"
+                        ? "PK-extractor masih jalan. Tunggu sampai badge ✅ siap supaya hasilnya pkRecord, bukan fallback wrapper lama."
+                        : pkStatus === "failed"
+                          ? "PK-extractor gagal — output akan berupa wrapper V.09 lama (legacy)."
+                          : "Salin JSON hasil ekstraksi ke clipboard, dibungkus dengan Json Schema Contract V.09 (meta + data)."}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -2032,17 +2087,30 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowVisualResult(true)}
-                      className="h-11 px-4 gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Visual Result
-                    </Button>
+                    <span tabIndex={0}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowVisualResult(true)}
+                        disabled={pkStatus === "loading"}
+                        className="h-11 px-4 gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        {pkStatus === "loading"
+                          ? `⏳ Menyiapkan V.09... ${pkElapsedSec}s`
+                          : pkStatus === "failed"
+                            ? "Visual Result (fallback)"
+                            : "Visual Result"}
+                      </Button>
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs">
-                    <p>Lihat preview Json Schema Contract V.09 (meta + data) sebelum disalin atau disimpan.</p>
+                    <p>
+                      {pkStatus === "loading"
+                        ? "PK-extractor masih jalan. Tunggu sampai badge ✅ siap."
+                        : pkStatus === "failed"
+                          ? "PK-extractor gagal — preview akan berupa wrapper V.09 lama (legacy)."
+                          : "Lihat preview Json Schema Contract V.09 (meta + data) sebelum disalin atau disimpan."}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -2070,10 +2138,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 <Button 
                   onClick={handleCommitPromo}
                   variant="golden"
+                  disabled={pkStatus === "loading"}
                   className="h-11 px-6 gap-2"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  Gunakan Promo
+                  {pkStatus === "loading"
+                    ? `⏳ Menyiapkan V.09... ${pkElapsedSec}s`
+                    : pkStatus === "failed"
+                      ? "Gunakan Promo (fallback)"
+                      : "Gunakan Promo"}
                 </Button>
               )}
             </div>
