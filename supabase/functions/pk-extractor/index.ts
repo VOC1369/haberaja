@@ -451,6 +451,128 @@ function getToolSchema() {
   };
 }
 
+// ============================================================
+// PROJECTION DERIVATION (deterministic, post-extraction)
+// projection_engine = DERIVED ONLY. Build dari engine lain.
+// LLM TIDAK BOLEH isi langsung — di-overwrite di sini.
+// ============================================================
+type AnyObj = Record<string, unknown>;
+const _o = (v: unknown): AnyObj => (v && typeof v === "object" ? (v as AnyObj) : {});
+const _s = (v: unknown): string => (typeof v === "string" ? v : "");
+const _a = <T = unknown>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
+const _n = (v: unknown): number | null =>
+  typeof v === "number" && !Number.isNaN(v) ? v : null;
+const _b = (v: unknown): boolean => v === true;
+
+function deriveProjection(engines: AnyObj): AnyObj {
+  const identity = _o(engines.identity_engine);
+  const promo = _o(identity.promo_block);
+  const taxonomy = _o(engines.taxonomy_engine);
+  const reward = _o(engines.reward_engine);
+  const trigger = _o(engines.trigger_engine);
+  const claim = _o(engines.claim_engine);
+  const claimMethod = _o(claim.method_block);
+  const claimChannels = _o(claim.channels_block);
+  const proofReq = _o(claim.proof_requirement_block);
+  const scope = _o(engines.scope_engine);
+  const reasoning = _o(engines.reasoning_engine);
+  const dependency = _o(engines.dependency_engine);
+  const period = _o(engines.period_engine);
+  const variant = _o(engines.variant_engine);
+
+  const promoName = _s(promo.promo_name);
+  const promoType = _s(promo.promo_type);
+  const targetUser = _s(promo.target_user);
+  const calcBasis = _s(reward.calculation_basis);
+  const calcMethod = _s(reward.calculation_method);
+  const calcValue = _n(reward.calculation_value);
+  const calcUnit = _s(reward.calculation_unit);
+  const payoutDir = _s(reward.payout_direction);
+  const rewardType = _s(reward.reward_type);
+  const maxReward = _n(reward.max_reward);
+  const minBase = _n(reward.min_base);
+  const turnoverBasis = _s(taxonomy.turnover_basis);
+  const channels = _a<string>(claimChannels.channels);
+  const priority = _a<string>(claimChannels.priority_order);
+  const channelsArr = priority.length > 0 ? priority : channels;
+
+  // Auto-summary
+  const valueStr =
+    calcValue !== null
+      ? calcMethod === "percentage" || calcUnit === "%" || calcUnit === "percent"
+        ? `${calcValue}%`
+        : `${calcValue}${calcUnit ? ` ${calcUnit}` : ""}`
+      : "";
+  const basisLabel = calcBasis ? ` dari ${calcBasis}` : "";
+  const summary = promoName
+    ? `${promoName}${valueStr ? ` — ${valueStr}` : ""}${basisLabel}.`.trim()
+    : "";
+
+  // Target segment label
+  const targetLabel =
+    targetUser === "all_member" || targetUser === "all"
+      ? "Semua"
+      : targetUser === "new_member"
+        ? "Member Baru"
+        : targetUser === "vip"
+          ? "VIP"
+          : targetUser === "existing_member"
+            ? "Member Lama"
+            : targetUser || "";
+
+  // Stateful = mengandung tier/level/state akumulasi
+  const tierArche = _s(taxonomy.tier_archetype);
+  const variants = _a(_o(variant).variants);
+  const stateful = !!tierArche || variants.length > 1;
+
+  return {
+    _description: "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
+    summary_block: {
+      summary,
+      promo_summary: summary,
+      main_trigger: _s(trigger.trigger_event),
+      main_reward_form: rewardType,
+      main_reward_percent: calcMethod === "percentage" ? calcValue : null,
+      main_reward_value: calcValue,
+      main_reward_unit: calcUnit,
+      max_bonus: maxReward,
+      min_base: minBase,
+      payout_direction: payoutDir,
+      turnover_multiplier: null,
+      turnover_basis: turnoverBasis || null,
+      stateful,
+    },
+    claim_summary_block: {
+      primary_claim_method: _s(claimMethod.claim_method),
+      primary_claim_platform: channelsArr[0] ?? "",
+      claim_channels: channelsArr,
+      auto_credit: _b(claimMethod.auto_credit),
+      proof_required: _b(proofReq.proof_required),
+      claim_frequency: _s(period.claim_frequency),
+      distribution_day: _s(period.distribution_day),
+    },
+    scope_summary_block: {
+      game_domain: _s(_o(scope.game_block).game_domain) || _s(scope.game_domain),
+      game_types: _a<string>(_o(scope.game_block).markets ?? scope.markets ?? []),
+      game_providers: _a<string>(
+        _o(scope.game_block).eligible_providers ?? scope.game_providers ?? [],
+      ),
+      game_exclusions: _a<string>(
+        _o(scope.blacklist_block).providers ?? scope.blacklist_categories ?? [],
+      ),
+      stacking_policy: _s(_o(dependency).stacking_policy ?? dependency.stacking_policy),
+    },
+    intent_summary_block: {
+      intent_category: _s(reasoning.intent_category) || _s((engines.projection_engine as AnyObj | undefined)?.intent_category as unknown),
+      primary_action: _s(reasoning.primary_action),
+      reward_nature: _s(reasoning.reward_nature),
+      distribution_path: _s(reasoning.distribution_path),
+      value_shape: _s(reasoning.value_shape),
+      target_segment: targetLabel,
+    },
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
