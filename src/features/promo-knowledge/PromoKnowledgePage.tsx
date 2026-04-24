@@ -229,6 +229,74 @@ export default function PromoKnowledgePage() {
               </CardHeader>
             </Card>
 
+            {saveError && (
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+              >
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div className="flex-1">{saveError}</div>
+                <button
+                  onClick={() => setSaveError(null)}
+                  className="text-destructive/70 hover:text-destructive"
+                  aria-label="Dismiss save error"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {validation.issues.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    Validation
+                    <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
+                      {validation.errorCount > 0 && (
+                        <span className="inline-flex items-center gap-1 text-destructive">
+                          <AlertCircle className="h-3 w-3" /> {validation.errorCount} error{validation.errorCount > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {validation.warningCount > 0 && (
+                        <span className="inline-flex items-center gap-1 text-warning">
+                          <AlertTriangle className="h-3 w-3" /> {validation.warningCount} warning{validation.warningCount > 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {validation.infoCount > 0 && (
+                        <span className="inline-flex items-center gap-1 text-muted-foreground">
+                          <Info className="h-3 w-3" /> {validation.infoCount} info
+                        </span>
+                      )}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <ul className="space-y-1.5 max-h-48 overflow-auto">
+                    {validation.issues.map((iss, idx) => {
+                      const color =
+                        iss.severity === "error"
+                          ? "text-destructive"
+                          : iss.severity === "warning"
+                            ? "text-warning"
+                            : "text-muted-foreground";
+                      const Icon = iss.severity === "error" ? AlertCircle : iss.severity === "warning" ? AlertTriangle : Info;
+                      return (
+                        <li key={idx} className="flex items-start gap-2 text-xs">
+                          <Icon className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${color}`} />
+                          <div className="flex-1 min-w-0">
+                            <div className={`font-medium ${color}`}>{iss.message}</div>
+                            <div className="font-mono text-[10px] text-muted-foreground truncate">
+                              {iss.path} · {iss.code}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
             <ClaimEngineForm
               value={record.claim_engine}
               onChange={(next) => setRecord({ ...record, claim_engine: next })}
