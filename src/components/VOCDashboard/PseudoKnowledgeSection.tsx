@@ -264,6 +264,20 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     return () => clearInterval(interval);
   }, [isExtracting]);
 
+  // PK extractor timer — ticks while pkStatus === "loading"
+  useEffect(() => {
+    if (pkStatus !== "loading") {
+      setPkElapsedSec(0);
+      return;
+    }
+    const startedAt = Date.now();
+    setPkElapsedSec(0);
+    const interval = setInterval(() => {
+      setPkElapsedSec(Math.floor((Date.now() - startedAt) / 1000));
+    }, 250);
+    return () => clearInterval(interval);
+  }, [pkStatus]);
+
   // ============================================
   // IMAGE UPLOAD HANDLERS
   // ============================================
