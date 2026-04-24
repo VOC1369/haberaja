@@ -65,6 +65,9 @@ import { formatPromoType, getPromoSubTypeDisplay } from "@/lib/utils";
 import { ClassificationOverride } from "./ClassificationOverride";
 import { ConfidenceGateModal } from "./ConfidenceGateModal";
 import type { PromoFormData } from "./PromoFormWizard/types";
+import { wrapV09, type V09ExtractionSource } from "@/lib/extractors/contracts/json-schema-v09";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Eye } from "lucide-react";
 
 // Helper: Title Case for mode badges
 const formatPromoMode = (mode: string | null | undefined): string => {
