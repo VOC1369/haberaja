@@ -771,6 +771,20 @@ function toV31Row(
   };
 }
 
+// @sunset-on-cutover
+/**
+ * Read-only wrapper around toV31Row for the Parity tab.
+ * Pure: produces what storage WOULD write, without writing. No side effects.
+ * Remove together with the parity bridge after cutover sign-off.
+ */
+export function toV31RowForParity(
+  promo: PromoFormData,
+  id = 'parity-preview',
+  createdBy = 'parity-tab',
+): Record<string, unknown> {
+  return toV31Row(promo, id, createdBy);
+}
+
 // ============================================
 // CONVERT v3.1 DB ROW → PromoFormData (for form wizard editing)
 // Bridge: mechanics[] + canonical_projection → PromoFormData
