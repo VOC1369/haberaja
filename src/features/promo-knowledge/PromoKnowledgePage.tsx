@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ClaimEngineForm } from "@/features/promo-knowledge/form/ClaimEngineForm";
 import { DebugPanel } from "@/features/promo-knowledge/debug/DebugPanel";
+import { ParityTab } from "@/features/promo-knowledge/parity";
 import {
   createDraftRecord,
   saveRecord,
