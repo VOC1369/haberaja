@@ -478,12 +478,12 @@ function getToolSchema() {
           },
           ai_confidence: {
             type: "object",
-            description: "Map of field path → confidence score (0..1). Path format: 'engine.block.field'",
+            description: "WAJIB TERISI dgn minimum 10 path penting (mis. 'identity_engine.promo_block.promo_name', 'reward_engine.calculation_value'). Path format: 'engine.block.field'. Nilai 0..1. JANGAN kirim {} kosong.",
             additionalProperties: { type: "number" },
           },
           field_status: {
             type: "object",
-            description: "Map of field path → status: explicit | inferred | derived | unknown",
+            description: "WAJIB TERISI dgn minimum 10 path. Map field path → 'explicit' | 'inferred' | 'derived' | 'unknown'. JANGAN kirim {} kosong.",
             additionalProperties: { type: "string" },
           },
           extraction_notes: {
