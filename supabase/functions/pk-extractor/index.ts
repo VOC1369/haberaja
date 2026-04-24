@@ -586,7 +586,6 @@ function deriveProjection(engines: AnyObj): AnyObj {
   //   Reason: ambiguous — no stable business definition.
   //   If needed in future, ADD a new field with explicit definition,
   //   do NOT resurrect this one.
-  const variants = _a(_o(variant).variants);
 
   return {
     _description: "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
