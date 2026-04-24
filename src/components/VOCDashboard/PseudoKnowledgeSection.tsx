@@ -2027,8 +2027,27 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               </Button>
             </div>
             
-            {/* Center: Empty */}
-            <div className="flex items-center gap-3" />
+            {/* Center: PK V.09 status badge */}
+            <div className="flex items-center gap-3">
+              {pkStatus === "loading" && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-muted/50 text-xs font-medium text-muted-foreground">
+                  <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  PK V.09: ⏳ loading ({pkElapsedSec}s)
+                </div>
+              )}
+              {pkStatus === "ready" && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+                  PK V.09: ✅ siap
+                </div>
+              )}
+              {pkStatus === "failed" && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/30 bg-destructive/10 text-xs font-medium text-destructive">
+                  <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
+                  PK V.09: ❌ gagal — pakai fallback wrapper lama
+                </div>
+              )}
+            </div>
             
             {/* Right: Copy JSON + Visual Result + Primary Action */}
             <div className="flex items-center gap-3">
@@ -2036,17 +2055,30 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={handleCopyJSON}
-                      className="h-11 px-4 gap-2"
-                    >
-                      <Copy className="w-4 h-4" />
-                      Copy JSON
-                    </Button>
+                    <span tabIndex={0}>
+                      <Button
+                        variant="outline"
+                        onClick={handleCopyJSON}
+                        disabled={pkStatus === "loading"}
+                        className="h-11 px-4 gap-2"
+                      >
+                        <Copy className="w-4 h-4" />
+                        {pkStatus === "loading"
+                          ? `⏳ Menyiapkan V.09... ${pkElapsedSec}s`
+                          : pkStatus === "failed"
+                            ? "Copy JSON (fallback)"
+                            : "Copy JSON"}
+                      </Button>
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs">
-                    <p>Salin JSON hasil ekstraksi ke clipboard, dibungkus dengan Json Schema Contract V.09 (meta + data).</p>
+                    <p>
+                      {pkStatus === "loading"
+                        ? "PK-extractor masih jalan. Tunggu sampai badge ✅ siap supaya hasilnya pkRecord, bukan fallback wrapper lama."
+                        : pkStatus === "failed"
+                          ? "PK-extractor gagal — output akan berupa wrapper V.09 lama (legacy)."
+                          : "Salin JSON hasil ekstraksi ke clipboard, dibungkus dengan Json Schema Contract V.09 (meta + data)."}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -2055,17 +2087,30 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowVisualResult(true)}
-                      className="h-11 px-4 gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Visual Result
-                    </Button>
+                    <span tabIndex={0}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowVisualResult(true)}
+                        disabled={pkStatus === "loading"}
+                        className="h-11 px-4 gap-2"
+                      >
+                        <Eye className="w-4 h-4" />
+                        {pkStatus === "loading"
+                          ? `⏳ Menyiapkan V.09... ${pkElapsedSec}s`
+                          : pkStatus === "failed"
+                            ? "Visual Result (fallback)"
+                            : "Visual Result"}
+                      </Button>
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs">
-                    <p>Lihat preview Json Schema Contract V.09 (meta + data) sebelum disalin atau disimpan.</p>
+                    <p>
+                      {pkStatus === "loading"
+                        ? "PK-extractor masih jalan. Tunggu sampai badge ✅ siap."
+                        : pkStatus === "failed"
+                          ? "PK-extractor gagal — preview akan berupa wrapper V.09 lama (legacy)."
+                          : "Lihat preview Json Schema Contract V.09 (meta + data) sebelum disalin atau disimpan."}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
