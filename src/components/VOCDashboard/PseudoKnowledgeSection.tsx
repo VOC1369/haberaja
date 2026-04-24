@@ -132,6 +132,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
   // STEP 1 — V.09 PK record (paralel dgn voc-wolf untuk Copy JSON / Visual Result / Gunakan Promo)
   const [pkRecord, setPkRecord] = useState<PromoKnowledgeRecord | null>(null);
+  // STEP 1 — status pk-extractor untuk UX (cegah klik prematur)
+  const [pkStatus, setPkStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
   // Memoized mapped preview (single source of truth for badge + commit)
