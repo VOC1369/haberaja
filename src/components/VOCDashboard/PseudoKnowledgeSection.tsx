@@ -458,6 +458,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       // STEP 1 — paralel call ke pk-extractor (V.09). Tidak blocking utama;
       // hasilnya dipakai untuk Copy JSON / Visual Result / Gunakan Promo.
       // Card body tetap render dari `extractedPromo` (voc-wolf) di Step 1.
+      setPkStatus("loading");
+      setPkRecord(null);
+      const pkStartedAt = Date.now();
       (async () => {
         try {
           const pk = await extractPromoV09({
@@ -467,19 +470,23 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           });
           if (pk.ok && pk.record) {
             setPkRecord(pk.record);
+            setPkStatus("ready");
             console.log("[Step1/PK] pkRecord siap", {
+              elapsed_ms: Date.now() - pkStartedAt,
               record_id: pk.record.record_id,
               promo_name: (pk.record.identity_engine as any)?.promo_block?.promo_name,
               mechanics_items: ((pk.record.mechanics_engine as any)?.items_block?.items ?? []).length,
               has_projection: Object.keys((pk.record.projection_engine as any) ?? {}).length > 0,
             });
           } else {
+            setPkStatus("failed");
             console.warn("[Step1/PK] pk-extractor gagal:", pk.error, pk.message);
-            toast.warning("Ekstraksi V.09 (PK) gagal — Copy JSON akan fallback ke wrapper V.09 lama", {
+            toast.warning("Ekstraksi V.09 (PK) gagal — fallback wrapper V.09 lama aktif", {
               description: pk.message,
             });
           }
         } catch (err) {
+          setPkStatus("failed");
           console.error("[Step1/PK] pk-extractor exception:", err);
         }
       })();
