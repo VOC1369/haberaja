@@ -130,6 +130,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   
   // Extraction state  
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
+  // STEP 1 — V.09 PK record (paralel dgn voc-wolf untuk Copy JSON / Visual Result / Gunakan Promo)
+  const [pkRecord, setPkRecord] = useState<PromoKnowledgeRecord | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
   // Memoized mapped preview (single source of truth for badge + commit)
