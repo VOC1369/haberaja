@@ -2020,6 +2020,50 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         </div>
       )}
 
+      {/* Visual Result Modal — preview Json Schema Contract V.09 */}
+      <Dialog open={showVisualResult} onOpenChange={setShowVisualResult}>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              Visual Result — Json Schema Contract V.09
+            </DialogTitle>
+            <DialogDescription>
+              Preview JSON yang akan disalin / disimpan. Dibungkus wrapper V.09 (meta + data).
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 rounded-md border bg-muted/30 p-4">
+            <pre className="text-xs font-mono whitespace-pre-wrap break-words">
+{extractedPromo
+  ? JSON.stringify(
+      wrapV09(extractedPromo, {
+        source: (inputMode === "image" ? "image" : inputMode === "url" ? "url" : "text"),
+        source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
+      }),
+      null,
+      2,
+    )
+  : "// Belum ada hasil ekstraksi"}
+            </pre>
+          </ScrollArea>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowVisualResult(false)}>
+              Tutup
+            </Button>
+            <Button
+              variant="golden"
+              onClick={() => {
+                handleCopyJSON();
+              }}
+              className="gap-2"
+            >
+              <Copy className="w-4 h-4" />
+              Copy JSON
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Leave Warning Dialog */}
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
         <AlertDialogContent>
