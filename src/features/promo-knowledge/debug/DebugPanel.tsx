@@ -79,7 +79,7 @@ export function DebugPanel({ record, validation }: Props) {
             <Badge className="bg-destructive/15 text-destructive border-destructive/30" variant="outline">
               {validation.errorCount} errors
             </Badge>
-            <Badge className="bg-amber-500/15 text-amber-500 border-amber-500/30" variant="outline">
+            <Badge className="bg-warning/15 text-warning border-warning/30" variant="outline">
               {validation.warningCount} warnings
             </Badge>
             <Badge variant="outline">{validation.infoCount} info</Badge>
@@ -94,7 +94,7 @@ export function DebugPanel({ record, validation }: Props) {
                         i.severity === "error"
                           ? "text-destructive"
                           : i.severity === "warning"
-                            ? "text-amber-500"
+                            ? "text-warning"
                             : "text-muted-foreground"
                       }
                     >

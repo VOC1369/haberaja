@@ -69,7 +69,7 @@ function FieldIssues({ path, validation }: { path: string; validation: Validatio
             i.severity === "error"
               ? "text-xs text-destructive"
               : i.severity === "warning"
-                ? "text-xs text-amber-500"
+                ? "text-xs text-warning"
                 : "text-xs text-muted-foreground"
           }
         >

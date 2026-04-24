@@ -11,7 +11,6 @@
  */
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +47,31 @@ export default function PromoKnowledgePage() {
   useEffect(() => {
     refreshList();
   }, [refreshList]);
+
+  // Native SEO (no helmet dependency)
+  useEffect(() => {
+    document.title = "Promo Knowledge — Gate 1 Slice";
+    const setMeta = (name: string, content: string) => {
+      let el = document.querySelector(`meta[name="${name}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute("name", name);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+    setMeta(
+      "description",
+      "PK-06.0 first vertical slice workspace. Schema-driven form, live validation, observability.",
+    );
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", `${window.location.origin}/promo-knowledge`);
+  }, []);
 
   const validation = useMemo(() => validatePromoKnowledge(record), [record]);
 
@@ -103,19 +127,13 @@ export default function PromoKnowledgePage() {
     s === "ai_draft"
       ? "bg-secondary text-secondary-foreground"
       : s === "reviewed"
-        ? "bg-amber-500/15 text-amber-500 border border-amber-500/30"
+        ? "bg-warning/15 text-warning border border-warning/30"
         : s === "finalized" || s === "published"
           ? "bg-primary/15 text-primary border border-primary/30"
           : "bg-muted text-muted-foreground";
 
   return (
     <>
-      <Helmet>
-        <title>Promo Knowledge — Gate 1 Slice</title>
-        <meta name="description" content="PK-06.0 first vertical slice workspace. Schema-driven form, live validation, observability." />
-        <link rel="canonical" href={`${window.location.origin}/promo-knowledge`} />
-      </Helmet>
-
       <main className="min-h-screen bg-background text-foreground">
         <header className="border-b border-border bg-card">
           <div className="mx-auto max-w-7xl px-6 py-4 flex items-center justify-between">
