@@ -7,6 +7,7 @@ import { NotificationModal } from "@/components/NotificationModal";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import PromoKnowledgePage from "./features/promo-knowledge/PromoKnowledgePage";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/promo-knowledge" element={<PromoKnowledgePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
