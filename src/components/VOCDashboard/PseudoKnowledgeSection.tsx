@@ -69,6 +69,11 @@ import { wrapV09, type V09ExtractionSource } from "@/lib/extractors/contracts/js
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
 
+// STEP 1 — V.09 dual-call: pk-extractor untuk Copy JSON / Visual Result / Gunakan Promo
+import { extractPromoV09 } from "@/features/promo-knowledge/extractor/extract-client";
+import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";
+import type { PromoKnowledgeRecord } from "@/features/promo-knowledge/schema/pk-06.0";
+
 // Helper: Title Case for mode badges
 const formatPromoMode = (mode: string | null | undefined): string => {
   if (!mode) return '-';
