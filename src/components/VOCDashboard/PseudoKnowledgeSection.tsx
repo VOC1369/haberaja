@@ -69,6 +69,11 @@ import { wrapV09, type V09ExtractionSource } from "@/lib/extractors/contracts/js
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
 
+// STEP 1 — V.09 dual-call: pk-extractor untuk Copy JSON / Visual Result / Gunakan Promo
+import { extractPromoV09 } from "@/features/promo-knowledge/extractor/extract-client";
+import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";
+import type { PromoKnowledgeRecord } from "@/features/promo-knowledge/schema/pk-06.0";
+
 // Helper: Title Case for mode badges
 const formatPromoMode = (mode: string | null | undefined): string => {
   if (!mode) return '-';
@@ -125,6 +130,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   
   // Extraction state  
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
+  // STEP 1 — V.09 PK record (paralel dgn voc-wolf untuk Copy JSON / Visual Result / Gunakan Promo)
+  const [pkRecord, setPkRecord] = useState<PromoKnowledgeRecord | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
   // Memoized mapped preview (single source of truth for badge + commit)
@@ -445,7 +452,36 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       
       setExtractedPromo(result);
       setEditHistory([]);
-      
+
+      // STEP 1 — paralel call ke pk-extractor (V.09). Tidak blocking utama;
+      // hasilnya dipakai untuk Copy JSON / Visual Result / Gunakan Promo.
+      // Card body tetap render dari `extractedPromo` (voc-wolf) di Step 1.
+      (async () => {
+        try {
+          const pk = await extractPromoV09({
+            text: imageBase64 ? (currentInput?.trim() ?? "") : (currentInput ?? ""),
+            images: imageBase64 ? [imageBase64] : [],
+            client_id_hint: result?.client_id ?? "",
+          });
+          if (pk.ok && pk.record) {
+            setPkRecord(pk.record);
+            console.log("[Step1/PK] pkRecord siap", {
+              record_id: pk.record.record_id,
+              promo_name: (pk.record.identity_engine as any)?.promo_block?.promo_name,
+              mechanics_items: ((pk.record.mechanics_engine as any)?.items_block?.items ?? []).length,
+              has_projection: Object.keys((pk.record.projection_engine as any) ?? {}).length > 0,
+            });
+          } else {
+            console.warn("[Step1/PK] pk-extractor gagal:", pk.error, pk.message);
+            toast.warning("Ekstraksi V.09 (PK) gagal — Copy JSON akan fallback ke wrapper V.09 lama", {
+              description: pk.message,
+            });
+          }
+        } catch (err) {
+          console.error("[Step1/PK] pk-extractor exception:", err);
+        }
+      })();
+
       // Auto-save to session
       extractorSession.save({
         extractedPromo: result,
@@ -520,6 +556,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // HOTFIX: Complete state reset to prevent carryover
     // Clear ALL extraction state
     setExtractedPromo(null);
+    setPkRecord(null);
     setEditHistory([]);
     setEditInput('');        // Reset edit input
     setShowEditHelp(false);  // Reset help visibility
@@ -541,24 +578,31 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   };
 
   const handleCopyJSON = async () => {
-    if (!extractedPromo) return;
+    if (!extractedPromo && !pkRecord) return;
 
     try {
-      // Bungkus dengan Json Schema Contract V.09 (wrapper di atas ExtractedPromo)
-      const sourceMap: Record<string, V09ExtractionSource> = {
-        url: "url",
-        text: "text",
-        image: "image",
-      };
-      const wrapped = wrapV09(extractedPromo, {
-        source: sourceMap[inputMode] ?? "text",
-        source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
-      });
-      const jsonString = JSON.stringify(wrapped, null, 2);
+      // STEP 1 — prefer raw PromoKnowledgeRecord (V.09 / PK-06.0).
+      // Fallback ke wrapper V.09 lama bila pk-extractor belum/gagal selesai.
+      let jsonString: string;
+      let label: string;
+      if (pkRecord) {
+        jsonString = JSON.stringify(pkRecord, null, 2);
+        label = `${jsonString.length} karakter • PromoKnowledgeRecord (PK-06.0 / V.09)`;
+      } else {
+        const sourceMap: Record<string, V09ExtractionSource> = {
+          url: "url",
+          text: "text",
+          image: "image",
+        };
+        const wrapped = wrapV09(extractedPromo!, {
+          source: sourceMap[inputMode] ?? "text",
+          source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
+        });
+        jsonString = JSON.stringify(wrapped, null, 2);
+        label = `${jsonString.length} karakter • fallback wrapper V.09 (PK belum siap)`;
+      }
       await navigator.clipboard.writeText(jsonString);
-      toast.success("JSON V.09 disalin ke clipboard", {
-        description: `${jsonString.length} karakter • schema_version: v09`,
-      });
+      toast.success("JSON disalin ke clipboard", { description: label });
     } catch {
       toast.error("Gagal menyalin ke clipboard");
     }
@@ -597,24 +641,39 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   };
   
   // Separated commit logic for reuse after gate confirmation
-  // Uses memoized mappedPreview to ensure badge ↔ commit consistency
+  // STEP 1 — save raw PromoKnowledgeRecord (V.09) ke localStorage via savePkRecord.
+  // Fallback ke legacy `localDraftKB.save(mappedPreview)` bila pkRecord belum siap.
   const proceedWithCommit = async () => {
-    if (!mappedPreview) return;
-    
     try {
-      // Simpan ke localStorage sebagai draft — user masih harus edit & publish via wizard
-      const draftPromo = { ...mappedPreview, status: 'draft' as const };
+      if (pkRecord) {
+        const saved = savePkRecord(pkRecord);
+        const promoName =
+          (saved.identity_engine as { promo_block?: { promo_name?: string } })?.promo_block?.promo_name ||
+          "Promo Tanpa Nama";
+        toast.success("Promo (V.09) disimpan sebagai draft!", {
+          description: `"${promoName}" — record_id: ${saved.record_id}`,
+        });
+        handleRestart();
+        if (onNavigateToPromo) onNavigateToPromo();
+        return;
+      }
+
+      // Fallback (PK belum siap): pakai mapper lama supaya user gak stuck.
+      if (!mappedPreview) {
+        toast.error("Belum ada data untuk disimpan");
+        return;
+      }
+      const draftPromo = { ...mappedPreview, status: "draft" as const };
       const savedDraft = localDraftKB.save(draftPromo);
-      
-      toast.success("Promo disimpan sebagai draft!", {
-        description: `"${savedDraft.promo_name}" siap diedit & dipublish dari Promo KB`,
+      toast.success("Promo disimpan sebagai draft! (fallback legacy)", {
+        description: `"${savedDraft.promo_name}" — pk-extractor belum selesai, gunakan mapper lama`,
       });
-      
       handleRestart();
+      if (onNavigateToPromo) onNavigateToPromo();
     } catch (error) {
-      console.error('Error saving draft:', error);
+      console.error("Error saving draft:", error);
       toast.error("Gagal menyimpan draft", {
-        description: error instanceof Error ? error.message : "Unknown error"
+        description: error instanceof Error ? error.message : "Unknown error",
       });
     }
   };
@@ -2020,30 +2079,34 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         </div>
       )}
 
-      {/* Visual Result Modal — preview Json Schema Contract V.09 */}
+      {/* Visual Result Modal — preview PromoKnowledgeRecord (V.09 / PK-06.0) */}
       <Dialog open={showVisualResult} onOpenChange={setShowVisualResult}>
         <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
-              Visual Result — Json Schema Contract V.09
+              Visual Result — PromoKnowledgeRecord (V.09)
             </DialogTitle>
             <DialogDescription>
-              Preview JSON yang akan disalin / disimpan. Dibungkus wrapper V.09 (meta + data).
+              {pkRecord
+                ? "Raw PromoKnowledgeRecord — 23 engine, governance V.06, domain PK-06.0. Inilah JSON yang akan disalin / disimpan."
+                : "PK-extractor belum selesai atau gagal — fallback ke wrapper V.09 lama (legacy)."}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1 rounded-md border bg-muted/30 p-4">
             <pre className="text-xs font-mono whitespace-pre-wrap break-words">
-{extractedPromo
-  ? JSON.stringify(
-      wrapV09(extractedPromo, {
-        source: (inputMode === "image" ? "image" : inputMode === "url" ? "url" : "text"),
-        source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
-      }),
-      null,
-      2,
-    )
-  : "// Belum ada hasil ekstraksi"}
+{pkRecord
+  ? JSON.stringify(pkRecord, null, 2)
+  : extractedPromo
+    ? JSON.stringify(
+        wrapV09(extractedPromo, {
+          source: (inputMode === "image" ? "image" : inputMode === "url" ? "url" : "text"),
+          source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
+        }),
+        null,
+        2,
+      )
+    : "// Belum ada hasil ekstraksi"}
             </pre>
           </ScrollArea>
           <div className="flex justify-end gap-2 pt-2">
