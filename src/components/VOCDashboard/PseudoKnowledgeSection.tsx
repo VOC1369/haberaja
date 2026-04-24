@@ -135,6 +135,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // STEP 1 — status pk-extractor untuk UX (cegah klik prematur)
   const [pkStatus, setPkStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   const [pkElapsedSec, setPkElapsedSec] = useState(0);
+  const [pkFailReason, setPkFailReason] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
   // Memoized mapped preview (single source of truth for badge + commit)
@@ -475,6 +476,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       // Card body tetap render dari `extractedPromo` (voc-wolf) di Step 1.
       setPkStatus("loading");
       setPkRecord(null);
+      setPkFailReason("");
       const pkStartedAt = Date.now();
       (async () => {
         try {
@@ -488,6 +490,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             setPkStatus("ready");
             console.log("[Step1/PK] pkRecord siap", {
               elapsed_ms: Date.now() - pkStartedAt,
+              model: pk.model,
               record_id: pk.record.record_id,
               promo_name: (pk.record.identity_engine as any)?.promo_block?.promo_name,
               mechanics_items: ((pk.record.mechanics_engine as any)?.items_block?.items ?? []).length,
@@ -495,13 +498,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             });
           } else {
             setPkStatus("failed");
+            setPkFailReason(pk.error || "UNKNOWN");
             console.warn("[Step1/PK] pk-extractor gagal:", pk.error, pk.message);
-            toast.warning("Ekstraksi V.09 (PK) gagal — fallback wrapper V.09 lama aktif", {
+            toast.warning(`Ekstraksi V.09 (PK) gagal — ${pk.error || "UNKNOWN"} — fallback wrapper V.09 lama aktif`, {
               description: pk.message,
             });
           }
         } catch (err) {
           setPkStatus("failed");
+          setPkFailReason("EXCEPTION");
           console.error("[Step1/PK] pk-extractor exception:", err);
         }
       })();
@@ -582,6 +587,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     setExtractedPromo(null);
     setPkRecord(null);
     setPkStatus("idle");
+    setPkFailReason("");
     setEditHistory([]);
     setEditInput('');        // Reset edit input
     setShowEditHelp(false);  // Reset help visibility
@@ -2042,10 +2048,33 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 </div>
               )}
               {pkStatus === "failed" && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/30 bg-destructive/10 text-xs font-medium text-destructive">
-                  <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
-                  PK V.09: ❌ gagal — pakai fallback wrapper lama
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/30 bg-destructive/10 text-xs font-medium text-destructive cursor-help">
+                        <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
+                        PK V.09: ❌ gagal{pkFailReason ? ` (${pkFailReason})` : ""} — fallback aktif
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p>
+                        {pkFailReason === "NO_TOOL_CALL"
+                          ? "Claude reply tanpa tool_use. Cek console untuk lihat text reply."
+                          : pkFailReason === "INVALID_TOOL_ARGS"
+                            ? "Claude panggil tool tapi argumen kosong/invalid."
+                            : pkFailReason === "PAYMENT_REQUIRED"
+                              ? "Anthropic credits habis. Top-up di console.anthropic.com."
+                              : pkFailReason === "RATE_LIMITED"
+                                ? "Rate limit Anthropic — coba sebentar lagi."
+                                : pkFailReason === "OVERLOADED"
+                                  ? "Server Anthropic overload — coba lagi."
+                                  : pkFailReason === "EXCEPTION"
+                                    ? "Network/JS exception — cek console."
+                                    : "Gagal — cek console untuk detail."}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
             

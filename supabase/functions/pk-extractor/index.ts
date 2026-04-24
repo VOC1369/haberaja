@@ -3,20 +3,21 @@
  *
  * Multimodal LLM extraction:
  *   - Input: text (raw promo content) + optional image (base64 / url)
- *   - LLM: google/gemini-2.5-pro (vision + text + reasoning)
+ *   - LLM: Anthropic Claude Sonnet 4.5 via ai-proxy (Supabase edge function)
  *   - Output: Json Schema Draft V.09 (full inert shape, 22 engines)
  *
- * Uses Lovable AI Gateway. NO keyword matching. NO regex parsing.
- * Pure LLM reasoning end-to-end.
+ * Architecture: pk-extractor → ai-proxy (type=extract_pk) → Anthropic Messages API.
+ * NO Lovable AI Gateway. NO direct Anthropic call. NO model name leaked to caller.
+ * NO keyword matching. NO regex parsing. Pure LLM reasoning end-to-end.
  *
  * State on output: ai_draft. NOT persisted server-side. Returned to client.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const DEFAULT_MODEL = "google/gemini-2.5-pro";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const AI_PROXY_TYPE = "extract_pk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -716,14 +717,61 @@ function normalizePkRecord(parsed: AnyObj): void {
   parsed.field_status = fstat;
 }
 
+// ============================================================
+// Convert OpenAI tool schema → Anthropic tool schema
+// OpenAI: { type:"function", function:{ name, description, parameters } }
+// Anthropic: { name, description, input_schema }
+// ============================================================
+function toAnthropicTool(openaiTool: AnyObj): AnyObj {
+  const fn = _o(openaiTool.function);
+  return {
+    name: _s(fn.name),
+    description: _s(fn.description),
+    input_schema: fn.parameters ?? { type: "object", properties: {} },
+  };
+}
+
+// ============================================================
+// Convert image input → Anthropic image content block
+// Supports:
+//   - data URL:  data:image/png;base64,XXX  →  source.type=base64
+//   - https URL: https://...                →  source.type=url
+// ============================================================
+function toAnthropicImage(img: string): AnyObj | null {
+  if (!img) return null;
+  const trimmed = img.trim();
+  if (trimmed.startsWith("data:")) {
+    // data:image/png;base64,XXXX
+    const m = trimmed.match(/^data:([^;]+);base64,(.+)$/);
+    if (!m) return null;
+    const mediaType = m[1];
+    const data = m[2];
+    return {
+      type: "image",
+      source: { type: "base64", media_type: mediaType, data },
+    };
+  }
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return {
+      type: "image",
+      source: { type: "url", url: trimmed },
+    };
+  }
+  // Bare base64 — assume PNG
+  return {
+    type: "image",
+    source: { type: "base64", media_type: "image/png", data: trimmed },
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY not configured");
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not configured");
     }
 
     const body = await req.json().catch(() => null);
@@ -738,7 +786,6 @@ serve(async (req) => {
     const images: string[] = Array.isArray(body.images)
       ? body.images.filter((i: unknown) => typeof i === "string" && i.length > 0)
       : [];
-    const model: string = typeof body.model === "string" && body.model ? body.model : DEFAULT_MODEL;
 
     if (!text && images.length === 0) {
       return new Response(
@@ -750,10 +797,11 @@ serve(async (req) => {
       );
     }
 
-    // Build multimodal user message
+    // ============================================================
+    // Build Anthropic-format multimodal user message
+    // ============================================================
     const userContent: Array<Record<string, unknown>> = [];
 
-    // Context / instruction
     const contextParts: string[] = [];
     if (text) {
       contextParts.push(`KONTEN PROMO (TEKS):\n\n${text}`);
@@ -764,83 +812,118 @@ serve(async (req) => {
       );
     }
     contextParts.push(
-      "\n\nINSTRUKSI: Ekstrak ke Json Schema Draft V.09 via tool call 'extract_promo_v09'. Hybrid mode: text + image saling melengkapi.",
+      "\n\nINSTRUKSI: Ekstrak ke Json Schema Draft V.09 via tool 'extract_promo_v09'. WAJIB panggil tool — JANGAN balas teks. Hybrid mode: text + image saling melengkapi.",
     );
 
+    // Anthropic ordering convention: image blocks BEFORE text block (better recall).
+    for (const img of images) {
+      const block = toAnthropicImage(img);
+      if (block) userContent.push(block);
+    }
     userContent.push({ type: "text", text: contextParts.join("\n\n") });
 
-    for (const img of images) {
-      userContent.push({
-        type: "image_url",
-        image_url: { url: img },
-      });
-    }
+    // ============================================================
+    // Build ai-proxy request (Anthropic-format passthrough)
+    // ============================================================
+    const tool = toAnthropicTool(getToolSchema());
 
-    const tool = getToolSchema();
-
-    const gatewayBody = {
-      model,
+    const proxyBody = {
+      type: AI_PROXY_TYPE, // "extract_pk" — ai-proxy hardcodes max_tokens 16k + Sonnet
+      system: SYSTEM_PROMPT,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userContent },
       ],
       tools: [tool],
-      tool_choice: { type: "function", function: { name: "extract_promo_v09" } },
+      tool_choice: { type: "tool", name: "extract_promo_v09" },
       temperature: 0.1,
     };
 
-    const aiResp = await fetch(GATEWAY_URL, {
+    const startedAt = Date.now();
+    const aiResp = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(gatewayBody),
+      body: JSON.stringify(proxyBody),
     });
+    const latencyMs = Date.now() - startedAt;
 
     if (!aiResp.ok) {
       const errText = await aiResp.text().catch(() => "");
-      console.error("[pk-extractor] Gateway error:", aiResp.status, errText);
+      console.error("[pk-extractor] ai-proxy error:", aiResp.status, errText);
 
-      if (aiResp.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "RATE_LIMITED", message: "Terlalu banyak request, coba lagi sebentar" }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
+      // Pass through ai-proxy's own structured errors (CREDIT_EXHAUSTED, RATE_LIMITED, OVERLOADED)
+      let upstreamError: AnyObj = {};
+      try { upstreamError = JSON.parse(errText); } catch { /* keep empty */ }
+
       if (aiResp.status === 402) {
         return new Response(
-          JSON.stringify({ error: "PAYMENT_REQUIRED", message: "Lovable AI credits habis, top up di Settings → Workspace → Usage" }),
+          JSON.stringify({ error: "PAYMENT_REQUIRED", message: _s(upstreamError.message) || "Anthropic credits habis. Top-up di console.anthropic.com." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      throw new Error(`Gateway ${aiResp.status}: ${errText}`);
+      if (aiResp.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "RATE_LIMITED", message: _s(upstreamError.message) || "Terlalu banyak request, coba lagi sebentar." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if (aiResp.status === 503) {
+        return new Response(
+          JSON.stringify({ error: "OVERLOADED", message: _s(upstreamError.message) || "Anthropic overload, coba lagi." }),
+          { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      throw new Error(`ai-proxy ${aiResp.status}: ${errText}`);
     }
 
     const aiData = await aiResp.json();
-    const toolCall = aiData?.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall || toolCall.function?.name !== "extract_promo_v09") {
-      console.error("[pk-extractor] No tool call in response:", JSON.stringify(aiData).slice(0, 500));
+    const modelUsed = _s(aiData.model);
+    const stopReason = _s(aiData.stop_reason);
+
+    // ============================================================
+    // Parse Anthropic response: content[] array, find tool_use block
+    // ============================================================
+    const contentArr = _a<AnyObj>(aiData.content);
+    const toolUse = contentArr.find((b) => _s(b.type) === "tool_use" && _s(b.name) === "extract_promo_v09");
+
+    if (!toolUse) {
+      // Collect any text reply for diagnostic
+      const textReply = contentArr
+        .filter((b) => _s(b.type) === "text")
+        .map((b) => _s(b.text))
+        .join("\n")
+        .slice(0, 2000);
+      console.error("[pk-extractor] NO_TOOL_CALL — Claude text reply:", textReply || "(empty)");
+      console.error("[pk-extractor] stop_reason:", stopReason, "model:", modelUsed);
       return new Response(
         JSON.stringify({
           error: "NO_TOOL_CALL",
-          message: "LLM tidak mengikuti tool schema. Coba ulang.",
-          raw: aiData?.choices?.[0]?.message?.content ?? null,
+          message: "Claude reply tanpa tool_use. Cek console.",
+          raw_text: textReply,
+          stop_reason: stopReason,
+          model: modelUsed,
         }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(toolCall.function.arguments);
-    } catch (e) {
-      console.error("[pk-extractor] Tool args not valid JSON:", e);
+    // Anthropic returns tool input as object (already parsed). No JSON.parse needed.
+    const parsed: Record<string, unknown> =
+      toolUse.input && typeof toolUse.input === "object"
+        ? (toolUse.input as Record<string, unknown>)
+        : {};
+
+    if (Object.keys(parsed).length === 0) {
+      console.error("[pk-extractor] tool_use.input empty");
       return new Response(
         JSON.stringify({
           error: "INVALID_TOOL_ARGS",
-          message: "Tool arguments bukan JSON valid",
-          raw: toolCall.function.arguments,
+          message: "Tool input kosong",
+          stop_reason: stopReason,
+          model: modelUsed,
         }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
@@ -857,13 +940,24 @@ serve(async (req) => {
     // DERIVED: overwrite projection_engine deterministically (LLM hint discarded)
     parsed.projection_engine = deriveProjection(parsed);
 
+    console.log("[pk-extractor] OK", {
+      model: modelUsed,
+      stop_reason: stopReason,
+      extraction_source,
+      latency_ms: latencyMs,
+      mechanics_items: _a(_o(parsed.mechanics_engine).items).length,
+      ai_confidence_keys: Object.keys(_o(parsed.ai_confidence)).length,
+    });
+
     return new Response(
       JSON.stringify({
         ok: true,
-        model,
+        model: modelUsed,
         extraction_source,
         engines: parsed,
         usage: aiData?.usage ?? null,
+        latency_ms: latencyMs,
+        stop_reason: stopReason,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
