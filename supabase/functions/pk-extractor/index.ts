@@ -159,10 +159,14 @@ function getToolSchema() {
               client_block: {
                 type: "object",
                 properties: {
-                  client_id: { type: "string" },
+                  client_id: { type: "string", description: "Slug client (mis. 'slot25', 'haberaja'). Empty string kalau benar-benar tidak ada." },
                   client_name: { type: "string" },
+                  client_id_field_status: {
+                    type: "string",
+                    description: "Status pengisian client_id: 'explicit' (tertulis di sumber), 'inferred' (disimpulkan dari URL/brand), 'unknown' (tidak ada).",
+                  },
                 },
-                required: ["client_id", "client_name"],
+                required: ["client_id", "client_name", "client_id_field_status"],
                 additionalProperties: false,
               },
               promo_block: {
@@ -171,7 +175,10 @@ function getToolSchema() {
                   promo_name: { type: "string" },
                   promo_type: { type: "string" },
                   target_user: { type: "string" },
-                  promo_mode: { type: "string" },
+                  promo_mode: {
+                    type: "string",
+                    description: "WAJIB salah satu dari 'single' | 'tiered' | 'multi_variant'. Empty string hanya kalau benar-benar tidak ada konten promo.",
+                  },
                 },
                 required: ["promo_name", "promo_type", "target_user", "promo_mode"],
                 additionalProperties: false,
