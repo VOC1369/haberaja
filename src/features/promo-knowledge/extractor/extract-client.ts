@@ -46,6 +46,25 @@ const numOrNull = (v: unknown): number | null =>
 const strOrNull = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
 
 /**
+ * A.7 — TIMEZONE CANONICAL (IANA only).
+ * Normalize legacy aliases (WIB / WITA / WIT) → IANA Indonesia timezones.
+ * Empty string passes through unchanged. Already-IANA values pass through unchanged.
+ */
+const TIMEZONE_ALIAS_MAP: Record<string, string> = {
+  WIB: "Asia/Jakarta",
+  wib: "Asia/Jakarta",
+  WITA: "Asia/Makassar",
+  wita: "Asia/Makassar",
+  WIT: "Asia/Jayapura",
+  wit: "Asia/Jayapura",
+};
+function normalizeTimezone(v: unknown): string {
+  const s = str(v).trim();
+  if (!s) return "";
+  return TIMEZONE_ALIAS_MAP[s] ?? s;
+}
+
+/**
  * Reshape flat engines (dari LLM tool call) → nested *_block shape (sesuai inert).
  */
 function mergeEnginesIntoRecord(
