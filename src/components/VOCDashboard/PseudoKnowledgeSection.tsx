@@ -578,24 +578,31 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   };
 
   const handleCopyJSON = async () => {
-    if (!extractedPromo) return;
+    if (!extractedPromo && !pkRecord) return;
 
     try {
-      // Bungkus dengan Json Schema Contract V.09 (wrapper di atas ExtractedPromo)
-      const sourceMap: Record<string, V09ExtractionSource> = {
-        url: "url",
-        text: "text",
-        image: "image",
-      };
-      const wrapped = wrapV09(extractedPromo, {
-        source: sourceMap[inputMode] ?? "text",
-        source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
-      });
-      const jsonString = JSON.stringify(wrapped, null, 2);
+      // STEP 1 — prefer raw PromoKnowledgeRecord (V.09 / PK-06.0).
+      // Fallback ke wrapper V.09 lama bila pk-extractor belum/gagal selesai.
+      let jsonString: string;
+      let label: string;
+      if (pkRecord) {
+        jsonString = JSON.stringify(pkRecord, null, 2);
+        label = `${jsonString.length} karakter • PromoKnowledgeRecord (PK-06.0 / V.09)`;
+      } else {
+        const sourceMap: Record<string, V09ExtractionSource> = {
+          url: "url",
+          text: "text",
+          image: "image",
+        };
+        const wrapped = wrapV09(extractedPromo!, {
+          source: sourceMap[inputMode] ?? "text",
+          source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
+        });
+        jsonString = JSON.stringify(wrapped, null, 2);
+        label = `${jsonString.length} karakter • fallback wrapper V.09 (PK belum siap)`;
+      }
       await navigator.clipboard.writeText(jsonString);
-      toast.success("JSON V.09 disalin ke clipboard", {
-        description: `${jsonString.length} karakter • schema_version: v09`,
-      });
+      toast.success("JSON disalin ke clipboard", { description: label });
     } catch {
       toast.error("Gagal menyalin ke clipboard");
     }
