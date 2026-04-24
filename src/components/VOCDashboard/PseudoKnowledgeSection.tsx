@@ -641,24 +641,39 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   };
   
   // Separated commit logic for reuse after gate confirmation
-  // Uses memoized mappedPreview to ensure badge ↔ commit consistency
+  // STEP 1 — save raw PromoKnowledgeRecord (V.09) ke localStorage via savePkRecord.
+  // Fallback ke legacy `localDraftKB.save(mappedPreview)` bila pkRecord belum siap.
   const proceedWithCommit = async () => {
-    if (!mappedPreview) return;
-    
     try {
-      // Simpan ke localStorage sebagai draft — user masih harus edit & publish via wizard
-      const draftPromo = { ...mappedPreview, status: 'draft' as const };
+      if (pkRecord) {
+        const saved = savePkRecord(pkRecord);
+        const promoName =
+          (saved.identity_engine as { promo_block?: { promo_name?: string } })?.promo_block?.promo_name ||
+          "Promo Tanpa Nama";
+        toast.success("Promo (V.09) disimpan sebagai draft!", {
+          description: `"${promoName}" — record_id: ${saved.record_id}`,
+        });
+        handleRestart();
+        if (onNavigateToPromo) onNavigateToPromo();
+        return;
+      }
+
+      // Fallback (PK belum siap): pakai mapper lama supaya user gak stuck.
+      if (!mappedPreview) {
+        toast.error("Belum ada data untuk disimpan");
+        return;
+      }
+      const draftPromo = { ...mappedPreview, status: "draft" as const };
       const savedDraft = localDraftKB.save(draftPromo);
-      
-      toast.success("Promo disimpan sebagai draft!", {
-        description: `"${savedDraft.promo_name}" siap diedit & dipublish dari Promo KB`,
+      toast.success("Promo disimpan sebagai draft! (fallback legacy)", {
+        description: `"${savedDraft.promo_name}" — pk-extractor belum selesai, gunakan mapper lama`,
       });
-      
       handleRestart();
+      if (onNavigateToPromo) onNavigateToPromo();
     } catch (error) {
-      console.error('Error saving draft:', error);
+      console.error("Error saving draft:", error);
       toast.error("Gagal menyimpan draft", {
-        description: error instanceof Error ? error.message : "Unknown error"
+        description: error instanceof Error ? error.message : "Unknown error",
       });
     }
   };
