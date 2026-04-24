@@ -135,6 +135,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // STEP 1 — status pk-extractor untuk UX (cegah klik prematur)
   const [pkStatus, setPkStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   const [pkElapsedSec, setPkElapsedSec] = useState(0);
+  const [pkFailReason, setPkFailReason] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
   // Memoized mapped preview (single source of truth for badge + commit)
