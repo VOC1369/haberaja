@@ -2079,30 +2079,34 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         </div>
       )}
 
-      {/* Visual Result Modal — preview Json Schema Contract V.09 */}
+      {/* Visual Result Modal — preview PromoKnowledgeRecord (V.09 / PK-06.0) */}
       <Dialog open={showVisualResult} onOpenChange={setShowVisualResult}>
         <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
-              Visual Result — Json Schema Contract V.09
+              Visual Result — PromoKnowledgeRecord (V.09)
             </DialogTitle>
             <DialogDescription>
-              Preview JSON yang akan disalin / disimpan. Dibungkus wrapper V.09 (meta + data).
+              {pkRecord
+                ? "Raw PromoKnowledgeRecord — 23 engine, governance V.06, domain PK-06.0. Inilah JSON yang akan disalin / disimpan."
+                : "PK-extractor belum selesai atau gagal — fallback ke wrapper V.09 lama (legacy)."}
             </DialogDescription>
           </DialogHeader>
           <ScrollArea className="flex-1 rounded-md border bg-muted/30 p-4">
             <pre className="text-xs font-mono whitespace-pre-wrap break-words">
-{extractedPromo
-  ? JSON.stringify(
-      wrapV09(extractedPromo, {
-        source: (inputMode === "image" ? "image" : inputMode === "url" ? "url" : "text"),
-        source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
-      }),
-      null,
-      2,
-    )
-  : "// Belum ada hasil ekstraksi"}
+{pkRecord
+  ? JSON.stringify(pkRecord, null, 2)
+  : extractedPromo
+    ? JSON.stringify(
+        wrapV09(extractedPromo, {
+          source: (inputMode === "image" ? "image" : inputMode === "url" ? "url" : "text"),
+          source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
+        }),
+        null,
+        2,
+      )
+    : "// Belum ada hasil ekstraksi"}
             </pre>
           </ScrollArea>
           <div className="flex justify-end gap-2 pt-2">
