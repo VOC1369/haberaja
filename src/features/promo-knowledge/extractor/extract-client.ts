@@ -281,14 +281,16 @@ function mergeEnginesIntoRecord(
     },
     mechanics_engine: {
       source_block: { source: str(mech.mechanic_source) || `llm_${extractionSource}_extraction` },
-      items_block: { items: arr<string>(mech.mechanic_types).map((t) => ({ type: t })) },
+      items_block: {
+        // Edge function sekarang output items[] dgn detail penuh
+        // (mechanic_id, mechanic_type, evidence, confidence, ambiguity,
+        //  ambiguity_reason, activation_rule, data). Pass-through apa adanya.
+        items: arr<AnyObj>(mech.items),
+      },
     },
     projection_engine: {
-      _description: "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
-      summary_block: { summary: str(proj.summary), intent_category: str(proj.intent_category) },
-      claim_summary_block: {},
-      scope_summary_block: {},
-      intent_summary_block: { intent_category: str(proj.intent_category) },
+      // DERIVED — server (pk-extractor) sudah generate. Pass-through penuh.
+      ...obj(proj),
     },
     risk_engine: {
       level_block: { promo_risk_level: str(risk.promo_risk_level) },

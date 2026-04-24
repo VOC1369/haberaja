@@ -68,6 +68,25 @@ REASONING TIPS:
 - "Rollingan" → primary_action: bet_to_rollingan, calculation_basis: turnover, payout_direction: backend
 - "Referral" → primary_action: refer_to_commission, intent_category: virality
 
+MECHANICS (PENTING):
+mechanics_engine.items[] WAJIB DIISI dgn detail per-unit-logika. JANGAN kosongkan
+kalau ada konten promo. Pecah promo jadi unit-unit semantik:
+  - 1 item per trigger event (apa yg memicu promo)
+  - 1 item per eligibility/syarat (siapa yg boleh, threshold)
+  - 1 item per calculation (rumus, persen, basis)
+  - 1 item per reward (bentuk hadiah)
+  - 1 item per distribution (kapan/cara dikirim)
+  - 1 item per control (anti-stack, anti-fraud rule umum)
+  - 1 item per invalidator (kondisi pembatalan, void)
+
+Setiap item HARUS punya: evidence (kutipan), confidence, activation_rule (atau null),
+data (object detail). Untuk Cashback biasanya minimal 6 item.
+
+PROJECTION:
+projection_engine JANGAN diisi sendiri. Akan di-derive otomatis post-extraction
+dari engine lain. Cukup isi dgn nilai default kosong sesuai schema (summary: "",
+intent_category: ""). Server akan overwrite.
+
 Output via tool call WAJIB dipanggil. JANGAN balas teks biasa.`;
 
 // JSON Schema for tool calling — matches PromoKnowledgeRecord shape
@@ -113,8 +132,8 @@ function getToolSchema() {
               result_block: {
                 type: "object",
                 properties: {
-                  program_classification: { type: "string", enum: ["A", "B", "C", ""] },
-                  review_confidence: { type: "string", enum: ["high", "medium", "low", ""] },
+                  program_classification: { type: "string", description: "A | B | C | empty string if unknown" },
+                  review_confidence: { type: "string", description: "high | medium | low | empty if unknown" },
                 },
                 required: ["program_classification", "review_confidence"],
                 additionalProperties: false,
@@ -179,7 +198,7 @@ function getToolSchema() {
                   properties: {
                     field: { type: "string" },
                     operator: { type: "string" },
-                    value: { type: ["string", "number", "null"] },
+                    value: { type: "string", description: "Stringify number kalau perlu. Empty string kalau ga ada." },
                     currency: { type: "string" },
                   },
                   required: ["field", "operator", "value", "currency"],
@@ -342,11 +361,41 @@ function getToolSchema() {
           },
           mechanics_engine: {
             type: "object",
+            description: "Per-mechanic detail. items[] WAJIB diisi dengan tiap unit mekanik yg terdeteksi (trigger/eligibility/calculation/reward/distribution/control/invalidator/etc). JANGAN kosongkan kalau ada konten.",
             properties: {
-              mechanic_types: { type: "array", items: { type: "string" } },
-              mechanic_source: { type: "string" },
+              mechanic_source: { type: "string", description: "e.g. llm_text_extraction, llm_image_extraction, llm_multimodal_extraction" },
+              items: {
+                type: "array",
+                description: "Setiap mechanic = 1 unit logika promo. Pecah jadi item terpisah utk tiap trigger/syarat/perhitungan/reward/distribusi/aturan/invalidator. Untuk Cashback biasanya minimal 6 item: 1 trigger, 1 eligibility, 1 calculation, 1 reward, 1 distribution, 1+ invalidator.",
+                items: {
+                  type: "object",
+                  properties: {
+                    mechanic_id: { type: "string", description: "format: m_<type>_<idx>, e.g. m_trigger_1" },
+                    mechanic_type: {
+                      type: "string",
+                      enum: ["trigger", "eligibility", "calculation", "reward", "distribution", "control", "invalidator", "constraint", "other"],
+                    },
+                    evidence: { type: "string", description: "kutipan persis dari sumber yg jadi basis mechanic ini" },
+                    confidence: { type: "number", description: "0..1" },
+                    ambiguity: { type: "boolean" },
+                    ambiguity_reason: { type: ["string", "null"] },
+                    activation_rule: {
+                      type: ["object", "null"],
+                      description: "kondisi pengaktifan: { condition_type, threshold_value?, period_start?, period_end?, schedule_day?, violation_types?, ... }. null kalau ga relevan.",
+                      additionalProperties: true,
+                    },
+                    data: {
+                      type: "object",
+                      description: "detail spesifik mechanic. Bebas struktur, isi field yg relevan: trigger_event, calculation_base, percentage, reward_type, distribution_method, void_action, dst.",
+                      additionalProperties: true,
+                    },
+                  },
+                  required: ["mechanic_id", "mechanic_type", "evidence", "confidence", "ambiguity", "ambiguity_reason", "activation_rule", "data"],
+                  additionalProperties: false,
+                },
+              },
             },
-            required: ["mechanic_types", "mechanic_source"],
+            required: ["mechanic_source", "items"],
             additionalProperties: false,
           },
           projection_engine: {
@@ -398,6 +447,128 @@ function getToolSchema() {
         ],
         additionalProperties: false,
       },
+    },
+  };
+}
+
+// ============================================================
+// PROJECTION DERIVATION (deterministic, post-extraction)
+// projection_engine = DERIVED ONLY. Build dari engine lain.
+// LLM TIDAK BOLEH isi langsung — di-overwrite di sini.
+// ============================================================
+type AnyObj = Record<string, unknown>;
+const _o = (v: unknown): AnyObj => (v && typeof v === "object" ? (v as AnyObj) : {});
+const _s = (v: unknown): string => (typeof v === "string" ? v : "");
+const _a = <T = unknown>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
+const _n = (v: unknown): number | null =>
+  typeof v === "number" && !Number.isNaN(v) ? v : null;
+const _b = (v: unknown): boolean => v === true;
+
+function deriveProjection(engines: AnyObj): AnyObj {
+  const identity = _o(engines.identity_engine);
+  const promo = _o(identity.promo_block);
+  const taxonomy = _o(engines.taxonomy_engine);
+  const reward = _o(engines.reward_engine);
+  const trigger = _o(engines.trigger_engine);
+  const claim = _o(engines.claim_engine);
+  const claimMethod = _o(claim.method_block);
+  const claimChannels = _o(claim.channels_block);
+  const proofReq = _o(claim.proof_requirement_block);
+  const scope = _o(engines.scope_engine);
+  const reasoning = _o(engines.reasoning_engine);
+  const dependency = _o(engines.dependency_engine);
+  const period = _o(engines.period_engine);
+  const variant = _o(engines.variant_engine);
+
+  const promoName = _s(promo.promo_name);
+  const promoType = _s(promo.promo_type);
+  const targetUser = _s(promo.target_user);
+  const calcBasis = _s(reward.calculation_basis);
+  const calcMethod = _s(reward.calculation_method);
+  const calcValue = _n(reward.calculation_value);
+  const calcUnit = _s(reward.calculation_unit);
+  const payoutDir = _s(reward.payout_direction);
+  const rewardType = _s(reward.reward_type);
+  const maxReward = _n(reward.max_reward);
+  const minBase = _n(reward.min_base);
+  const turnoverBasis = _s(taxonomy.turnover_basis);
+  const channels = _a<string>(claimChannels.channels);
+  const priority = _a<string>(claimChannels.priority_order);
+  const channelsArr = priority.length > 0 ? priority : channels;
+
+  // Auto-summary
+  const valueStr =
+    calcValue !== null
+      ? calcMethod === "percentage" || calcUnit === "%" || calcUnit === "percent"
+        ? `${calcValue}%`
+        : `${calcValue}${calcUnit ? ` ${calcUnit}` : ""}`
+      : "";
+  const basisLabel = calcBasis ? ` dari ${calcBasis}` : "";
+  const summary = promoName
+    ? `${promoName}${valueStr ? ` — ${valueStr}` : ""}${basisLabel}.`.trim()
+    : "";
+
+  // Target segment label
+  const targetLabel =
+    targetUser === "all_member" || targetUser === "all"
+      ? "Semua"
+      : targetUser === "new_member"
+        ? "Member Baru"
+        : targetUser === "vip"
+          ? "VIP"
+          : targetUser === "existing_member"
+            ? "Member Lama"
+            : targetUser || "";
+
+  // Stateful = mengandung tier/level/state akumulasi
+  const tierArche = _s(taxonomy.tier_archetype);
+  const variants = _a(_o(variant).variants);
+  const stateful = !!tierArche || variants.length > 1;
+
+  return {
+    _description: "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
+    summary_block: {
+      summary,
+      promo_summary: summary,
+      main_trigger: _s(trigger.trigger_event),
+      main_reward_form: rewardType,
+      main_reward_percent: calcMethod === "percentage" ? calcValue : null,
+      main_reward_value: calcValue,
+      main_reward_unit: calcUnit,
+      max_bonus: maxReward,
+      min_base: minBase,
+      payout_direction: payoutDir,
+      turnover_multiplier: null,
+      turnover_basis: turnoverBasis || null,
+      stateful,
+    },
+    claim_summary_block: {
+      primary_claim_method: _s(claimMethod.claim_method),
+      primary_claim_platform: channelsArr[0] ?? "",
+      claim_channels: channelsArr,
+      auto_credit: _b(claimMethod.auto_credit),
+      proof_required: _b(proofReq.proof_required),
+      claim_frequency: _s(period.claim_frequency),
+      distribution_day: _s(period.distribution_day),
+    },
+    scope_summary_block: {
+      game_domain: _s(_o(scope.game_block).game_domain) || _s(scope.game_domain),
+      game_types: _a<string>(_o(scope.game_block).markets ?? scope.markets ?? []),
+      game_providers: _a<string>(
+        _o(scope.game_block).eligible_providers ?? scope.game_providers ?? [],
+      ),
+      game_exclusions: _a<string>(
+        _o(scope.blacklist_block).providers ?? scope.blacklist_categories ?? [],
+      ),
+      stacking_policy: _s(_o(dependency).stacking_policy ?? dependency.stacking_policy),
+    },
+    intent_summary_block: {
+      intent_category: _s(reasoning.intent_category) || _s((engines.projection_engine as AnyObj | undefined)?.intent_category as unknown),
+      primary_action: _s(reasoning.primary_action),
+      reward_nature: _s(reasoning.reward_nature),
+      distribution_path: _s(reasoning.distribution_path),
+      value_shape: _s(reasoning.value_shape),
+      target_segment: targetLabel,
     },
   };
 }
@@ -536,6 +707,9 @@ serve(async (req) => {
     let extraction_source = "text";
     if (text && images.length > 0) extraction_source = "multimodal";
     else if (images.length > 0) extraction_source = "image";
+
+    // DERIVED: overwrite projection_engine deterministically (LLM hint discarded)
+    parsed.projection_engine = deriveProjection(parsed);
 
     return new Response(
       JSON.stringify({
