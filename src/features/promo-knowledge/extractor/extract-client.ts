@@ -93,7 +93,7 @@ function mergeEnginesIntoRecord(
     identity_engine: {
       client_block: {
         client_id: str(identClient.client_id),
-        client_id_field_status: "",
+        client_id_field_status: str(identClient.client_id_field_status),
         client_name: str(identClient.client_name),
       },
       promo_block: {
