@@ -582,10 +582,11 @@ function deriveProjection(engines: AnyObj): AnyObj {
             ? "Member Lama"
             : targetUser || "";
 
-  // Stateful = mengandung tier/level/state akumulasi
-  const tierArche = _s(taxonomy.tier_archetype);
+  // D3 (2026-04-24): `stateful` field DROPPED from output.
+  //   Reason: ambiguous — no stable business definition.
+  //   If needed in future, ADD a new field with explicit definition,
+  //   do NOT resurrect this one.
   const variants = _a(_o(variant).variants);
-  const stateful = !!tierArche || variants.length > 1;
 
   return {
     _description: "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
@@ -602,7 +603,7 @@ function deriveProjection(engines: AnyObj): AnyObj {
       payout_direction: payoutDir,
       turnover_multiplier: null,
       turnover_basis: turnoverBasis || null,
-      stateful,
+      // stateful: DROPPED per D3 (2026-04-24)
     },
     claim_summary_block: {
       primary_claim_method: _s(claimMethod.claim_method),
