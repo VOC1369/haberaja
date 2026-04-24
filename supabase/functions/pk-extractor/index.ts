@@ -769,6 +769,9 @@ serve(async (req) => {
     if (text && images.length > 0) extraction_source = "multimodal";
     else if (images.length > 0) extraction_source = "image";
 
+    // POST-PROCESS: normalize content quality (safety net for GAP-Q1..Q5)
+    normalizePkRecord(parsed);
+
     // DERIVED: overwrite projection_engine deterministically (LLM hint discarded)
     parsed.projection_engine = deriveProjection(parsed);
 
