@@ -160,6 +160,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const [hasUnsavedData, setHasUnsavedData] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+
+  // V.09 Visual Result modal
+  const [showVisualResult, setShowVisualResult] = useState(false);
   
   const scrollBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -539,11 +542,23 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
   const handleCopyJSON = async () => {
     if (!extractedPromo) return;
-    
+
     try {
-      const jsonString = JSON.stringify(extractedPromo, null, 2);
+      // Bungkus dengan Json Schema Contract V.09 (wrapper di atas ExtractedPromo)
+      const sourceMap: Record<string, V09ExtractionSource> = {
+        url: "url",
+        text: "text",
+        image: "image",
+      };
+      const wrapped = wrapV09(extractedPromo, {
+        source: sourceMap[inputMode] ?? "text",
+        source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
+      });
+      const jsonString = JSON.stringify(wrapped, null, 2);
       await navigator.clipboard.writeText(jsonString);
-      toast.success("JSON disalin ke clipboard", { description: `${jsonString.length} karakter` });
+      toast.success("JSON V.09 disalin ke clipboard", {
+        description: `${jsonString.length} karakter • schema_version: v09`,
+      });
     } catch {
       toast.error("Gagal menyalin ke clipboard");
     }
