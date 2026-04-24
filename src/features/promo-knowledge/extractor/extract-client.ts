@@ -149,7 +149,7 @@ function mergeEnginesIntoRecord(
       },
     },
     time_window_engine: {
-      timezone_block: { timezone: str(tw.timezone), offset: str(tw.offset) },
+      timezone_block: { timezone: normalizeTimezone(tw.timezone), offset: str(tw.offset) },
       claim_window_block: { open_ended: bool(tw.open_ended) },
       distribution_window_block: {},
       reset_block: {},
