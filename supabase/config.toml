@@ -1,1 +1,4 @@
 project_id = "hstepvryfsdyvowfzesd"
+
+[functions.pk-extractor]
+verify_jwt = false
