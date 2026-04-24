@@ -209,102 +209,137 @@ export default function PromoKnowledgePage() {
             </Card>
           </aside>
 
-          {/* Main — form */}
+          {/* Main — form OR parity */}
           <section className="space-y-4">
-            <Card>
-              <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle className="text-base">claim_engine</CardTitle>
-                  <CardDescription className="text-xs font-mono">
-                    record_id: {record.record_id.slice(0, 12)}…
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-[10px] px-2 py-1 rounded font-mono ${stateColor(record.readiness_engine.state_block.state)}`}>
-                    {record.readiness_engine.state_block.state}
-                  </span>
-                  <Button size="sm" variant="outline" onClick={handleAdvanceState} disabled={!NEXT_STATE[record.readiness_engine.state_block.state]}>
-                    advance →
-                  </Button>
-                  <Button size="sm" onClick={handleSave}>Save Draft</Button>
-                </div>
-              </CardHeader>
-            </Card>
-
-            {saveError && (
-              <div
-                role="alert"
-                className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+            {/* Tab strip */}
+            <div className="inline-flex rounded-md border border-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setTab("editor")}
+                className={`px-3 py-1.5 text-xs ${
+                  tab === "editor"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background hover:bg-muted"
+                }`}
               >
-                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                <div className="flex-1">{saveError}</div>
-                <button
-                  onClick={() => setSaveError(null)}
-                  className="text-destructive/70 hover:text-destructive"
-                  aria-label="Dismiss save error"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            )}
+                Editor
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("parity")}
+                className={`px-3 py-1.5 text-xs border-l border-border ${
+                  tab === "parity"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background hover:bg-muted"
+                }`}
+              >
+                Parity
+                <span className="ml-1.5 inline-block px-1 py-0.5 rounded bg-warning/15 text-warning text-[9px] font-mono align-middle">
+                  dev
+                </span>
+              </button>
+            </div>
 
-            {validation.issues.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    Validation
-                    <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
-                      {validation.errorCount > 0 && (
-                        <span className="inline-flex items-center gap-1 text-destructive">
-                          <AlertCircle className="h-3 w-3" /> {validation.errorCount} error{validation.errorCount > 1 ? "s" : ""}
-                        </span>
-                      )}
-                      {validation.warningCount > 0 && (
-                        <span className="inline-flex items-center gap-1 text-warning">
-                          <AlertTriangle className="h-3 w-3" /> {validation.warningCount} warning{validation.warningCount > 1 ? "s" : ""}
-                        </span>
-                      )}
-                      {validation.infoCount > 0 && (
-                        <span className="inline-flex items-center gap-1 text-muted-foreground">
-                          <Info className="h-3 w-3" /> {validation.infoCount} info
-                        </span>
-                      )}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <ul className="space-y-1.5 max-h-48 overflow-auto">
-                    {validation.issues.map((iss, idx) => {
-                      const color =
-                        iss.severity === "error"
-                          ? "text-destructive"
-                          : iss.severity === "warning"
-                            ? "text-warning"
-                            : "text-muted-foreground";
-                      const Icon = iss.severity === "error" ? AlertCircle : iss.severity === "warning" ? AlertTriangle : Info;
-                      return (
-                        <li key={idx} className="flex items-start gap-2 text-xs">
-                          <Icon className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${color}`} />
-                          <div className="flex-1 min-w-0">
-                            <div className={`font-medium ${color}`}>{iss.message}</div>
-                            <div className="font-mono text-[10px] text-muted-foreground truncate">
-                              {iss.path} · {iss.code}
-                            </div>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </CardContent>
-              </Card>
-            )}
+            {tab === "parity" ? (
+              <ParityTab />
+            ) : (
+              <>
+                <Card>
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+                    <div>
+                      <CardTitle className="text-base">claim_engine</CardTitle>
+                      <CardDescription className="text-xs font-mono">
+                        record_id: {record.record_id.slice(0, 12)}…
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-2 py-1 rounded font-mono ${stateColor(record.readiness_engine.state_block.state)}`}>
+                        {record.readiness_engine.state_block.state}
+                      </span>
+                      <Button size="sm" variant="outline" onClick={handleAdvanceState} disabled={!NEXT_STATE[record.readiness_engine.state_block.state]}>
+                        advance →
+                      </Button>
+                      <Button size="sm" onClick={handleSave}>Save Draft</Button>
+                    </div>
+                  </CardHeader>
+                </Card>
 
-            <ClaimEngineForm
-              value={record.claim_engine}
-              onChange={(next) => setRecord({ ...record, claim_engine: next })}
-              validation={validation}
-              aiConfidence={record.ai_confidence}
-            />
+                {saveError && (
+                  <div
+                    role="alert"
+                    className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+                  >
+                    <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                    <div className="flex-1">{saveError}</div>
+                    <button
+                      onClick={() => setSaveError(null)}
+                      className="text-destructive/70 hover:text-destructive"
+                      aria-label="Dismiss save error"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+
+                {validation.issues.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        Validation
+                        <span className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground">
+                          {validation.errorCount > 0 && (
+                            <span className="inline-flex items-center gap-1 text-destructive">
+                              <AlertCircle className="h-3 w-3" /> {validation.errorCount} error{validation.errorCount > 1 ? "s" : ""}
+                            </span>
+                          )}
+                          {validation.warningCount > 0 && (
+                            <span className="inline-flex items-center gap-1 text-warning">
+                              <AlertTriangle className="h-3 w-3" /> {validation.warningCount} warning{validation.warningCount > 1 ? "s" : ""}
+                            </span>
+                          )}
+                          {validation.infoCount > 0 && (
+                            <span className="inline-flex items-center gap-1 text-muted-foreground">
+                              <Info className="h-3 w-3" /> {validation.infoCount} info
+                            </span>
+                          )}
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <ul className="space-y-1.5 max-h-48 overflow-auto">
+                        {validation.issues.map((iss, idx) => {
+                          const color =
+                            iss.severity === "error"
+                              ? "text-destructive"
+                              : iss.severity === "warning"
+                                ? "text-warning"
+                                : "text-muted-foreground";
+                          const Icon = iss.severity === "error" ? AlertCircle : iss.severity === "warning" ? AlertTriangle : Info;
+                          return (
+                            <li key={idx} className="flex items-start gap-2 text-xs">
+                              <Icon className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${color}`} />
+                              <div className="flex-1 min-w-0">
+                                <div className={`font-medium ${color}`}>{iss.message}</div>
+                                <div className="font-mono text-[10px] text-muted-foreground truncate">
+                                  {iss.path} · {iss.code}
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <ClaimEngineForm
+                  value={record.claim_engine}
+                  onChange={(next) => setRecord({ ...record, claim_engine: next })}
+                  validation={validation}
+                  aiConfidence={record.ai_confidence}
+                />
+              </>
+            )}
           </section>
 
           {/* Right — debug panel */}
