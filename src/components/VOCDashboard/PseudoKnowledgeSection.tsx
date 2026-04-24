@@ -1946,9 +1946,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             {/* Center: Empty */}
             <div className="flex items-center gap-3" />
             
-            {/* Right: Copy JSON + Primary Action */}
+            {/* Right: Copy JSON + Visual Result + Primary Action */}
             <div className="flex items-center gap-3">
-              {/* Copy Raw JSON button — always visible when extraction exists */}
+              {/* Copy JSON V.09 — bungkus ExtractedPromo dgn Json Schema Contract V.09 */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1962,7 +1962,26 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs">
-                    <p>Salin raw JSON hasil ekstraksi (sebelum mapping ke form) ke clipboard</p>
+                    <p>Salin JSON hasil ekstraksi ke clipboard, dibungkus dengan Json Schema Contract V.09 (meta + data).</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Visual Result — preview wrapper V.09 di modal */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowVisualResult(true)}
+                      className="h-11 px-4 gap-2"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Visual Result
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p>Lihat preview Json Schema Contract V.09 (meta + data) sebelum disalin atau disimpan.</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
