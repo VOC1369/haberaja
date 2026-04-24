@@ -67,6 +67,7 @@ ENUM REFERENSI (subset, lihat tool schema untuk full list):
 - void_trigger: bonus_hunter, safety_bet, invest, ip_duplicate, data_duplicate, deposit_fraud, hold_freespin, multi_accounting, self_referral, account_change, claim_timeout, wrong_bank_info, screenshot_missing, game_category_violation, cashout_partial
 - game_domain: slot, casino, live_casino, sports, sportsbook, togel, sabung_ayam, e_lottery, arcade, mixed, all
 - intent_category: acquisition (akuisisi), retention (retensi), reactivation, engagement, virality, upsell
+- timezone: WAJIB IANA format. Pakai HANYA "Asia/Jakarta" | "Asia/Makassar" | "Asia/Jayapura". JANGAN "WIB"/"WITA"/"WIT" — itu alias legacy yang DI-REJECT. Default Indonesia tanpa konteks region → "Asia/Jakarta".
 
 REASONING TIPS:
 - "Cashback" → primary_action: lose_to_cashback, calculation_basis: loss, payout_direction: backend, intent_category: retention
@@ -241,7 +242,7 @@ function getToolSchema() {
           time_window_engine: {
             type: "object",
             properties: {
-              timezone: { type: "string" },
+              timezone: { type: "string", description: "IANA timezone WAJIB. Hanya 'Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura' | ''. JANGAN pakai 'WIB'/'WITA'/'WIT'." },
               offset: { type: "string" },
               open_ended: { type: "boolean" },
             },
