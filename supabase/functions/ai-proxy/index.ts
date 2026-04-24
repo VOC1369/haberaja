@@ -6,13 +6,16 @@ const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 // OFFICIAL: 1 LLM = Claude Sonnet 4.5 untuk semua type
 const SONNET_MODEL = "claude-sonnet-4-5-20250929";
 
-const MODEL_CONFIG: Record<string, { model: string; max_tokens: number; default_temperature: number }> = {
+const MODEL_CONFIG: Record<string, { model: string; max_tokens: number; default_temperature: number; allow_tools?: boolean }> = {
   // Parser/extractor reasoning path — slight flexibility for natural language operator input
-  extract:     { model: SONNET_MODEL, max_tokens: 8000, default_temperature: 0.2 },
-  classify:    { model: SONNET_MODEL, max_tokens: 500,  default_temperature: 0 },
-  reject_gate: { model: SONNET_MODEL, max_tokens: 120,  default_temperature: 0 },
-  intent:      { model: SONNET_MODEL, max_tokens: 800,  default_temperature: 0 },
-  chat:        { model: SONNET_MODEL, max_tokens: 4000, default_temperature: 0 },
+  extract:     { model: SONNET_MODEL, max_tokens: 8000,  default_temperature: 0.2 },
+  classify:    { model: SONNET_MODEL, max_tokens: 500,   default_temperature: 0 },
+  reject_gate: { model: SONNET_MODEL, max_tokens: 120,   default_temperature: 0 },
+  intent:      { model: SONNET_MODEL, max_tokens: 800,   default_temperature: 0 },
+  chat:        { model: SONNET_MODEL, max_tokens: 4000,  default_temperature: 0 },
+  // PK V.09 extractor — large structured output via tool calling.
+  // max_tokens HARDCODED 16k. Caller cannot override. tools/tool_choice passthrough.
+  extract_pk:  { model: SONNET_MODEL, max_tokens: 16000, default_temperature: 0.1, allow_tools: true },
 };
 
 const corsHeaders = {
