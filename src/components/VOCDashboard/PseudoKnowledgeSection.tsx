@@ -2048,10 +2048,33 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 </div>
               )}
               {pkStatus === "failed" && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/30 bg-destructive/10 text-xs font-medium text-destructive">
-                  <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
-                  PK V.09: ❌ gagal — pakai fallback wrapper lama
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/30 bg-destructive/10 text-xs font-medium text-destructive cursor-help">
+                        <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
+                        PK V.09: ❌ gagal{pkFailReason ? ` (${pkFailReason})` : ""} — fallback aktif
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      <p>
+                        {pkFailReason === "NO_TOOL_CALL"
+                          ? "Claude reply tanpa tool_use. Cek console untuk lihat text reply."
+                          : pkFailReason === "INVALID_TOOL_ARGS"
+                            ? "Claude panggil tool tapi argumen kosong/invalid."
+                            : pkFailReason === "PAYMENT_REQUIRED"
+                              ? "Anthropic credits habis. Top-up di console.anthropic.com."
+                              : pkFailReason === "RATE_LIMITED"
+                                ? "Rate limit Anthropic — coba sebentar lagi."
+                                : pkFailReason === "OVERLOADED"
+                                  ? "Server Anthropic overload — coba lagi."
+                                  : pkFailReason === "EXCEPTION"
+                                    ? "Network/JS exception — cek console."
+                                    : "Gagal — cek console untuk detail."}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </div>
             
