@@ -202,10 +202,10 @@ function getToolSchema() {
               question_block: {
                 type: "object",
                 properties: {
-                  q1: { type: "object", properties: { answer: { type: "string" }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
-                  q2: { type: "object", properties: { answer: { type: "string" }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
-                  q3: { type: "object", properties: { answer: { type: "string" }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
-                  q4: { type: "object", properties: { answer: { type: "string" }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
+                  q1: { type: "object", properties: { answer: { type: "string", enum: ["ya", "tidak", ""] }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
+                  q2: { type: "object", properties: { answer: { type: "string", enum: ["ya", "tidak", ""] }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
+                  q3: { type: "object", properties: { answer: { type: "string", enum: ["ya", "tidak", ""] }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
+                  q4: { type: "object", properties: { answer: { type: "string", enum: ["ya", "tidak", ""] }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
                 },
                 required: ["q1", "q2", "q3", "q4"],
                 additionalProperties: false,
