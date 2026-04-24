@@ -556,6 +556,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // HOTFIX: Complete state reset to prevent carryover
     // Clear ALL extraction state
     setExtractedPromo(null);
+    setPkRecord(null);
     setEditHistory([]);
     setEditInput('');        // Reset edit input
     setShowEditHelp(false);  // Reset help visibility
