@@ -132,8 +132,8 @@ function getToolSchema() {
               result_block: {
                 type: "object",
                 properties: {
-                  program_classification: { type: "string", enum: ["A", "B", "C", ""] },
-                  review_confidence: { type: "string", enum: ["high", "medium", "low", ""] },
+                  program_classification: { type: "string", description: "A | B | C | empty string if unknown" },
+                  review_confidence: { type: "string", description: "high | medium | low | empty if unknown" },
                 },
                 required: ["program_classification", "review_confidence"],
                 additionalProperties: false,
@@ -198,7 +198,7 @@ function getToolSchema() {
                   properties: {
                     field: { type: "string" },
                     operator: { type: "string" },
-                    value: { type: ["string", "number", "null"] },
+                    value: { type: "string", description: "Stringify number kalau perlu. Empty string kalau ga ada." },
                     currency: { type: "string" },
                   },
                   required: ["field", "operator", "value", "currency"],
