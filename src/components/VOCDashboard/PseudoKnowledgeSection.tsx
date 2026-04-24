@@ -2138,10 +2138,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 <Button 
                   onClick={handleCommitPromo}
                   variant="golden"
+                  disabled={pkStatus === "loading"}
                   className="h-11 px-6 gap-2"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  Gunakan Promo
+                  {pkStatus === "loading"
+                    ? `⏳ Menyiapkan V.09... ${pkElapsedSec}s`
+                    : pkStatus === "failed"
+                      ? "Gunakan Promo (fallback)"
+                      : "Gunakan Promo"}
                 </Button>
               )}
             </div>
