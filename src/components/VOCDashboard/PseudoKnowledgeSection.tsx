@@ -452,7 +452,36 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       
       setExtractedPromo(result);
       setEditHistory([]);
-      
+
+      // STEP 1 — paralel call ke pk-extractor (V.09). Tidak blocking utama;
+      // hasilnya dipakai untuk Copy JSON / Visual Result / Gunakan Promo.
+      // Card body tetap render dari `extractedPromo` (voc-wolf) di Step 1.
+      (async () => {
+        try {
+          const pk = await extractPromoV09({
+            text: imageBase64 ? (currentInput?.trim() ?? "") : (currentInput ?? ""),
+            images: imageBase64 ? [imageBase64] : [],
+            client_id_hint: result?.client_id ?? "",
+          });
+          if (pk.ok && pk.record) {
+            setPkRecord(pk.record);
+            console.log("[Step1/PK] pkRecord siap", {
+              record_id: pk.record.record_id,
+              promo_name: (pk.record.identity_engine as any)?.promo_block?.promo_name,
+              mechanics_items: ((pk.record.mechanics_engine as any)?.items_block?.items ?? []).length,
+              has_projection: Object.keys((pk.record.projection_engine as any) ?? {}).length > 0,
+            });
+          } else {
+            console.warn("[Step1/PK] pk-extractor gagal:", pk.error, pk.message);
+            toast.warning("Ekstraksi V.09 (PK) gagal — Copy JSON akan fallback ke wrapper V.09 lama", {
+              description: pk.message,
+            });
+          }
+        } catch (err) {
+          console.error("[Step1/PK] pk-extractor exception:", err);
+        }
+      })();
+
       // Auto-save to session
       extractorSession.save({
         extractedPromo: result,
