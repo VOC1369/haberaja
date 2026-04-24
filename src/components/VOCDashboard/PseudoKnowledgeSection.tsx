@@ -587,6 +587,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     setExtractedPromo(null);
     setPkRecord(null);
     setPkStatus("idle");
+    setPkFailReason("");
     setEditHistory([]);
     setEditInput('');        // Reset edit input
     setShowEditHelp(false);  // Reset help visibility
