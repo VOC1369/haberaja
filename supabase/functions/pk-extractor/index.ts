@@ -68,6 +68,25 @@ REASONING TIPS:
 - "Rollingan" → primary_action: bet_to_rollingan, calculation_basis: turnover, payout_direction: backend
 - "Referral" → primary_action: refer_to_commission, intent_category: virality
 
+MECHANICS (PENTING):
+mechanics_engine.items[] WAJIB DIISI dgn detail per-unit-logika. JANGAN kosongkan
+kalau ada konten promo. Pecah promo jadi unit-unit semantik:
+  - 1 item per trigger event (apa yg memicu promo)
+  - 1 item per eligibility/syarat (siapa yg boleh, threshold)
+  - 1 item per calculation (rumus, persen, basis)
+  - 1 item per reward (bentuk hadiah)
+  - 1 item per distribution (kapan/cara dikirim)
+  - 1 item per control (anti-stack, anti-fraud rule umum)
+  - 1 item per invalidator (kondisi pembatalan, void)
+
+Setiap item HARUS punya: evidence (kutipan), confidence, activation_rule (atau null),
+data (object detail). Untuk Cashback biasanya minimal 6 item.
+
+PROJECTION:
+projection_engine JANGAN diisi sendiri. Akan di-derive otomatis post-extraction
+dari engine lain. Cukup isi dgn nilai default kosong sesuai schema (summary: "",
+intent_category: ""). Server akan overwrite.
+
 Output via tool call WAJIB dipanggil. JANGAN balas teks biasa.`;
 
 // JSON Schema for tool calling — matches PromoKnowledgeRecord shape
