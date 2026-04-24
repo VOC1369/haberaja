@@ -65,6 +65,9 @@ import { formatPromoType, getPromoSubTypeDisplay } from "@/lib/utils";
 import { ClassificationOverride } from "./ClassificationOverride";
 import { ConfidenceGateModal } from "./ConfidenceGateModal";
 import type { PromoFormData } from "./PromoFormWizard/types";
+import { wrapV09, type V09ExtractionSource } from "@/lib/extractors/contracts/json-schema-v09";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Eye } from "lucide-react";
 
 // Helper: Title Case for mode badges
 const formatPromoMode = (mode: string | null | undefined): string => {
@@ -157,6 +160,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const [hasUnsavedData, setHasUnsavedData] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+
+  // V.09 Visual Result modal
+  const [showVisualResult, setShowVisualResult] = useState(false);
   
   const scrollBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -536,11 +542,23 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
   const handleCopyJSON = async () => {
     if (!extractedPromo) return;
-    
+
     try {
-      const jsonString = JSON.stringify(extractedPromo, null, 2);
+      // Bungkus dengan Json Schema Contract V.09 (wrapper di atas ExtractedPromo)
+      const sourceMap: Record<string, V09ExtractionSource> = {
+        url: "url",
+        text: "text",
+        image: "image",
+      };
+      const wrapped = wrapV09(extractedPromo, {
+        source: sourceMap[inputMode] ?? "text",
+        source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
+      });
+      const jsonString = JSON.stringify(wrapped, null, 2);
       await navigator.clipboard.writeText(jsonString);
-      toast.success("JSON disalin ke clipboard", { description: `${jsonString.length} karakter` });
+      toast.success("JSON V.09 disalin ke clipboard", {
+        description: `${jsonString.length} karakter • schema_version: v09`,
+      });
     } catch {
       toast.error("Gagal menyalin ke clipboard");
     }
@@ -1928,9 +1946,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             {/* Center: Empty */}
             <div className="flex items-center gap-3" />
             
-            {/* Right: Copy JSON + Primary Action */}
+            {/* Right: Copy JSON + Visual Result + Primary Action */}
             <div className="flex items-center gap-3">
-              {/* Copy Raw JSON button — always visible when extraction exists */}
+              {/* Copy JSON V.09 — bungkus ExtractedPromo dgn Json Schema Contract V.09 */}
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1944,7 +1962,26 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-xs">
-                    <p>Salin raw JSON hasil ekstraksi (sebelum mapping ke form) ke clipboard</p>
+                    <p>Salin JSON hasil ekstraksi ke clipboard, dibungkus dengan Json Schema Contract V.09 (meta + data).</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Visual Result — preview wrapper V.09 di modal */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowVisualResult(true)}
+                      className="h-11 px-4 gap-2"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Visual Result
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p>Lihat preview Json Schema Contract V.09 (meta + data) sebelum disalin atau disimpan.</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -1982,6 +2019,50 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           </div>
         </div>
       )}
+
+      {/* Visual Result Modal — preview Json Schema Contract V.09 */}
+      <Dialog open={showVisualResult} onOpenChange={setShowVisualResult}>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5" />
+              Visual Result — Json Schema Contract V.09
+            </DialogTitle>
+            <DialogDescription>
+              Preview JSON yang akan disalin / disimpan. Dibungkus wrapper V.09 (meta + data).
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 rounded-md border bg-muted/30 p-4">
+            <pre className="text-xs font-mono whitespace-pre-wrap break-words">
+{extractedPromo
+  ? JSON.stringify(
+      wrapV09(extractedPromo, {
+        source: (inputMode === "image" ? "image" : inputMode === "url" ? "url" : "text"),
+        source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
+      }),
+      null,
+      2,
+    )
+  : "// Belum ada hasil ekstraksi"}
+            </pre>
+          </ScrollArea>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowVisualResult(false)}>
+              Tutup
+            </Button>
+            <Button
+              variant="golden"
+              onClick={() => {
+                handleCopyJSON();
+              }}
+              className="gap-2"
+            >
+              <Copy className="w-4 h-4" />
+              Copy JSON
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Leave Warning Dialog */}
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
