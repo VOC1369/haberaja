@@ -40,6 +40,7 @@ PRINSIP UTAMA:
    - Number → null
    - Array → []
    - Boolean → false (default)
+   - Object opsional (mis. activation_rule) → null. JANGAN PERNAH {} kosong.
    Jangan pernah mengarang nilai.
 4. PROVENANCE. Untuk SETIAP field penting, isi:
    - ai_confidence[path] = 0.0 - 1.0 (1.0 = explicit di sumber, 0.0 = tidak ada)
@@ -52,6 +53,10 @@ STRUKTUR OUTPUT: Lihat tool schema 'extract_promo_v09'. WAJIB isi semua 22 engin
 
 ENUM REFERENSI (subset, lihat tool schema untuk full list):
 - promo_type: welcome_bonus, deposit_bonus, cashback, rollingan, referral, lucky_spin, lucky_draw, freechip, freespin_bonus, parlay_protection, birthday_bonus, level_up, loyalty_point, merchandise, event_ranking, event_turnover_ladder, event_slot_specific, mystery_number, extra_withdraw, payment_discount, new_member_bonus
+- promo_mode: single, tiered, multi_variant. WAJIB diisi:
+   - "single" = 1 reward formula tanpa tier/varian
+   - "tiered" = ada tier/level (mis. Bronze/Silver/Gold) dgn reward berbeda
+   - "multi_variant" = beberapa varian paralel (mis. per game type)
 - target_user: new_member, existing_member, vip, all_member
 - program_classification: A (Reward Program), B (Event Program), C (System Rule)
 - claim_method: auto, manual_livechat, manual_whatsapp, manual_telegram, in_app_button, form_submission, cs_approval
@@ -68,7 +73,18 @@ REASONING TIPS:
 - "Rollingan" → primary_action: bet_to_rollingan, calculation_basis: turnover, payout_direction: backend
 - "Referral" → primary_action: refer_to_commission, intent_category: virality
 
-MECHANICS (PENTING):
+IDENTITY (PENTING — JANGAN KOSONGKAN):
+- client_block.client_id: Slug client (mis. "slot25", "haberaja"). Ekstrak dari URL, brand mark,
+  atau header sumber. Kalau tidak ada → "" dan field_status="unknown".
+- client_block.client_id_field_status: status pengisian client_id ("explicit"/"inferred"/"unknown").
+- promo_block.promo_mode: WAJIB salah satu dari single | tiered | multi_variant. Gunakan reasoning,
+  jangan kosong kalau ada konten promo.
+
+CLASSIFICATION ANSWER (LOCKED):
+- classification_engine.question_block.q1..q4 .answer WAJIB pakai "ya" atau "tidak" (HURUF KECIL,
+  Bahasa Indonesia). JANGAN "Yes"/"No"/"Iya"/"Tidak". Konsisten satu konvensi di seluruh schema.
+
+MECHANICS (WAJIB ISI items[].data):
 mechanics_engine.items[] WAJIB DIISI dgn detail per-unit-logika. JANGAN kosongkan
 kalau ada konten promo. Pecah promo jadi unit-unit semantik:
   - 1 item per trigger event (apa yg memicu promo)
@@ -79,13 +95,51 @@ kalau ada konten promo. Pecah promo jadi unit-unit semantik:
   - 1 item per control (anti-stack, anti-fraud rule umum)
   - 1 item per invalidator (kondisi pembatalan, void)
 
-Setiap item HARUS punya: evidence (kutipan), confidence, activation_rule (atau null),
-data (object detail). Untuk Cashback biasanya minimal 6 item.
+Setiap item HARUS punya: evidence (kutipan), confidence, activation_rule (object atau null —
+JANGAN {} kosong), data (object detail TERISI — JANGAN {} kosong).
+
+CONTOH data per mechanic_type (contoh, bukan exhaustive):
+- trigger        → { trigger_event, period_type, calculation_window, calculation_basis }
+- eligibility    → { user_segment, min_threshold, threshold_unit, currency }
+- calculation    → { calculation_basis, calculation_method, percentage, max_reward, currency }
+- reward         → { reward_type, reward_form, reward_unit, voucher_kind }
+- distribution   → { distribution_method, distribution_day, distribution_window, auto_credit }
+- control        → { control_type, stacking_policy, max_concurrent }
+- invalidator    → { void_trigger, void_action, penalty_scope }
+- constraint     → { constraint_type, value, currency }
+Pilih field yg relevan dgn isi promo. JANGAN kirim {} kosong — kalau benar2 tidak ada
+detail untuk mechanic itu, jangan buat itemnya sama sekali.
+
+activation_rule:
+- null         → kalau mechanic ini aktif tanpa syarat tambahan
+- object       → kalau ada kondisi: { condition_type, threshold_value?, threshold_unit?,
+                  period_start?, period_end?, schedule_day?, violation_types? }
+NEVER kirim {} kosong.
 
 PROJECTION:
 projection_engine JANGAN diisi sendiri. Akan di-derive otomatis post-extraction
 dari engine lain. Cukup isi dgn nilai default kosong sesuai schema (summary: "",
 intent_category: ""). Server akan overwrite.
+
+ai_confidence (WAJIB TERISI):
+Map dari field path → score 0..1. WAJIB isi MINIMUM 10 path penting yg sudah Anda ekstrak,
+contoh path:
+  "identity_engine.promo_block.promo_name"
+  "identity_engine.promo_block.promo_type"
+  "identity_engine.promo_block.target_user"
+  "identity_engine.promo_block.promo_mode"
+  "reward_engine.calculation_basis"
+  "reward_engine.calculation_value"
+  "reward_engine.payout_direction"
+  "reward_engine.reward_type"
+  "trigger_engine.trigger_event"
+  "claim_engine.method_block.claim_method"
+  "scope_engine.game_domain"
+  "period_engine.valid_from"
+  "period_engine.valid_until"
+JANGAN kirim {} kosong. Kalau field tidak ada di sumber → confidence 0.0, tetap dimasukkan.
+
+field_status sama: WAJIB minimal 10 path, value "explicit"/"inferred"/"derived"/"unknown".
 
 Output via tool call WAJIB dipanggil. JANGAN balas teks biasa.`;
 
