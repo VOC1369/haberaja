@@ -634,6 +634,88 @@ function deriveProjection(engines: AnyObj): AnyObj {
   };
 }
 
+// ============================================================
+// POST-PROCESS NORMALIZER (safety net for GAP-Q1..Q5)
+// Run BEFORE deriveProjection. Mutates parsed in-place.
+// ============================================================
+function normalizePkRecord(parsed: AnyObj): void {
+  // GAP-Q5: classification answer enum lock — coerce to "ya"/"tidak"
+  const classif = _o(parsed.classification_engine);
+  const qb = _o(classif.question_block);
+  const yesSet = new Set(["ya", "yes", "iya", "y", "true"]);
+  const noSet = new Set(["tidak", "no", "n", "false", "ga", "nggak", "engga"]);
+  for (const k of ["q1", "q2", "q3", "q4"]) {
+    const q = _o(qb[k]);
+    const ans = _s(q.answer).trim().toLowerCase();
+    if (yesSet.has(ans)) q.answer = "ya";
+    else if (noSet.has(ans)) q.answer = "tidak";
+    else if (ans !== "ya" && ans !== "tidak") q.answer = "";
+    qb[k] = q;
+  }
+  classif.question_block = qb;
+  parsed.classification_engine = classif;
+
+  // GAP-Q2 + GAP-Q1: normalize mechanics items
+  const mech = _o(parsed.mechanics_engine);
+  const items = _a<AnyObj>(mech.items);
+  const cleaned = items.map((it) => {
+    const item = _o(it);
+    // activation_rule: {} → null (never empty object)
+    const ar = item.activation_rule;
+    if (ar && typeof ar === "object" && !Array.isArray(ar) && Object.keys(ar as object).length === 0) {
+      item.activation_rule = null;
+    }
+    // data: {} → mark with placeholder so item is not silently empty
+    const data = item.data;
+    if (!data || (typeof data === "object" && !Array.isArray(data) && Object.keys(data as object).length === 0)) {
+      item.data = { _empty: true, _reason: "llm_left_empty" };
+    }
+    return item;
+  });
+  mech.items = cleaned;
+  parsed.mechanics_engine = mech;
+
+  // GAP-Q4: ensure client_id_field_status exists
+  const ident = _o(parsed.identity_engine);
+  const cb = _o(ident.client_block);
+  if (typeof cb.client_id_field_status !== "string" || !cb.client_id_field_status) {
+    cb.client_id_field_status = _s(cb.client_id) ? "explicit" : "unknown";
+  }
+  ident.client_block = cb;
+  parsed.identity_engine = ident;
+
+  // GAP-Q3: seed minimal ai_confidence / field_status if LLM left empty
+  const seedPaths: Array<[string, unknown]> = [
+    ["identity_engine.promo_block.promo_name", _o(ident.promo_block).promo_name],
+    ["identity_engine.promo_block.promo_type", _o(ident.promo_block).promo_type],
+    ["identity_engine.promo_block.target_user", _o(ident.promo_block).target_user],
+    ["identity_engine.promo_block.promo_mode", _o(ident.promo_block).promo_mode],
+    ["identity_engine.client_block.client_id", cb.client_id],
+    ["reward_engine.calculation_basis", _o(parsed.reward_engine).calculation_basis],
+    ["reward_engine.calculation_value", _o(parsed.reward_engine).calculation_value],
+    ["reward_engine.payout_direction", _o(parsed.reward_engine).payout_direction],
+    ["reward_engine.reward_type", _o(parsed.reward_engine).reward_type],
+    ["trigger_engine.trigger_event", _o(parsed.trigger_engine).trigger_event],
+    ["claim_engine.method_block.claim_method", _o(_o(parsed.claim_engine).method_block).claim_method],
+    ["scope_engine.game_domain", _o(parsed.scope_engine).game_domain],
+    ["period_engine.valid_from", _o(parsed.period_engine).valid_from],
+    ["period_engine.valid_until", _o(parsed.period_engine).valid_until],
+  ];
+  const conf = (parsed.ai_confidence && typeof parsed.ai_confidence === "object")
+    ? (parsed.ai_confidence as AnyObj)
+    : {};
+  const fstat = (parsed.field_status && typeof parsed.field_status === "object")
+    ? (parsed.field_status as AnyObj)
+    : {};
+  for (const [path, val] of seedPaths) {
+    const present = val !== "" && val !== null && val !== undefined && !(Array.isArray(val) && val.length === 0);
+    if (!(path in conf)) conf[path] = present ? 0.6 : 0.0;
+    if (!(path in fstat)) fstat[path] = present ? "inferred" : "unknown";
+  }
+  parsed.ai_confidence = conf;
+  parsed.field_status = fstat;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
