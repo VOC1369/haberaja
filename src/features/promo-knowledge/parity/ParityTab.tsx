@@ -105,7 +105,7 @@ export default function ParityTab() {
       persisted = { __error: String(e) };
     }
     try {
-      pk06 = legacyFormToPK06Candidate(form);
+      pk06 = legacyFormToPK06Candidate(form as unknown as Record<string, unknown> & { id?: string });
     } catch (e) {
       pk06 = { __error: String(e) };
     }
