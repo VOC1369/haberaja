@@ -708,6 +708,9 @@ serve(async (req) => {
     if (text && images.length > 0) extraction_source = "multimodal";
     else if (images.length > 0) extraction_source = "image";
 
+    // DERIVED: overwrite projection_engine deterministically (LLM hint discarded)
+    parsed.projection_engine = deriveProjection(parsed);
+
     return new Response(
       JSON.stringify({
         ok: true,
