@@ -3,20 +3,21 @@
  *
  * Multimodal LLM extraction:
  *   - Input: text (raw promo content) + optional image (base64 / url)
- *   - LLM: google/gemini-2.5-pro (vision + text + reasoning)
+ *   - LLM: Anthropic Claude Sonnet 4.5 via ai-proxy (Supabase edge function)
  *   - Output: Json Schema Draft V.09 (full inert shape, 22 engines)
  *
- * Uses Lovable AI Gateway. NO keyword matching. NO regex parsing.
- * Pure LLM reasoning end-to-end.
+ * Architecture: pk-extractor → ai-proxy (type=extract_pk) → Anthropic Messages API.
+ * NO Lovable AI Gateway. NO direct Anthropic call. NO model name leaked to caller.
+ * NO keyword matching. NO regex parsing. Pure LLM reasoning end-to-end.
  *
  * State on output: ai_draft. NOT persisted server-side. Returned to client.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const DEFAULT_MODEL = "google/gemini-2.5-pro";
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const AI_PROXY_TYPE = "extract_pk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
