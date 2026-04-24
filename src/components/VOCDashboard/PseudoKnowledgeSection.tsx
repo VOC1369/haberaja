@@ -476,6 +476,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       // Card body tetap render dari `extractedPromo` (voc-wolf) di Step 1.
       setPkStatus("loading");
       setPkRecord(null);
+      setPkFailReason("");
       const pkStartedAt = Date.now();
       (async () => {
         try {
@@ -489,6 +490,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             setPkStatus("ready");
             console.log("[Step1/PK] pkRecord siap", {
               elapsed_ms: Date.now() - pkStartedAt,
+              model: pk.model,
               record_id: pk.record.record_id,
               promo_name: (pk.record.identity_engine as any)?.promo_block?.promo_name,
               mechanics_items: ((pk.record.mechanics_engine as any)?.items_block?.items ?? []).length,
@@ -496,13 +498,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             });
           } else {
             setPkStatus("failed");
+            setPkFailReason(pk.error || "UNKNOWN");
             console.warn("[Step1/PK] pk-extractor gagal:", pk.error, pk.message);
-            toast.warning("Ekstraksi V.09 (PK) gagal — fallback wrapper V.09 lama aktif", {
+            toast.warning(`Ekstraksi V.09 (PK) gagal — ${pk.error || "UNKNOWN"} — fallback wrapper V.09 lama aktif`, {
               description: pk.message,
             });
           }
         } catch (err) {
           setPkStatus("failed");
+          setPkFailReason("EXCEPTION");
           console.error("[Step1/PK] pk-extractor exception:", err);
         }
       })();
