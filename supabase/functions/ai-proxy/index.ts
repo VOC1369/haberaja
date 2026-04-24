@@ -30,12 +30,14 @@ serve(async (req) => {
   }
   try {
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not set");
-    const { type, messages, system, temperature, stream = false } = await req.json();
+    const requestBody = await req.json();
+    const { type, messages, system, temperature, stream = false, tools, tool_choice } = requestBody;
     if (!MODEL_CONFIG[type]) throw new Error(`Invalid type: ${type}`);
     const config = MODEL_CONFIG[type];
     // Per-type default temperature; caller can still override explicitly
     const effectiveTemperature =
       typeof temperature === "number" ? temperature : config.default_temperature;
+    // max_tokens is HARDCODED per type. Caller-provided max_tokens is ignored.
     const body: Record<string, unknown> = {
       model: config.model,
       max_tokens: config.max_tokens,
@@ -44,6 +46,12 @@ serve(async (req) => {
     };
     if (system) body.system = system;
     if (stream) body.stream = true;
+
+    // Tools / tool_choice passthrough — only for types that explicitly allow it.
+    if (config.allow_tools) {
+      if (Array.isArray(tools) && tools.length > 0) body.tools = tools;
+      if (tool_choice) body.tool_choice = tool_choice;
+    }
 
     const response = await fetch(ANTHROPIC_API_URL, {
       method: "POST",
