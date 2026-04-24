@@ -44,6 +44,7 @@ export default function PromoKnowledgePage() {
   const [record, setRecord] = useState<PromoKnowledgeRecord>(() => createDraftRecord());
   const [list, setList] = useState<PkIndexEntry[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"editor" | "parity">("editor");
 
   const refreshList = useCallback(() => setList(listRecords()), []);
 
