@@ -342,11 +342,41 @@ function getToolSchema() {
           },
           mechanics_engine: {
             type: "object",
+            description: "Per-mechanic detail. items[] WAJIB diisi dengan tiap unit mekanik yg terdeteksi (trigger/eligibility/calculation/reward/distribution/control/invalidator/etc). JANGAN kosongkan kalau ada konten.",
             properties: {
-              mechanic_types: { type: "array", items: { type: "string" } },
-              mechanic_source: { type: "string" },
+              mechanic_source: { type: "string", description: "e.g. llm_text_extraction, llm_image_extraction, llm_multimodal_extraction" },
+              items: {
+                type: "array",
+                description: "Setiap mechanic = 1 unit logika promo. Pecah jadi item terpisah utk tiap trigger/syarat/perhitungan/reward/distribusi/aturan/invalidator. Untuk Cashback biasanya minimal 6 item: 1 trigger, 1 eligibility, 1 calculation, 1 reward, 1 distribution, 1+ invalidator.",
+                items: {
+                  type: "object",
+                  properties: {
+                    mechanic_id: { type: "string", description: "format: m_<type>_<idx>, e.g. m_trigger_1" },
+                    mechanic_type: {
+                      type: "string",
+                      enum: ["trigger", "eligibility", "calculation", "reward", "distribution", "control", "invalidator", "constraint", "other"],
+                    },
+                    evidence: { type: "string", description: "kutipan persis dari sumber yg jadi basis mechanic ini" },
+                    confidence: { type: "number", description: "0..1" },
+                    ambiguity: { type: "boolean" },
+                    ambiguity_reason: { type: ["string", "null"] },
+                    activation_rule: {
+                      type: ["object", "null"],
+                      description: "kondisi pengaktifan: { condition_type, threshold_value?, period_start?, period_end?, schedule_day?, violation_types?, ... }. null kalau ga relevan.",
+                      additionalProperties: true,
+                    },
+                    data: {
+                      type: "object",
+                      description: "detail spesifik mechanic. Bebas struktur, isi field yg relevan: trigger_event, calculation_base, percentage, reward_type, distribution_method, void_action, dst.",
+                      additionalProperties: true,
+                    },
+                  },
+                  required: ["mechanic_id", "mechanic_type", "evidence", "confidence", "ambiguity", "ambiguity_reason", "activation_rule", "data"],
+                  additionalProperties: false,
+                },
+              },
             },
-            required: ["mechanic_types", "mechanic_source"],
+            required: ["mechanic_source", "items"],
             additionalProperties: false,
           },
           projection_engine: {
