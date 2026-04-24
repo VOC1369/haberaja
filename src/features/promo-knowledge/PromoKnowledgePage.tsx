@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useMemo, useState, useCallback } from "react";
+import { AlertCircle, AlertTriangle, Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,7 @@ const NEXT_STATE: Partial<Record<LifecycleState, LifecycleState>> = {
 export default function PromoKnowledgePage() {
   const [record, setRecord] = useState<PromoKnowledgeRecord>(() => createDraftRecord());
   const [list, setList] = useState<PkIndexEntry[]>([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const refreshList = useCallback(() => setList(listRecords()), []);
 
@@ -84,9 +86,15 @@ export default function PromoKnowledgePage() {
   };
 
   const handleSave = () => {
-    const saved = saveRecord(record);
-    setRecord(saved);
-    refreshList();
+    try {
+      const saved = saveRecord(record);
+      setRecord(saved);
+      refreshList();
+      setSaveError(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setSaveError(`Save failed: ${msg}`);
+    }
   };
 
   const handleOpen = (id: string) => {
