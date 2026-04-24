@@ -540,7 +540,6 @@ function deriveProjection(engines: AnyObj): AnyObj {
   const reasoning = _o(engines.reasoning_engine);
   const dependency = _o(engines.dependency_engine);
   const period = _o(engines.period_engine);
-  const variant = _o(engines.variant_engine);
 
   const promoName = _s(promo.promo_name);
   const promoType = _s(promo.promo_type);
