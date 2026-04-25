@@ -1,0 +1,593 @@
+{
+  "governance_version": "V.06",
+  "domain_version": "PK-06.0",
+  "domain": "promo_knowledge",
+  "_schema": {
+    "version": "1.1",
+    "locked_at": "2026-04-24",
+    "ref": "pseudo-engine-schema-v06-spec.md"
+  },
+  "record_id": "15eb45c8-148c-4777-b8b5-15e3a0f84ed6",
+  "created_at": "2026-04-25T09:09:42.043Z",
+  "updated_at": "2026-04-25T09:09:42.043Z",
+  "identity_engine": {
+    "client_block": {
+      "client_id": "lautan77",
+      "client_id_field_status": "explicit",
+      "client_name": "LAUTAN77"
+    },
+    "promo_block": {
+      "promo_name": "Download Aplikasi Dapat Freechip",
+      "promo_type": "freechip",
+      "target_user": "new_member",
+      "promo_mode": "single"
+    }
+  },
+  "classification_engine": {
+    "result_block": {
+      "program_classification": "B",
+      "secondary_classifications": [],
+      "review_confidence": "high"
+    },
+    "question_block": {
+      "q1": {
+        "answer": "tidak",
+        "reasoning": "Ini adalah event/campaign khusus untuk pengguna yang download APK, bukan reward program berkelanjutan. Bersifat one-time per user ID.",
+        "evidence": ""
+      },
+      "q2": {
+        "answer": "ya",
+        "reasoning": "Ini adalah event program dengan periode terbatas (meskipun tanggal akhir tidak disebutkan), memberikan freechip sebagai apresiasi download aplikasi.",
+        "evidence": ""
+      },
+      "q3": {
+        "answer": "tidak",
+        "reasoning": "Bukan aturan sistem, melainkan program promosi dengan reward konkret (credit game 10rb-15rb).",
+        "evidence": ""
+      },
+      "q4": {
+        "answer": "tidak",
+        "reasoning": "Tidak ada ambiguitas klasifikasi. Jelas merupakan event program (B) untuk akuisisi pengguna aplikasi.",
+        "evidence": ""
+      }
+    },
+    "meta_block": {
+      "quality_flags": [],
+      "evidence_count": 0,
+      "override": false,
+      "prompt_version": "v09",
+      "latency_ms": null
+    }
+  },
+  "taxonomy_engine": {
+    "mode_block": {
+      "mode": "single",
+      "tier_archetype": null
+    },
+    "logic_block": {
+      "conversion_formula": "",
+      "turnover_basis": null
+    }
+  },
+  "period_engine": {
+    "validity_block": {
+      "valid_from": "",
+      "valid_until": ""
+    },
+    "distribution_block": {
+      "claim_frequency": "once_per_user",
+      "calculation_period": "one_time",
+      "distribution_day": "immediate"
+    }
+  },
+  "time_window_engine": {
+    "timezone_block": {
+      "timezone": "Asia/Jakarta",
+      "offset": ""
+    },
+    "claim_window_block": {
+      "open_ended": true
+    },
+    "distribution_window_block": {},
+    "reset_block": {}
+  },
+  "trigger_engine": {
+    "primary_trigger_block": {
+      "trigger_event": "app_download_install",
+      "action": "",
+      "evidence": ""
+    },
+    "trigger_rule_block": {
+      "rule_type": "",
+      "conditions": [
+        {
+          "field": "app_installed",
+          "operator": "equals",
+          "value": "true",
+          "currency": ""
+        },
+        {
+          "field": "user_logged_in",
+          "operator": "equals",
+          "value": "true",
+          "currency": ""
+        }
+      ],
+      "logic_operator": "AND"
+    },
+    "alternative_triggers_block": {
+      "or_conditions": [],
+      "and_conditions": []
+    }
+  },
+  "claim_engine": {
+    "method_block": {
+      "claim_method": "manual_whatsapp",
+      "auto_credit": true
+    },
+    "channels_block": {
+      "channels": [
+        "whatsapp"
+      ],
+      "priority_order": [
+        "whatsapp"
+      ]
+    },
+    "proof_requirement_block": {
+      "proof_required": false,
+      "proof_types": [],
+      "proof_destinations": []
+    },
+    "instruction_block": {
+      "claim_steps": [
+        "Download & install APK LAUTAN77",
+        "Login ke akun (WAJIB memiliki User ID)",
+        "Masuk ke halaman penukaran (Redemption Store)",
+        "Pilih produk CREDIT GAME yang diinginkan",
+        "Konfirmasi ke Admin via WhatsApp Official",
+        "Credit akan masuk secara otomatis"
+      ],
+      "claim_url": ""
+    }
+  },
+  "proof_engine": {
+    "social_proof_block": {
+      "platforms": [],
+      "hashtags": [],
+      "content_requirements": []
+    },
+    "screenshot_proof_block": {
+      "ss_targets": [],
+      "rules": []
+    }
+  },
+  "payment_engine": {
+    "deposit_block": {
+      "deposit_method": "",
+      "deposit_rate": null
+    },
+    "method_whitelist_block": {
+      "methods": [],
+      "providers": []
+    },
+    "method_blacklist_block": {
+      "methods": [],
+      "providers": []
+    }
+  },
+  "scope_engine": {
+    "game_block": {
+      "game_domain": "all",
+      "markets": [],
+      "eligible_providers": []
+    },
+    "blacklist_block": {
+      "types": [],
+      "providers": [],
+      "games": [],
+      "rules": []
+    }
+  },
+  "reward_engine": {
+    "event_block": {
+      "event_rewards": [],
+      "prizes": []
+    },
+    "requirement_block": {
+      "min_deposit": 10000,
+      "unlock_conditions": []
+    },
+    "combo_reward_block": {
+      "combo_items": []
+    },
+    "matrix_reward_block": {
+      "axis_x_label": "",
+      "axis_y_label": "",
+      "matrix_cells": []
+    },
+    "conditional_reward_block": {
+      "conditions": [],
+      "default_reward": null
+    },
+    "calculation_basis": "fixed",
+    "calculation_method": "fixed_amount",
+    "calculation_value": null,
+    "calculation_unit": "IDR",
+    "payout_direction": "backend",
+    "reward_type": "credit_game",
+    "voucher_kind": null,
+    "max_reward": 15000,
+    "currency": "IDR"
+  },
+  "loyalty_engine": {
+    "mechanism_block": {
+      "point_name": "",
+      "earning_rule": ""
+    },
+    "exchange_block": {
+      "exchange_groups": []
+    },
+    "tier_block": {
+      "tier_system": []
+    }
+  },
+  "variant_engine": {
+    "summary_block": {
+      "has_subcategories": false,
+      "expected_count": null
+    },
+    "items_block": {
+      "subcategories": []
+    }
+  },
+  "dependency_engine": {
+    "exclusion_block": {
+      "mutually_exclusive_with": [],
+      "can_combine_with": []
+    },
+    "stacking_block": {
+      "stacking_allowed": true,
+      "stacking_policy": "exclusive",
+      "rules": [],
+      "max_concurrent": null
+    },
+    "prerequisite_block": {
+      "requires_promo": [],
+      "requires_achievement": []
+    }
+  },
+  "invalidation_engine": {
+    "void_conditions_block": [
+      {
+        "trigger": "multi_accounting"
+      }
+    ],
+    "penalty_block": {
+      "void_action": "void_reward",
+      "penalty_type": "reward_void",
+      "penalty_scope": "current_promo"
+    },
+    "anti_fraud_block": {
+      "anti_fraud_rules": [
+        "multi_accounting"
+      ],
+      "detection_methods": []
+    }
+  },
+  "terms_engine": {
+    "conditions_block": {
+      "terms_conditions": [
+        "Penukaran hanya 1x per User ID & hanya untuk pengguna APK",
+        "Keputusan LAUTAN77 bersifat mutlak & tidak dapat diganggu gugat",
+        "WAJIB memiliki User ID",
+        "Credit game eksklusif pada menu REDEMPTION STORE mulai dari 10rb s.d. 15rb",
+        "Credit akan masuk secara otomatis setelah konfirmasi ke Admin via WhatsApp Official"
+      ]
+    },
+    "requirements_block": {
+      "special_requirements": []
+    }
+  },
+  "readiness_engine": {
+    "state_block": {
+      "state": "ai_draft",
+      "state_changed_at": "2026-04-25T09:09:42.043Z",
+      "state_changed_by": "extractor:pk-extractor"
+    },
+    "commit_block": {
+      "ready_to_commit": false
+    },
+    "validation_block": {
+      "is_structurally_complete": true,
+      "status": "needs_review",
+      "warnings": [
+        "Periode promo tidak jelas (valid_from dan valid_until kosong)",
+        "Tidak ada informasi tentang turnover requirement atau withdrawal condition untuk freechip",
+        "Game domain diasumsikan 'all' karena tidak ada pembatasan spesifik disebutkan"
+      ]
+    },
+    "observability_block": {
+      "ambiguity_flags": [
+        "Tanggal akhir tidak disebutkan (Tanggal akhir: -), diasumsikan open-ended",
+        "Nilai exact freechip tidak spesifik, hanya range 10rb-15rb, kemungkinan user memilih sendiri di Redemption Store"
+      ],
+      "contradiction_flags": [],
+      "review_required": true
+    }
+  },
+  "reasoning_engine": {
+    "intent_block": {
+      "primary_action": "app_install_to_freechip",
+      "reward_nature": "appreciation_reward",
+      "distribution_path": "redemption_store",
+      "value_shape": "fixed_range"
+    },
+    "selection_block": {
+      "mechanic_type": "",
+      "locked_fields": [],
+      "invariant_violations": []
+    }
+  },
+  "mechanics_engine": {
+    "source_block": {
+      "source": "llm_multimodal_extraction"
+    },
+    "items_block": {
+      "items": [
+        {
+          "mechanic_id": "m_trigger_1",
+          "mechanic_type": "trigger",
+          "evidence": "Download & install APK LAUTAN77, Login ke akun (WAJIB memiliki User ID)",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "trigger_event": "app_download_install",
+            "trigger_sequence": [
+              "download_apk",
+              "install_apk",
+              "login_with_user_id"
+            ],
+            "platform": "APK",
+            "app_name": "LAUTAN77"
+          }
+        },
+        {
+          "mechanic_id": "m_eligibility_1",
+          "mechanic_type": "eligibility",
+          "evidence": "Penukaran hanya 1x per User ID & hanya untuk pengguna APK",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "user_segment_and_frequency",
+            "user_segment": "apk_users_only",
+            "max_claim_per_user": 1
+          },
+          "data": {
+            "user_segment": "apk_users",
+            "frequency_limit": "once_per_user_id",
+            "platform_requirement": "APK_only",
+            "user_id_required": true
+          }
+        },
+        {
+          "mechanic_id": "m_reward_1",
+          "mechanic_type": "reward",
+          "evidence": "kamu bisa menukarkan credit game eksklusif pada menu REDEMPTION STORE mulai dari 10rb s.d. 15rb",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "reward_type": "credit_game",
+            "reward_form": "game_credit",
+            "min_amount": 10000,
+            "max_amount": 15000,
+            "currency": "IDR",
+            "redemption_location": "REDEMPTION_STORE"
+          }
+        },
+        {
+          "mechanic_id": "m_distribution_1",
+          "mechanic_type": "distribution",
+          "evidence": "Konfirmasi ke Admin via WhatsApp Official, Credit akan masuk secara otomatis",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "manual_confirmation_required",
+            "confirmation_channel": "whatsapp_official"
+          },
+          "data": {
+            "distribution_method": "auto_credit_after_confirmation",
+            "confirmation_channel": "whatsapp",
+            "distribution_timing": "immediate",
+            "auto_credit": true
+          }
+        },
+        {
+          "mechanic_id": "m_control_1",
+          "mechanic_type": "control",
+          "evidence": "Penukaran hanya 1x per User ID",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "frequency_cap",
+            "max_redemption": 1,
+            "scope": "per_user_id"
+          },
+          "data": {
+            "control_type": "frequency_limit",
+            "max_claim": 1,
+            "scope": "user_id",
+            "enforcement": "system_level"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_1",
+          "mechanic_type": "invalidator",
+          "evidence": "Keputusan LAUTAN77 bersifat mutlak & tidak dapat diganggu gugat",
+          "confidence": 0.8,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "operator_discretion",
+            "violation_types": [
+              "abuse",
+              "fraud",
+              "terms_violation"
+            ]
+          },
+          "data": {
+            "void_trigger": "operator_discretion",
+            "void_action": "reward_void",
+            "penalty_scope": "current_promo",
+            "appeal_allowed": false,
+            "final_decision_authority": "LAUTAN77"
+          }
+        },
+        {
+          "mechanic_id": "m_constraint_1",
+          "mechanic_type": "constraint",
+          "evidence": "Masuk ke halaman penukaran (Redemption Store), Pilih produk CREDIT GAME yang diinginkan",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "constraint_type": "redemption_process",
+            "redemption_interface": "redemption_store",
+            "product_selection_required": true,
+            "product_type": "credit_game"
+          }
+        }
+      ]
+    }
+  },
+  "projection_engine": {
+    "_description": "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
+    "summary_block": {
+      "summary": "Download Aplikasi Dapat Freechip dari fixed.",
+      "promo_summary": "Download Aplikasi Dapat Freechip dari fixed.",
+      "main_trigger": "app_download_install",
+      "main_reward_form": "credit_game",
+      "main_reward_percent": null,
+      "main_reward_value": null,
+      "main_reward_unit": "IDR",
+      "max_bonus": 15000,
+      "min_base": 10000,
+      "payout_direction": "backend",
+      "turnover_multiplier": null,
+      "turnover_basis": null
+    },
+    "claim_summary_block": {
+      "primary_claim_method": "manual_whatsapp",
+      "primary_claim_platform": "whatsapp",
+      "claim_channels": [
+        "whatsapp"
+      ],
+      "auto_credit": true,
+      "proof_required": false,
+      "claim_frequency": "once_per_user",
+      "distribution_day": "immediate"
+    },
+    "scope_summary_block": {
+      "game_domain": "all",
+      "game_types": [],
+      "game_providers": [],
+      "game_exclusions": [],
+      "stacking_policy": "exclusive"
+    },
+    "intent_summary_block": {
+      "intent_category": "acquisition",
+      "primary_action": "app_install_to_freechip",
+      "reward_nature": "appreciation_reward",
+      "distribution_path": "redemption_store",
+      "value_shape": "fixed_range",
+      "target_segment": "Member Baru"
+    }
+  },
+  "risk_engine": {
+    "level_block": {
+      "promo_risk_level": "low"
+    }
+  },
+  "meta_engine": {
+    "source_block": {
+      "source_url": "",
+      "raw_content": "",
+      "extraction_source": "multimodal",
+      "source_type": "image_upload"
+    },
+    "extraction_block": {
+      "has_rowspan_tables": false,
+      "html_was_normalized": false,
+      "client_id_source": null,
+      "propagated_fields": [],
+      "ambiguous_blacklists": 0,
+      "extracted_at": "2026-04-25T09:09:42.043Z",
+      "classification_overridden": false,
+      "classification_override_reason": "",
+      "original_llm_category": ""
+    },
+    "schema_block": {
+      "schema_name": "Pseudo Engine Schema",
+      "schema_version": "1.1",
+      "created_by": "habe_raja",
+      "status": "locked",
+      "evolved_from": "1.0",
+      "extractor": "pk-extractor@claude-sonnet-4-5"
+    }
+  },
+  "ai_confidence": {
+    "identity_engine.client_block.client_id": 1,
+    "identity_engine.promo_block.promo_name": 1,
+    "identity_engine.promo_block.promo_type": 1,
+    "identity_engine.promo_block.target_user": 0.85,
+    "identity_engine.promo_block.promo_mode": 1,
+    "reward_engine.calculation_basis": 1,
+    "reward_engine.calculation_method": 1,
+    "reward_engine.reward_type": 1,
+    "reward_engine.min_base": 1,
+    "reward_engine.max_reward": 1,
+    "reward_engine.payout_direction": 0.9,
+    "trigger_engine.trigger_event": 1,
+    "claim_engine.method_block.claim_method": 1,
+    "claim_engine.method_block.auto_credit": 1,
+    "scope_engine.game_domain": 0.7,
+    "period_engine.valid_from": 0,
+    "period_engine.valid_until": 0,
+    "period_engine.claim_frequency": 1,
+    "time_window_engine.timezone": 0.8,
+    "time_window_engine.open_ended": 0.9,
+    "classification_engine.result_block.program_classification": 1,
+    "reward_engine.calculation_value": 0
+  },
+  "_field_status": {
+    "identity_engine.client_block.client_id": "explicit",
+    "identity_engine.promo_block.promo_name": "explicit",
+    "identity_engine.promo_block.promo_type": "explicit",
+    "identity_engine.promo_block.target_user": "inferred",
+    "identity_engine.promo_block.promo_mode": "derived",
+    "reward_engine.calculation_basis": "derived",
+    "reward_engine.calculation_method": "derived",
+    "reward_engine.reward_type": "explicit",
+    "reward_engine.min_base": "explicit",
+    "reward_engine.max_reward": "explicit",
+    "reward_engine.payout_direction": "inferred",
+    "trigger_engine.trigger_event": "explicit",
+    "claim_engine.method_block.claim_method": "explicit",
+    "claim_engine.method_block.auto_credit": "explicit",
+    "scope_engine.game_domain": "inferred",
+    "period_engine.valid_from": "unknown",
+    "period_engine.valid_until": "unknown",
+    "period_engine.claim_frequency": "explicit",
+    "time_window_engine.timezone": "inferred",
+    "time_window_engine.open_ended": "inferred",
+    "classification_engine.result_block.program_classification": "derived",
+    "reward_engine.calculation_value": "unknown"
+  }
+}

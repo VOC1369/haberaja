@@ -1,0 +1,665 @@
+{
+  "governance_version": "V.06",
+  "domain_version": "PK-06.0",
+  "domain": "promo_knowledge",
+  "_schema": {
+    "version": "1.1",
+    "locked_at": "2026-04-24",
+    "ref": "pseudo-engine-schema-v06-spec.md"
+  },
+  "record_id": "9e39a6c1-1db9-4afa-bb3e-eda16f0f99ae",
+  "created_at": "2026-04-25T07:13:43.429Z",
+  "updated_at": "2026-04-25T07:13:43.429Z",
+  "identity_engine": {
+    "client_block": {
+      "client_id": "slot25",
+      "client_id_field_status": "explicit",
+      "client_name": "SLOT25"
+    },
+    "promo_block": {
+      "promo_name": "Cashback Sportsbook 5%",
+      "promo_type": "cashback",
+      "target_user": "existing_member",
+      "promo_mode": "single"
+    }
+  },
+  "classification_engine": {
+    "result_block": {
+      "program_classification": "A",
+      "secondary_classifications": [],
+      "review_confidence": "high"
+    },
+    "question_block": {
+      "q1": {
+        "answer": "ya",
+        "reasoning": "Program cashback sportsbook 5% adalah reward rutin mingguan yang dihitung dari total kekalahan Selasa-Senin dan dikreditkan setiap Selasa. Ini adalah reward program berkelanjutan.",
+        "evidence": ""
+      },
+      "q2": {
+        "answer": "tidak",
+        "reasoning": "Tidak ada periode terbatas, tidak ada ranking/kompetisi, tidak ada tema event khusus. Ini adalah program cashback rutin mingguan yang berjalan terus-menerus.",
+        "evidence": ""
+      },
+      "q3": {
+        "answer": "tidak",
+        "reasoning": "Ini bukan aturan sistem umum. Ini adalah program reward spesifik dengan mekanisme cashback 5% untuk sportsbook dengan syarat minimal kekalahan Rp500.000.",
+        "evidence": ""
+      },
+      "q4": {
+        "answer": "ya",
+        "reasoning": "Klasifikasi A (Reward Program) sudah tepat karena ini adalah program cashback rutin mingguan dengan perhitungan loss-based dan distribusi terjadwal setiap Selasa.",
+        "evidence": ""
+      }
+    },
+    "meta_block": {
+      "quality_flags": [],
+      "evidence_count": 0,
+      "override": false,
+      "prompt_version": "v09",
+      "latency_ms": null
+    }
+  },
+  "taxonomy_engine": {
+    "mode_block": {
+      "mode": "single",
+      "tier_archetype": null
+    },
+    "logic_block": {
+      "conversion_formula": "",
+      "turnover_basis": null
+    }
+  },
+  "period_engine": {
+    "validity_block": {
+      "valid_from": "",
+      "valid_until": ""
+    },
+    "distribution_block": {
+      "claim_frequency": "weekly",
+      "calculation_period": "weekly_tuesday_to_monday",
+      "distribution_day": "tuesday"
+    }
+  },
+  "time_window_engine": {
+    "timezone_block": {
+      "timezone": "Asia/Jakarta",
+      "offset": ""
+    },
+    "claim_window_block": {
+      "open_ended": true
+    },
+    "distribution_window_block": {},
+    "reset_block": {}
+  },
+  "trigger_engine": {
+    "primary_trigger_block": {
+      "trigger_event": "loss_accumulation",
+      "action": "",
+      "evidence": ""
+    },
+    "trigger_rule_block": {
+      "rule_type": "",
+      "conditions": [
+        {
+          "field": "total_loss",
+          "operator": ">=",
+          "value": "500000",
+          "currency": "IDR"
+        },
+        {
+          "field": "game_domain",
+          "operator": "==",
+          "value": "sportsbook",
+          "currency": ""
+        },
+        {
+          "field": "calculation_period",
+          "operator": "==",
+          "value": "tuesday_to_monday",
+          "currency": ""
+        }
+      ],
+      "logic_operator": "AND"
+    },
+    "alternative_triggers_block": {
+      "or_conditions": [],
+      "and_conditions": []
+    }
+  },
+  "claim_engine": {
+    "method_block": {
+      "claim_method": "auto",
+      "auto_credit": true
+    },
+    "channels_block": {
+      "channels": [],
+      "priority_order": []
+    },
+    "proof_requirement_block": {
+      "proof_required": false,
+      "proof_types": [],
+      "proof_destinations": []
+    },
+    "instruction_block": {
+      "claim_steps": [
+        "Bonus cashback akan dihitung dari total kekalahan hari Selasa hingga Senin",
+        "Cashback akan dikreditkan otomatis setiap hari Selasa"
+      ],
+      "claim_url": ""
+    }
+  },
+  "proof_engine": {
+    "social_proof_block": {
+      "platforms": [],
+      "hashtags": [],
+      "content_requirements": []
+    },
+    "screenshot_proof_block": {
+      "ss_targets": [],
+      "rules": []
+    }
+  },
+  "payment_engine": {
+    "deposit_block": {
+      "deposit_method": "",
+      "deposit_rate": null
+    },
+    "method_whitelist_block": {
+      "methods": [],
+      "providers": []
+    },
+    "method_blacklist_block": {
+      "methods": [],
+      "providers": []
+    }
+  },
+  "scope_engine": {
+    "game_block": {
+      "game_domain": "sportsbook",
+      "markets": [],
+      "eligible_providers": []
+    },
+    "blacklist_block": {
+      "types": [
+        "safety_bet",
+        "opposite_betting",
+        "other_sports"
+      ],
+      "providers": [],
+      "games": [],
+      "rules": []
+    }
+  },
+  "reward_engine": {
+    "event_block": {
+      "event_rewards": [],
+      "prizes": []
+    },
+    "requirement_block": {
+      "min_deposit": 500000,
+      "unlock_conditions": []
+    },
+    "combo_reward_block": {
+      "combo_items": []
+    },
+    "matrix_reward_block": {
+      "axis_x_label": "",
+      "axis_y_label": "",
+      "matrix_cells": []
+    },
+    "conditional_reward_block": {
+      "conditions": [],
+      "default_reward": null
+    },
+    "calculation_basis": "loss",
+    "calculation_method": "percentage",
+    "calculation_value": 5,
+    "calculation_unit": "percent",
+    "payout_direction": "backend",
+    "reward_type": "cash",
+    "voucher_kind": null,
+    "max_reward": null,
+    "currency": "IDR"
+  },
+  "loyalty_engine": {
+    "mechanism_block": {
+      "point_name": "",
+      "earning_rule": ""
+    },
+    "exchange_block": {
+      "exchange_groups": []
+    },
+    "tier_block": {
+      "tier_system": []
+    }
+  },
+  "variant_engine": {
+    "summary_block": {
+      "has_subcategories": false,
+      "expected_count": null
+    },
+    "items_block": {
+      "subcategories": []
+    }
+  },
+  "dependency_engine": {
+    "exclusion_block": {
+      "mutually_exclusive_with": [],
+      "can_combine_with": []
+    },
+    "stacking_block": {
+      "stacking_allowed": true,
+      "stacking_policy": "non_stackable",
+      "rules": [],
+      "max_concurrent": null
+    },
+    "prerequisite_block": {
+      "requires_promo": [],
+      "requires_achievement": []
+    }
+  },
+  "invalidation_engine": {
+    "void_conditions_block": [
+      {
+        "trigger": "bonus_hunter"
+      },
+      {
+        "trigger": "safety_bet"
+      },
+      {
+        "trigger": "ip_duplicate"
+      },
+      {
+        "trigger": "multi_accounting"
+      }
+    ],
+    "penalty_block": {
+      "void_action": "withdraw_bonus",
+      "penalty_type": "bonus_and_winnings_forfeiture",
+      "penalty_scope": "current_promotion"
+    },
+    "anti_fraud_block": {
+      "anti_fraud_rules": [
+        "bonus_hunter",
+        "safety_bet",
+        "ip_duplicate",
+        "multi_accounting"
+      ],
+      "detection_methods": []
+    }
+  },
+  "terms_engine": {
+    "conditions_block": {
+      "terms_conditions": [
+        "Pembagian Cashback : Bonus cashback akan dihitung dari total kekalahan hari Selasa hingga Senin , dan akan dikreditkan setiap hari SELASA",
+        "Promo berlaku Untuk semua Member SLOT25",
+        "Promo ini tidak dapat digabungkan dengan promo lainnya",
+        "Minimal Kekalahan Rp500.000",
+        "Bonus dan Taruhan menang ditarik kembali apabila melakukan taruhan: di dua sisi ( SAFETY BET/ OPPOSITE BETTING ), OTHER SPORTS",
+        "SLOT25 berhak untuk mengubah, menolak,membatalkan atau menutup semua promosi sesuai dengan ketentuan yang berlaku tanpa ada pemberitahuan sebelumnya",
+        "Apabila ditemukan adanya indikasi kecurangan, Bonus Hunter, dan Kesamaan IP, maka SLOT25 berhak menarik bonus dan semua kemenangan",
+        "Syarat & Ketentuan Umum berlaku"
+      ]
+    },
+    "requirements_block": {
+      "special_requirements": []
+    }
+  },
+  "readiness_engine": {
+    "state_block": {
+      "state": "ai_draft",
+      "state_changed_at": "2026-04-25T07:13:43.430Z",
+      "state_changed_by": "extractor:pk-extractor"
+    },
+    "commit_block": {
+      "ready_to_commit": false
+    },
+    "validation_block": {
+      "is_structurally_complete": true,
+      "status": "needs_review",
+      "warnings": [
+        "No explicit valid_from and valid_until dates provided - program appears to be ongoing",
+        "Timezone inferred as Asia/Jakarta based on Indonesian context (IDR currency, Indonesian language)",
+        "Target user inferred as existing_member based on 'semua Member SLOT25' phrasing"
+      ]
+    },
+    "observability_block": {
+      "ambiguity_flags": [],
+      "contradiction_flags": [],
+      "review_required": true
+    }
+  },
+  "reasoning_engine": {
+    "intent_block": {
+      "primary_action": "lose_to_cashback",
+      "reward_nature": "loss_mitigation",
+      "distribution_path": "auto_credit_weekly",
+      "value_shape": "percentage_of_loss"
+    },
+    "selection_block": {
+      "mechanic_type": "",
+      "locked_fields": [],
+      "invariant_violations": []
+    }
+  },
+  "mechanics_engine": {
+    "source_block": {
+      "source": "llm_multimodal_extraction"
+    },
+    "items_block": {
+      "items": [
+        {
+          "mechanic_id": "m_trigger_1",
+          "mechanic_type": "trigger",
+          "evidence": "Bonus cashback akan dihitung dari total kekalahan hari Selasa hingga Senin",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "weekly_loss_accumulation",
+            "period_start": "tuesday",
+            "period_end": "monday",
+            "threshold_value": 500000,
+            "threshold_unit": "IDR"
+          },
+          "data": {
+            "trigger_event": "loss_accumulation",
+            "period_type": "weekly",
+            "calculation_window": "tuesday_to_monday",
+            "calculation_basis": "loss",
+            "game_domain": "sportsbook"
+          }
+        },
+        {
+          "mechanic_id": "m_eligibility_1",
+          "mechanic_type": "eligibility",
+          "evidence": "Promo berlaku Untuk semua Member SLOT25. Minimal Kekalahan Rp500.000",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "minimum_loss_threshold",
+            "threshold_value": 500000,
+            "threshold_unit": "IDR"
+          },
+          "data": {
+            "user_segment": "existing_member",
+            "min_threshold": 500000,
+            "threshold_unit": "IDR",
+            "currency": "IDR",
+            "threshold_type": "loss"
+          }
+        },
+        {
+          "mechanic_id": "m_calculation_1",
+          "mechanic_type": "calculation",
+          "evidence": "CASHBACK SPORTSBOOK 5%",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "calculation_basis": "loss",
+            "calculation_method": "percentage",
+            "percentage": 5,
+            "max_reward": null,
+            "currency": "IDR",
+            "calculation_formula": "total_loss * 5%"
+          }
+        },
+        {
+          "mechanic_id": "m_reward_1",
+          "mechanic_type": "reward",
+          "evidence": "Bonus cashback akan dihitung dari total kekalahan",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "reward_type": "cash",
+            "reward_form": "cashback",
+            "reward_unit": "IDR",
+            "voucher_kind": null,
+            "payout_direction": "backend"
+          }
+        },
+        {
+          "mechanic_id": "m_distribution_1",
+          "mechanic_type": "distribution",
+          "evidence": "akan dikreditkan setiap hari SELASA",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "scheduled_distribution",
+            "schedule_day": "tuesday"
+          },
+          "data": {
+            "distribution_method": "auto_credit",
+            "distribution_day": "tuesday",
+            "distribution_window": "weekly",
+            "auto_credit": true,
+            "distribution_timing": "every_tuesday"
+          }
+        },
+        {
+          "mechanic_id": "m_control_1",
+          "mechanic_type": "control",
+          "evidence": "Promo ini tidak dapat digabungkan dengan promo lainnya",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "control_type": "stacking_restriction",
+            "stacking_policy": "non_stackable",
+            "max_concurrent": 1,
+            "blacklist_scope": "all_other_promos"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_1",
+          "mechanic_type": "invalidator",
+          "evidence": "Bonus dan Taruhan menang ditarik kembali apabila melakukan taruhan: di dua sisi ( SAFETY BET/ OPPOSITE BETTING ), OTHER SPORTS",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "betting_pattern_violation",
+            "violation_types": [
+              "safety_bet",
+              "opposite_betting",
+              "other_sports"
+            ]
+          },
+          "data": {
+            "void_trigger": "safety_bet",
+            "void_action": "withdraw_bonus_and_winnings",
+            "penalty_scope": "current_promotion",
+            "violation_types": [
+              "safety_bet",
+              "opposite_betting",
+              "other_sports_betting"
+            ]
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_2",
+          "mechanic_type": "invalidator",
+          "evidence": "Apabila ditemukan adanya indikasi kecurangan, Bonus Hunter, dan Kesamaan IP, maka SLOT25 berhak menarik bonus dan semua kemenangan",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "fraud_detection",
+            "violation_types": [
+              "bonus_hunter",
+              "ip_duplicate",
+              "fraud_indication"
+            ]
+          },
+          "data": {
+            "void_trigger": "bonus_hunter",
+            "void_action": "withdraw_bonus_and_winnings",
+            "penalty_scope": "all_promotions",
+            "fraud_types": [
+              "bonus_hunter",
+              "ip_duplicate",
+              "cheating_indication"
+            ]
+          }
+        },
+        {
+          "mechanic_id": "m_control_2",
+          "mechanic_type": "control",
+          "evidence": "SLOT25 berhak untuk mengubah, menolak,membatalkan atau menutup semua promosi sesuai dengan ketentuan yang berlaku tanpa ada pemberitahuan sebelumnya",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "control_type": "operator_discretion",
+            "operator_rights": [
+              "modify",
+              "reject",
+              "cancel",
+              "terminate"
+            ],
+            "notice_requirement": false
+          }
+        }
+      ]
+    }
+  },
+  "projection_engine": {
+    "_description": "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
+    "summary_block": {
+      "summary": "Cashback Sportsbook 5% — 5% dari loss.",
+      "promo_summary": "Cashback Sportsbook 5% — 5% dari loss.",
+      "main_trigger": "loss_accumulation",
+      "main_reward_form": "cash",
+      "main_reward_percent": 5,
+      "main_reward_value": 5,
+      "main_reward_unit": "percent",
+      "max_bonus": null,
+      "min_base": 500000,
+      "payout_direction": "backend",
+      "turnover_multiplier": null,
+      "turnover_basis": null
+    },
+    "claim_summary_block": {
+      "primary_claim_method": "auto",
+      "primary_claim_platform": "",
+      "claim_channels": [],
+      "auto_credit": true,
+      "proof_required": false,
+      "claim_frequency": "weekly",
+      "distribution_day": "tuesday"
+    },
+    "scope_summary_block": {
+      "game_domain": "sportsbook",
+      "game_types": [],
+      "game_providers": [],
+      "game_exclusions": [
+        "safety_bet",
+        "opposite_betting",
+        "other_sports"
+      ],
+      "stacking_policy": "non_stackable"
+    },
+    "intent_summary_block": {
+      "intent_category": "retention",
+      "primary_action": "lose_to_cashback",
+      "reward_nature": "loss_mitigation",
+      "distribution_path": "auto_credit_weekly",
+      "value_shape": "percentage_of_loss",
+      "target_segment": "Member Lama"
+    }
+  },
+  "risk_engine": {
+    "level_block": {
+      "promo_risk_level": "medium"
+    }
+  },
+  "meta_engine": {
+    "source_block": {
+      "source_url": "",
+      "raw_content": "",
+      "extraction_source": "multimodal",
+      "source_type": "image_upload"
+    },
+    "extraction_block": {
+      "has_rowspan_tables": false,
+      "html_was_normalized": false,
+      "client_id_source": null,
+      "propagated_fields": [],
+      "ambiguous_blacklists": 0,
+      "extracted_at": "2026-04-25T07:13:43.430Z",
+      "classification_overridden": false,
+      "classification_override_reason": "",
+      "original_llm_category": ""
+    },
+    "schema_block": {
+      "schema_name": "Pseudo Engine Schema",
+      "schema_version": "1.1",
+      "created_by": "habe_raja",
+      "status": "locked",
+      "evolved_from": "1.0",
+      "extractor": "pk-extractor@claude-sonnet-4-5"
+    }
+  },
+  "ai_confidence": {
+    "identity_engine.client_block.client_id": 1,
+    "identity_engine.promo_block.promo_name": 1,
+    "identity_engine.promo_block.promo_type": 1,
+    "identity_engine.promo_block.target_user": 0.9,
+    "identity_engine.promo_block.promo_mode": 1,
+    "reward_engine.calculation_basis": 1,
+    "reward_engine.calculation_value": 1,
+    "reward_engine.calculation_method": 1,
+    "reward_engine.payout_direction": 1,
+    "reward_engine.reward_type": 1,
+    "reward_engine.min_base": 1,
+    "trigger_engine.trigger_event": 1,
+    "trigger_engine.conditions": 1,
+    "claim_engine.method_block.claim_method": 1,
+    "claim_engine.method_block.auto_credit": 1,
+    "scope_engine.game_domain": 1,
+    "scope_engine.blacklist_categories": 1,
+    "period_engine.claim_frequency": 1,
+    "period_engine.calculation_period": 1,
+    "period_engine.distribution_day": 1,
+    "period_engine.valid_from": 0,
+    "period_engine.valid_until": 0,
+    "dependency_engine.stacking_policy": 1,
+    "invalidation_engine.void_triggers": 1,
+    "invalidation_engine.void_actions": 1,
+    "time_window_engine.timezone": 0.8,
+    "classification_engine.result_block.program_classification": 1
+  },
+  "_field_status": {
+    "identity_engine.client_block.client_id": "explicit",
+    "identity_engine.promo_block.promo_name": "explicit",
+    "identity_engine.promo_block.promo_type": "explicit",
+    "identity_engine.promo_block.target_user": "inferred",
+    "identity_engine.promo_block.promo_mode": "derived",
+    "reward_engine.calculation_basis": "explicit",
+    "reward_engine.calculation_value": "explicit",
+    "reward_engine.calculation_method": "explicit",
+    "reward_engine.payout_direction": "inferred",
+    "reward_engine.reward_type": "explicit",
+    "reward_engine.min_base": "explicit",
+    "trigger_engine.trigger_event": "inferred",
+    "claim_engine.method_block.claim_method": "explicit",
+    "scope_engine.game_domain": "explicit",
+    "period_engine.claim_frequency": "explicit",
+    "period_engine.calculation_period": "explicit",
+    "period_engine.distribution_day": "explicit",
+    "period_engine.valid_from": "unknown",
+    "period_engine.valid_until": "unknown",
+    "dependency_engine.stacking_policy": "explicit",
+    "invalidation_engine.void_triggers": "explicit",
+    "time_window_engine.timezone": "inferred",
+    "classification_engine.result_block.program_classification": "derived"
+  }
+}
