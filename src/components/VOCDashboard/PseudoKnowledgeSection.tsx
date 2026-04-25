@@ -2102,6 +2102,23 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   </Tooltip>
                 </TooltipProvider>
               )}
+              {/* BUG #4 — non-blocking mapper failure surface (preview only).
+                  pkRecord + Copy JSON remain available even when this shows. */}
+              {mappedPreviewError && extractedPromo && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-xs font-medium text-amber-700 dark:text-amber-300 cursor-help">
+                        <AlertTriangle className="w-3 h-3" />
+                        Preview failed, raw JSON still available
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-md">
+                      <p className="text-xs break-words">{mappedPreviewError}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             
             {/* Right: Copy JSON + Visual Result + Primary Action */}
