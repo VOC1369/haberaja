@@ -1,0 +1,738 @@
+{
+  "governance_version": "V.06",
+  "domain_version": "PK-06.0",
+  "domain": "promo_knowledge",
+  "_schema": {
+    "version": "1.1",
+    "locked_at": "2026-04-24",
+    "ref": "pseudo-engine-schema-v06-spec.md"
+  },
+  "record_id": "7116af79-6bc6-4180-913d-9a6979249543",
+  "created_at": "2026-04-24T23:03:42.908Z",
+  "updated_at": "2026-04-24T23:03:42.908Z",
+  "identity_engine": {
+    "client_block": {
+      "client_id": "lautan77",
+      "client_id_field_status": "explicit",
+      "client_name": "LAUTAN77"
+    },
+    "promo_block": {
+      "promo_name": "EVENT KEJAR LEVEL UP LAUTAN77",
+      "promo_type": "level_up",
+      "target_user": "existing_member",
+      "promo_mode": "tiered"
+    }
+  },
+  "classification_engine": {
+    "result_block": {
+      "program_classification": "B",
+      "secondary_classifications": [],
+      "review_confidence": "high"
+    },
+    "question_block": {
+      "q1": {
+        "answer": "tidak",
+        "reasoning": "Ini adalah event level up dengan reward bertingkat berdasarkan pencapaian level (Silver, Gold, Platinum, Diamond). Bukan reward program berkelanjutan, melainkan event dengan periode tertentu.",
+        "evidence": ""
+      },
+      "q2": {
+        "answer": "ya",
+        "reasoning": "Event ini memiliki periode tertentu (meskipun tanggal akhir tidak disebutkan secara spesifik), ada mekanisme klaim H+1 setelah level up, dan ada tabel reward bertingkat berdasarkan level yang dicapai.",
+        "evidence": ""
+      },
+      "q3": {
+        "answer": "tidak",
+        "reasoning": "Ini bukan aturan sistem umum, melainkan event spesifik dengan reward dan syarat klaim tertentu.",
+        "evidence": ""
+      },
+      "q4": {
+        "answer": "tidak",
+        "reasoning": "Berdasarkan q2=ya (Event Program), maka classification adalah B.",
+        "evidence": ""
+      }
+    },
+    "meta_block": {
+      "quality_flags": [],
+      "evidence_count": 0,
+      "override": false,
+      "prompt_version": "v09",
+      "latency_ms": null
+    }
+  },
+  "taxonomy_engine": {
+    "mode_block": {
+      "mode": "tiered",
+      "tier_archetype": "level_based"
+    },
+    "logic_block": {
+      "conversion_formula": "",
+      "turnover_basis": null
+    }
+  },
+  "period_engine": {
+    "validity_block": {
+      "valid_from": "",
+      "valid_until": ""
+    },
+    "distribution_block": {
+      "claim_frequency": "once_per_level",
+      "calculation_period": "event_duration",
+      "distribution_day": "h_plus_1"
+    }
+  },
+  "time_window_engine": {
+    "timezone_block": {
+      "timezone": "WIB",
+      "offset": "+07:00"
+    },
+    "claim_window_block": {
+      "open_ended": true
+    },
+    "distribution_window_block": {},
+    "reset_block": {}
+  },
+  "trigger_engine": {
+    "primary_trigger_block": {
+      "trigger_event": "level_up_achievement",
+      "action": "",
+      "evidence": ""
+    },
+    "trigger_rule_block": {
+      "rule_type": "",
+      "conditions": [
+        {
+          "field": "user_level",
+          "operator": "level_up_to",
+          "value": "silver_gold_platinum_diamond",
+          "currency": ""
+        },
+        {
+          "field": "deposit_history",
+          "operator": ">=",
+          "value": "100000",
+          "currency": "IDR"
+        }
+      ],
+      "logic_operator": "AND"
+    },
+    "alternative_triggers_block": {
+      "or_conditions": [],
+      "and_conditions": []
+    }
+  },
+  "claim_engine": {
+    "method_block": {
+      "claim_method": "manual_livechat",
+      "auto_credit": false
+    },
+    "channels_block": {
+      "channels": [
+        "livechat",
+        "whatsapp"
+      ],
+      "priority_order": [
+        "livechat",
+        "whatsapp"
+      ]
+    },
+    "proof_requirement_block": {
+      "proof_required": true,
+      "proof_types": [
+        "screenshot"
+      ],
+      "proof_destinations": [
+        "livechat",
+        "whatsapp"
+      ]
+    },
+    "instruction_block": {
+      "claim_steps": [
+        "Player WAJIB memiliki User ID di LAUTAN77",
+        "Tier Bronze to Silver WAJIB memiliki History Deposit Sebesar Rp.100.000",
+        "Setelah mendapatkan kenaikan level, player bisa langsung melakukan claim tanpa perlu deposit kembali",
+        "WAJIB disertakan bukti screenshot kenaikan LEVEL UP",
+        "Bonus WAJIB diclaim setelah berhasil Level UP dan dapat langsung menghubungi Livechat/Whatsapp resmi",
+        "Batas claim promosi H+1 setelah mendapatkan kenaikan level",
+        "Saldo reward level up bisa langsung di withdraw setelah saldo cair kedalam akun dan tanpa perlu dimainkan terlebih dahulu"
+      ],
+      "claim_url": ""
+    }
+  },
+  "proof_engine": {
+    "social_proof_block": {
+      "platforms": [],
+      "hashtags": [],
+      "content_requirements": []
+    },
+    "screenshot_proof_block": {
+      "ss_targets": [
+        "livechat",
+        "whatsapp"
+      ],
+      "rules": []
+    }
+  },
+  "payment_engine": {
+    "deposit_block": {
+      "deposit_method": "standard_deposit",
+      "deposit_rate": null
+    },
+    "method_whitelist_block": {
+      "methods": [],
+      "providers": []
+    },
+    "method_blacklist_block": {
+      "methods": [],
+      "providers": []
+    }
+  },
+  "scope_engine": {
+    "game_block": {
+      "game_domain": "all",
+      "markets": [],
+      "eligible_providers": []
+    },
+    "blacklist_block": {
+      "types": [],
+      "providers": [],
+      "games": [],
+      "rules": []
+    }
+  },
+  "reward_engine": {
+    "event_block": {
+      "event_rewards": [],
+      "prizes": []
+    },
+    "requirement_block": {
+      "min_deposit": null,
+      "unlock_conditions": []
+    },
+    "combo_reward_block": {
+      "combo_items": []
+    },
+    "matrix_reward_block": {
+      "axis_x_label": "",
+      "axis_y_label": "",
+      "matrix_cells": []
+    },
+    "conditional_reward_block": {
+      "conditions": [],
+      "default_reward": null
+    },
+    "calculation_basis": "level_up_reward",
+    "calculation_method": "fixed_per_tier",
+    "calculation_value": null,
+    "calculation_unit": "IDR",
+    "payout_direction": "backend",
+    "reward_type": "cash",
+    "voucher_kind": null,
+    "max_reward": 10000000,
+    "currency": "IDR"
+  },
+  "loyalty_engine": {
+    "mechanism_block": {
+      "point_name": "",
+      "earning_rule": ""
+    },
+    "exchange_block": {
+      "exchange_groups": []
+    },
+    "tier_block": {
+      "tier_system": [
+        {
+          "tier_name": "SILVER_GOLD_PLATINUM_DIAMOND"
+        }
+      ]
+    }
+  },
+  "variant_engine": {
+    "summary_block": {
+      "has_subcategories": true,
+      "expected_count": 4
+    },
+    "items_block": {
+      "subcategories": [
+        {
+          "variant_id": "v_silver",
+          "tier_name": "SILVER",
+          "tier_level": 1,
+          "reward_amount": 25000,
+          "currency": "IDR",
+          "min_deposit_history": 100000,
+          "conditions": {
+            "level": "SILVER",
+            "min_deposit_bronze_to_silver": 100000
+          }
+        },
+        {
+          "variant_id": "v_gold",
+          "tier_name": "GOLD",
+          "tier_level": 2,
+          "reward_amount": 1000000,
+          "currency": "IDR",
+          "min_deposit_history": 100000,
+          "conditions": {
+            "level": "GOLD"
+          }
+        },
+        {
+          "variant_id": "v_platinum",
+          "tier_name": "PLATINUM",
+          "tier_level": 3,
+          "reward_amount": 5000000,
+          "currency": "IDR",
+          "min_deposit_history": 100000,
+          "conditions": {
+            "level": "PLATINUM"
+          }
+        },
+        {
+          "variant_id": "v_diamond",
+          "tier_name": "DIAMOND",
+          "tier_level": 4,
+          "reward_amount": 10000000,
+          "currency": "IDR",
+          "min_deposit_history": 100000,
+          "conditions": {
+            "level": "DIAMOND"
+          }
+        }
+      ]
+    }
+  },
+  "dependency_engine": {
+    "exclusion_block": {
+      "mutually_exclusive_with": [],
+      "can_combine_with": []
+    },
+    "stacking_block": {
+      "stacking_allowed": true,
+      "stacking_policy": "exclusive_event",
+      "rules": [],
+      "max_concurrent": null
+    },
+    "prerequisite_block": {
+      "requires_promo": [],
+      "requires_achievement": []
+    }
+  },
+  "invalidation_engine": {
+    "void_conditions_block": [
+      {
+        "trigger": "level_up_before_event"
+      },
+      {
+        "trigger": "claim_timeout"
+      },
+      {
+        "trigger": "screenshot_missing"
+      }
+    ],
+    "penalty_block": {
+      "void_action": "forfeit_reward",
+      "penalty_type": "reward_void",
+      "penalty_scope": "current_claim"
+    },
+    "anti_fraud_block": {
+      "anti_fraud_rules": [
+        "level_up_before_event",
+        "claim_timeout",
+        "screenshot_missing"
+      ],
+      "detection_methods": []
+    }
+  },
+  "terms_engine": {
+    "conditions_block": {
+      "terms_conditions": [
+        "Player WAJIB Memiliki User ID di LAUTAN77",
+        "Tier Bronze to Silver WAJIB memiliki History Deposit Sebesar Rp.100.000",
+        "Apabila Player Sudah Naik Level Terlebih Dahulu Sebelum Event Level Up Ini Berjalan Maka Bonus Kenaikan Level Sebelumnya Sudah Tidak Bisa Didapatkan",
+        "Setelah User ID mendapatkan Kenaikan Level Player Bisa Langsung Melakukan Claim Tanpa Perlu Deposit Kembali",
+        "WAJIB di sertakan bukti screenshot kenaikan LEVEL UP",
+        "Bonus WAJIB diclaim Setelah Berhasil Level UP dan Dapat Langsung Menghubungi Livechat/Whatsapp Resmi kami",
+        "Batas Claim Promosi H+1 Setelah Mendapatkan Kenaikan Level",
+        "Saldo Reward Level Up Bisa Langsung di Withdraw Setelah Saldo Cair Kedalam Akun dan Tanpa Perlu dimainkan Terlebih Dahulu"
+      ]
+    },
+    "requirements_block": {
+      "special_requirements": []
+    }
+  },
+  "readiness_engine": {
+    "state_block": {
+      "state": "ai_draft",
+      "state_changed_at": "2026-04-24T23:03:42.909Z",
+      "state_changed_by": "extractor:pk-extractor"
+    },
+    "commit_block": {
+      "ready_to_commit": false
+    },
+    "validation_block": {
+      "is_structurally_complete": true,
+      "status": "needs_review",
+      "warnings": [
+        "Period valid_from dan valid_until kosong karena tidak ada tanggal spesifik di sumber",
+        "Syarat deposit Rp.100.000 hanya berlaku untuk tier Bronze to Silver, tidak jelas apakah berlaku untuk tier lainnya",
+        "Tidak ada informasi tentang bagaimana cara player naik level (apakah berdasarkan turnover, deposit, atau kriteria lain)"
+      ]
+    },
+    "observability_block": {
+      "ambiguity_flags": [
+        "Tanggal akhir event tidak disebutkan (Tanggal akhir: -)",
+        "Scope game domain tidak disebutkan secara eksplisit, diasumsikan 'all' karena event level up umum"
+      ],
+      "contradiction_flags": [],
+      "review_required": true
+    }
+  },
+  "reasoning_engine": {
+    "intent_block": {
+      "primary_action": "level_up_to_reward",
+      "reward_nature": "cash_reward_per_level",
+      "distribution_path": "manual_claim_after_level_up",
+      "value_shape": "tiered_fixed_by_level"
+    },
+    "selection_block": {
+      "mechanic_type": "",
+      "locked_fields": [],
+      "invariant_violations": []
+    }
+  },
+  "mechanics_engine": {
+    "source_block": {
+      "source": "llm_multimodal_extraction"
+    },
+    "items_block": {
+      "items": [
+        {
+          "mechanic_id": "m_trigger_1",
+          "mechanic_type": "trigger",
+          "evidence": "EVENT KEJAR LEVEL UP LAUTAN77 - Player mencapai level Silver, Gold, Platinum, atau Diamond",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "level_achievement",
+            "threshold_value": "silver_gold_platinum_diamond"
+          },
+          "data": {
+            "trigger_event": "level_up_achievement",
+            "period_type": "event_duration",
+            "calculation_window": "immediate",
+            "calculation_basis": "level_up_reward"
+          }
+        },
+        {
+          "mechanic_id": "m_eligibility_1",
+          "mechanic_type": "eligibility",
+          "evidence": "Player WAJIB Memiliki User ID di LAUTAN77",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "user_segment": "existing_member",
+            "requirement_type": "registered_user",
+            "platform": "LAUTAN77"
+          }
+        },
+        {
+          "mechanic_id": "m_eligibility_2",
+          "mechanic_type": "eligibility",
+          "evidence": "Tier Bronze to Silver WAJIB memiliki History Deposit Sebesar Rp.100.000",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "tier_specific_requirement",
+            "threshold_value": 100000,
+            "threshold_unit": "IDR",
+            "applicable_tier": "bronze_to_silver"
+          },
+          "data": {
+            "user_segment": "bronze_to_silver",
+            "min_threshold": 100000,
+            "threshold_unit": "IDR",
+            "currency": "IDR",
+            "requirement_type": "deposit_history"
+          }
+        },
+        {
+          "mechanic_id": "m_calculation_1",
+          "mechanic_type": "calculation",
+          "evidence": "Tabel reward: SILVER 25.000, GOLD 1.000.000, PLATINUM 5.000.000, DIAMOND 10.000.000",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "calculation_basis": "level_up_reward",
+            "calculation_method": "fixed_per_tier",
+            "tier_rewards": {
+              "SILVER": 25000,
+              "GOLD": 1000000,
+              "PLATINUM": 5000000,
+              "DIAMOND": 10000000
+            },
+            "currency": "IDR"
+          }
+        },
+        {
+          "mechanic_id": "m_reward_1",
+          "mechanic_type": "reward",
+          "evidence": "Saldo Reward Level Up Bisa Langsung di Withdraw Setelah Saldo Cair Kedalam Akun dan Tanpa Perlu dimainkan Terlebih Dahulu",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "reward_type": "cash",
+            "reward_form": "withdrawable_cash",
+            "reward_unit": "IDR",
+            "turnover_requirement": 0,
+            "instant_withdraw": true
+          }
+        },
+        {
+          "mechanic_id": "m_distribution_1",
+          "mechanic_type": "distribution",
+          "evidence": "Setelah User ID mendapatkan Kenaikan Level Player Bisa Langsung Melakukan Claim Tanpa Perlu Deposit Kembali",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "distribution_method": "manual_claim",
+            "distribution_day": "immediate_after_level_up",
+            "distribution_window": "h_plus_1",
+            "auto_credit": false,
+            "no_deposit_required": true
+          }
+        },
+        {
+          "mechanic_id": "m_distribution_2",
+          "mechanic_type": "distribution",
+          "evidence": "Bonus WAJIB diclaim Setelah Berhasil Level UP dan Dapat Langsung Menghubungi Livechat/Whatsapp Resmi kami",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "distribution_method": "manual_claim",
+            "claim_channels": [
+              "livechat",
+              "whatsapp"
+            ],
+            "claim_timing": "after_level_up",
+            "auto_credit": false
+          }
+        },
+        {
+          "mechanic_id": "m_control_1",
+          "mechanic_type": "control",
+          "evidence": "WAJIB di sertakan bukti screenshot kenaikan LEVEL UP",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "control_type": "proof_requirement",
+            "proof_type": "screenshot",
+            "proof_subject": "level_up_notification",
+            "mandatory": true
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_1",
+          "mechanic_type": "invalidator",
+          "evidence": "Apabila Player Sudah Naik Level Terlebih Dahulu Sebelum Event Level Up Ini Berjalan Maka Bonus Kenaikan Level Sebelumnya Sudah Tidak Bisa Didapatkan",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "timing_violation",
+            "violation_types": [
+              "level_up_before_event"
+            ]
+          },
+          "data": {
+            "void_trigger": "level_up_before_event",
+            "void_action": "forfeit_reward",
+            "penalty_scope": "previous_level_bonus"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_2",
+          "mechanic_type": "invalidator",
+          "evidence": "Batas Claim Promosi H+1 Setelah Mendapatkan Kenaikan Level",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "time_limit",
+            "threshold_value": "1",
+            "threshold_unit": "days",
+            "period_start": "level_up_time"
+          },
+          "data": {
+            "void_trigger": "claim_timeout",
+            "void_action": "forfeit_reward",
+            "penalty_scope": "current_claim",
+            "claim_deadline": "h_plus_1"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_3",
+          "mechanic_type": "invalidator",
+          "evidence": "WAJIB di sertakan bukti screenshot kenaikan LEVEL UP (implied: tanpa screenshot = void)",
+          "confidence": 0.9,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "proof_missing",
+            "violation_types": [
+              "screenshot_missing"
+            ]
+          },
+          "data": {
+            "void_trigger": "screenshot_missing",
+            "void_action": "forfeit_reward",
+            "penalty_scope": "current_claim"
+          }
+        }
+      ]
+    }
+  },
+  "projection_engine": {
+    "_description": "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
+    "summary_block": {
+      "summary": "EVENT KEJAR LEVEL UP LAUTAN77 dari level_up_reward.",
+      "promo_summary": "EVENT KEJAR LEVEL UP LAUTAN77 dari level_up_reward.",
+      "main_trigger": "level_up_achievement",
+      "main_reward_form": "cash",
+      "main_reward_percent": null,
+      "main_reward_value": null,
+      "main_reward_unit": "IDR",
+      "max_bonus": 10000000,
+      "min_base": null,
+      "payout_direction": "backend",
+      "turnover_multiplier": null,
+      "turnover_basis": null
+    },
+    "claim_summary_block": {
+      "primary_claim_method": "manual_livechat",
+      "primary_claim_platform": "livechat",
+      "claim_channels": [
+        "livechat",
+        "whatsapp"
+      ],
+      "auto_credit": false,
+      "proof_required": true,
+      "claim_frequency": "once_per_level",
+      "distribution_day": "h_plus_1"
+    },
+    "scope_summary_block": {
+      "game_domain": "all",
+      "game_types": [],
+      "game_providers": [],
+      "game_exclusions": [],
+      "stacking_policy": "exclusive_event"
+    },
+    "intent_summary_block": {
+      "intent_category": "retention",
+      "primary_action": "level_up_to_reward",
+      "reward_nature": "cash_reward_per_level",
+      "distribution_path": "manual_claim_after_level_up",
+      "value_shape": "tiered_fixed_by_level",
+      "target_segment": "Member Lama"
+    }
+  },
+  "risk_engine": {
+    "level_block": {
+      "promo_risk_level": "medium"
+    }
+  },
+  "meta_engine": {
+    "source_block": {
+      "source_url": "",
+      "raw_content": "",
+      "extraction_source": "multimodal",
+      "source_type": "image_upload"
+    },
+    "extraction_block": {
+      "has_rowspan_tables": false,
+      "html_was_normalized": false,
+      "client_id_source": null,
+      "propagated_fields": [],
+      "ambiguous_blacklists": 0,
+      "extracted_at": "2026-04-24T23:03:42.909Z",
+      "classification_overridden": false,
+      "classification_override_reason": "",
+      "original_llm_category": ""
+    },
+    "schema_block": {
+      "schema_name": "Pseudo Engine Schema",
+      "schema_version": "1.1",
+      "created_by": "habe_raja",
+      "status": "locked",
+      "evolved_from": "1.0",
+      "extractor": "pk-extractor@claude-sonnet-4-5"
+    }
+  },
+  "ai_confidence": {
+    "identity_engine.client_block.client_id": 1,
+    "identity_engine.promo_block.promo_name": 1,
+    "identity_engine.promo_block.promo_type": 1,
+    "identity_engine.promo_block.target_user": 0.95,
+    "identity_engine.promo_block.promo_mode": 1,
+    "reward_engine.calculation_basis": 1,
+    "reward_engine.calculation_method": 1,
+    "reward_engine.calculation_value": 0,
+    "reward_engine.payout_direction": 1,
+    "reward_engine.reward_type": 1,
+    "reward_engine.max_reward": 1,
+    "trigger_engine.trigger_event": 1,
+    "claim_engine.method_block.claim_method": 1,
+    "claim_engine.proof_requirement_block.proof_required": 1,
+    "scope_engine.game_domain": 0.7,
+    "period_engine.valid_from": 0,
+    "period_engine.valid_until": 0,
+    "period_engine.claim_frequency": 0.95,
+    "period_engine.distribution_day": 1,
+    "variant_engine.tier_dimension": 1,
+    "variant_engine.variants": 1,
+    "invalidation_engine.void_triggers": 1,
+    "loyalty_engine.tier_name": 1,
+    "classification_engine.result_block.program_classification": 0.95,
+    "taxonomy_engine.mode": 1
+  },
+  "_field_status": {
+    "identity_engine.client_block.client_id": "explicit",
+    "identity_engine.promo_block.promo_name": "explicit",
+    "identity_engine.promo_block.promo_type": "explicit",
+    "identity_engine.promo_block.target_user": "inferred",
+    "identity_engine.promo_block.promo_mode": "explicit",
+    "reward_engine.calculation_basis": "explicit",
+    "reward_engine.calculation_method": "derived",
+    "reward_engine.calculation_value": "unknown",
+    "reward_engine.payout_direction": "inferred",
+    "reward_engine.reward_type": "explicit",
+    "reward_engine.max_reward": "explicit",
+    "trigger_engine.trigger_event": "explicit",
+    "claim_engine.method_block.claim_method": "explicit",
+    "claim_engine.proof_requirement_block.proof_required": "explicit",
+    "scope_engine.game_domain": "inferred",
+    "period_engine.valid_from": "unknown",
+    "period_engine.valid_until": "unknown",
+    "period_engine.claim_frequency": "inferred",
+    "period_engine.distribution_day": "explicit",
+    "variant_engine.tier_dimension": "explicit",
+    "variant_engine.variants": "explicit",
+    "invalidation_engine.void_triggers": "explicit",
+    "loyalty_engine.tier_name": "explicit",
+    "classification_engine.result_block.program_classification": "derived",
+    "taxonomy_engine.mode": "explicit"
+  }
+}
