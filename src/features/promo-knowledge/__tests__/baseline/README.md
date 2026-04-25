@@ -40,10 +40,8 @@ Diff tool: TBD (Step #5 — automated regression)
 
 ### Numbering gap (intentional)
 
-Slot **04** in `baseline/` is reserved for Kupon Loyalty. The payload
-arrived truncated in chat history — must be re-pasted in full before
-saving. Slot **05** is reserved in `baseline/` for the level-up promo
-once it's promoted out of `baseline_pending/`.
+Slot **05** is reserved in `baseline/` for the level-up promo once it's
+promoted out of `baseline_pending/` (see promotion criteria below).
 
 ## Promotion criteria (pending → baseline)
 
