@@ -1880,6 +1880,10 @@ export function normalizePromoData(data: Partial<PromoFormData>): Partial<PromoF
       'referral': 'referral',
       'network': 'referral',  // alternative name → referral
       'point_store': 'point_store',
+      // V.09 alias: extractor emits point_redemption.
+      // Legacy form pipeline still uses point_store.
+      // TODO: migrate production canonical to point_redemption later.
+      'point_redemption': 'point_store',
       'level': 'level',
       'formula': 'formula',
     };
