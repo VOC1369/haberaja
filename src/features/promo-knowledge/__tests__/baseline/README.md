@@ -22,15 +22,15 @@ Diff tool: TBD (Step #5 — automated regression)
 
 ## Files (DO NOT MODIFY)
 
-### baseline/ (clean — 4 saved, 1 missing)
+### baseline/ (clean — 5 saved)
 
 | # | File | Pattern | record_id |
 |---|------|---------|-----------|
-| 01 | `01-cashback-slot25.json`              | Single, loss-based, Class A      | `9e39a6c1-...` |
-| 02 | `02-welcome-bonus-lautan77.json`       | Multi-variant (5), Class A       | `b74ea03e-...` |
-| 03 | `03-extra-cuan-referral-lautan77.json` | Tiered referral, Class A         | `5c4fdf21-...` |
-| 04 | `04-kupon-loyalty-lautan77.json`       | **MISSING** — payload truncated  | `6a440fec-...` |
-| 06 | `06-bonus-apk-freechip-lautan77.json`  | App install + redemption, Class B | `15eb45c8-...` |
+| 01 | `01-cashback-slot25.json`              | Single, loss-based, Class A         | `9e39a6c1-...` |
+| 02 | `02-welcome-bonus-lautan77.json`       | Multi-variant (5), Class A          | `b74ea03e-...` |
+| 03 | `03-extra-cuan-referral-lautan77.json` | Tiered referral, Class A            | `5c4fdf21-...` |
+| 04 | `04-kupon-loyalty-lautan77.json`       | 9-tier `point_redemption`, Class A  | `6a440fec-...` |
+| 06 | `06-bonus-apk-freechip-lautan77.json`  | App install + redemption, Class B   | `15eb45c8-...` |
 
 ### baseline_pending/ (anomaly — 1 saved)
 
@@ -40,10 +40,8 @@ Diff tool: TBD (Step #5 — automated regression)
 
 ### Numbering gap (intentional)
 
-Slot **04** in `baseline/` is reserved for Kupon Loyalty. The payload
-arrived truncated in chat history — must be re-pasted in full before
-saving. Slot **05** is reserved in `baseline/` for the level-up promo
-once it's promoted out of `baseline_pending/`.
+Slot **05** is reserved in `baseline/` for the level-up promo once it's
+promoted out of `baseline_pending/` (see promotion criteria below).
 
 ## Promotion criteria (pending → baseline)
 
