@@ -138,9 +138,22 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const [pkFailReason, setPkFailReason] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
+  // BUG #4 FIX — non-blocking mapper failure surface.
+  // Previously: catch block called setExtractedPromo(null), wiping the
+  // successful V.09 extraction and forcing UI back to landing (data loss
+  // + Copy JSON unavailable). Now: extractedPromo + pkRecord stay intact;
+  // mappedPreview returns null and a non-blocking error message is shown
+  // via mappedPreviewError state. Copy JSON / Visual Result / V.09 result
+  // remain accessible because they read pkRecord, not mappedPreview.
+  const [mappedPreviewError, setMappedPreviewError] = useState<string | null>(null);
+
   // Memoized mapped preview (single source of truth for badge + commit)
   const mappedPreview = useMemo<PromoFormData | null>(() => {
-    if (!extractedPromo) return null;
+    if (!extractedPromo) {
+      // Reset error when there is nothing to map (avoid stale message).
+      if (mappedPreviewError !== null) setMappedPreviewError(null);
+      return null;
+    }
     try {
       console.log('[TRACE-6B] useMemo calling mapExtractedToPromoFormData...');
       const result = mapExtractedToPromoFormData(extractedPromo);
@@ -149,14 +162,27 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         tier_archetype: (result as any)?.tier_archetype,
         tiers_count: (result as any)?.tiers?.length ?? 0,
       });
+      if (mappedPreviewError !== null) setMappedPreviewError(null);
       return result;
     } catch (err) {
       console.error('[TRACE-6B] mapExtractedToPromoFormData FAILED:', err);
-      console.error('[PseudoKnowledgeSection] mapExtractedToPromoFormData failed — stale extraction data cleared:', err);
-      // Clear corrupted extraction state so the page doesn't hard-crash
-      setExtractedPromo(null);
+      console.error(
+        '[PseudoKnowledgeSection] mapExtractedToPromoFormData failed — extraction preserved, preview unavailable:',
+        err,
+      );
+      // BUG #4: do NOT call setExtractedPromo(null). Preserve raw extraction
+      // and pkRecord so Copy JSON / V.09 result stay accessible.
+      const reason = err instanceof Error ? err.message : String(err);
+      const next = `Preview failed, raw JSON still available — ${reason}`;
+      // Guard: only update if changed, to avoid an infinite re-render loop
+      // (state setter inside useMemo would otherwise re-run on every render).
+      if (mappedPreviewError !== next) setMappedPreviewError(next);
       return null;
     }
+    // mappedPreviewError intentionally NOT in deps: it is a write-only side
+    // channel here, gated by equality checks above. Including it would risk
+    // a re-run loop because we setState inside the memo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [extractedPromo]);
   
   // Confidence Gate state (LLM Classifier)
