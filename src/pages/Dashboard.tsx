@@ -407,6 +407,10 @@ const Dashboard = () => {
           setActiveKnowledgeCategory("promo");
           setKnowledgeResetKey(prev => prev + 1);
         }}
+        onNavigateToPseudo={() => {
+          setActiveKnowledgeCategory("pseudo");
+          setKnowledgeResetKey(prev => prev + 1);
+        }}
       />;
     }
     if (activeSection === "ticket") return <TicketList category={activeTicketCategory} />;
