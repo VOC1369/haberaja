@@ -106,14 +106,14 @@ serve(async (req) => {
     content.push({
       type: "text",
       text: text.trim()
-        ? `Berikut input promo mentah dari user:\n\n${text.trim()}\n\nRapikan sesuai format wajib.`
-        : `Tidak ada text — gunakan semua image di atas. Rapikan sesuai format wajib.`,
+        ? `Input promo mentah dari user (text + ${images.length} image):\n\n${text.trim()}\n\nIngat: Mode A+ STRICT VERBATIM. Preserve wording, jangan parafrase, jangan auto-fix typo, jangan auto-normalize, jangan tambah section yang tidak ada di sumber.`
+        : `Tidak ada text input. Gunakan ${images.length} image di atas sebagai sumber tunggal. Mode A+ STRICT VERBATIM. OCR apa adanya, jangan auto-fix typo, jangan parafrase.`,
     });
 
     const body = {
       model: MODEL,
       max_tokens: 4000,
-      temperature: 0.1,
+      temperature: 0,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content }],
     };
