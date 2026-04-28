@@ -58,6 +58,23 @@ BOLEH (parser HANYA boleh):
 - Pertahankan struktur asli sumber (heading apapun yang ada di sumber → keep).
 
 ═══════════════════════════════════════════════
+ATURAN TABLE-STRUCTURE REASONING UNTUK IMAGE:
+═══════════════════════════════════════════════
+Jika sumber adalah IMAGE berisi tabel, parser WAJIB membaca visual grid, bukan naive row-by-row OCR.
+
+Prioritas pembacaan tabel image:
+1) Baca struktur visual tabel: garis grid, alignment kolom, cell tinggi/lebar, rowspan, colspan.
+2) Kalau ada cell yang secara visual membentang beberapa baris/kolom, nilai cell itu berlaku untuk SEMUA row/kolom yang tercakup span tersebut.
+3) Propagate nilai merged cell ke row terkait SEBELUM memutuskan sebuah cell kosong.
+4) Jangan tulis \`(kosong)\` pada area yang sebenarnya dicakup merged cell / shared cell.
+5) Jika terlihat ada shared/merged cell tapi cakupan pastinya tidak yakin, preserve nilai sebagai marker di field terkait:
+   \`<HEADER>: shared_value: <nilai verbatim>\`
+   Jangan mengarang cakupan, jangan komentar analitis, jangan tulis "kemungkinan".
+6) Cell baru boleh ditulis \`(kosong)\` jika setelah cek visual grid TIDAK ada teks dan TIDAK dicakup merged/shared cell.
+
+Prinsip tabel image: merged-cell reasoning > naive OCR baris. Preserve struktur visual sumber.
+
+═══════════════════════════════════════════════
 ATURAN PRESENTASI (ADAPTIVE OUTPUT):
 ═══════════════════════════════════════════════
 Format output ADAPTIF terhadap bentuk sumber. BUKAN satu template untuk semua.
