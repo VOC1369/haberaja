@@ -942,10 +942,27 @@ export function applyKeywordOverride(
 ): { category: ProgramCategory; wasOverridden: boolean; overrideReason?: string } {
   const nameLower = promoName.toLowerCase();
   const typeLower = (promoType || '').toLowerCase();
-  
+
+  // Bug #2 context guard — voucher/kupon false positive suppression.
+  // Rule 'voucher' (patterns /voucher/i, /kupon/i) unconditionally forces Category B (Event).
+  // This misclassifies loyalty/redemption promos. Apply contextual gate:
+  //   - require an explicit event signal in the haystack, AND
+  //   - suppress if loyalty/redemption signals present.
+  // Scope: only the 'voucher' rule is gated. KEYWORD_RULES untouched.
+  const EVENT_SIGNALS = /(lucky\s*draw|tournament|leaderboard|mission|competition|spin\s*event|undian|event|ranking)/i;
+  const LOYALTY_SIGNALS = /(loyalty|loyal|redeem|redemption|tukar\s*poin|point\s*store|poin)/i;
+  const isVoucherGated = (haystack: string): boolean => {
+    if (LOYALTY_SIGNALS.test(haystack)) return false; // suppress
+    return EVENT_SIGNALS.test(haystack);              // require event signal
+  };
+
   // Check promo_name first (higher priority)
   for (const rule of KEYWORD_RULES) {
     if (rule.patterns.some(pattern => pattern.test(nameLower))) {
+      if (rule.id === 'voucher' && !isVoucherGated(`${nameLower} ${typeLower}`)) {
+        console.log(`[KeywordRules] Voucher override SUPPRESSED in promo_name (no event signal / loyalty present)`);
+        continue; // let other rules / LLM decide
+      }
       if (llmCategory !== rule.category) {
         console.log(`[KeywordRules] Override: ${rule.id} in promo_name, forcing ${rule.category} (was ${llmCategory})`);
         return { category: rule.category, wasOverridden: true, overrideReason: rule.reason };
@@ -953,10 +970,14 @@ export function applyKeywordOverride(
       return { category: rule.category, wasOverridden: false };
     }
   }
-  
+
   // Fallback to promo_type
   for (const rule of KEYWORD_RULES) {
     if (rule.patterns.some(pattern => pattern.test(typeLower))) {
+      if (rule.id === 'voucher' && !isVoucherGated(`${nameLower} ${typeLower}`)) {
+        console.log(`[KeywordRules] Voucher override SUPPRESSED in promo_type (no event signal / loyalty present)`);
+        continue;
+      }
       if (llmCategory !== rule.category) {
         console.log(`[KeywordRules] Override: ${rule.id} in promo_type, forcing ${rule.category} (was ${llmCategory})`);
         return { category: rule.category, wasOverridden: true, overrideReason: `${rule.reason} (from promo_type)` };
@@ -964,7 +985,7 @@ export function applyKeywordOverride(
       return { category: rule.category, wasOverridden: false };
     }
   }
-  
+
   // No override needed
   return { category: llmCategory, wasOverridden: false };
 }
