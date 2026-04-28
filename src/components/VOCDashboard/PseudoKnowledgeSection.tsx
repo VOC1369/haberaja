@@ -217,6 +217,23 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // ============================================
   
   useEffect(() => {
+    // Parser handoff: if Parser sent us clean text, pre-fill input and skip session restore.
+    try {
+      const handoff = localStorage.getItem("parser_handoff_text_v1");
+      if (handoff && handoff.trim()) {
+        localStorage.removeItem("parser_handoff_text_v1");
+        setInputMode("text" as InputMode);
+        setCurrentInput(handoff);
+        toast.info("Hasil Parser siap diekstrak", {
+          description: "Klik panah untuk mulai ekstraksi.",
+          duration: 3000,
+        });
+        return;
+      }
+    } catch {
+      // ignore localStorage errors
+    }
+
     const saved = extractorSession.load();
     
     if (saved?.extractedPromo) {
