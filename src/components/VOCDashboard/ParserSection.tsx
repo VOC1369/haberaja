@@ -189,8 +189,8 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                 <img src={wolfclawIcon} alt="Parser" className="h-12 w-12 rounded-xl" />
                 <h2 className="text-2xl font-semibold text-foreground">Parser</h2>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Paste text promo mentah dan/atau attach screenshot. Parser akan merapikannya jadi
-                  text terstruktur siap kirim ke Pseudo Extractor.
+                  Paste text promo mentah dan/atau attach screenshot. Parser merapikan struktur tanpa
+                  mengubah isi — siap dikirim ke Pseudo Extractor.
                 </p>
                 <Badge variant="outline" className="bg-success/10 text-success border-success/30 mt-1">
                   <span className="w-2 h-2 rounded-full bg-success mr-2" />

@@ -14,46 +14,66 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SYSTEM_PROMPT = `Anda adalah PARSER PROMO. Tugas: rapikan input promo mentah (text + image) menjadi text terstruktur yang mudah dibaca manusia.
+const SYSTEM_PROMPT = `Anda adalah PARSER PROMO (Mode A+ — Verbatim Source Preservation + Structural Cleanup).
 
-ATURAN KETAT:
-- Jangan generate JSON.
-- Jangan mengklasifikasi promo.
-- Jangan mengarang data. Jika tidak ada → tulis "Tidak disebutkan".
-- Pertahankan SEMUA fakta penting (angka, syarat, persen, nominal, game type, provider).
-- Gabungkan informasi dari text + semua image.
-- Jika ada konflik antara text dan image, catat di bagian "CATATAN AMBIGU".
-- Perbaiki line break, rapikan tabel jadi list bernomor.
-- Output bahasa Indonesia.
+PARSER BUKAN TEMPAT BERPIKIR. PARSER TEMPAT MERAPIKAN BUKTI.
 
-FORMAT OUTPUT WAJIB (gunakan persis section heading di bawah):
+═══════════════════════════════════════════════
+DILARANG KERAS (parser TIDAK BOLEH):
+═══════════════════════════════════════════════
+- Menambah fakta yang tidak ada di sumber.
+- Infer / asumsi / enrich / interpretasi.
+- Parafrase bebas. Pertahankan wording asli semaksimal mungkin.
+- Membuat section yang tidak ada di sumber.
+- Menulis "tidak disebutkan", "kemungkinan", "mungkin", "diasumsikan".
+- Membuat catatan ambigu / catatan analitis apapun.
+- Menganalisa konflik. Kalau ada konflik → tulis kedua versi apa adanya, jangan komentar.
+- Memisahkan informasi yang menyatu di sumber jadi field terpisah.
+  Contoh: "Semua Provider Casino, Kecuali evolution gaming dan sexy baccarat"
+  → TETAP 1 cell. JANGAN dipisah jadi field "Pengecualian".
+- Auto-fix typo. "Mircogaming" tetap "Mircogaming". "evolution gaming" tetap huruf kecil.
+- Auto-normalisasi kapitalisasi nama provider.
+- Mengubah format tanggal (jangan ubah "25-Mei-2050" jadi "2050-05-25").
+- Mengubah format angka (jangan ubah "Rp. 50,000" jadi "Rp 50.000").
+- Mengubah makna kalimat sekecil apapun.
+- Generate JSON, klasifikasi, atau enum.
+- Menambahkan heading template (JUDUL PROMO / CARA KLAIM / dst) kalau di sumber tidak ada.
 
-JUDUL PROMO:
-<judul promo>
+Normalisasi (tanggal, angka, kapitalisasi, fix typo, pisahkan field) = TUGAS EXTRACTOR, BUKAN PARSER.
 
-DESKRIPSI:
-<deskripsi singkat 1-3 kalimat>
+═══════════════════════════════════════════════
+BOLEH (parser HANYA boleh):
+═══════════════════════════════════════════════
+- Rapikan line break dan spacing yang berlebihan.
+- Buang noise UI yang JELAS bukan konten promo:
+  • Countdown timer ("HARI 8791 JAM 21 MENIT 04")
+  • Tombol UI ("BagikanShare", "Copy Link", "Klik di sini")
+  • Separator dekoratif (===, ---, ***, ▬▬▬)
+  • Duplikasi judul yang persis sama berturut-turut
+  • Emoji dekoratif murni (🎁🔥💰) — tapi PRESERVE emoji yang punya makna konten
+- Ubah tabel rusak (tab/spasi acak/HTML) → markdown table yang rapi.
+- Cell tabel kosong → tulis \`(kosong)\`. Jangan tulis "tidak ada" atau "tidak disebutkan".
+- Gabungkan teks dari multiple image + text input jadi 1 dokumen.
+  Urutan: text user dulu, lalu konten dari image dalam urutan upload.
+- Pertahankan struktur asli sumber (heading apapun yang ada di sumber → keep).
 
-TABEL BONUS / REWARD:
-1. <item>
-2. <item>
+═══════════════════════════════════════════════
+ATURAN OUTPUT:
+═══════════════════════════════════════════════
+- TIDAK ADA template heading wajib. Output ikuti struktur sumber.
+- Kalau sumber punya heading "TABEL BONUS" → keep apa adanya.
+- Kalau sumber TIDAK punya "Cara Klaim" → JANGAN bikin section itu.
+- Tabel selalu jadi markdown table (\`| col1 | col2 |\`).
+- Bahasa output = bahasa sumber. Jangan terjemahkan.
+- Output text mentah saja, tanpa code fence \`\`\`.
 
-CONTOH PERHITUNGAN:
-<contoh perhitungan jika ada, atau "Tidak disebutkan">
+═══════════════════════════════════════════════
+PRINSIP:
+═══════════════════════════════════════════════
+Kalau ragu apakah suatu perubahan boleh dilakukan → JANGAN lakukan.
+Lebih baik output "kotor sedikit tapi setia" daripada "rapi tapi mengarang".
+Extractor (Wolfclaw) yang akan reasoning. Parser hanya merapikan bukti.`;
 
-SYARAT & KETENTUAN:
-1. <syarat>
-2. <syarat>
-
-CARA KLAIM:
-<langkah klaim>
-
-PENGECUALIAN / BLACKLIST:
-- <item, atau "Tidak disebutkan">
-
-CATATAN AMBIGU:
-- <data tidak jelas / konflik text vs image>
-- Jika tidak ada: tulis "Tidak ada catatan ambigu."`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -86,14 +106,14 @@ serve(async (req) => {
     content.push({
       type: "text",
       text: text.trim()
-        ? `Berikut input promo mentah dari user:\n\n${text.trim()}\n\nRapikan sesuai format wajib.`
-        : `Tidak ada text — gunakan semua image di atas. Rapikan sesuai format wajib.`,
+        ? `Input promo mentah dari user (text + ${images.length} image):\n\n${text.trim()}\n\nIngat: Mode A+ STRICT VERBATIM. Preserve wording, jangan parafrase, jangan auto-fix typo, jangan auto-normalize, jangan tambah section yang tidak ada di sumber.`
+        : `Tidak ada text input. Gunakan ${images.length} image di atas sebagai sumber tunggal. Mode A+ STRICT VERBATIM. OCR apa adanya, jangan auto-fix typo, jangan parafrase.`,
     });
 
     const body = {
       model: MODEL,
       max_tokens: 4000,
-      temperature: 0.1,
+      temperature: 0,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content }],
     };
