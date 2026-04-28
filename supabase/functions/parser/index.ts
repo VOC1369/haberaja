@@ -51,19 +51,51 @@ BOLEH (parser HANYA boleh):
   • Separator dekoratif (===, ---, ***, ▬▬▬)
   • Duplikasi judul yang persis sama berturut-turut
   • Emoji dekoratif murni (🎁🔥💰) — tapi PRESERVE emoji yang punya makna konten
-- Ubah tabel rusak (tab/spasi acak/HTML) → markdown table yang rapi.
+- Ubah tabel rusak (tab/spasi acak/HTML) → format readable (lihat ATURAN PRESENTASI di bawah).
 - Cell tabel kosong → tulis \`(kosong)\`. Jangan tulis "tidak ada" atau "tidak disebutkan".
 - Gabungkan teks dari multiple image + text input jadi 1 dokumen.
   Urutan: text user dulu, lalu konten dari image dalam urutan upload.
 - Pertahankan struktur asli sumber (heading apapun yang ada di sumber → keep).
 
 ═══════════════════════════════════════════════
-ATURAN OUTPUT:
+ATURAN PRESENTASI (ADAPTIVE OUTPUT):
 ═══════════════════════════════════════════════
-- TIDAK ADA template heading wajib. Output ikuti struktur sumber.
-- Kalau sumber punya heading "TABEL BONUS" → keep apa adanya.
+Format output ADAPTIF terhadap bentuk sumber. BUKAN satu template untuk semua.
+
+1) Kalau sumber berbentuk TABEL / ROW BERULANG (tabel bonus, daftar reward bertingkat,
+   per-paket, per-kategori):
+   → Gunakan NUMBERED STRUCTURED BLOCKS, bukan markdown table.
+   → Format:
+     <NAMA SECTION DARI SUMBER>
+
+     1. <Judul row / nama paket> — <kategori jika ada>
+        <Field A>: <nilai apa adanya>
+        <Field B>: <nilai apa adanya>
+        <Field C>: (kosong)
+
+     2. <Judul row berikutnya>
+        ...
+   → Field name & nilai = VERBATIM dari header tabel sumber. Jangan ganti label.
+   → Cell kosong → \`(kosong)\`.
+   → Pisahkan tiap block dengan 1 baris kosong.
+
+2) Kalau sumber berbentuk NARASI biasa → tetap narasi rapi (line break dirapikan saja).
+
+3) Kalau sumber berbentuk LIST SYARAT → tetap bullet/numbered list apa adanya.
+
+4) Kalau sumber CAMPURAN → tiap section pakai format paling cocok (boleh mix
+   narasi + numbered blocks + list dalam 1 dokumen).
+
+LARANGAN PRESENTASI:
+- JANGAN paksa semua promo jadi format "TABEL BONUS".
+- JANGAN bikin row/field baru yang tidak ada di sumber.
+- JANGAN gabung field berbeda jadi satu.
+- JANGAN pakai markdown table (\`| col |\`) — ganti ke numbered blocks kalau tabular.
+- JANGAN bikin heading "TABEL BONUS" kalau sumber tidak nyebut. Pakai heading dari sumber.
+
+ATURAN UMUM OUTPUT:
+- TIDAK ADA template heading wajib. Heading ikuti sumber.
 - Kalau sumber TIDAK punya "Cara Klaim" → JANGAN bikin section itu.
-- Tabel selalu jadi markdown table (\`| col1 | col2 |\`).
 - Bahasa output = bahasa sumber. Jangan terjemahkan.
 - Output text mentah saja, tanpa code fence \`\`\`.
 
