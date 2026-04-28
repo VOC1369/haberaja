@@ -1,17 +1,19 @@
 // Parser edge function — calls Anthropic via shared key.
 // Cleans raw promo text (+ optional images) into structured human-readable text.
 //
-// TWO-PASS PARSING (v2):
+// TWO-PASS PARSING (v3 — AI-first, no regex orchestration):
 //   Pass 1: Standard parse (text + image) → readable output.
-//   Pass 2 (selective audit): Triggered only if image present AND Pass 1 output
-//          shows numbered/table-like blocks with `(kosong)` cells in fields that
-//          have values in other rows (suspect merged-cell artifact).
-//          Pass 2 re-sends full image + Pass 1 output + suspect field list,
-//          asks Opus to repair ONLY merged-cell propagation. No wording/normalization.
+//   Pass 2 (auto when image present): Structural audit on full image + Pass 1 output.
+//          Repairs merged-cell / rowspan / colspan propagation only. Minimum-diff.
+//          If no table in image → returns Pass 1 output unchanged.
+//
+// Trigger rule (simple, AI-first):
+//   - Text only         → Pass 1 only.
+//   - Any image present → Pass 1 + Pass 2.
 //
 // Model routing:
-//   - Pass 1: Sonnet 4.5 (default, cheap, fast).
-//   - Pass 2: Claude Opus 4 (vision + structural reasoning for merged cells).
+//   - Pass 1: Sonnet 4.5
+//   - Pass 2: Claude Opus 4 (vision + structural reasoning)
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -161,13 +163,15 @@ Kalau ragu soal STRUKTUR (merged cell, layout) → WAJIB reasoning, propagate de
 Lebih baik output "kotor sedikit tapi setia + struktur benar" daripada "rapi tapi salah propagate cell".`;
 
 // ============================================================
-// SYSTEM PROMPT — PASS 2 (Selective Merged-Cell Audit Only)
+// SYSTEM PROMPT — PASS 2 (Generic Structural Audit)
 // ============================================================
-const SYSTEM_PROMPT_PASS2 = `Anda adalah AUDITOR TABEL MERGED-CELL (Pass 2).
+const SYSTEM_PROMPT_PASS2 = `Anda adalah AUDITOR STRUKTUR VISUAL (Pass 2).
 
 TUGAS TUNGGAL:
-Periksa output Pass 1 vs image asli. Cari field yang ditulis \`(kosong)\` atau \`—\` yang
-SEBENARNYA dicakup merged cell / shared cell di image. Perbaiki HANYA cell tersebut.
+Bandingkan output Pass 1 dengan image asli. Audit struktur visual tabel — fokus pada
+merged cell, rowspan, colspan, shared cell. Repair propagation kalau ada cell yang
+seharusnya terisi (karena dicakup merged cell) tapi di Pass 1 ditulis \`(kosong)\`,
+\`—\`, atau hilang. Minimum-diff.
 
 ═══════════════════════════════════════════════
 DILARANG KERAS:
@@ -186,99 +190,29 @@ DILARANG KERAS:
 ═══════════════════════════════════════════════
 HANYA BOLEH:
 ═══════════════════════════════════════════════
-- Mengganti \`(kosong)\` atau \`—\` di field yang TERBUKTI dicakup merged cell di image.
+- Mengganti \`(kosong)\` / \`—\` / cell hilang di field yang TERBUKTI dicakup merged cell di image.
 - Nilai pengganti = VERBATIM dari merged cell di image (jangan normalize).
 
 ═══════════════════════════════════════════════
 PROSEDUR:
 ═══════════════════════════════════════════════
-1. Untuk SETIAP field suspect yang dilaporkan, lihat image:
-   - Cek visual grid: apakah cell di posisi (row, kolom) itu dicakup rowspan/colspan?
-   - Kalau YA → ambil nilai dari merged cell, tulis verbatim.
-   - Kalau TIDAK → biarkan \`(kosong)\`.
+1. Scan image: apakah ada tabel sama sekali?
+   - KALAU TIDAK ADA TABEL di image → return output Pass 1 APA ADANYA, character-identik,
+     tanpa perubahan apapun. Selesai.
 
-2. Output FORMAT:
+2. KALAU ADA TABEL di image:
+   - Untuk setiap row × kolom, cek visual grid: apakah cell itu dicakup rowspan/colspan?
+   - Kalau YA dan Pass 1 menulis \`(kosong)\`/\`—\` → ganti dengan nilai verbatim dari merged cell.
+   - Kalau TIDAK → biarkan apa adanya.
+
+3. OUTPUT FORMAT:
    Kembalikan FULL output Pass 1 yang sudah diperbaiki — character-identik dengan input
-   kecuali cell-cell suspect yang berhasil diisi dari merged cell.
+   kecuali cell-cell yang berhasil di-repair dari merged cell.
 
-3. JANGAN tambah komentar, JANGAN tambah preamble, JANGAN tulis "berikut hasil audit:".
+4. JANGAN tambah komentar, JANGAN tambah preamble, JANGAN tulis "berikut hasil audit:".
    Langsung output text final saja, tanpa code fence.
 
 PRINSIP: Minimum-diff repair. Kalau ragu → jangan ubah.`;
-
-// ============================================================
-// SUSPECT DETECTOR — Pure regex/string analysis on Pass 1 output
-// ============================================================
-interface SuspectReport {
-  trigger: boolean;
-  blockCount: number;
-  emptyFields: Array<{ blockIndex: number; blockTitle: string; field: string }>;
-  suspectFields: string[]; // unique field names that have empty in some rows AND value in others
-}
-
-function detectSuspectMergedCells(output: string): SuspectReport {
-  const report: SuspectReport = { trigger: false, blockCount: 0, emptyFields: [], suspectFields: [] };
-
-  // Split into numbered blocks: lines starting with "N. " (1-indexed)
-  // Block boundary = blank line followed by "N. " OR start of file.
-  const lines = output.split("\n");
-  type Block = { index: number; title: string; fields: Map<string, string> };
-  const blocks: Block[] = [];
-  let current: Block | null = null;
-
-  const blockHeaderRe = /^(\d+)\.\s+(.+?)\s*$/;
-  // Field line: indented, "FIELD NAME: value"
-  const fieldRe = /^\s+([A-Za-z][A-Za-z0-9 _\-/()]*?):\s*(.*)$/;
-
-  for (const line of lines) {
-    const bh = blockHeaderRe.exec(line);
-    if (bh) {
-      if (current) blocks.push(current);
-      current = { index: parseInt(bh[1], 10), title: bh[2].trim(), fields: new Map() };
-      continue;
-    }
-    if (current) {
-      const f = fieldRe.exec(line);
-      if (f) {
-        const fname = f[1].trim();
-        const fval = f[2].trim();
-        // Only first occurrence per block
-        if (!current.fields.has(fname)) current.fields.set(fname, fval);
-      }
-    }
-  }
-  if (current) blocks.push(current);
-
-  report.blockCount = blocks.length;
-  if (blocks.length < 2) return report;
-
-  // Aggregate per-field: which rows are empty, which have values
-  const fieldStats = new Map<string, { empty: number[]; filled: number[] }>();
-  const isEmpty = (v: string) =>
-    v === "" || /^\(kosong\)$/i.test(v) || v === "—" || v === "-" || /^n\/?a$/i.test(v);
-
-  for (const b of blocks) {
-    for (const [fname, fval] of b.fields.entries()) {
-      if (!fieldStats.has(fname)) fieldStats.set(fname, { empty: [], filled: [] });
-      const st = fieldStats.get(fname)!;
-      if (isEmpty(fval)) {
-        st.empty.push(b.index);
-        report.emptyFields.push({ blockIndex: b.index, blockTitle: b.title, field: fname });
-      } else {
-        st.filled.push(b.index);
-      }
-    }
-  }
-
-  for (const [fname, st] of fieldStats.entries()) {
-    if (st.empty.length > 0 && st.filled.length > 0) {
-      report.suspectFields.push(fname);
-    }
-  }
-
-  report.trigger = report.suspectFields.length > 0;
-  return report;
-}
 
 // ============================================================
 // Anthropic call helper
@@ -393,63 +327,38 @@ serve(async (req) => {
 
     let finalOutput = pass1.text;
     let pass2Triggered = false;
-    let pass2Reason = "";
-    let suspectReport: SuspectReport | null = null;
 
-    // ============= PASS 2 (selective audit) =============
+    // ============= PASS 2 (auto when image present) =============
     if (hasImage) {
-      suspectReport = detectSuspectMergedCells(pass1.text);
-      if (suspectReport.trigger) {
-        pass2Triggered = true;
-        pass2Reason = `Detected ${suspectReport.suspectFields.length} suspect field(s) with mixed empty/filled values across ${suspectReport.blockCount} blocks.`;
+      pass2Triggered = true;
 
-        const suspectListText = suspectReport.suspectFields
-          .map((f) => `  - "${f}"`)
-          .join("\n");
-        const emptyCellListText = suspectReport.emptyFields
-          .filter((e) => suspectReport!.suspectFields.includes(e.field))
-          .map((e) => `  - Block #${e.blockIndex} ("${e.blockTitle}") → field "${e.field}" = (kosong)`)
-          .join("\n");
-
-        const pass2Content: any[] = [...imageBlocks];
-        pass2Content.push({
-          type: "text",
-          text: `=== OUTPUT PASS 1 (verbatim) ===
+      const pass2Content: any[] = [...imageBlocks];
+      pass2Content.push({
+        type: "text",
+        text: `=== OUTPUT PASS 1 (verbatim) ===
 ${pass1.text}
 
 === AUDIT TASK ===
-Field-field berikut punya nilai di sebagian row tapi (kosong) di row lain — kemungkinan
-artifact merged-cell tidak ter-propagate. WAJIB cek image untuk setiap cell suspect.
+Audit struktur visual semua tabel di image di atas vs output Pass 1.
+Fokus: merged cell, rowspan, colspan, shared cell propagation.
+Repair HANYA cell yang ditulis (kosong)/—/hilang padahal di image dicakup merged cell.
+Minimum-diff. Kalau di image tidak ada tabel sama sekali → return output Pass 1 apa adanya.
 
-Field suspect:
-${suspectListText}
+Output FULL dokumen final, tanpa preamble, tanpa komentar, tanpa code fence.`,
+      });
 
-Cell suspect (yang ditulis kosong di Pass 1):
-${emptyCellListText}
+      const pass2 = await callAnthropic({
+        model: MODEL_PASS2,
+        system: SYSTEM_PROMPT_PASS2,
+        content: pass2Content,
+        maxTokens: 4000,
+      });
 
-Untuk SETIAP cell suspect, lihat image:
-- Kalau cell visual di posisi itu dicakup merged/shared cell (rowspan/colspan) → ganti
-  (kosong) dengan nilai verbatim dari merged cell.
-- Kalau tidak → biarkan (kosong).
-
-JANGAN ubah apapun selain cell-cell di atas. Output FULL dokumen Pass 1 dengan
-hanya cell suspect yang diperbaiki. Tanpa preamble, tanpa komentar, tanpa code fence.`,
-        });
-
-        const pass2 = await callAnthropic({
-          model: MODEL_PASS2,
-          system: SYSTEM_PROMPT_PASS2,
-          content: pass2Content,
-          maxTokens: 4000,
-        });
-
-        if (pass2.ok && pass2.text.trim().length > 0) {
-          finalOutput = pass2.text;
-        } else if (!pass2.ok) {
-          // Pass 2 failed → keep Pass 1 output, log reason
-          pass2Reason += ` | Pass 2 call failed (status ${pass2.status}); keeping Pass 1 output.`;
-          console.warn("[parser] Pass 2 failed:", pass2.status, pass2.errBody);
-        }
+      if (pass2.ok && pass2.text.trim().length > 0) {
+        finalOutput = pass2.text;
+      } else if (!pass2.ok) {
+        console.warn("[parser] Pass 2 failed:", pass2.status, pass2.errBody);
+        // Keep Pass 1 output as fallback
       }
     }
 
@@ -458,9 +367,6 @@ hanya cell suspect yang diperbaiki. Tanpa preamble, tanpa komentar, tanpa code f
         output: finalOutput,
         debug: {
           pass2Triggered,
-          pass2Reason,
-          suspectFields: suspectReport?.suspectFields ?? [],
-          blockCount: suspectReport?.blockCount ?? 0,
           modelPass1: MODEL_PASS1,
           modelPass2: pass2Triggered ? MODEL_PASS2 : null,
         },
