@@ -417,12 +417,12 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     <div className="relative h-10 w-10 rounded-full bg-button-hover/15 flex items-center justify-center shrink-0">
                       <Loader2 className="h-5 w-5 text-button-hover animate-spin" />
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-foreground">
-                        Parser sedang membersihkan dan menyusun promo…
+                    <div className="min-w-0 space-y-1.5">
+                      <div className="text-sm font-semibold text-foreground leading-relaxed">
+                        Wolfclaw AI sedang memahami dan merapikan promo...
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        Membaca text dan {images.length} image. Estimasi 10–30 detik.
+                      <div className="text-xs text-muted-foreground leading-relaxed">
+                        Estimasi Maximum 60 Detik...
                       </div>
                     </div>
                   </div>
