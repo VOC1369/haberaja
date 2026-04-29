@@ -1,19 +1,22 @@
 /**
- * PK-06.0 LOCAL STORAGE ADAPTER
+ * PKB_WOLFBRAIN V.10 LOCAL STORAGE ADAPTER
  *
- * Rules:
- *   - 50-record cap, oldest evicted by updated_at ASC (D-3 APPROVED)
- *   - On every save: re-inject governance metadata from Registry (D-6 enforced
- *     even if caller forgot/tampered)
- *   - Bump updated_at automatically
- *   - Index kept under PK_INDEX_KEY for cheap listing without parsing every record
+ * STEP 2 — V.10 NATIVE.
+ *   - Storage now operates on `PkV10Record` directly.
+ *   - Dumb upsert: NO D-6 re-injection. V.10 carries its own version stamp
+ *     inside `meta_engine.schema_block` (schema_name / schema_version /
+ *     locked_at / created_by / status / extractor) — no top-level legacy
+ *     governance fields are bolted on at save time.
+ *   - 50-record cap, oldest evicted by `updated_at` ASC.
+ *   - `updated_at` bumped on every save.
+ *   - Index kept under PK_INDEX_KEY for cheap listing.
  *
- * NO Supabase, NO server roundtrip — Gate 1 is localStorage-only.
+ * NO Supabase, NO server roundtrip — localStorage-only.
+ * NO V.09 conversion. NO silent fallback.
  */
 
-import { buildGovernanceMetadata } from "../registry";
-import { createInertPromoKnowledgeRecord } from "../schema/inert";
-import type { PromoKnowledgeRecord } from "../schema/pk-06.0";
+import { createInertPkV10Record } from "../schema/pk-v10";
+import type { PkV10Record } from "../schema/pk-v10";
 
 const RECORD_PREFIX = "pk:rec:";
 const PK_INDEX_KEY = "pk:index";
@@ -39,19 +42,18 @@ function writeIndex(entries: PkIndexEntry[]) {
   localStorage.setItem(PK_INDEX_KEY, JSON.stringify(entries));
 }
 
-function indexEntryFor(rec: PromoKnowledgeRecord): PkIndexEntry {
-  const promo_name =
-    (rec.identity_engine as { promo_block?: { promo_name?: string } })?.promo_block?.promo_name ?? "";
+function indexEntryFor(rec: PkV10Record): PkIndexEntry {
+  const promo_name = rec.identity_engine?.promo_block?.promo_name ?? "";
+  const state = rec.readiness_engine?.state_block?.state ?? "draft";
   return {
     record_id: rec.record_id,
     promo_name,
-    state: rec.readiness_engine.state_block.state,
+    state,
     updated_at: rec.updated_at,
   };
 }
 
 function genId(): string {
-  // crypto.randomUUID is widely supported; fall back if not available.
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
@@ -59,33 +61,31 @@ function genId(): string {
 }
 
 /**
- * Create a fresh inert record (NOT yet persisted).
+ * Create a fresh inert V.10 record (NOT yet persisted).
  */
-export function createDraftRecord(): PromoKnowledgeRecord {
-  return createInertPromoKnowledgeRecord(genId());
+export function createDraftRecord(): PkV10Record {
+  return createInertPkV10Record(genId());
 }
 
 /**
- * Save (upsert) a record. Re-injects governance metadata + bumps updated_at.
- * Evicts oldest if cap exceeded.
+ * Save (upsert) a V.10 record. Bumps `updated_at`. Evicts oldest if cap exceeded.
+ *
+ * IMPORTANT: This is a dumb upsert. No legacy governance fields are injected.
+ * V.10 records carry their schema stamp in `meta_engine.schema_block`.
  */
-export function saveRecord(rec: PromoKnowledgeRecord): PromoKnowledgeRecord {
-  const gov = buildGovernanceMetadata();
-  const stamped: PromoKnowledgeRecord = {
+export function saveRecord(rec: PkV10Record): PkV10Record {
+  const stamped: PkV10Record = {
     ...rec,
-    ...gov, // D-6 enforcement: always re-inject from registry
     updated_at: new Date().toISOString(),
   };
 
   localStorage.setItem(RECORD_PREFIX + stamped.record_id, JSON.stringify(stamped));
 
-  // update index
   const idx = readIndex().filter((e) => e.record_id !== stamped.record_id);
   idx.push(indexEntryFor(stamped));
 
-  // evict oldest if over cap
   if (idx.length > MAX_RECORDS) {
-    idx.sort((a, b) => a.updated_at.localeCompare(b.updated_at)); // oldest first
+    idx.sort((a, b) => a.updated_at.localeCompare(b.updated_at));
     while (idx.length > MAX_RECORDS) {
       const evict = idx.shift();
       if (evict) {
@@ -98,10 +98,10 @@ export function saveRecord(rec: PromoKnowledgeRecord): PromoKnowledgeRecord {
   return stamped;
 }
 
-export function loadRecord(record_id: string): PromoKnowledgeRecord | null {
+export function loadRecord(record_id: string): PkV10Record | null {
   try {
     const raw = localStorage.getItem(RECORD_PREFIX + record_id);
-    return raw ? (JSON.parse(raw) as PromoKnowledgeRecord) : null;
+    return raw ? (JSON.parse(raw) as PkV10Record) : null;
   } catch {
     return null;
   }

@@ -1,9 +1,12 @@
 /**
- * EXTRACTOR CONTRACT — interface only (Gate 1).
+ * @deprecated STEP 2 (V.10 migration): this contract surface is LEGACY V.09.
+ * The active runtime path uses `extract-client.ts` → `PkV10Record` directly,
+ * not this interface. Kept only as a historical reference until the V.10
+ * extractor contract surface is defined (V.10.1 backlog).
  *
- * Implementation deferred to Gate 2 (Extractor Proof).
- * This file defines the surface area so consumers and future implementers
- * can target a stable shape.
+ * Do NOT add new consumers. Do NOT extend.
+ *
+ * EXTRACTOR CONTRACT — interface only (Gate 1, V.09 era).
  *
  * Versioned independently from schema and governance:
  *   - governance_version → ARD/policy

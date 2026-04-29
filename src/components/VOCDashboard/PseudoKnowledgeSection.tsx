@@ -69,10 +69,10 @@ import { wrapV09, type V09ExtractionSource } from "@/lib/extractors/contracts/js
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
 
-// STEP 1 — V.09 dual-call: pk-extractor untuk Copy JSON / Visual Result / Gunakan Promo
-import { extractPromoV09 } from "@/features/promo-knowledge/extractor/extract-client";
+// STEP 2 — V.10 native: pk-extractor returns PkV10Record. No V.09 conversion.
+import { extractPromoV10 } from "@/features/promo-knowledge/extractor/extract-client";
 import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";
-import type { PromoKnowledgeRecord } from "@/features/promo-knowledge/schema/pk-06.0";
+import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 
 // Helper: Title Case for mode badges
 const formatPromoMode = (mode: string | null | undefined): string => {
@@ -130,8 +130,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   
   // Extraction state  
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
-  // STEP 1 — V.09 PK record (paralel dgn voc-wolf untuk Copy JSON / Visual Result / Gunakan Promo)
-  const [pkRecord, setPkRecord] = useState<PromoKnowledgeRecord | null>(null);
+  // STEP 2 — V.10 PK record (paralel dgn voc-wolf untuk Copy JSON / Visual Result / Gunakan Promo)
+  const [pkRecord, setPkRecord] = useState<PkV10Record | null>(null);
   // STEP 1 — status pk-extractor untuk UX (cegah klik prematur)
   const [pkStatus, setPkStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
   const [pkElapsedSec, setPkElapsedSec] = useState(0);
@@ -523,7 +523,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       const pkStartedAt = Date.now();
       (async () => {
         try {
-          const pk = await extractPromoV09({
+          const pk = await extractPromoV10({
             text: imageBase64 ? (currentInput?.trim() ?? "") : (currentInput ?? ""),
             images: imageBase64 ? [imageBase64] : [],
             client_id_hint: result?.client_id ?? "",
@@ -655,13 +655,13 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     if (!extractedPromo && !pkRecord) return;
 
     try {
-      // STEP 1 — prefer raw PromoKnowledgeRecord (V.09 / PK-06.0).
+      // STEP 2 — prefer raw PkV10Record (V.10 native).
       // Fallback ke wrapper V.09 lama bila pk-extractor belum/gagal selesai.
       let jsonString: string;
       let label: string;
       if (pkRecord) {
         jsonString = JSON.stringify(pkRecord, null, 2);
-        label = `${jsonString.length} karakter • PromoKnowledgeRecord (PK-06.0 / V.09)`;
+        label = `${jsonString.length} karakter • PkV10Record (PKB_Wolfbrain V.10)`;
       } else {
         const sourceMap: Record<string, V09ExtractionSource> = {
           url: "url",
@@ -715,16 +715,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   };
   
   // Separated commit logic for reuse after gate confirmation
-  // STEP 1 — save raw PromoKnowledgeRecord (V.09) ke localStorage via savePkRecord.
+  // STEP 2 — save raw PkV10Record (V.10) ke localStorage via savePkRecord.
   // Fallback ke legacy `localDraftKB.save(mappedPreview)` bila pkRecord belum siap.
   const proceedWithCommit = async () => {
     try {
       if (pkRecord) {
         const saved = savePkRecord(pkRecord);
         const promoName =
-          (saved.identity_engine as { promo_block?: { promo_name?: string } })?.promo_block?.promo_name ||
-          "Promo Tanpa Nama";
-        toast.success("Promo (V.09) disimpan sebagai draft!", {
+          saved.identity_engine?.promo_block?.promo_name || "Promo Tanpa Nama";
+        toast.success("Promo (V.10) disimpan sebagai draft!", {
           description: `"${promoName}" — record_id: ${saved.record_id}`,
         });
         handleRestart();
@@ -2243,17 +2242,17 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         </div>
       )}
 
-      {/* Visual Result Modal — preview PromoKnowledgeRecord (V.09 / PK-06.0) */}
+      {/* Visual Result Modal — preview PkV10Record (PKB_Wolfbrain V.10) */}
       <Dialog open={showVisualResult} onOpenChange={setShowVisualResult}>
         <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="w-5 h-5" />
-              Visual Result — PromoKnowledgeRecord (V.09)
+              Visual Result — PkV10Record (V.10)
             </DialogTitle>
             <DialogDescription>
               {pkRecord
-                ? "Raw PromoKnowledgeRecord — 23 engine, governance V.06, domain PK-06.0. Inilah JSON yang akan disalin / disimpan."
+                ? "Raw PkV10Record — 22 engine, schema PKB_Wolfbrain V.10, locked 2026-04-28. Inilah JSON yang akan disalin / disimpan."
                 : "PK-extractor belum selesai atau gagal — fallback ke wrapper V.09 lama (legacy)."}
             </DialogDescription>
           </DialogHeader>
