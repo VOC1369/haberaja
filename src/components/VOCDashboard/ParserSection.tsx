@@ -253,7 +253,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     try {
       // Always send the raw parser baseline to extractor — never the polished/
       // restructured presentation layer (markdown markers would pollute parsing).
-      const payload = rawResult ?? result;
+      // Strip "## " headline markers (presentation-only hint) before handoff.
+      const baseline = rawResult ?? result;
+      const payload = baseline.replace(/^##\s+/gm, "");
       localStorage.setItem(PARSER_HANDOFF_KEY, payload);
       toast.success("Dikirim ke Pseudo Extractor");
       if (onSendToPseudo) onSendToPseudo();
