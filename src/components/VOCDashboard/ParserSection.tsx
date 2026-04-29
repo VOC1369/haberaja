@@ -178,73 +178,6 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     }
   };
 
-  // ── Enhance (Step 2 — LLM polish) ─────────────────────
-  const handleEnhance = async () => {
-    if (!rawResult || isEnhancing) return;
-    setIsEnhancing(true);
-    setPolishWarning(null);
-
-    try {
-      const resp = await fetch(POLISHER_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ text: rawResult }),
-      });
-
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}));
-        const msg = body?.error || `Enhance gagal (HTTP ${resp.status})`;
-        toast.error("Polisher gagal", { description: msg });
-        return;
-      }
-
-      const data = await resp.json();
-
-      // Soft-fail dari edge function (upstream 5xx / rate limit / credit habis)
-      if (data?.fallback) {
-        const msg = data?.message || data?.error || "Polisher tidak tersedia. Tetap pakai versi asli.";
-        setPolishWarning(msg);
-        toast.error("Polish dilewati", { description: msg });
-        return;
-      }
-
-      const polished = (data?.output as string) || "";
-      if (!polished.trim()) {
-        toast.error("Polisher mengembalikan output kosong");
-        return;
-      }
-
-      // Integrity check — angka, %, Rp, brand caps, dates, multipliers
-      const integ = checkIntegrity(rawResult, polished);
-      if (!integ.ok) {
-        // Fallback ke raw + tampilkan warning badge
-        setResult(rawResult);
-        setIsPolished(false);
-        setPolishWarning(
-          integ.reason ||
-            "Polisher mengubah data — hasilnya dibatalkan demi keamanan.",
-        );
-        toast.error("Polish dibatalkan", {
-          description: "Integritas data tidak lolos. Hasil dikembalikan ke versi asli.",
-        });
-        return;
-      }
-
-      setResult(polished);
-      setIsPolished(true);
-      toast.success("Polished");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Network error";
-      toast.error("Polisher gagal", { description: msg });
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
   const handleBackToRaw = () => {
     if (!rawResult) return;
     setResult(rawResult);
@@ -253,17 +186,19 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     setPolishWarning(null);
   };
 
-  // ── Restructure (Level 2 — deterministic, opt-in) ─────
-  const handleRestructure = () => {
+  // ── Polish (unified, deterministic, integrity-checked) ─
+  // Internally: cleanup baseline (already applied) → Level 2 restructure
+  // → integrity check → fallback to raw on failure.
+  const handlePolish = () => {
     if (!rawResult) return;
     try {
       const restructured = polishLevel2(rawResult);
       const integ = checkIntegrityLevel2(rawResult, restructured);
       if (!integ.ok) {
         setPolishWarning(
-          integ.reason || "Restructure dibatalkan — integrity check gagal.",
+          integ.reason || "Polish dibatalkan — integrity check gagal.",
         );
-        toast.error("Restructure dibatalkan", {
+        toast.error("Polish dibatalkan", {
           description: "Integritas data tidak lolos. Tetap pakai versi asli.",
         });
         return;
@@ -272,10 +207,10 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
       setIsRestructured(true);
       setIsPolished(false);
       setPolishWarning(null);
-      toast.success("Restructured");
+      toast.success("Polished");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Restructure gagal";
-      toast.error("Restructure gagal", { description: msg });
+      const msg = e instanceof Error ? e.message : "Polish gagal";
+      toast.error("Polish gagal", { description: msg });
     }
   };
 
