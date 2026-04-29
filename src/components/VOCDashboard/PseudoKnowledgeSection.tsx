@@ -1725,9 +1725,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 <p className="text-sm text-muted-foreground max-w-md">
                   Paste link, HTML, atau drop screenshot — AI akan mengekstrak ke format Knowledge Base.
                 </p>
-                <Badge variant="outline" className="bg-success/10 text-success border-success/30 mt-1">
+                <Badge className="bg-success/10 text-success border-0 mt-1 hover:bg-success/15 focus:ring-1 focus:ring-success/40 transition-colors">
                   <span className="w-2 h-2 rounded-full bg-success mr-2" />
-                  VOC AI Knowledge
+                  Wolfclaw AI
                 </Badge>
               </div>
 
