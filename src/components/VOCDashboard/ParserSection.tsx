@@ -249,7 +249,34 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     if (!rawResult) return;
     setResult(rawResult);
     setIsPolished(false);
+    setIsRestructured(false);
     setPolishWarning(null);
+  };
+
+  // ── Restructure (Level 2 — deterministic, opt-in) ─────
+  const handleRestructure = () => {
+    if (!rawResult) return;
+    try {
+      const restructured = polishLevel2(rawResult);
+      const integ = checkIntegrityLevel2(rawResult, restructured);
+      if (!integ.ok) {
+        setPolishWarning(
+          integ.reason || "Restructure dibatalkan — integrity check gagal.",
+        );
+        toast.error("Restructure dibatalkan", {
+          description: "Integritas data tidak lolos. Tetap pakai versi asli.",
+        });
+        return;
+      }
+      setResult(restructured);
+      setIsRestructured(true);
+      setIsPolished(false);
+      setPolishWarning(null);
+      toast.success("Restructured");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Restructure gagal";
+      toast.error("Restructure gagal", { description: msg });
+    }
   };
 
   // ── Result actions ────────────────────────────────────
