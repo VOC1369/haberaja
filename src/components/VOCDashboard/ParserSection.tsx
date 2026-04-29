@@ -116,6 +116,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     setResult(null);
     setRawResult(null);
     setIsPolished(false);
+    setIsRestructured(false);
     setPolishWarning(null);
 
     try {
