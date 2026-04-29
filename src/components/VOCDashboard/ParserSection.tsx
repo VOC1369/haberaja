@@ -434,24 +434,71 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
           {result && !isLoading && (
             <div className="space-y-4">
               <div className="relative rounded-xl border border-border bg-card">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-success/10 text-success border-success/30">
-                      Parser Result
+                <div className="flex items-center justify-between px-5 py-3 border-b border-border gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge
+                      variant="outline"
+                      className={
+                        isPolished
+                          ? "bg-button-hover/10 text-button-hover border-button-hover/30"
+                          : "bg-success/10 text-success border-success/30"
+                      }
+                    >
+                      {isPolished ? "Polished" : "Parser Result"}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {result.length} karakter
                     </span>
+                    {polishWarning && (
+                      <Badge
+                        variant="outline"
+                        className="bg-warning/10 text-warning border-warning/40 gap-1"
+                        title={polishWarning}
+                      >
+                        <AlertTriangle className="h-3 w-3" />
+                        Polish skipped — integrity check failed
+                      </Badge>
+                    )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={handleCopy}
-                    title="Copy hasil parser"
-                    className="rounded-full"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {isPolished ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleBackToRaw}
+                        title="Kembalikan ke versi asli parser"
+                        className="rounded-full gap-1.5 h-8"
+                      >
+                        <Undo2 className="h-3.5 w-3.5" />
+                        Back to Raw
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleEnhance}
+                        disabled={isEnhancing || !rawResult}
+                        title="Rapikan tampilan dengan AI (tidak mengubah data)"
+                        className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
+                      >
+                        {isEnhancing ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5" />
+                        )}
+                        {isEnhancing ? "Polishing…" : "Enhance"}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={handleCopy}
+                      title="Copy hasil parser"
+                      className="rounded-full"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <pre className="whitespace-pre-wrap break-words px-5 py-4 text-sm text-foreground font-mono leading-relaxed">
                   {result}
