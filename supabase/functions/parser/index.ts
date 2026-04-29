@@ -22,7 +22,9 @@ const MODEL_PASS2 = "claude-opus-4-20250514";
 
 const MAX_TOKENS = 8000;
 const TEMPERATURE = 0;
-const MIN_OUTPUT_CHARS = 50;
+const MIN_OUTPUT_CHARS = 20;
+const GEMINI_TIMEOUT_MS = 20000;
+const ANTHROPIC_TIMEOUT_MS = 30000;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -352,6 +354,8 @@ async function callGemini(opts: {
   };
 
   let resp: Response;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT_MS);
   try {
     resp = await fetch(LOVABLE_AI_URL, {
       method: "POST",
@@ -360,9 +364,18 @@ async function callGemini(opts: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify(body),
+      signal: ctrl.signal,
     });
   } catch (e) {
-    return { ok: false, reason: `network: ${e instanceof Error ? e.message : String(e)}` };
+    const aborted = (e as any)?.name === "AbortError";
+    return {
+      ok: false,
+      reason: aborted
+        ? `timeout after ${GEMINI_TIMEOUT_MS}ms`
+        : `network: ${e instanceof Error ? e.message : String(e)}`,
+    };
+  } finally {
+    clearTimeout(timer);
   }
 
   if (!resp.ok) {
@@ -398,21 +411,36 @@ async function callAnthropic(opts: {
   content: any[];
   maxTokens: number;
 }): Promise<{ ok: true; text: string } | { ok: false; status: number; errBody: any }> {
-  const resp = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY!,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: opts.model,
-      max_tokens: opts.maxTokens,
-      temperature: TEMPERATURE,
-      system: opts.system,
-      messages: [{ role: "user", content: opts.content }],
-    }),
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ANTHROPIC_TIMEOUT_MS);
+  let resp: Response;
+  try {
+    resp = await fetch(ANTHROPIC_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY!,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: opts.model,
+        max_tokens: opts.maxTokens,
+        temperature: TEMPERATURE,
+        system: opts.system,
+        messages: [{ role: "user", content: opts.content }],
+      }),
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    const aborted = (e as any)?.name === "AbortError";
+    return {
+      ok: false,
+      status: 0,
+      errBody: { error: { type: aborted ? "timeout" : "network", message: e instanceof Error ? e.message : String(e) } },
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!resp.ok) {
     const errBody = await resp.json().catch(() => ({}));
