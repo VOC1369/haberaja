@@ -485,7 +485,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     )}
                   </div>
                   <Badge className="bg-muted text-muted-foreground border-0 hover:bg-muted/80 transition-colors">
-                    {result.length} karakter
+                    {result.length}
                   </Badge>
                 </div>
                 {isRestructured ? (
