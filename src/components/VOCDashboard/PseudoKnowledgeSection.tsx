@@ -69,6 +69,7 @@ import type { PromoFormData } from "./PromoFormWizard/types";
 import { extractPromoV10 } from "@/features/promo-knowledge/extractor/extract-client";
 import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
+import { AdminVerifySection } from "@/features/promo-knowledge/admin-verify/AdminVerifySection";
 
 // Helper: Title Case for mode badges
 const formatPromoMode = (mode: string | null | undefined): string => {
@@ -2040,6 +2041,11 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   </div>
                 )}
               </Card>
+          )}
+
+          {/* Admin Verification — Phase 1: questions auto-generated from pkRecord */}
+          {pkRecord && pkStatus === "ready" && (
+            <AdminVerifySection record={pkRecord} onApply={setPkRecord} />
           )}
 
             </>
