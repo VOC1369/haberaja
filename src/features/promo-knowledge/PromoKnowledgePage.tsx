@@ -30,7 +30,8 @@ import {
 import { validatePromoKnowledge } from "@/features/promo-knowledge/validator";
 import { buildSamplePromo } from "@/features/promo-knowledge/fixtures/sample-claim-engine";
 import { PK_REGISTRY } from "@/features/promo-knowledge/registry";
-import type { PromoKnowledgeRecord, LifecycleState } from "@/features/promo-knowledge/schema/pk-06.0";
+import type { LifecycleState } from "@/features/promo-knowledge/schema/pk-06.0";
+import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 
 const NEXT_STATE: Partial<Record<LifecycleState, LifecycleState>> = {
   ai_draft: "reviewed",
@@ -40,7 +41,7 @@ const NEXT_STATE: Partial<Record<LifecycleState, LifecycleState>> = {
 };
 
 export default function PromoKnowledgePage() {
-  const [record, setRecord] = useState<PromoKnowledgeRecord>(() => createDraftRecord());
+  const [record, setRecord] = useState<PkV10Record>(() => createDraftRecord());
   const [list, setList] = useState<PkIndexEntry[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -75,7 +76,11 @@ export default function PromoKnowledgePage() {
     canonical.setAttribute("href", `${window.location.origin}/promo-knowledge`);
   }, []);
 
-  const validation = useMemo(() => validatePromoKnowledge(record), [record]);
+  // Legacy validator/form/debug typed against V.09 PromoKnowledgeRecord. Page itself is
+  // marked legacy (Step 2: V.10 runtime lives in PseudoKnowledgeSection, not here).
+  // Cast at call boundaries to keep legacy page loadable without rewriting V.09 types.
+  const legacyRecord = record as unknown as import("@/features/promo-knowledge/schema/pk-06.0").PromoKnowledgeRecord;
+  const validation = useMemo(() => validatePromoKnowledge(legacyRecord), [legacyRecord]);
 
   const handleLoadSample = () => {
     setRecord(buildSamplePromo());
@@ -298,8 +303,8 @@ export default function PromoKnowledgePage() {
             )}
 
             <ClaimEngineForm
-              value={record.claim_engine}
-              onChange={(next) => setRecord({ ...record, claim_engine: next })}
+              value={legacyRecord.claim_engine}
+              onChange={(next) => setRecord({ ...record, claim_engine: next as unknown as PkV10Record["claim_engine"] })}
               validation={validation}
               aiConfidence={record.ai_confidence}
             />
@@ -307,7 +312,7 @@ export default function PromoKnowledgePage() {
 
           {/* Right — debug panel */}
           <aside>
-            <DebugPanel record={record} validation={validation} />
+            <DebugPanel record={legacyRecord} validation={validation} />
           </aside>
         </div>
       </main>
