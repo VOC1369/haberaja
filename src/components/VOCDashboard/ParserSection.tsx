@@ -51,9 +51,26 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   const [polishWarning, setPolishWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const canSubmit = !isLoading && (text.trim().length > 0 || images.length > 0);
+
+  // Tick elapsed time while loading
+  useEffect(() => {
+    if (!isLoading) return;
+    const startedAt = Date.now();
+    setElapsedMs(0);
+    const id = window.setInterval(() => setElapsedMs(Date.now() - startedAt), 250);
+    return () => window.clearInterval(id);
+  }, [isLoading]);
+
+  const handleCancelParse = () => {
+    abortControllerRef.current?.abort();
+    setIsLoading(false);
+    toast.info("Parser dibatalkan");
+  };
 
   // ── Image handling ────────────────────────────────────
   const processImageFile = async (file: File) => {
