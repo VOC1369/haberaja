@@ -408,17 +408,38 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
           {isLoading && (
             <div className="absolute inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
               <div className="rounded-xl border border-border bg-muted/40 p-5 space-y-4 w-full max-w-3xl pointer-events-auto">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="relative h-10 w-10 rounded-full bg-button-hover/15 flex items-center justify-center shrink-0">
-                    <Loader2 className="h-5 w-5 text-button-hover animate-spin" />
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative h-10 w-10 rounded-full bg-button-hover/15 flex items-center justify-center shrink-0">
+                      <Loader2 className="h-5 w-5 text-button-hover animate-spin" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-foreground">
+                        Parser sedang membersihkan dan menyusun promo…
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Membaca text dan {images.length} image. Estimasi 10–30 detik.
+                      </div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-foreground">
-                      Parser sedang membersihkan dan menyusun promo…
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="text-sm font-mono tabular-nums text-foreground" aria-live="polite">
+                      {(() => {
+                        const totalSec = Math.floor(elapsedMs / 1000);
+                        const mm = String(Math.floor(totalSec / 60)).padStart(2, "0");
+                        const ss = String(totalSec % 60).padStart(2, "0");
+                        return `${mm}:${ss}`;
+                      })()}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Membaca text dan {images.length} image. Estimasi 10–30 detik.
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelParse}
+                      className="rounded-full"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      Batal
+                    </Button>
                   </div>
                 </div>
                 <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
