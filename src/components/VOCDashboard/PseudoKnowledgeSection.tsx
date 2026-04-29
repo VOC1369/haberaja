@@ -126,7 +126,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   
   // Extraction state  
   const [extractedPromo, setExtractedPromo] = useState<ExtractedPromo | null>(null);
-  // STEP 2 — V.10 PK record (paralel dgn voc-wolf untuk Copy JSON / Visual Result / Gunakan Promo)
+  // STEP 2 — V.10 PK record (paralel dgn voc-wolf untuk Copy JSON / Gunakan Promo)
   const [pkRecord, setPkRecord] = useState<PkV10Record | null>(null);
   // STEP 1 — status pk-extractor untuk UX (cegah klik prematur)
   const [pkStatus, setPkStatus] = useState<"idle" | "loading" | "ready" | "failed">("idle");
@@ -139,7 +139,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // successful V.09 extraction and forcing UI back to landing (data loss
   // + Copy JSON unavailable). Now: extractedPromo + pkRecord stay intact;
   // mappedPreview returns null and a non-blocking error message is shown
-  // via mappedPreviewError state. Copy JSON / Visual Result / V.09 result
+  // via mappedPreviewError state. Copy JSON / V.09 result
   // remain accessible because they read pkRecord, not mappedPreview.
   const [mappedPreviewError, setMappedPreviewError] = useState<string | null>(null);
 
@@ -509,7 +509,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       setEditHistory([]);
 
       // STEP 1 — paralel call ke pk-extractor (V.09). Tidak blocking utama;
-      // hasilnya dipakai untuk Copy JSON / Visual Result / Gunakan Promo.
+      // hasilnya dipakai untuk Copy JSON / Gunakan Promo.
       // Card body tetap render dari `extractedPromo` (voc-wolf) di Step 1.
       setPkStatus("loading");
       setPkRecord(null);
@@ -2125,7 +2125,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               )}
             </div>
             
-            {/* Right: Copy JSON + Visual Result + Primary Action */}
+            {/* Right: Copy JSON + Primary Action */}
             <div className="flex items-center gap-3">
               {/* Copy JSON V.09 — bungkus ExtractedPromo dgn Json Schema Contract V.09 */}
               <TooltipProvider>
