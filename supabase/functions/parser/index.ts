@@ -22,7 +22,9 @@ const MODEL_PASS2 = "claude-opus-4-20250514";
 
 const MAX_TOKENS = 8000;
 const TEMPERATURE = 0;
-const MIN_OUTPUT_CHARS = 50;
+const MIN_OUTPUT_CHARS = 20;
+const GEMINI_TIMEOUT_MS = 20000;
+const ANTHROPIC_TIMEOUT_MS = 30000;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -352,6 +354,8 @@ async function callGemini(opts: {
   };
 
   let resp: Response;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), GEMINI_TIMEOUT_MS);
   try {
     resp = await fetch(LOVABLE_AI_URL, {
       method: "POST",
@@ -360,9 +364,18 @@ async function callGemini(opts: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
       },
       body: JSON.stringify(body),
+      signal: ctrl.signal,
     });
   } catch (e) {
-    return { ok: false, reason: `network: ${e instanceof Error ? e.message : String(e)}` };
+    const aborted = (e as any)?.name === "AbortError";
+    return {
+      ok: false,
+      reason: aborted
+        ? `timeout after ${GEMINI_TIMEOUT_MS}ms`
+        : `network: ${e instanceof Error ? e.message : String(e)}`,
+    };
+  } finally {
+    clearTimeout(timer);
   }
 
   if (!resp.ok) {
@@ -398,21 +411,36 @@ async function callAnthropic(opts: {
   content: any[];
   maxTokens: number;
 }): Promise<{ ok: true; text: string } | { ok: false; status: number; errBody: any }> {
-  const resp = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": ANTHROPIC_API_KEY!,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: opts.model,
-      max_tokens: opts.maxTokens,
-      temperature: TEMPERATURE,
-      system: opts.system,
-      messages: [{ role: "user", content: opts.content }],
-    }),
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ANTHROPIC_TIMEOUT_MS);
+  let resp: Response;
+  try {
+    resp = await fetch(ANTHROPIC_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY!,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: opts.model,
+        max_tokens: opts.maxTokens,
+        temperature: TEMPERATURE,
+        system: opts.system,
+        messages: [{ role: "user", content: opts.content }],
+      }),
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    const aborted = (e as any)?.name === "AbortError";
+    return {
+      ok: false,
+      status: 0,
+      errBody: { error: { type: aborted ? "timeout" : "network", message: e instanceof Error ? e.message : String(e) } },
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!resp.ok) {
     const errBody = await resp.json().catch(() => ({}));
@@ -515,6 +543,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  const t0 = Date.now();
   try {
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not set");
     const { text = "", images = [] } = await req.json();
@@ -538,8 +567,12 @@ serve(async (req) => {
         content: [{ type: "text", text: userText }],
         maxTokens: MAX_TOKENS,
       });
-      if (!pass1.ok) return mapAnthropicError(pass1.status, pass1.errBody);
+      if (!pass1.ok) {
+        console.warn("[parser]", JSON.stringify({ route: "claude_text", ok: false, status: pass1.status, latency_ms: Date.now() - t0, image_count: 0 }));
+        return mapAnthropicError(pass1.status, pass1.errBody);
+      }
 
+      console.log("[parser]", JSON.stringify({ route: "claude_text", model: MODEL_PASS1, ok: true, latency_ms: Date.now() - t0, image_count: 0, output_chars: pass1.text.length }));
       return new Response(
         JSON.stringify({
           output: pass1.text,
@@ -557,6 +590,7 @@ serve(async (req) => {
     });
 
     if (gemini.ok) {
+      console.log("[parser]", JSON.stringify({ route: "gemini", model: GEMINI_MODEL, ok: true, latency_ms: Date.now() - t0, image_count: imgs.length, output_chars: gemini.text.length }));
       return new Response(
         JSON.stringify({
           output: gemini.text,
@@ -567,10 +601,14 @@ serve(async (req) => {
     }
 
     // Gemini failed → fallback Claude image flow
-    console.warn("[parser] Gemini failed, falling back to Claude:", gemini.reason);
+    console.warn("[parser]", JSON.stringify({ route: "gemini", ok: false, reason: gemini.reason, latency_ms: Date.now() - t0, image_count: imgs.length, action: "fallback_claude" }));
     const fallback = await claudeImageFlow(String(text), imgs);
-    if (!fallback.ok) return mapAnthropicError(fallback.status, fallback.errBody);
+    if (!fallback.ok) {
+      console.warn("[parser]", JSON.stringify({ route: "gemini_fallback_claude", ok: false, status: fallback.status, latency_ms: Date.now() - t0, image_count: imgs.length }));
+      return mapAnthropicError(fallback.status, fallback.errBody);
+    }
 
+    console.log("[parser]", JSON.stringify({ route: "gemini_fallback_claude", model: fallback.pass2 ? MODEL_PASS2 : MODEL_PASS1, ok: true, latency_ms: Date.now() - t0, image_count: imgs.length, output_chars: fallback.output.length, gemini_fail_reason: gemini.reason }));
     return new Response(
       JSON.stringify({
         output: fallback.output,
