@@ -219,10 +219,10 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
       const integ = checkIntegrityLevel2(rawResult, restructured);
       if (!integ.ok) {
         setPolishWarning(
-          integ.reason || "Polish dibatalkan — integrity check gagal.",
+          integ.reason || "Source already clean — no polish needed.",
         );
-        toast.error("Polish dibatalkan", {
-          description: "Integritas data tidak lolos. Tetap pakai versi asli.",
+        toast.success("Polish not needed", {
+          description: "Source sudah bersih. Tetap pakai versi asli.",
         });
         return;
       }
