@@ -168,6 +168,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
       setRawResult(baseline);
       setResult(baseline);
       setIsPolished(false);
+      setIsRestructured(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Network error";
       setError(msg);
