@@ -487,10 +487,16 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                       className={
                         isPolished
                           ? "bg-button-hover/10 text-button-hover border-button-hover/30"
-                          : "bg-success/10 text-success border-success/30"
+                          : isRestructured
+                            ? "bg-button-hover/10 text-button-hover border-button-hover/30"
+                            : "bg-success/10 text-success border-success/30"
                       }
                     >
-                      {isPolished ? "Polished" : "Parser Result"}
+                      {isPolished
+                        ? "Polished"
+                        : isRestructured
+                          ? "Restructured"
+                          : "Parser Result"}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {result.length} karakter
@@ -507,7 +513,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    {isPolished ? (
+                    {isPolished || isRestructured ? (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -519,21 +525,34 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                         Back to Raw
                       </Button>
                     ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleEnhance}
-                        disabled={isEnhancing || !rawResult}
-                        title="Rapikan tampilan dengan AI (tidak mengubah data)"
-                        className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
-                      >
-                        {isEnhancing ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-3.5 w-3.5" />
-                        )}
-                        {isEnhancing ? "Polishing…" : "Enhance"}
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRestructure}
+                          disabled={!rawResult}
+                          title="Restructure tampilan secara deterministic (no AI, no data change)"
+                          className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
+                        >
+                          <Wand2 className="h-3.5 w-3.5" />
+                          Restructure
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleEnhance}
+                          disabled={isEnhancing || !rawResult}
+                          title="Rapikan tampilan dengan AI (tidak mengubah data)"
+                          className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
+                        >
+                          {isEnhancing ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-3.5 w-3.5" />
+                          )}
+                          {isEnhancing ? "Polishing…" : "Enhance"}
+                        </Button>
+                      </>
                     )}
                     <Button
                       variant="ghost"
@@ -546,9 +565,16 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     </Button>
                   </div>
                 </div>
-                <pre className="whitespace-pre-wrap break-words px-5 py-4 text-sm text-foreground font-mono leading-relaxed">
-                  {result}
-                </pre>
+                {isRestructured ? (
+                  <MiniMarkdown
+                    text={result}
+                    className="px-5 py-4 text-sm text-foreground leading-relaxed"
+                  />
+                ) : (
+                  <pre className="whitespace-pre-wrap break-words px-5 py-4 text-sm text-foreground font-mono leading-relaxed">
+                    {result}
+                  </pre>
+                )}
               </div>
 
               <div className="flex items-center justify-between gap-2 flex-wrap">
