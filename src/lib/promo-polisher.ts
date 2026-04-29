@@ -173,6 +173,163 @@ function normalizeNumericToken(s: string): string {
     .toLowerCase();
 }
 
+// ============================================================
+// STEP 2 — POLISH LEVEL 2 (DETERMINISTIC, OPT-IN VIA "RESTRUCTURE")
+// ============================================================
+//
+// Allowed:
+//   1. Dedupe field-vs-title (e.g. baris "KODE PROMOSI: WELCOME 50%" tepat
+//      di bawah judul "1. WELCOME 50% — CASINO" → drop baris field redundan).
+//   2. Bold field labels (e.g. "KODE PROMOSI:" → "**KODE PROMOSI:**").
+//   3. Conservative header injection — HANYA jika sinyal sangat eksplisit:
+//      - Baris yang isinya "Contoh Perhitungan" / "Contoh Perhitungan Bonus"
+//        → diganti jadi "## CONTOH PERHITUNGAN".
+//      - Baris yang isinya "Syarat dan Ketentuan" / "S&K" → "## SYARAT DAN KETENTUAN".
+//      - Header "## PAKET BONUS" hanya disisipkan kalau ada >= 2 numbered
+//        bonus blocks ("1. ... KODE PROMOSI", "2. ... KODE PROMOSI", dst).
+//
+// Tetap diintegrity-check di pemanggil. Tidak menambah/menghapus data tokens.
+
+const FIELD_LABELS = [
+  "KODE PROMOSI",
+  "KATEGORI",
+  "MINIMAL DEPOSIT",
+  "MINIMUM DEPOSIT",
+  "MAKSIMAL BONUS",
+  "MAKSIMUM BONUS",
+  "MAX BONUS",
+  "TURNOVER",
+  "TO",
+  "PERSENTASE BONUS",
+  "BONUS",
+  "PERIODE",
+  "PROVIDER",
+  "GAME",
+  "SYARAT",
+];
+
+function normalizeForCompare(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9% ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function dedupeFieldVsTitle(text: string): string {
+  const lines = text.split("\n");
+  const out: string[] = [];
+  let currentTitleNorm = "";
+
+  for (const line of lines) {
+    // Detect "major" title line: "1. WELCOME BONUS …" (numbered + caps-ish)
+    const titleMatch = /^\s*\d+\.\s+(.+)$/.exec(line);
+    if (titleMatch && /[A-ZÀ-Ÿ]{2,}/.test(titleMatch[1])) {
+      currentTitleNorm = normalizeForCompare(titleMatch[1]);
+      out.push(line);
+      continue;
+    }
+
+    // Detect "FIELD: value" line
+    const fieldMatch = /^\s*([A-ZÀ-Ÿ][A-ZÀ-Ÿ &/]{2,}?)\s*:\s*(.+?)\s*$/.exec(line);
+    if (fieldMatch && currentTitleNorm) {
+      const value = fieldMatch[2];
+      const valueNorm = normalizeForCompare(value);
+      // Drop only if the field VALUE is contained in (or equals) the title.
+      // Conservative: require valueNorm length >= 4 to avoid false positives.
+      if (
+        valueNorm.length >= 4 &&
+        (currentTitleNorm === valueNorm || currentTitleNorm.includes(valueNorm))
+      ) {
+        continue; // drop redundant field
+      }
+    }
+
+    out.push(line);
+  }
+
+  return out.join("\n");
+}
+
+function boldFieldLabels(text: string): string {
+  // Only at line start; capture optional leading spaces.
+  const labelAlt = FIELD_LABELS.map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const re = new RegExp(`^([ \\t]*)(${labelAlt})\\s*:`, "gm");
+  return text.replace(re, (_m, lead, label) => `${lead}**${label}:**`);
+}
+
+function injectExplicitHeaders(text: string): string {
+  const lines = text.split("\n");
+  const out: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const norm = trimmed.toLowerCase().replace(/[:.\-–—]+$/g, "").trim();
+
+    if (
+      norm === "contoh perhitungan" ||
+      norm === "contoh perhitungan bonus" ||
+      norm === "contoh kalkulasi"
+    ) {
+      out.push("## CONTOH PERHITUNGAN");
+      continue;
+    }
+    if (
+      norm === "syarat dan ketentuan" ||
+      norm === "syarat & ketentuan" ||
+      norm === "s&k" ||
+      norm === "syarat ketentuan" ||
+      norm === "terms and conditions"
+    ) {
+      out.push("## SYARAT DAN KETENTUAN");
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join("\n");
+}
+
+function injectPaketBonusHeader(text: string): string {
+  // Count "numbered bonus blocks" — heuristic:
+  //   line matches /^\s*\d+\.\s+.+/ AND within ~6 lines after has "KODE PROMOSI"
+  const lines = text.split("\n");
+  const numberedIdx: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*\d+\.\s+\S/.test(lines[i])) {
+      // look-ahead for KODE PROMOSI within next 6 lines
+      const window = lines.slice(i + 1, i + 7).join("\n");
+      if (/KODE\s+PROMOSI/i.test(window) || /KODE\s+PROMOSI/i.test(lines[i])) {
+        numberedIdx.push(i);
+      }
+    }
+  }
+  if (numberedIdx.length < 2) return text;
+
+  const insertAt = numberedIdx[0];
+  // Avoid double-insert if previous non-empty line already a header
+  for (let j = insertAt - 1; j >= 0; j--) {
+    const t = lines[j].trim();
+    if (t === "") continue;
+    if (/^##\s+PAKET BONUS/i.test(t)) return text;
+    break;
+  }
+  const before = lines.slice(0, insertAt);
+  const after = lines.slice(insertAt);
+  const sep = before.length > 0 && before[before.length - 1].trim() !== "" ? [""] : [];
+  return [...before, ...sep, "## PAKET BONUS", "", ...after].join("\n");
+}
+
+export function polishLevel2(text: string): string {
+  if (!text || typeof text !== "string") return text;
+  let t = text;
+  t = dedupeFieldVsTitle(t);
+  t = injectExplicitHeaders(t);
+  t = injectPaketBonusHeader(t);
+  t = boldFieldLabels(t);
+  // collapse stray triple blank lines that may appear after dedupe
+  t = t.replace(/\n{3,}/g, "\n\n").trim();
+  return t;
+}
+
 export function checkIntegrity(raw: string, polished: string): IntegrityReport {
   const rawTokens = extractDataTokens(raw);
   const polTokens = extractDataTokens(polished);
@@ -198,4 +355,34 @@ export function checkIntegrity(raw: string, polished: string): IntegrityReport {
         ? `${missing.length} data token hilang di hasil polish`
         : `${added.length} data token baru muncul (kemungkinan inferensi)`,
   };
+}
+
+// ============================================================
+// LEVEL 2 INTEGRITY HELPERS
+// ============================================================
+
+/**
+ * Strip Level-2 polish markup before integrity comparison so that headers
+ * and bold markers don't pollute the data token set.
+ *  - "## CONTOH PERHITUNGAN" / "## SYARAT DAN KETENTUAN" / "## PAKET BONUS"
+ *    → removed entirely (these are presentation-only injected headers).
+ *  - "**LABEL:**" → "LABEL:" (strip bold).
+ */
+export function stripPolishMarkup(text: string): string {
+  if (!text) return text;
+  let t = text;
+  t = t.replace(
+    /^[ \t]*##\s+(CONTOH PERHITUNGAN|SYARAT DAN KETENTUAN|PAKET BONUS)[ \t]*$/gm,
+    "",
+  );
+  t = t.replace(/\*\*(.+?)\*\*/g, "$1");
+  return t;
+}
+
+/**
+ * Integrity check tailored for Level-2 polish output: strips injected
+ * markup before comparing data tokens against the raw baseline.
+ */
+export function checkIntegrityLevel2(raw: string, polished: string): IntegrityReport {
+  return checkIntegrity(raw, stripPolishMarkup(polished));
 }

@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef } from "react";
-import { Loader2, Plus, X, ArrowUp, Copy, Send, Sparkles, Undo2, AlertTriangle } from "lucide-react";
+import { Loader2, Plus, X, ArrowUp, Copy, Send, Sparkles, Undo2, AlertTriangle, Wand2 } from "lucide-react";
 import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,7 +20,13 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/lib/notify";
-import { deterministicPolish, checkIntegrity } from "@/lib/promo-polisher";
+import {
+  deterministicPolish,
+  checkIntegrity,
+  polishLevel2,
+  checkIntegrityLevel2,
+} from "@/lib/promo-polisher";
+import { MiniMarkdown } from "@/lib/mini-markdown";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -41,6 +47,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   const [result, setResult] = useState<string | null>(null);
   const [rawResult, setRawResult] = useState<string | null>(null);
   const [isPolished, setIsPolished] = useState(false);
+  const [isRestructured, setIsRestructured] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [polishWarning, setPolishWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -109,6 +116,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     setResult(null);
     setRawResult(null);
     setIsPolished(false);
+    setIsRestructured(false);
     setPolishWarning(null);
 
     try {
@@ -160,6 +168,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
       setRawResult(baseline);
       setResult(baseline);
       setIsPolished(false);
+      setIsRestructured(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Network error";
       setError(msg);
@@ -240,7 +249,34 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     if (!rawResult) return;
     setResult(rawResult);
     setIsPolished(false);
+    setIsRestructured(false);
     setPolishWarning(null);
+  };
+
+  // ── Restructure (Level 2 — deterministic, opt-in) ─────
+  const handleRestructure = () => {
+    if (!rawResult) return;
+    try {
+      const restructured = polishLevel2(rawResult);
+      const integ = checkIntegrityLevel2(rawResult, restructured);
+      if (!integ.ok) {
+        setPolishWarning(
+          integ.reason || "Restructure dibatalkan — integrity check gagal.",
+        );
+        toast.error("Restructure dibatalkan", {
+          description: "Integritas data tidak lolos. Tetap pakai versi asli.",
+        });
+        return;
+      }
+      setResult(restructured);
+      setIsRestructured(true);
+      setIsPolished(false);
+      setPolishWarning(null);
+      toast.success("Restructured");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Restructure gagal";
+      toast.error("Restructure gagal", { description: msg });
+    }
   };
 
   // ── Result actions ────────────────────────────────────
@@ -257,7 +293,10 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   const handleSendToPseudo = () => {
     if (!result) return;
     try {
-      localStorage.setItem(PARSER_HANDOFF_KEY, result);
+      // Always send the raw parser baseline to extractor — never the polished/
+      // restructured presentation layer (markdown markers would pollute parsing).
+      const payload = rawResult ?? result;
+      localStorage.setItem(PARSER_HANDOFF_KEY, payload);
       toast.success("Dikirim ke Pseudo Extractor");
       if (onSendToPseudo) onSendToPseudo();
     } catch {
@@ -271,6 +310,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     setResult(null);
     setRawResult(null);
     setIsPolished(false);
+    setIsRestructured(false);
     setPolishWarning(null);
     setError(null);
   };
@@ -450,10 +490,16 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                       className={
                         isPolished
                           ? "bg-button-hover/10 text-button-hover border-button-hover/30"
-                          : "bg-success/10 text-success border-success/30"
+                          : isRestructured
+                            ? "bg-button-hover/10 text-button-hover border-button-hover/30"
+                            : "bg-success/10 text-success border-success/30"
                       }
                     >
-                      {isPolished ? "Polished" : "Parser Result"}
+                      {isPolished
+                        ? "Polished"
+                        : isRestructured
+                          ? "Restructured"
+                          : "Parser Result"}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {result.length} karakter
@@ -470,7 +516,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    {isPolished ? (
+                    {isPolished || isRestructured ? (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -482,21 +528,34 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                         Back to Raw
                       </Button>
                     ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleEnhance}
-                        disabled={isEnhancing || !rawResult}
-                        title="Rapikan tampilan dengan AI (tidak mengubah data)"
-                        className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
-                      >
-                        {isEnhancing ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-3.5 w-3.5" />
-                        )}
-                        {isEnhancing ? "Polishing…" : "Enhance"}
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleRestructure}
+                          disabled={!rawResult}
+                          title="Restructure tampilan secara deterministic (no AI, no data change)"
+                          className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
+                        >
+                          <Wand2 className="h-3.5 w-3.5" />
+                          Restructure
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleEnhance}
+                          disabled={isEnhancing || !rawResult}
+                          title="Rapikan tampilan dengan AI (tidak mengubah data)"
+                          className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
+                        >
+                          {isEnhancing ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-3.5 w-3.5" />
+                          )}
+                          {isEnhancing ? "Polishing…" : "Enhance"}
+                        </Button>
+                      </>
                     )}
                     <Button
                       variant="ghost"
@@ -509,9 +568,16 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     </Button>
                   </div>
                 </div>
-                <pre className="whitespace-pre-wrap break-words px-5 py-4 text-sm text-foreground font-mono leading-relaxed">
-                  {result}
-                </pre>
+                {isRestructured ? (
+                  <MiniMarkdown
+                    text={result}
+                    className="px-5 py-4 text-sm text-foreground leading-relaxed"
+                  />
+                ) : (
+                  <pre className="whitespace-pre-wrap break-words px-5 py-4 text-sm text-foreground font-mono leading-relaxed">
+                    {result}
+                  </pre>
+                )}
               </div>
 
               <div className="flex items-center justify-between gap-2 flex-wrap">
