@@ -543,6 +543,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  const t0 = Date.now();
   try {
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not set");
     const { text = "", images = [] } = await req.json();
@@ -566,8 +567,12 @@ serve(async (req) => {
         content: [{ type: "text", text: userText }],
         maxTokens: MAX_TOKENS,
       });
-      if (!pass1.ok) return mapAnthropicError(pass1.status, pass1.errBody);
+      if (!pass1.ok) {
+        console.warn("[parser]", JSON.stringify({ route: "claude_text", ok: false, status: pass1.status, latency_ms: Date.now() - t0, image_count: 0 }));
+        return mapAnthropicError(pass1.status, pass1.errBody);
+      }
 
+      console.log("[parser]", JSON.stringify({ route: "claude_text", model: MODEL_PASS1, ok: true, latency_ms: Date.now() - t0, image_count: 0, output_chars: pass1.text.length }));
       return new Response(
         JSON.stringify({
           output: pass1.text,
@@ -585,6 +590,7 @@ serve(async (req) => {
     });
 
     if (gemini.ok) {
+      console.log("[parser]", JSON.stringify({ route: "gemini", model: GEMINI_MODEL, ok: true, latency_ms: Date.now() - t0, image_count: imgs.length, output_chars: gemini.text.length }));
       return new Response(
         JSON.stringify({
           output: gemini.text,
@@ -595,10 +601,14 @@ serve(async (req) => {
     }
 
     // Gemini failed → fallback Claude image flow
-    console.warn("[parser] Gemini failed, falling back to Claude:", gemini.reason);
+    console.warn("[parser]", JSON.stringify({ route: "gemini", ok: false, reason: gemini.reason, latency_ms: Date.now() - t0, image_count: imgs.length, action: "fallback_claude" }));
     const fallback = await claudeImageFlow(String(text), imgs);
-    if (!fallback.ok) return mapAnthropicError(fallback.status, fallback.errBody);
+    if (!fallback.ok) {
+      console.warn("[parser]", JSON.stringify({ route: "gemini_fallback_claude", ok: false, status: fallback.status, latency_ms: Date.now() - t0, image_count: imgs.length }));
+      return mapAnthropicError(fallback.status, fallback.errBody);
+    }
 
+    console.log("[parser]", JSON.stringify({ route: "gemini_fallback_claude", model: fallback.pass2 ? MODEL_PASS2 : MODEL_PASS1, ok: true, latency_ms: Date.now() - t0, image_count: imgs.length, output_chars: fallback.output.length, gemini_fail_reason: gemini.reason }));
     return new Response(
       JSON.stringify({
         output: fallback.output,
