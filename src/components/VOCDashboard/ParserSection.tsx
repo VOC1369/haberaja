@@ -479,11 +479,11 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     </span>
                     {polishWarning && (
                       <Badge
-                        className="bg-warning/10 text-warning border-0 gap-1 hover:bg-warning/15 focus:ring-1 focus:ring-warning/40 transition-colors"
+                        className="bg-success/10 text-success border-0 gap-1 hover:bg-success/15 focus:ring-1 focus:ring-success/40 transition-colors"
                         title={polishWarning}
                       >
-                        <AlertTriangle className="h-3 w-3" />
-                        Polish skipped — integrity check failed
+                        <CheckCircle2 className="h-3 w-3" />
+                        Polish not needed — source already clean
                       </Badge>
                     )}
                   </div>
