@@ -47,6 +47,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   const [result, setResult] = useState<string | null>(null);
   const [rawResult, setRawResult] = useState<string | null>(null);
   const [isPolished, setIsPolished] = useState(false);
+  const [isRestructured, setIsRestructured] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [polishWarning, setPolishWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
