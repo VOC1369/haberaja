@@ -528,34 +528,17 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                         Back to Raw
                       </Button>
                     ) : (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleRestructure}
-                          disabled={!rawResult}
-                          title="Restructure tampilan secara deterministic (no AI, no data change)"
-                          className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
-                        >
-                          <Wand2 className="h-3.5 w-3.5" />
-                          Restructure
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleEnhance}
-                          disabled={isEnhancing || !rawResult}
-                          title="Rapikan tampilan dengan AI (tidak mengubah data)"
-                          className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
-                        >
-                          {isEnhancing ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Sparkles className="h-3.5 w-3.5" />
-                          )}
-                          {isEnhancing ? "Polishing…" : "Enhance"}
-                        </Button>
-                      </>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handlePolish}
+                        disabled={!rawResult}
+                        title="Rapikan tampilan (deterministic, tidak mengubah data)"
+                        className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
+                      >
+                        <Wand2 className="h-3.5 w-3.5" />
+                        Polish
+                      </Button>
                     )}
                     <Button
                       variant="ghost"
