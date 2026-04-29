@@ -268,9 +268,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                   Paste text promo mentah dan/atau attach screenshot. Parser merapikan struktur tanpa
                   mengubah isi — siap dikirim ke Pseudo Extractor.
                 </p>
-                <Badge variant="outline" className="bg-success/10 text-success border-success/30 mt-1">
+                <Badge className="bg-success/10 text-success border-0 mt-1">
                   <span className="w-2 h-2 rounded-full bg-success mr-2" />
-                  VOC Parser
+                  Wolfclaw AI
                 </Badge>
               </div>
 
