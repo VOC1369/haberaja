@@ -31,7 +31,6 @@ import { MiniMarkdown } from "@/lib/mini-markdown";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const PARSER_URL = `${SUPABASE_URL}/functions/v1/parser`;
-const POLISHER_URL = `${SUPABASE_URL}/functions/v1/polisher`;
 
 export const PARSER_HANDOFF_KEY = "parser_handoff_text_v1";
 
@@ -46,9 +45,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   // result = displayed text (raw or polished). rawResult = baseline for Back-to-Raw.
   const [result, setResult] = useState<string | null>(null);
   const [rawResult, setRawResult] = useState<string | null>(null);
+  // isPolished kept for backward-compat (LLM enhance path, currently unused in UI).
   const [isPolished, setIsPolished] = useState(false);
   const [isRestructured, setIsRestructured] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
   const [polishWarning, setPolishWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
