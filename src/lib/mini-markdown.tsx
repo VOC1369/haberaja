@@ -15,7 +15,7 @@
 
 import { Fragment, type ReactNode } from "react";
 
-function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
+function renderInline(text: string, keyPrefix: string): ReactNode[] {
   // Split by **bold** keeping delimiters
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
