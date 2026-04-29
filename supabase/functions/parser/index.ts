@@ -239,28 +239,36 @@ async function callGemini(opts: {
   userText: string;
   images: ImageBlock[];
 }): Promise<{ ok: true; text: string } | { ok: false; reason: string }> {
-  if (!GEMINI_API_KEY) return { ok: false, reason: "GEMINI_API_KEY not set" };
+  if (!LOVABLE_API_KEY) return { ok: false, reason: "LOVABLE_API_KEY not set" };
 
-  const parts: any[] = [];
+  // OpenAI-compatible content (text + image_url with data URI). Gateway routes to Gemini.
+  const userContent: any[] = [];
   for (const img of opts.images) {
-    parts.push({ inlineData: { mimeType: img.mediaType, data: img.data } });
+    userContent.push({
+      type: "image_url",
+      image_url: { url: `data:${img.mediaType};base64,${img.data}` },
+    });
   }
-  parts.push({ text: opts.userText });
+  userContent.push({ type: "text", text: opts.userText });
 
   const body = {
-    systemInstruction: { parts: [{ text: opts.systemPrompt }] },
-    contents: [{ role: "user", parts }],
-    generationConfig: {
-      temperature: TEMPERATURE,
-      maxOutputTokens: MAX_TOKENS,
-    },
+    model: GEMINI_MODEL,
+    messages: [
+      { role: "system", content: opts.systemPrompt },
+      { role: "user", content: userContent },
+    ],
+    temperature: TEMPERATURE,
+    max_tokens: MAX_TOKENS,
   };
 
   let resp: Response;
   try {
-    resp = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    resp = await fetch(LOVABLE_AI_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      },
       body: JSON.stringify(body),
     });
   } catch (e) {
@@ -279,15 +287,11 @@ async function callGemini(opts: {
     return { ok: false, reason: `invalid json: ${e instanceof Error ? e.message : String(e)}` };
   }
 
-  const text = (data?.candidates?.[0]?.content?.parts ?? [])
-    .filter((p: any) => typeof p?.text === "string")
-    .map((p: any) => p.text)
-    .join("\n")
-    .trim();
+  const text = (data?.choices?.[0]?.message?.content ?? "").toString().trim();
 
   if (!text) {
-    const finishReason = data?.candidates?.[0]?.finishReason ?? "unknown";
-    return { ok: false, reason: `empty output (finishReason=${finishReason})` };
+    const finishReason = data?.choices?.[0]?.finish_reason ?? "unknown";
+    return { ok: false, reason: `empty output (finish_reason=${finishReason})` };
   }
   if (text.length < MIN_OUTPUT_CHARS) {
     return { ok: false, reason: `output too short (${text.length} chars)` };
