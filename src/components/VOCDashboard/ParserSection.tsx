@@ -241,7 +241,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   const handleCopy = async () => {
     if (!result) return;
     try {
-      await navigator.clipboard.writeText(result);
+      // Strip "## " presentation markers when copying — user expects clean text.
+      const clean = result.replace(/^##\s+/gm, "");
+      await navigator.clipboard.writeText(clean);
       toast.success("Copied");
     } catch {
       toast.error("Gagal menyalin");
