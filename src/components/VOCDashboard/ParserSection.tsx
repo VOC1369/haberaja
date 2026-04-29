@@ -420,11 +420,11 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                 <div className="flex items-center justify-between px-5 py-3 border-b border-border gap-3 flex-wrap">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge
-                      variant="outline"
                       className={
-                        isPolished || isRestructured
-                          ? "bg-button-hover/10 text-button-hover border-button-hover/30"
-                          : "bg-success/10 text-success border-success/30"
+                        (isPolished || isRestructured
+                          ? "bg-button-hover/10 text-button-hover hover:bg-button-hover/15 focus:ring-1 focus:ring-button-hover/40"
+                          : "bg-success/10 text-success hover:bg-success/15 focus:ring-1 focus:ring-success/40") +
+                        " border-0 transition-colors"
                       }
                     >
                       {isPolished || isRestructured ? "Polished" : "Parser Result"}
@@ -434,8 +434,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     </span>
                     {polishWarning && (
                       <Badge
-                        variant="outline"
-                        className="bg-warning/10 text-warning border-warning/40 gap-1"
+                        className="bg-warning/10 text-warning border-0 gap-1 hover:bg-warning/15 focus:ring-1 focus:ring-warning/40 transition-colors"
                         title={polishWarning}
                       >
                         <AlertTriangle className="h-3 w-3" />
