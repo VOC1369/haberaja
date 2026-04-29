@@ -13,7 +13,7 @@
  * Tidak menggunakan dangerouslySetInnerHTML — semua via React nodes.
  */
 
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 
 function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
   // Split by **bold** keeping delimiters
