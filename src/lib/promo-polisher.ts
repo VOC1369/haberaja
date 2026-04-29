@@ -356,3 +356,33 @@ export function checkIntegrity(raw: string, polished: string): IntegrityReport {
         : `${added.length} data token baru muncul (kemungkinan inferensi)`,
   };
 }
+
+// ============================================================
+// LEVEL 2 INTEGRITY HELPERS
+// ============================================================
+
+/**
+ * Strip Level-2 polish markup before integrity comparison so that headers
+ * and bold markers don't pollute the data token set.
+ *  - "## CONTOH PERHITUNGAN" / "## SYARAT DAN KETENTUAN" / "## PAKET BONUS"
+ *    → removed entirely (these are presentation-only injected headers).
+ *  - "**LABEL:**" → "LABEL:" (strip bold).
+ */
+export function stripPolishMarkup(text: string): string {
+  if (!text) return text;
+  let t = text;
+  t = t.replace(
+    /^[ \t]*##\s+(CONTOH PERHITUNGAN|SYARAT DAN KETENTUAN|PAKET BONUS)[ \t]*$/gm,
+    "",
+  );
+  t = t.replace(/\*\*(.+?)\*\*/g, "$1");
+  return t;
+}
+
+/**
+ * Integrity check tailored for Level-2 polish output: strips injected
+ * markup before comparing data tokens against the raw baseline.
+ */
+export function checkIntegrityLevel2(raw: string, polished: string): IntegrityReport {
+  return checkIntegrity(raw, stripPolishMarkup(polished));
+}
