@@ -1,23 +1,39 @@
 /**
- * pk-extractor — Json Schema Draft V.09 extractor
+ * pk-extractor — PKB_WOLFBRAIN V.10 NATIVE EXTRACTOR
  *
- * Multimodal LLM extraction:
- *   - Input: text (raw promo content) + optional image (base64 / url)
- *   - LLM: Anthropic Claude Sonnet 4.5 via ai-proxy (Supabase edge function)
- *   - Output: Json Schema Draft V.09 (full inert shape, 22 engines)
+ * V10-only. Zero V.09 fallback. Zero conversion layer.
  *
- * Architecture: pk-extractor → ai-proxy (type=extract_pk) → Anthropic Messages API.
- * NO Lovable AI Gateway. NO direct Anthropic call. NO model name leaked to caller.
- * NO keyword matching. NO regex parsing. Pure LLM reasoning end-to-end.
+ * Input  : { text?: string, images?: string[], client_id_hint?: string }
+ * Output : { ok: true, record: PkV10Record, model, extraction_source, ... }
  *
- * State on output: ai_draft. NOT persisted server-side. Returned to client.
+ * Pipeline:
+ *   1. Build Anthropic multimodal user message (image-first, then text).
+ *   2. Call ai-proxy with V10 SYSTEM_PROMPT + Wolfclaw_Extractor_V10 tool.
+ *   3. Receive tool_use.input → partial PkV10Record-shaped object.
+ *   4. mergeIntoInert() → guarantee full-shape PkV10Record.
+ *   5. computeFieldStatus() → tag every leaf path (explicit | inferred | not_stated).
+ *   6. Return record. NO downgrade to V.09. NO silent fallback.
+ *
+ * Source of truth: WB_F1 (skeleton) + WB_F2 (field defs) + WB_F3 (enums V10).
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import {
+  ENUMS,
+  PK_V10_AI_CONFIDENCE_QUESTION_THRESHOLD,
+  PK_V10_PROMPT_VERSION,
+} from "../_shared/pk-v10-enums.ts";
+import {
+  createInertPkV10Record,
+  mergeIntoInert,
+  computeFieldStatus,
+  type AnyObj,
+} from "../_shared/pk-v10-inert.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const AI_PROXY_TYPE = "extract_pk";
+const TOOL_NAME = "Wolfclaw_Extractor_V10";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,744 +42,834 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SYSTEM_PROMPT = `Anda adalah Promo Knowledge Extractor V.09.
+// ============================================================
+// V10 SYSTEM PROMPT
+// ============================================================
+const SYSTEM_PROMPT = `Anda adalah Wolfclaw Extractor V.10 — extractor PKB_Wolfbrain V.10.
 
-TUGAS: Ekstrak konten promo (teks dan/atau gambar) ke struktur Json Schema Draft V.09.
+TUGAS
+Ekstrak konten promo (teks dan/atau gambar) ke struktur PkV10Record via
+tool '${TOOL_NAME}'. WAJIB panggil tool. JANGAN balas teks biasa.
 
-PRINSIP UTAMA:
+PRINSIP UTAMA (F1 + F2 + F3 V.10):
+
 1. REASONING-FIRST. Anda BUKAN bot keyword. Pahami semantic, bukan cocok kata.
-2. HYBRID INPUT. Jika text dan image dua-duanya ada, gabungkan info dari kedua sumber.
+
+2. HYBRID INPUT. Text + image saling melengkapi.
    - Image bisa lebih lengkap dari text (logo, badge, tabel reward).
    - Text bisa lebih lengkap dari image (S&K detail, mekanisme klaim).
-   - Saling melengkapi, bukan saling konflik.
-3. JUJUR TENTANG KETIDAKTAHUAN. Jika field tidak disebut di sumber:
-   - String → "" (set tapi kosong)
-   - Number → null
-   - Array → []
+
+3. JUJUR TENTANG KETIDAKTAHUAN (F1 §8.1 INERT CONTRACT).
+   Field tidak disebut di sumber:
+   - String → "" (set tapi kosong, JANGAN dihilangkan)
+   - Number → null (untuk field nullable) atau 0 (jangan tebak)
+   - Array  → []
    - Boolean → false (default)
-   - Object opsional (mis. activation_rule) → null. JANGAN PERNAH {} kosong.
-   Jangan pernah mengarang nilai.
-4. PROVENANCE. Untuk SETIAP field penting, isi:
-   - ai_confidence[path] = 0.0 - 1.0 (1.0 = explicit di sumber, 0.0 = tidak ada)
-   - field_status[path] = "explicit" | "inferred" | "derived" | "unknown"
-5. STATE. Output WAJIB readiness_engine.state_block.state = "ai_draft".
-6. ENUM STRICT. Gunakan HANYA value yang ada di enum spec. Jika ragu → "" / null.
+   - Object opsional → null kalau memang nullable, kalau tidak isi sub-block dgn defaults blank.
+   JANGAN PERNAH mengarang nilai. JANGAN PERNAH kirim {} kosong untuk sub-block.
 
-STRUKTUR OUTPUT: Lihat tool schema 'extract_promo_v09'. WAJIB isi semua 22 engine
-(boleh kosong sesuai aturan poin 3, tapi shape harus utuh).
+4. PROVENANCE (F3 §1.21).
+   - ai_confidence[path] = 0.0–1.0  (1.0 = explicit di sumber, 0.0 = tebakan)
+   - _field_status[path] ∈ { "explicit" | "inferred" | "derived" | "propagated" | "not_stated" | "not_applicable" }
+     * explicit       → ada bukti jelas di sumber
+     * inferred       → reasoning kuat, tidak literal
+     * derived        → diturunkan dari field lain
+     * propagated     → diisi otomatis dari context (mis. client_id dari URL)
+     * not_stated     → tidak ada di sumber (DEFAULT untuk field kosong)
+     * not_applicable → memang tidak relevan untuk promo ini
+   Threshold ai_confidence untuk kandidat pertanyaan ke Admin: < ${PK_V10_AI_CONFIDENCE_QUESTION_THRESHOLD}.
 
-ENUM REFERENSI (subset, lihat tool schema untuk full list):
-- promo_type: welcome_bonus, deposit_bonus, cashback, rollingan, referral, lucky_spin, lucky_draw, freechip, freespin_bonus, parlay_protection, birthday_bonus, level_up, loyalty_point, merchandise, event_ranking, event_turnover_ladder, event_slot_specific, mystery_number, extra_withdraw, payment_discount, new_member_bonus
-- promo_mode: single, tiered, multi_variant. WAJIB diisi:
-   - "single" = 1 reward formula tanpa tier/varian
-   - "tiered" = ada tier/level (mis. Bronze/Silver/Gold) dgn reward berbeda
-   - "multi_variant" = beberapa varian paralel (mis. per game type)
-- target_user: new_member, existing_member, vip, all_member
-- program_classification: A (Reward Program), B (Event Program), C (System Rule)
-- claim_method: auto, manual_livechat, manual_whatsapp, manual_telegram, in_app_button, form_submission, cs_approval
-- calculation_basis: deposit, turnover, loss, win, bet, payout, downline_winlose, level_up_reward, fixed, rank_position, stake_amount
-- payout_direction: upfront (sebelum main), backend (setelah main, mis. cashback)
-- reward_type: physical, cash, credit_game, voucher, ticket, lucky_spin, discount, freespin, combo
-- void_trigger: bonus_hunter, safety_bet, invest, ip_duplicate, data_duplicate, deposit_fraud, hold_freespin, multi_accounting, self_referral, account_change, claim_timeout, wrong_bank_info, screenshot_missing, game_category_violation, cashout_partial
-- game_domain: slot, casino, live_casino, sports, sportsbook, togel, sabung_ayam, e_lottery, arcade, mixed, all
-- intent_category: acquisition (akuisisi), retention (retensi), reactivation, engagement, virality, upsell
-- timezone: WAJIB IANA format. Pakai HANYA "Asia/Jakarta" | "Asia/Makassar" | "Asia/Jayapura". JANGAN "WIB"/"WITA"/"WIT" — itu alias legacy yang DI-REJECT. Default Indonesia tanpa konteks region → "Asia/Jakarta".
+5. STATE (F1 §1).
+   readiness_engine.state_block.state = "draft" (default — server akan stamp).
 
-REASONING TIPS:
-- "Cashback" → primary_action: lose_to_cashback, calculation_basis: loss, payout_direction: backend, intent_category: retention
-- "Bonus Deposit" → primary_action: deposit_to_bonus, calculation_basis: deposit, payout_direction: upfront, intent_category: acquisition (jika new_member) atau retention
-- "Rollingan" → primary_action: bet_to_rollingan, calculation_basis: turnover, payout_direction: backend
-- "Referral" → primary_action: refer_to_commission, intent_category: virality
+6. ENUM STRICT (F3).
+   - Gunakan HANYA value yang ada di enum spec di tool schema.
+   - Ragu → kosongkan ("" / null) dan beri _field_status="not_stated".
+   - Naming convention:
+     * System values  → snake_case (mis. "deposit_bonus")
+     * Bank/eWallet/Pulsa providers → UPPERCASE (mis. "BCA", "DANA")
+     * Game providers → Title Case (mis. "Pragmatic Play")
+   - Timezone WAJIB IANA: "Asia/Jakarta" | "Asia/Makassar" | "Asia/Jayapura".
+     JANGAN "WIB"/"WITA"/"WIT" — itu alias legacy DI-REJECT.
 
-IDENTITY (PENTING — JANGAN KOSONGKAN):
-- client_block.client_id: Slug client (mis. "slot25", "haberaja"). Ekstrak dari URL, brand mark,
-  atau header sumber. Kalau tidak ada → "" dan field_status="unknown".
-- client_block.client_id_field_status: status pengisian client_id ("explicit"/"inferred"/"unknown").
-- promo_block.promo_mode: WAJIB salah satu dari single | tiered | multi_variant. Gunakan reasoning,
-  jangan kosong kalau ada konten promo.
+7. AUTHORITY ORDER (F2 ATURAN KEBENARAN DATA).
+   Truth structural ada di mechanics_engine.items[]. Field flat di reward_engine
+   adalah display summary saja. Kalau ada conflict, mechanics_engine menang.
 
-CLASSIFICATION ANSWER (LOCKED):
-- classification_engine.question_block.q1..q4 .answer WAJIB pakai "ya" atau "tidak" (HURUF KECIL,
-  Bahasa Indonesia). JANGAN "Yes"/"No"/"Iya"/"Tidak". Konsisten satu konvensi di seluruh schema.
+8. PROJECTION ENGINE (F1 §projection).
+   JANGAN isi projection_engine — ini DERIVED only. Biarkan blank.
+   (Server akan generate post-extraction.)
 
-MECHANICS (WAJIB ISI items[].data):
-mechanics_engine.items[] WAJIB DIISI dgn detail per-unit-logika. JANGAN kosongkan
-kalau ada konten promo. Pecah promo jadi unit-unit semantik:
-  - 1 item per trigger event (apa yg memicu promo)
-  - 1 item per eligibility/syarat (siapa yg boleh, threshold)
-  - 1 item per calculation (rumus, persen, basis)
-  - 1 item per reward (bentuk hadiah)
-  - 1 item per distribution (kapan/cara dikirim)
-  - 1 item per control (anti-stack, anti-fraud rule umum)
-  - 1 item per invalidator (kondisi pembatalan, void)
+ENGINE WAJIB DIISI (jika ada konten):
 
-Setiap item HARUS punya: evidence (kutipan), confidence, activation_rule (object atau null —
-JANGAN {} kosong), data (object detail TERISI — JANGAN {} kosong).
+A. identity_engine.client_block
+   - client_id: slug client dari URL/brand mark/header (mis. "slot25", "haberaja").
+     Kosong → "" + _field_status="not_stated".
+   - client_id_field_status: "explicit" | "inferred" | "propagated" (F3 §1.1).
+   - client_name: nama brand sebagaimana ditulis sumber.
 
-CONTOH data per mechanic_type (contoh, bukan exhaustive):
-- trigger        → { trigger_event, period_type, calculation_window, calculation_basis }
-- eligibility    → { user_segment, min_threshold, threshold_unit, currency }
-- calculation    → { calculation_basis, calculation_method, percentage, max_reward, currency }
-- reward         → { reward_type, reward_form, reward_unit, voucher_kind }
-- distribution   → { distribution_method, distribution_day, distribution_window, auto_credit }
-- control        → { control_type, stacking_policy, max_concurrent }
-- invalidator    → { void_trigger, void_action, penalty_scope }
-- constraint     → { constraint_type, value, currency }
-Pilih field yg relevan dgn isi promo. JANGAN kirim {} kosong — kalau benar2 tidak ada
-detail untuk mechanic itu, jangan buat itemnya sama sekali.
+B. identity_engine.promo_block
+   - promo_name (verbatim dari sumber)
+   - promo_type ∈ enum F3 §1.1 (welcome_bonus, deposit_bonus, cashback, ...)
+   - target_user ∈ { new_member | existing_member | vip | all_member }
+   - promo_mode ∈ { single | multi }
 
-activation_rule:
-- null         → kalau mechanic ini aktif tanpa syarat tambahan
-- object       → kalau ada kondisi: { condition_type, threshold_value?, threshold_unit?,
-                  period_start?, period_end?, schedule_day?, violation_types? }
-NEVER kirim {} kosong.
+C. classification_engine
+   - result_block.program_classification ∈ { A | B | C }
+     * A = Reward Program, B = Event Program, C = System Rule
+   - question_block.q1..q4 .answer ∈ { "ya" | "tidak" } HURUF KECIL.
+     JANGAN "Yes"/"No"/"Iya"/"Tidak" (kapital).
 
-PROJECTION:
-projection_engine JANGAN diisi sendiri. Akan di-derive otomatis post-extraction
-dari engine lain. Cukup isi dgn nilai default kosong sesuai schema (summary: "",
-intent_category: ""). Server akan overwrite.
+D. mechanics_engine.items[] — STRUKTURAL TRUTH (F2 authority #1).
+   WAJIB pecah promo jadi unit-unit semantik:
+     * 1 item per trigger event
+     * 1 item per eligibility/syarat
+     * 1 item per calculation (rumus, persen, basis)
+     * 1 item per reward (bentuk hadiah)
+     * 1 item per distribution (kapan/cara dikirim)
+     * 1 item per control (anti-stack, anti-fraud rule umum)
+     * 1 item per invalidator (kondisi pembatalan, void)
+   Setiap item HARUS punya:
+     - mechanic_id: format "m_<type>_<idx>" (mis. "m_trigger_1")
+     - mechanic_type ∈ enum F3 §1.18
+     - evidence: kutipan persis dari sumber (atau "" kalau tidak ada)
+     - confidence: 0.0–1.0
+     - ambiguity: boolean
+     - ambiguity_reason: string atau null
+     - activation_rule: object kondisi atau null. JANGAN {} kosong.
+     - data: object detail per type. JANGAN {} kosong — kalau benar-benar
+       tidak ada data spesifik, JANGAN buat itemnya sama sekali.
 
-ai_confidence (WAJIB TERISI):
-Map dari field path → score 0..1. WAJIB isi MINIMUM 10 path penting yg sudah Anda ekstrak,
-contoh path:
-  "identity_engine.promo_block.promo_name"
-  "identity_engine.promo_block.promo_type"
-  "identity_engine.promo_block.target_user"
-  "identity_engine.promo_block.promo_mode"
-  "reward_engine.calculation_basis"
-  "reward_engine.calculation_value"
-  "reward_engine.payout_direction"
-  "reward_engine.reward_type"
-  "trigger_engine.trigger_event"
-  "claim_engine.method_block.claim_method"
-  "scope_engine.game_domain"
-  "period_engine.valid_from"
-  "period_engine.valid_until"
-JANGAN kirim {} kosong. Kalau field tidak ada di sumber → confidence 0.0, tetap dimasukkan.
+   Contoh data per mechanic_type:
+     trigger      → { trigger_event, period_type?, calculation_window?, calculation_basis? }
+     eligibility  → { user_segment, min_threshold?, threshold_unit?, currency? }
+     calculation  → { calculation_basis, calculation_method, percentage?, max_reward?, currency? }
+     reward       → { reward_type, reward_form?, reward_unit?, voucher_kind? }
+     distribution → { distribution_method, distribution_day?, distribution_window?, auto_credit? }
+     control      → { control_type, stacking_policy?, max_concurrent? }
+     invalidator  → { void_trigger, void_action, penalty_scope }
 
-field_status sama: WAJIB minimal 10 path, value "explicit"/"inferred"/"derived"/"unknown".
+E. reward_engine FLAT FIELDS (display summary, F2 authority #4).
+   - calculation_basis, calculation_method, calculation_value, calculation_unit
+   - payout_direction (upfront | backend)
+   - reward_type, voucher_kind, max_reward, currency
+   Truth tetap di mechanics_engine — flat field di sini hanya ringkasan utama.
 
-Output via tool call WAJIB dipanggil. JANGAN balas teks biasa.`;
+F. trigger_engine.primary_trigger_block
+   - trigger_event ∈ enum F3 §1.6
+   - action: deskripsi singkat aksi user
+   - evidence: kutipan dari sumber
 
-// JSON Schema for tool calling — matches PromoKnowledgeRecord shape
-function getToolSchema() {
+G. claim_engine
+   - method_block.claim_method ∈ enum F3 §1.7
+   - channels_block.channels[] ∈ enum F3 §1.7
+   - proof_requirement_block (proof_required, proof_types[], proof_destinations[])
+
+H. scope_engine
+   - game_block.game_domain ∈ enum F3 §1.10
+   - game_block.eligible_providers[] ∈ enum F3 §1.10 (Title Case)
+   - platform_block.platform_access, geo_block.geo_restriction
+
+I. period_engine, time_window_engine — kalau ada di sumber, isi. Kalau tidak,
+   biarkan blank dan _field_status="not_stated".
+
+J. reasoning_engine.intent_block
+   - primary_action ∈ enum F3 §1.17
+   - reward_nature, distribution_path, value_shape
+   Reasoning tips:
+     * "Cashback"   → primary_action: lose_to_cashback, payout_direction: backend
+     * "Bonus Depo" → primary_action: deposit_to_bonus, payout_direction: upfront
+     * "Rollingan"  → primary_action: bet_to_rollingan, payout_direction: backend
+     * "Referral"   → primary_action: refer_to_commission
+
+K. ai_confidence MAP (WAJIB minimal 10 path penting).
+   Format: { "engine.block.field": 0.85, ... }
+   Path-path penting yang biasanya dinilai:
+     identity_engine.promo_block.promo_name
+     identity_engine.promo_block.promo_type
+     identity_engine.promo_block.target_user
+     identity_engine.promo_block.promo_mode
+     identity_engine.client_block.client_id
+     reward_engine.calculation_basis
+     reward_engine.calculation_value
+     reward_engine.payout_direction
+     reward_engine.reward_type
+     trigger_engine.primary_trigger_block.trigger_event
+     claim_engine.method_block.claim_method
+     scope_engine.game_block.game_domain
+     period_engine.validity_block.valid_from
+     period_engine.validity_block.valid_until
+
+L. _field_status MAP (WAJIB minimal 10 path).
+   Format: { "engine.block.field": "explicit" | "inferred" | ... }
+   Server akan compute defaults — tapi LLM yang tahu evidence semantic, jadi
+   isi minimal untuk path-path utama.
+
+OUTPUT
+Panggil tool '${TOOL_NAME}' dengan input PkV10Record (boleh partial — server
+akan merge ke inert full-shape). JANGAN balas teks. JANGAN mark-down.`;
+
+// ============================================================
+// TOOL SCHEMA — built from shared enum constants
+// ============================================================
+type JSONSchema = AnyObj;
+
+const enumStr = (key: keyof typeof ENUMS, allowEmpty = true): JSONSchema =>
+  allowEmpty
+    ? { type: "string", enum: ["", ...(ENUMS[key] as string[])] }
+    : { type: "string", enum: [...(ENUMS[key] as string[])] };
+
+const enumStrNullable = (key: keyof typeof ENUMS): JSONSchema => ({
+  type: ["string", "null"],
+  enum: [null, "", ...(ENUMS[key] as string[])],
+});
+
+const enumStrArray = (key: keyof typeof ENUMS): JSONSchema => ({
+  type: "array",
+  items: { type: "string", enum: [...(ENUMS[key] as string[])] },
+});
+
+function buildExtractorToolSchema(): AnyObj {
   return {
-    type: "function",
-    function: {
-      name: "extract_promo_v09",
-      description: "Extract promo content into Json Schema Draft V.09 format",
-      parameters: {
-        type: "object",
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      identity_engine: {
+        type: "object", additionalProperties: false,
         properties: {
-          identity_engine: {
-            type: "object",
+          client_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              client_block: {
-                type: "object",
-                properties: {
-                  client_id: { type: "string", description: "Slug client (mis. 'slot25', 'haberaja'). Empty string kalau benar-benar tidak ada." },
-                  client_name: { type: "string" },
-                  client_id_field_status: {
-                    type: "string",
-                    description: "Status pengisian client_id: 'explicit' (tertulis di sumber), 'inferred' (disimpulkan dari URL/brand), 'unknown' (tidak ada).",
-                  },
-                },
-                required: ["client_id", "client_name", "client_id_field_status"],
-                additionalProperties: false,
-              },
-              promo_block: {
-                type: "object",
-                properties: {
-                  promo_name: { type: "string" },
-                  promo_type: { type: "string" },
-                  target_user: { type: "string" },
-                  promo_mode: {
-                    type: "string",
-                    description: "WAJIB salah satu dari 'single' | 'tiered' | 'multi_variant'. Empty string hanya kalau benar-benar tidak ada konten promo.",
-                  },
-                },
-                required: ["promo_name", "promo_type", "target_user", "promo_mode"],
-                additionalProperties: false,
-              },
+              client_id: { type: "string" },
+              client_id_field_status: enumStr("client_id_field_status"),
+              client_name: { type: "string" },
             },
-            required: ["client_block", "promo_block"],
-            additionalProperties: false,
           },
-          classification_engine: {
-            type: "object",
+          promo_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              result_block: {
-                type: "object",
-                properties: {
-                  program_classification: { type: "string", description: "A | B | C | empty string if unknown" },
-                  review_confidence: { type: "string", description: "high | medium | low | empty if unknown" },
-                },
-                required: ["program_classification", "review_confidence"],
-                additionalProperties: false,
-              },
-              question_block: {
-                type: "object",
-                properties: {
-                  q1: { type: "object", properties: { answer: { type: "string", enum: ["ya", "tidak", ""] }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
-                  q2: { type: "object", properties: { answer: { type: "string", enum: ["ya", "tidak", ""] }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
-                  q3: { type: "object", properties: { answer: { type: "string", enum: ["ya", "tidak", ""] }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
-                  q4: { type: "object", properties: { answer: { type: "string", enum: ["ya", "tidak", ""] }, reasoning: { type: "string" } }, required: ["answer", "reasoning"], additionalProperties: false },
-                },
-                required: ["q1", "q2", "q3", "q4"],
-                additionalProperties: false,
-              },
+              promo_name: { type: "string" },
+              promo_type: enumStr("promo_type"),
+              target_user: enumStr("target_user"),
+              promo_mode: enumStr("promo_mode"),
             },
-            required: ["result_block", "question_block"],
-            additionalProperties: false,
           },
-          taxonomy_engine: {
-            type: "object",
+        },
+      },
+      classification_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          result_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              mode: { type: "string" },
-              tier_archetype: { type: ["string", "null"] },
-              turnover_basis: { type: ["string", "null"] },
+              program_classification: enumStr("program_classification"),
+              secondary_classifications: { type: "array", items: { type: "string" } },
+              review_confidence: enumStr("review_confidence"),
             },
-            required: ["mode", "tier_archetype", "turnover_basis"],
-            additionalProperties: false,
           },
-          period_engine: {
-            type: "object",
+          question_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              valid_from: { type: "string" },
-              valid_until: { type: "string" },
-              claim_frequency: { type: "string" },
+              q1: questionShape(), q2: questionShape(),
+              q3: questionShape(), q4: questionShape(),
+            },
+          },
+          meta_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              quality_flags: enumStrArray("quality_flag"),
+              evidence_count: { type: "integer", minimum: 0 },
+              override: { type: "boolean" },
+              latency_ms: { type: ["integer", "null"] },
+            },
+          },
+        },
+      },
+      taxonomy_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          mode_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              mode: enumStr("taxonomy_mode"),
+              tier_archetype: enumStrNullable("tier_archetype"),
+            },
+          },
+          logic_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              conversion_formula: { type: "string" },
+              turnover_basis: enumStrNullable("turnover_basis"),
+            },
+          },
+        },
+      },
+      period_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          validity_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              valid_from: { type: ["string", "null"] },
+              valid_until: { type: ["string", "null"] },
+              validity_mode: enumStr("validity_mode"),
+              validity_duration_value: { type: ["number", "null"] },
+              validity_duration_unit: enumStr("validity_duration_unit"),
+            },
+          },
+          distribution_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              claim_frequency: enumStr("claim_frequency"),
               calculation_period: { type: "string" },
-              distribution_day: { type: "string" },
-              reward_distribution: { type: "string" },
+              distribution_day: enumStr("distribution_day"),
             },
-            required: ["valid_from", "valid_until", "claim_frequency", "calculation_period", "distribution_day", "reward_distribution"],
-            additionalProperties: false,
           },
-          time_window_engine: {
-            type: "object",
+        },
+      },
+      time_window_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          timezone_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              timezone: { type: "string", description: "IANA timezone WAJIB. Hanya 'Asia/Jakarta' | 'Asia/Makassar' | 'Asia/Jayapura' | ''. JANGAN pakai 'WIB'/'WITA'/'WIT'." },
-              offset: { type: "string" },
-              open_ended: { type: "boolean" },
+              timezone: enumStr("timezone"),
+              offset: enumStr("offset"),
             },
-            required: ["timezone", "offset", "open_ended"],
-            additionalProperties: false,
           },
-          trigger_engine: {
-            type: "object",
+          claim_window_block: timeWindowSlotShape(),
+          distribution_window_block: timeWindowSlotShape(),
+          reset_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              trigger_event: { type: "string" },
-              logic_operator: { type: "string" },
-              conditions: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    field: { type: "string" },
-                    operator: { type: "string" },
-                    value: { type: "string", description: "Stringify number kalau perlu. Empty string kalau ga ada." },
-                    currency: { type: "string" },
-                  },
-                  required: ["field", "operator", "value", "currency"],
-                  additionalProperties: false,
-                },
-              },
+              enabled: { type: "boolean" },
+              reset_time: { type: "string" },
+              reset_frequency: enumStr("reset_frequency"),
             },
-            required: ["trigger_event", "logic_operator", "conditions"],
-            additionalProperties: false,
           },
-          claim_engine: {
-            type: "object",
+        },
+      },
+      trigger_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          primary_trigger_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              method_block: {
-                type: "object",
-                properties: {
-                  claim_method: { type: "string" },
-                  auto_credit: { type: "boolean" },
-                },
-                required: ["claim_method", "auto_credit"],
-                additionalProperties: false,
-              },
-              channels_block: {
-                type: "object",
-                properties: {
-                  channels: { type: "array", items: { type: "string" } },
-                  priority_order: { type: "array", items: { type: "string" } },
-                },
-                required: ["channels", "priority_order"],
-                additionalProperties: false,
-              },
-              proof_requirement_block: {
-                type: "object",
-                properties: {
-                  proof_required: { type: "boolean" },
-                  proof_types: { type: "array", items: { type: "string" } },
-                  proof_destinations: { type: "array", items: { type: "string" } },
-                },
-                required: ["proof_required", "proof_types", "proof_destinations"],
-                additionalProperties: false,
-              },
-              instruction_block: {
-                type: "object",
-                properties: {
-                  claim_steps: { type: "array", items: { type: "string" } },
-                  claim_url: { type: "string" },
-                },
-                required: ["claim_steps", "claim_url"],
-                additionalProperties: false,
-              },
+              trigger_event: enumStr("trigger_event"),
+              action: { type: "string" },
+              evidence: { type: "string" },
             },
-            required: ["method_block", "channels_block", "proof_requirement_block", "instruction_block"],
-            additionalProperties: false,
           },
-          proof_engine: {
-            type: "object",
+          trigger_rule_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              rule_type: { type: "string" },
+              conditions: { type: "array", items: triggerConditionShape() },
+              logic_operator: enumStr("logic_operator"),
+            },
+          },
+          alternative_triggers_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              or_conditions: { type: "array", items: triggerConditionShape() },
+              and_conditions: { type: "array", items: triggerConditionShape() },
+            },
+          },
+        },
+      },
+      claim_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          method_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              claim_method: enumStr("claim_method"),
+              auto_credit: { type: "boolean" },
+            },
+          },
+          channels_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              channels: enumStrArray("channel"),
+              priority_order: { type: "array", items: { type: "string" } },
+            },
+          },
+          proof_requirement_block: {
+            type: "object", additionalProperties: false,
             properties: {
               proof_required: { type: "boolean" },
-              proof_types: { type: "array", items: { type: "string" } },
-              proof_destinations: { type: "array", items: { type: "string" } },
-              hashtag_requirement: { type: "string" },
+              proof_types: enumStrArray("proof_type"),
+              proof_destinations: enumStrArray("proof_destination"),
             },
-            required: ["proof_required", "proof_types", "proof_destinations", "hashtag_requirement"],
-            additionalProperties: false,
           },
-          payment_engine: {
-            type: "object",
+          instruction_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              deposit_method: { type: "string" },
-              deposit_providers: { type: "array", items: { type: "string" } },
+              claim_steps: { type: "array", items: { type: "string" } },
+              claim_url: { type: "string" },
             },
-            required: ["deposit_method", "deposit_providers"],
-            additionalProperties: false,
           },
-          scope_engine: {
-            type: "object",
+        },
+      },
+      proof_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          social_proof_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              game_domain: { type: "string" },
-              game_providers: { type: "array", items: { type: "string" } },
-              blacklist_categories: { type: "array", items: { type: "string" } },
+              platforms: { type: "array", items: { type: "string" } },
+              hashtags: { type: "array", items: { type: "string" } },
+              content_requirements: { type: "array", items: { type: "string" } },
             },
-            required: ["game_domain", "game_providers", "blacklist_categories"],
-            additionalProperties: false,
           },
-          reward_engine: {
-            type: "object",
+          screenshot_proof_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              calculation_basis: { type: ["string", "null"] },
-              calculation_method: { type: "string" },
-              calculation_value: { type: ["number", "null"] },
-              calculation_unit: { type: "string" },
-              payout_direction: { type: ["string", "null"] },
-              reward_type: { type: "string" },
-              voucher_kind: { type: ["string", "null"] },
-              min_base: { type: ["number", "null"] },
-              max_reward: { type: ["number", "null"] },
-              currency: { type: "string" },
+              ss_targets: { type: "array", items: { type: "string" } },
+              rules: { type: "array", items: { type: "string" } },
             },
-            required: ["calculation_basis", "calculation_method", "calculation_value", "calculation_unit", "payout_direction", "reward_type", "voucher_kind", "min_base", "max_reward", "currency"],
-            additionalProperties: false,
           },
-          loyalty_engine: {
-            type: "object",
+        },
+      },
+      payment_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          deposit_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              point_name: { type: ["string", "null"] },
-              tier_name: { type: ["string", "null"] },
+              deposit_method: enumStr("deposit_method"),
+              deposit_rate: { type: ["number", "null"] },
             },
-            required: ["point_name", "tier_name"],
-            additionalProperties: false,
           },
-          variant_engine: {
-            type: "object",
+          method_whitelist_block: providersBlockShape(),
+          method_blacklist_block: providersBlockShape(),
+        },
+      },
+      scope_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          game_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              tier_dimension: { type: ["string", "null"] },
-              turnover_rule_format: { type: ["string", "null"] },
-              variants: { type: "array", items: { type: "object", additionalProperties: true } },
+              game_domain: enumStr("game_domain"),
+              markets: { type: "array", items: { type: "string" } },
+              eligible_providers: enumStrArray("game_provider"),
             },
-            required: ["tier_dimension", "turnover_rule_format", "variants"],
-            additionalProperties: false,
           },
-          dependency_engine: {
-            type: "object",
+          platform_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              stacking_policy: { type: "string" },
-              stack_whitelist: { type: "array", items: { type: "string" } },
-              stack_blacklist: { type: "array", items: { type: "string" } },
+              platform_access: enumStr("platform_access"),
+              apk_required: { type: "boolean" },
             },
-            required: ["stacking_policy", "stack_whitelist", "stack_blacklist"],
-            additionalProperties: false,
           },
-          invalidation_engine: {
-            type: "object",
+          geo_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              void_triggers: { type: "array", items: { type: "string" } },
-              void_actions: { type: "array", items: { type: "string" } },
-              penalty_type: { type: "string" },
-              penalty_scope: { type: "string" },
+              geo_restriction: enumStr("geo_restriction"),
             },
-            required: ["void_triggers", "void_actions", "penalty_type", "penalty_scope"],
-            additionalProperties: false,
           },
-          terms_engine: {
-            type: "object",
+          blacklist_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              raw_terms: { type: "array", items: { type: "string" } },
+              types: { type: "array", items: { type: "string" } },
+              providers: { type: "array", items: { type: "string" } },
+              games: { type: "array", items: { type: "string" } },
+              rules: { type: "array", items: { type: "string" } },
             },
-            required: ["raw_terms"],
-            additionalProperties: false,
           },
-          reasoning_engine: {
-            type: "object",
+        },
+      },
+      reward_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          event_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              primary_action: { type: "string" },
-              reward_nature: { type: "string" },
-              distribution_path: { type: "string" },
-              value_shape: { type: "string" },
+              event_rewards: { type: "array", items: { type: "object", additionalProperties: true } },
+              prizes: { type: "array", items: { type: "object", additionalProperties: true } },
             },
-            required: ["primary_action", "reward_nature", "distribution_path", "value_shape"],
-            additionalProperties: false,
           },
-          mechanics_engine: {
-            type: "object",
-            description: "Per-mechanic detail. items[] WAJIB diisi dengan tiap unit mekanik yg terdeteksi (trigger/eligibility/calculation/reward/distribution/control/invalidator/etc). JANGAN kosongkan kalau ada konten.",
+          requirement_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              mechanic_source: { type: "string", description: "e.g. llm_text_extraction, llm_image_extraction, llm_multimodal_extraction" },
-              items: {
-                type: "array",
-                description: "Setiap mechanic = 1 unit logika promo. Pecah jadi item terpisah utk tiap trigger/syarat/perhitungan/reward/distribusi/aturan/invalidator. Untuk Cashback biasanya minimal 6 item: 1 trigger, 1 eligibility, 1 calculation, 1 reward, 1 distribution, 1+ invalidator.",
-                items: {
-                  type: "object",
-                  properties: {
-                    mechanic_id: { type: "string", description: "format: m_<type>_<idx>, e.g. m_trigger_1" },
-                    mechanic_type: {
-                      type: "string",
-                      enum: ["trigger", "eligibility", "calculation", "reward", "distribution", "control", "invalidator", "constraint", "other"],
-                    },
-                    evidence: { type: "string", description: "kutipan persis dari sumber yg jadi basis mechanic ini" },
-                    confidence: { type: "number", description: "0..1" },
-                    ambiguity: { type: "boolean" },
-                    ambiguity_reason: { type: ["string", "null"] },
-                    activation_rule: {
-                      type: ["object", "null"],
-                      description: "kondisi pengaktifan: { condition_type, threshold_value?, period_start?, period_end?, schedule_day?, violation_types?, ... }. null kalau ga relevan.",
-                      additionalProperties: true,
-                    },
-                    data: {
-                      type: "object",
-                      description: "detail spesifik mechanic. Bebas struktur, isi field yg relevan: trigger_event, calculation_base, percentage, reward_type, distribution_method, void_action, dst.",
-                      additionalProperties: true,
-                    },
-                  },
-                  required: ["mechanic_id", "mechanic_type", "evidence", "confidence", "ambiguity", "ambiguity_reason", "activation_rule", "data"],
-                  additionalProperties: false,
-                },
+              min_deposit: { type: ["number", "null"] },
+              unlock_conditions: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          combo_reward_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              combo_items: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          matrix_reward_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              axis_x_label: { type: "string" },
+              axis_y_label: { type: "string" },
+              matrix_cells: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          conditional_reward_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              conditions: { type: "array", items: { type: "object", additionalProperties: true } },
+              default_reward: { type: ["object", "null"], additionalProperties: true },
+            },
+          },
+          calculation_basis: enumStr("calculation_basis"),
+          calculation_method: enumStr("calculation_method"),
+          calculation_value: { type: ["number", "null"] },
+          calculation_unit: enumStr("calculation_unit"),
+          payout_direction: enumStr("payout_direction"),
+          reward_type: enumStr("reward_type"),
+          voucher_kind: enumStrNullable("voucher_kind"),
+          max_reward: { type: ["number", "null"] },
+          currency: { type: ["string", "null"] },
+        },
+      },
+      loyalty_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          mechanism_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              point_name: enumStr("point_name"),
+              earning_rule: { type: "string" },
+              loyalty_mode: enumStr("loyalty_mode"),
+            },
+          },
+          exchange_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              exchange_groups: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          tier_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              tier_system: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+        },
+      },
+      variant_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          summary_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              has_subcategories: { type: "boolean" },
+              expected_count: { type: ["integer", "null"] },
+            },
+          },
+          items_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              subcategories: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+        },
+      },
+      dependency_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          exclusion_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              mutually_exclusive_with: { type: "array", items: { type: "string" } },
+              can_combine_with: { type: "array", items: { type: "string" } },
+            },
+          },
+          stacking_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              stacking_allowed: { type: "boolean" },
+              stacking_policy: enumStr("stacking_policy"),
+              rules: { type: "array", items: { type: "string" } },
+              max_concurrent: { type: ["integer", "null"], minimum: 1 },
+            },
+          },
+          prerequisite_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              requires_promo: { type: "array", items: { type: "string" } },
+              requires_achievement: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+      },
+      invalidation_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          void_conditions_block: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: true,
+              properties: {
+                trigger_type: enumStr("invalidator_trigger_type"),
+                trigger: enumStr("void_trigger"),
+                description: { type: "string" },
               },
             },
-            required: ["mechanic_source", "items"],
-            additionalProperties: false,
           },
-          projection_engine: {
-            type: "object",
+          penalty_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              intent_category: { type: "string" },
-              summary: { type: "string" },
+              void_action: enumStr("void_action"),
+              penalty_type: enumStr("penalty_type"),
+              penalty_scope: enumStr("penalty_scope"),
             },
-            required: ["intent_category", "summary"],
-            additionalProperties: false,
           },
-          risk_engine: {
-            type: "object",
+          anti_fraud_block: {
+            type: "object", additionalProperties: false,
             properties: {
-              promo_risk_level: { type: "string" },
+              anti_fraud_rules: { type: "array", items: { type: "string" } },
+              detection_methods: { type: "array", items: { type: "string" } },
             },
-            required: ["promo_risk_level"],
-            additionalProperties: false,
           },
-          ai_confidence: {
-            type: "object",
-            description: "WAJIB TERISI dgn minimum 10 path penting (mis. 'identity_engine.promo_block.promo_name', 'reward_engine.calculation_value'). Path format: 'engine.block.field'. Nilai 0..1. JANGAN kirim {} kosong.",
-            additionalProperties: { type: "number" },
+        },
+      },
+      terms_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          conditions_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              terms_conditions: { type: "array", items: { type: "string" } },
+            },
           },
-          field_status: {
-            type: "object",
-            description: "WAJIB TERISI dgn minimum 10 path. Map field path → 'explicit' | 'inferred' | 'derived' | 'unknown'. JANGAN kirim {} kosong.",
-            additionalProperties: { type: "string" },
+          requirements_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              special_requirements: { type: "array", items: { type: "string" } },
+            },
           },
-          extraction_notes: {
-            type: "object",
+        },
+      },
+      readiness_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          state_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              state: enumStr("readiness_state"),
+              state_changed_at: { type: "string" },
+              state_changed_by: { type: "string" },
+            },
+          },
+          commit_block: {
+            type: "object", additionalProperties: false,
+            properties: { ready_to_commit: { type: "boolean" } },
+          },
+          validation_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              is_structurally_complete: { type: "boolean" },
+              status: enumStr("validation_status"),
+              warnings: { type: "array", items: { type: "string" } },
+            },
+          },
+          observability_block: {
+            type: "object", additionalProperties: false,
             properties: {
               ambiguity_flags: { type: "array", items: { type: "string" } },
               contradiction_flags: { type: "array", items: { type: "string" } },
-              warnings: { type: "array", items: { type: "string" } },
+              review_required: { type: "boolean" },
             },
-            required: ["ambiguity_flags", "contradiction_flags", "warnings"],
-            additionalProperties: false,
           },
         },
-        required: [
-          "identity_engine", "classification_engine", "taxonomy_engine",
-          "period_engine", "time_window_engine", "trigger_engine",
-          "claim_engine", "proof_engine", "payment_engine", "scope_engine",
-          "reward_engine", "loyalty_engine", "variant_engine", "dependency_engine",
-          "invalidation_engine", "terms_engine", "reasoning_engine",
-          "mechanics_engine", "projection_engine", "risk_engine",
-          "ai_confidence", "field_status", "extraction_notes",
-        ],
-        additionalProperties: false,
+      },
+      reasoning_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          intent_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              primary_action: enumStr("primary_action"),
+              reward_nature: enumStr("reward_nature"),
+              distribution_path: enumStr("distribution_path"),
+              value_shape: enumStr("value_shape"),
+            },
+          },
+          selection_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              mechanic_type: enumStr("mechanic_type"),
+              locked_fields: { type: "array", items: { type: "string" } },
+              invariant_violations: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+      },
+      mechanics_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          source_block: {
+            type: "object", additionalProperties: false,
+            properties: { source: enumStr("mechanics_source") },
+          },
+          items_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              items: {
+                type: "array",
+                items: mechanicItemShape(),
+              },
+            },
+          },
+        },
+      },
+      risk_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          level_block: {
+            type: "object", additionalProperties: false,
+            properties: { promo_risk_level: enumStr("risk_level") },
+          },
+        },
+      },
+      meta_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          source_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              source_url: { type: "string" },
+              raw_content: { type: "string" },
+              extraction_source: enumStr("extraction_source"),
+              source_type: enumStr("source_type"),
+            },
+          },
+          extraction_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              has_rowspan_tables: { type: "boolean" },
+              html_was_normalized: { type: "boolean" },
+              client_id_source: enumStrNullable("client_id_field_status"),
+              propagated_fields: { type: "array", items: { type: "string" } },
+              ambiguous_blacklists: { type: "integer", minimum: 0 },
+              classification_overridden: { type: "boolean" },
+              classification_override_reason: { type: "string" },
+              original_llm_category: { type: "string" },
+            },
+          },
+        },
+      },
+      ai_confidence: {
+        type: "object",
+        description: "Map field path → 0..1. WAJIB minimal 10 path penting.",
+        additionalProperties: { type: "number", minimum: 0, maximum: 1 },
+      },
+      _field_status: {
+        type: "object",
+        description: "Map field path → field_status enum. WAJIB minimal 10 path.",
+        additionalProperties: enumStr("field_status", false),
       },
     },
   };
 }
 
+function questionShape(): JSONSchema {
+  return {
+    type: "object", additionalProperties: false,
+    properties: {
+      answer: { type: "string", enum: ["", "ya", "tidak"] },
+      reasoning: { type: "string" },
+      evidence: { type: "string" },
+    },
+  };
+}
+
+function timeWindowSlotShape(): JSONSchema {
+  return {
+    type: "object", additionalProperties: false,
+    properties: {
+      enabled: { type: "boolean" },
+      start_time: { type: "string" },
+      end_time: { type: "string" },
+      days: enumStrArray("distribution_day"),
+    },
+  };
+}
+
+function triggerConditionShape(): JSONSchema {
+  return {
+    type: "object", additionalProperties: true,
+    properties: {
+      field: { type: "string" },
+      operator: enumStr("condition_operator"),
+      value: { type: ["string", "number", "null"] },
+      currency: { type: "string" },
+    },
+  };
+}
+
+function providersBlockShape(): JSONSchema {
+  return {
+    type: "object", additionalProperties: false,
+    properties: {
+      methods: { type: "array", items: { type: "string" } },
+      providers: { type: "array", items: { type: "string" } },
+    },
+  };
+}
+
+function mechanicItemShape(): JSONSchema {
+  return {
+    type: "object", additionalProperties: false,
+    properties: {
+      mechanic_id: { type: "string" },
+      mechanic_type: enumStr("mechanic_type", false),
+      evidence: { type: "string" },
+      confidence: { type: "number", minimum: 0, maximum: 1 },
+      ambiguity: { type: "boolean" },
+      ambiguity_reason: { type: ["string", "null"] },
+      activation_rule: { type: ["object", "null"], additionalProperties: true },
+      data: { type: "object", additionalProperties: true },
+    },
+  };
+}
+
 // ============================================================
-// PROJECTION DERIVATION (deterministic, post-extraction)
-// projection_engine = DERIVED ONLY. Build dari engine lain.
-// LLM TIDAK BOLEH isi langsung — di-overwrite di sini.
+// HELPERS
 // ============================================================
-type AnyObj = Record<string, unknown>;
 const _o = (v: unknown): AnyObj => (v && typeof v === "object" ? (v as AnyObj) : {});
 const _s = (v: unknown): string => (typeof v === "string" ? v : "");
 const _a = <T = unknown>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
-const _n = (v: unknown): number | null =>
-  typeof v === "number" && !Number.isNaN(v) ? v : null;
-const _b = (v: unknown): boolean => v === true;
 
-function deriveProjection(engines: AnyObj): AnyObj {
-  const identity = _o(engines.identity_engine);
-  const promo = _o(identity.promo_block);
-  const taxonomy = _o(engines.taxonomy_engine);
-  const reward = _o(engines.reward_engine);
-  const trigger = _o(engines.trigger_engine);
-  const claim = _o(engines.claim_engine);
-  const claimMethod = _o(claim.method_block);
-  const claimChannels = _o(claim.channels_block);
-  const proofReq = _o(claim.proof_requirement_block);
-  const scope = _o(engines.scope_engine);
-  const reasoning = _o(engines.reasoning_engine);
-  const dependency = _o(engines.dependency_engine);
-  const period = _o(engines.period_engine);
-
-  const promoName = _s(promo.promo_name);
-  const promoType = _s(promo.promo_type);
-  const targetUser = _s(promo.target_user);
-  const calcBasis = _s(reward.calculation_basis);
-  const calcMethod = _s(reward.calculation_method);
-  const calcValue = _n(reward.calculation_value);
-  const calcUnit = _s(reward.calculation_unit);
-  const payoutDir = _s(reward.payout_direction);
-  const rewardType = _s(reward.reward_type);
-  const maxReward = _n(reward.max_reward);
-  const minBase = _n(reward.min_base);
-  const turnoverBasis = _s(taxonomy.turnover_basis);
-  const channels = _a<string>(claimChannels.channels);
-  const priority = _a<string>(claimChannels.priority_order);
-  const channelsArr = priority.length > 0 ? priority : channels;
-
-  // Auto-summary
-  const valueStr =
-    calcValue !== null
-      ? calcMethod === "percentage" || calcUnit === "%" || calcUnit === "percent"
-        ? `${calcValue}%`
-        : `${calcValue}${calcUnit ? ` ${calcUnit}` : ""}`
-      : "";
-  const basisLabel = calcBasis ? ` dari ${calcBasis}` : "";
-  const summary = promoName
-    ? `${promoName}${valueStr ? ` — ${valueStr}` : ""}${basisLabel}.`.trim()
-    : "";
-
-  // Target segment label
-  const targetLabel =
-    targetUser === "all_member" || targetUser === "all"
-      ? "Semua"
-      : targetUser === "new_member"
-        ? "Member Baru"
-        : targetUser === "vip"
-          ? "VIP"
-          : targetUser === "existing_member"
-            ? "Member Lama"
-            : targetUser || "";
-
-  // D3 (2026-04-24): `stateful` field DROPPED from output.
-  //   Reason: ambiguous — no stable business definition.
-  //   If needed in future, ADD a new field with explicit definition,
-  //   do NOT resurrect this one.
-
-  return {
-    _description: "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
-    summary_block: {
-      summary,
-      promo_summary: summary,
-      main_trigger: _s(trigger.trigger_event),
-      main_reward_form: rewardType,
-      main_reward_percent: calcMethod === "percentage" ? calcValue : null,
-      main_reward_value: calcValue,
-      main_reward_unit: calcUnit,
-      max_bonus: maxReward,
-      min_base: minBase,
-      payout_direction: payoutDir,
-      turnover_multiplier: null,
-      turnover_basis: turnoverBasis || null,
-      // stateful: DROPPED per D3 (2026-04-24)
-    },
-    claim_summary_block: {
-      primary_claim_method: _s(claimMethod.claim_method),
-      primary_claim_platform: channelsArr[0] ?? "",
-      claim_channels: channelsArr,
-      auto_credit: _b(claimMethod.auto_credit),
-      proof_required: _b(proofReq.proof_required),
-      claim_frequency: _s(period.claim_frequency),
-      distribution_day: _s(period.distribution_day),
-    },
-    scope_summary_block: {
-      game_domain: _s(_o(scope.game_block).game_domain) || _s(scope.game_domain),
-      game_types: _a<string>(_o(scope.game_block).markets ?? scope.markets ?? []),
-      game_providers: _a<string>(
-        _o(scope.game_block).eligible_providers ?? scope.game_providers ?? [],
-      ),
-      game_exclusions: _a<string>(
-        _o(scope.blacklist_block).providers ?? scope.blacklist_categories ?? [],
-      ),
-      stacking_policy: _s(_o(dependency).stacking_policy ?? dependency.stacking_policy),
-    },
-    intent_summary_block: {
-      intent_category: _s(reasoning.intent_category) || _s((engines.projection_engine as AnyObj | undefined)?.intent_category as unknown),
-      primary_action: _s(reasoning.primary_action),
-      reward_nature: _s(reasoning.reward_nature),
-      distribution_path: _s(reasoning.distribution_path),
-      value_shape: _s(reasoning.value_shape),
-      target_segment: targetLabel,
-    },
-  };
+function genId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `pk_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-// ============================================================
-// POST-PROCESS NORMALIZER (safety net for GAP-Q1..Q5)
-// Run BEFORE deriveProjection. Mutates parsed in-place.
-// ============================================================
-function normalizePkRecord(parsed: AnyObj): void {
-  // GAP-Q5: classification answer enum lock — coerce to "ya"/"tidak"
-  const classif = _o(parsed.classification_engine);
-  const qb = _o(classif.question_block);
-  const yesSet = new Set(["ya", "yes", "iya", "y", "true"]);
-  const noSet = new Set(["tidak", "no", "n", "false", "ga", "nggak", "engga"]);
-  for (const k of ["q1", "q2", "q3", "q4"]) {
-    const q = _o(qb[k]);
-    const ans = _s(q.answer).trim().toLowerCase();
-    if (yesSet.has(ans)) q.answer = "ya";
-    else if (noSet.has(ans)) q.answer = "tidak";
-    else if (ans !== "ya" && ans !== "tidak") q.answer = "";
-    qb[k] = q;
-  }
-  classif.question_block = qb;
-  parsed.classification_engine = classif;
-
-  // GAP-Q2 + GAP-Q1: normalize mechanics items
-  const mech = _o(parsed.mechanics_engine);
-  const items = _a<AnyObj>(mech.items);
-  const cleaned = items.map((it) => {
-    const item = _o(it);
-    // activation_rule: {} → null (never empty object)
-    const ar = item.activation_rule;
-    if (ar && typeof ar === "object" && !Array.isArray(ar) && Object.keys(ar as object).length === 0) {
-      item.activation_rule = null;
-    }
-    // data: {} → mark with placeholder so item is not silently empty
-    const data = item.data;
-    if (!data || (typeof data === "object" && !Array.isArray(data) && Object.keys(data as object).length === 0)) {
-      item.data = { _empty: true, _reason: "llm_left_empty" };
-    }
-    return item;
-  });
-  mech.items = cleaned;
-  parsed.mechanics_engine = mech;
-
-  // GAP-Q4: ensure client_id_field_status exists
-  const ident = _o(parsed.identity_engine);
-  const cb = _o(ident.client_block);
-  if (typeof cb.client_id_field_status !== "string" || !cb.client_id_field_status) {
-    cb.client_id_field_status = _s(cb.client_id) ? "explicit" : "unknown";
-  }
-  ident.client_block = cb;
-  parsed.identity_engine = ident;
-
-  // GAP-Q3: seed minimal ai_confidence / field_status if LLM left empty
-  const seedPaths: Array<[string, unknown]> = [
-    ["identity_engine.promo_block.promo_name", _o(ident.promo_block).promo_name],
-    ["identity_engine.promo_block.promo_type", _o(ident.promo_block).promo_type],
-    ["identity_engine.promo_block.target_user", _o(ident.promo_block).target_user],
-    ["identity_engine.promo_block.promo_mode", _o(ident.promo_block).promo_mode],
-    ["identity_engine.client_block.client_id", cb.client_id],
-    ["reward_engine.calculation_basis", _o(parsed.reward_engine).calculation_basis],
-    ["reward_engine.calculation_value", _o(parsed.reward_engine).calculation_value],
-    ["reward_engine.payout_direction", _o(parsed.reward_engine).payout_direction],
-    ["reward_engine.reward_type", _o(parsed.reward_engine).reward_type],
-    ["trigger_engine.trigger_event", _o(parsed.trigger_engine).trigger_event],
-    ["claim_engine.method_block.claim_method", _o(_o(parsed.claim_engine).method_block).claim_method],
-    ["scope_engine.game_domain", _o(parsed.scope_engine).game_domain],
-    ["period_engine.valid_from", _o(parsed.period_engine).valid_from],
-    ["period_engine.valid_until", _o(parsed.period_engine).valid_until],
-  ];
-  const conf = (parsed.ai_confidence && typeof parsed.ai_confidence === "object")
-    ? (parsed.ai_confidence as AnyObj)
-    : {};
-  const fstat = (parsed.field_status && typeof parsed.field_status === "object")
-    ? (parsed.field_status as AnyObj)
-    : {};
-  for (const [path, val] of seedPaths) {
-    const present = val !== "" && val !== null && val !== undefined && !(Array.isArray(val) && val.length === 0);
-    if (!(path in conf)) conf[path] = present ? 0.6 : 0.0;
-    if (!(path in fstat)) fstat[path] = present ? "inferred" : "unknown";
-  }
-  parsed.ai_confidence = conf;
-  parsed.field_status = fstat;
-}
-
-// ============================================================
-// Convert OpenAI tool schema → Anthropic tool schema
-// OpenAI: { type:"function", function:{ name, description, parameters } }
-// Anthropic: { name, description, input_schema }
-// ============================================================
-function toAnthropicTool(openaiTool: AnyObj): AnyObj {
-  const fn = _o(openaiTool.function);
-  return {
-    name: _s(fn.name),
-    description: _s(fn.description),
-    input_schema: fn.parameters ?? { type: "object", properties: {} },
-  };
-}
-
-// ============================================================
-// Convert image input → Anthropic image content block
-// Supports:
-//   - data URL:  data:image/png;base64,XXX  →  source.type=base64
-//   - https URL: https://...                →  source.type=url
-// ============================================================
 function toAnthropicImage(img: string): AnyObj | null {
   if (!img) return null;
   const trimmed = img.trim();
   if (trimmed.startsWith("data:")) {
-    // data:image/png;base64,XXXX
     const m = trimmed.match(/^data:([^;]+);base64,(.+)$/);
     if (!m) return null;
-    const mediaType = m[1];
-    const data = m[2];
     return {
       type: "image",
-      source: { type: "base64", media_type: mediaType, data },
+      source: { type: "base64", media_type: m[1], data: m[2] },
     };
   }
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return {
-      type: "image",
-      source: { type: "url", url: trimmed },
-    };
+    return { type: "image", source: { type: "url", url: trimmed } };
   }
-  // Bare base64 — assume PNG
   return {
     type: "image",
     source: { type: "base64", media_type: "image/png", data: trimmed },
   };
 }
 
+// ============================================================
+// HANDLER
+// ============================================================
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -786,6 +892,8 @@ serve(async (req) => {
     const images: string[] = Array.isArray(body.images)
       ? body.images.filter((i: unknown) => typeof i === "string" && i.length > 0)
       : [];
+    const clientIdHint: string =
+      typeof body.client_id_hint === "string" ? body.client_id_hint.trim() : "";
 
     if (!text && images.length === 0) {
       return new Response(
@@ -797,44 +905,41 @@ serve(async (req) => {
       );
     }
 
-    // ============================================================
-    // Build Anthropic-format multimodal user message
-    // ============================================================
+    // Build user content (image-first, then text)
     const userContent: Array<Record<string, unknown>> = [];
-
     const contextParts: string[] = [];
-    if (text) {
-      contextParts.push(`KONTEN PROMO (TEKS):\n\n${text}`);
-    }
+    if (text) contextParts.push(`KONTEN PROMO (TEKS):\n\n${text}`);
     if (images.length > 0) {
       contextParts.push(
         `KONTEN PROMO (GAMBAR): ${images.length} gambar disertakan. Baca konten visual: judul, persentase, nominal, syarat, badge, dan elemen UI promo.`,
       );
     }
+    if (clientIdHint) {
+      contextParts.push(`CLIENT_ID HINT (dari caller): "${clientIdHint}". Pakai sebagai propagated default jika tidak ada di sumber, dan tandai client_id_field_status="propagated".`);
+    }
     contextParts.push(
-      "\n\nINSTRUKSI: Ekstrak ke Json Schema Draft V.09 via tool 'extract_promo_v09'. WAJIB panggil tool — JANGAN balas teks. Hybrid mode: text + image saling melengkapi.",
+      `\nINSTRUKSI: Ekstrak ke PkV10Record via tool '${TOOL_NAME}'. WAJIB panggil tool — JANGAN balas teks. Hybrid mode: text + image saling melengkapi.`,
     );
 
-    // Anthropic ordering convention: image blocks BEFORE text block (better recall).
     for (const img of images) {
       const block = toAnthropicImage(img);
       if (block) userContent.push(block);
     }
     userContent.push({ type: "text", text: contextParts.join("\n\n") });
 
-    // ============================================================
-    // Build ai-proxy request (Anthropic-format passthrough)
-    // ============================================================
-    const tool = toAnthropicTool(getToolSchema());
+    // Build proxy request
+    const tool = {
+      name: TOOL_NAME,
+      description: "Ekstrak konten promo ke PKB_Wolfbrain V.10 (PkV10Record).",
+      input_schema: buildExtractorToolSchema(),
+    };
 
     const proxyBody = {
-      type: AI_PROXY_TYPE, // "extract_pk" — ai-proxy hardcodes max_tokens 16k + Sonnet
+      type: AI_PROXY_TYPE,
       system: SYSTEM_PROMPT,
-      messages: [
-        { role: "user", content: userContent },
-      ],
+      messages: [{ role: "user", content: userContent }],
       tools: [tool],
-      tool_choice: { type: "tool", name: "extract_promo_v09" },
+      tool_choice: { type: "tool", name: TOOL_NAME },
       temperature: 0.1,
     };
 
@@ -852,27 +957,25 @@ serve(async (req) => {
 
     if (!aiResp.ok) {
       const errText = await aiResp.text().catch(() => "");
-      console.error("[pk-extractor] ai-proxy error:", aiResp.status, errText);
-
-      // Pass through ai-proxy's own structured errors (CREDIT_EXHAUSTED, RATE_LIMITED, OVERLOADED)
+      console.error("[pk-extractor V10] ai-proxy error:", aiResp.status, errText);
       let upstreamError: AnyObj = {};
       try { upstreamError = JSON.parse(errText); } catch { /* keep empty */ }
 
       if (aiResp.status === 402) {
         return new Response(
-          JSON.stringify({ error: "PAYMENT_REQUIRED", message: _s(upstreamError.message) || "Anthropic credits habis. Top-up di console.anthropic.com." }),
+          JSON.stringify({ error: "PAYMENT_REQUIRED", message: _s(upstreamError.message) || "Anthropic credits habis." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       if (aiResp.status === 429) {
         return new Response(
-          JSON.stringify({ error: "RATE_LIMITED", message: _s(upstreamError.message) || "Terlalu banyak request, coba lagi sebentar." }),
+          JSON.stringify({ error: "RATE_LIMITED", message: _s(upstreamError.message) || "Terlalu banyak request." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
       if (aiResp.status === 503) {
         return new Response(
-          JSON.stringify({ error: "OVERLOADED", message: _s(upstreamError.message) || "Anthropic overload, coba lagi." }),
+          JSON.stringify({ error: "OVERLOADED", message: _s(upstreamError.message) || "Anthropic overload." }),
           { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
@@ -883,25 +986,21 @@ serve(async (req) => {
     const modelUsed = _s(aiData.model);
     const stopReason = _s(aiData.stop_reason);
 
-    // ============================================================
-    // Parse Anthropic response: content[] array, find tool_use block
-    // ============================================================
     const contentArr = _a<AnyObj>(aiData.content);
-    const toolUse = contentArr.find((b) => _s(b.type) === "tool_use" && _s(b.name) === "extract_promo_v09");
+    const toolUse = contentArr.find(
+      (b) => _s(b.type) === "tool_use" && _s(b.name) === TOOL_NAME,
+    );
 
     if (!toolUse) {
-      // Collect any text reply for diagnostic
       const textReply = contentArr
         .filter((b) => _s(b.type) === "text")
         .map((b) => _s(b.text))
-        .join("\n")
-        .slice(0, 2000);
-      console.error("[pk-extractor] NO_TOOL_CALL — Claude text reply:", textReply || "(empty)");
-      console.error("[pk-extractor] stop_reason:", stopReason, "model:", modelUsed);
+        .join("\n").slice(0, 2000);
+      console.error("[pk-extractor V10] NO_TOOL_CALL — Claude reply:", textReply || "(empty)");
       return new Response(
         JSON.stringify({
           error: "NO_TOOL_CALL",
-          message: "Claude reply tanpa tool_use. Cek console.",
+          message: "Claude reply tanpa tool_use.",
           raw_text: textReply,
           stop_reason: stopReason,
           model: modelUsed,
@@ -910,14 +1009,13 @@ serve(async (req) => {
       );
     }
 
-    // Anthropic returns tool input as object (already parsed). No JSON.parse needed.
-    const parsed: Record<string, unknown> =
+    const llmInput: AnyObj =
       toolUse.input && typeof toolUse.input === "object"
-        ? (toolUse.input as Record<string, unknown>)
+        ? (toolUse.input as AnyObj)
         : {};
 
-    if (Object.keys(parsed).length === 0) {
-      console.error("[pk-extractor] tool_use.input empty");
+    if (Object.keys(llmInput).length === 0) {
+      console.error("[pk-extractor V10] tool_use.input empty");
       return new Response(
         JSON.stringify({
           error: "INVALID_TOOL_ARGS",
@@ -929,24 +1027,71 @@ serve(async (req) => {
       );
     }
 
-    // Determine extraction_source
-    let extraction_source = "text";
+    // ============================================================
+    // SERVER MERGE: build full-shape PkV10Record
+    // ============================================================
+    let extraction_source = "plain_text";
     if (text && images.length > 0) extraction_source = "multimodal";
     else if (images.length > 0) extraction_source = "image";
 
-    // POST-PROCESS: normalize content quality (safety net for GAP-Q1..Q5)
-    normalizePkRecord(parsed);
+    const now = new Date().toISOString();
+    const inert = createInertPkV10Record(genId(), now);
 
-    // DERIVED: overwrite projection_engine deterministically (LLM hint discarded)
-    parsed.projection_engine = deriveProjection(parsed);
+    // Pre-fill server-authoritative blocks BEFORE merge so LLM can override
+    // semantic fields but not stamps.
+    const meta = inert.meta_engine as AnyObj;
+    (meta.source_block as AnyObj).extraction_source = extraction_source;
+    (meta.source_block as AnyObj).source_type =
+      extraction_source === "image" || extraction_source === "multimodal"
+        ? "image_upload"
+        : "text_paste";
+    (meta.extraction_block as AnyObj).extracted_at = now;
 
-    console.log("[pk-extractor] OK", {
+    // Apply propagated client_id from hint if LLM left it blank — handled
+    // post-merge so LLM-supplied value (if any) wins.
+    const merged = mergeIntoInert(inert, llmInput);
+
+    // Stamp authoritative fields AFTER merge (LLM cannot override these).
+    const mEngine = merged.meta_engine as AnyObj;
+    (mEngine.source_block as AnyObj).source_url = "";
+    (mEngine.source_block as AnyObj).raw_content = text.slice(0, 4000);
+    (mEngine.extraction_block as AnyObj).extracted_at = now;
+    mEngine.schema_block = (inert.meta_engine as AnyObj).schema_block;
+
+    const cEngine = merged.classification_engine as AnyObj;
+    (cEngine.meta_block as AnyObj).prompt_version = PK_V10_PROMPT_VERSION;
+    (cEngine.meta_block as AnyObj).latency_ms = latencyMs;
+
+    // Propagate client_id_hint if LLM didn't set client_id
+    const idEngine = merged.identity_engine as AnyObj;
+    const clientBlock = idEngine.client_block as AnyObj;
+    if (clientIdHint && !_s(clientBlock.client_id)) {
+      clientBlock.client_id = clientIdHint;
+      clientBlock.client_id_field_status = "propagated";
+    }
+
+    // ============================================================
+    // FIELD STATUS COMPUTATION
+    // ============================================================
+    const aiConfidence = (merged.ai_confidence as Record<string, number>) ?? {};
+    const llmFieldStatus = (merged._field_status as Record<string, unknown>) ?? {};
+    const fieldStatus = computeFieldStatus(
+      merged,
+      llmFieldStatus,
+      aiConfidence,
+      PK_V10_AI_CONFIDENCE_QUESTION_THRESHOLD,
+    );
+    merged._field_status = fieldStatus;
+
+    console.log("[pk-extractor V10] OK", {
       model: modelUsed,
       stop_reason: stopReason,
       extraction_source,
       latency_ms: latencyMs,
-      mechanics_items: _a(_o(parsed.mechanics_engine).items).length,
-      ai_confidence_keys: Object.keys(_o(parsed.ai_confidence)).length,
+      mechanics_items: _a(_o((merged.mechanics_engine as AnyObj).items_block).items).length,
+      ai_confidence_keys: Object.keys(aiConfidence).length,
+      field_status_keys: Object.keys(fieldStatus).length,
+      schema_version: ((merged.meta_engine as AnyObj).schema_block as AnyObj).schema_version,
     });
 
     return new Response(
@@ -954,16 +1099,17 @@ serve(async (req) => {
         ok: true,
         model: modelUsed,
         extraction_source,
-        engines: parsed,
+        record: merged,
         usage: aiData?.usage ?? null,
         latency_ms: latencyMs,
         stop_reason: stopReason,
+        schema_version: "V.10",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[pk-extractor] Unhandled:", msg);
+    console.error("[pk-extractor V10] Unhandled:", msg);
     return new Response(
       JSON.stringify({ error: "INTERNAL", message: msg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
