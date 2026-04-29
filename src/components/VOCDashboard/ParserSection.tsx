@@ -135,6 +135,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     setIsRestructured(false);
     setPolishWarning(null);
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const resp = await fetch(PARSER_URL, {
         method: "POST",
@@ -147,6 +150,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
           text: text.trim(),
           images: images.map((i) => i.base64),
         }),
+        signal: controller.signal,
       });
 
       if (!resp.ok) {
@@ -186,10 +190,13 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
       setIsPolished(false);
       setIsRestructured(false);
     } catch (e) {
+      // Aborted — UI already reset by handleCancelParse
+      if ((e as { name?: string })?.name === "AbortError") return;
       const msg = e instanceof Error ? e.message : "Network error";
       setError(msg);
       toast.error("Parser gagal", { description: msg });
     } finally {
+      abortControllerRef.current = null;
       setIsLoading(false);
     }
   };
