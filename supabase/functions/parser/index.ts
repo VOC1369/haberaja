@@ -142,6 +142,39 @@ Format output ADAPTIF terhadap bentuk sumber.
    - Field name & nilai = VERBATIM dari header tabel sumber.
    - Cell kosong (sudah lewat validasi LANGKAH 3) → \`(kosong)\`.
 
+   ATURAN SINGLE-ENTRY (PENTING — REASONING, BUKAN REGEX):
+   Sebelum menulis nomor "1.", tanya pada diri sendiri:
+   "Apakah section ini punya ≥2 entries / ≥2 row paket / ≥2 tier?"
+   - Kalau YA → tulis numbering "1.", "2.", "3." …
+   - Kalau TIDAK (cuma 1 entry) → JANGAN tulis "1.". Langsung tulis judul + fields-nya.
+
+   Berlaku UNIVERSAL untuk semua section (Contoh Perhitungan, Paket Bonus, Tier, Kategori Game, dll).
+   Numbering dipakai untuk MEMBEDAKAN beberapa entries — bukan hiasan.
+   Single entry = tidak butuh nomor karena tidak ada yang dibedakan.
+
+   Contoh KONTRAS:
+
+   ❌ SALAH (single entry tapi dikasih "1.")
+     Contoh Perhitungan:
+     1. SLOT
+        TURNOVER: 1.000.000
+        BONUS: 0.5%
+
+   ✅ BENAR (single entry, tanpa nomor)
+     Contoh Perhitungan:
+     SLOT
+        TURNOVER: 1.000.000
+        BONUS: 0.5%
+
+   ✅ BENAR (multi entry, pakai nomor)
+     Paket Bonus:
+     1. SLOT — Rollingan 0.5%
+        TURNOVER: 1.000.000
+     2. LIVE CASINO — Rollingan 0.8%
+        TURNOVER: 500.000
+
+   CATATAN: List S&K (syarat & ketentuan) tetap pakai numbering normal karena memang berurutan.
+
 2) Narasi → tetap narasi rapi.
 3) List syarat → tetap bullet/numbered list.
 4) Campuran → mix sesuai section.
