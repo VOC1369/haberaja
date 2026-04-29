@@ -2164,39 +2164,6 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-
-              {/* Visual Result — preview wrapper V.09 di modal */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span tabIndex={0}>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowVisualResult(true)}
-                        disabled={pkStatus === "loading"}
-                        className="h-11 px-4 gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        {pkStatus === "loading"
-                          ? `⏳ Menyiapkan V.09... ${pkElapsedSec}s`
-                          : pkStatus === "failed"
-                            ? "Visual Result (fallback)"
-                            : "Visual Result"}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <p>
-                      {pkStatus === "loading"
-                        ? "PK-extractor masih jalan. Tunggu sampai badge ✅ siap."
-                        : pkStatus === "failed"
-                          ? "PK-extractor gagal — preview akan berupa wrapper V.09 lama (legacy)."
-                          : "Lihat preview Json Schema Contract V.09 (meta + data) sebelum disalin atau disimpan."}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-
               {/* System Rule (C) cannot be saved to promo KB */}
               {extractedPromo.program_classification === 'C' ? (
                 <TooltipProvider>
