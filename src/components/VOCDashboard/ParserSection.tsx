@@ -107,6 +107,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     setIsLoading(true);
     setError(null);
     setResult(null);
+    setRawResult(null);
+    setIsPolished(false);
+    setPolishWarning(null);
 
     try {
       const resp = await fetch(PARSER_URL, {
@@ -141,7 +144,22 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
         toast.error(msg);
         return;
       }
-      setResult(output);
+
+      // Step 1 — Deterministic polish (auto, silent, integrity-checked)
+      let baseline = output;
+      try {
+        const cleaned = deterministicPolish(output);
+        const integ = checkIntegrity(output, cleaned);
+        if (integ.ok) baseline = cleaned;
+        // kalau gagal integrity (mestinya tidak akan terjadi karena deterministic),
+        // pakai output mentah parser.
+      } catch {
+        // safe fallback ke output mentah
+      }
+
+      setRawResult(baseline);
+      setResult(baseline);
+      setIsPolished(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Network error";
       setError(msg);
@@ -149,6 +167,71 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ── Enhance (Step 2 — LLM polish) ─────────────────────
+  const handleEnhance = async () => {
+    if (!rawResult || isEnhancing) return;
+    setIsEnhancing(true);
+    setPolishWarning(null);
+
+    try {
+      const resp = await fetch(POLISHER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ text: rawResult }),
+      });
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        const msg = body?.error || `Enhance gagal (HTTP ${resp.status})`;
+        toast.error("Polisher gagal", { description: msg });
+        return;
+      }
+
+      const data = await resp.json();
+      const polished = (data?.output as string) || "";
+      if (!polished.trim()) {
+        toast.error("Polisher mengembalikan output kosong");
+        return;
+      }
+
+      // Integrity check — angka, %, Rp, brand caps, dates, multipliers
+      const integ = checkIntegrity(rawResult, polished);
+      if (!integ.ok) {
+        // Fallback ke raw + tampilkan warning badge
+        setResult(rawResult);
+        setIsPolished(false);
+        setPolishWarning(
+          integ.reason ||
+            "Polisher mengubah data — hasilnya dibatalkan demi keamanan.",
+        );
+        toast.error("Polish dibatalkan", {
+          description: "Integritas data tidak lolos. Hasil dikembalikan ke versi asli.",
+        });
+        return;
+      }
+
+      setResult(polished);
+      setIsPolished(true);
+      toast.success("Polished");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Network error";
+      toast.error("Polisher gagal", { description: msg });
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
+  const handleBackToRaw = () => {
+    if (!rawResult) return;
+    setResult(rawResult);
+    setIsPolished(false);
+    setPolishWarning(null);
   };
 
   // ── Result actions ────────────────────────────────────
@@ -177,6 +260,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     setText("");
     setImages([]);
     setResult(null);
+    setRawResult(null);
+    setIsPolished(false);
+    setPolishWarning(null);
     setError(null);
   };
 
