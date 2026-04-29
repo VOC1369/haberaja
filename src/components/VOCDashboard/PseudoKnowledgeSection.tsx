@@ -652,29 +652,23 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   };
 
   const handleCopyJSON = async () => {
-    if (!extractedPromo && !pkRecord) return;
+    // STEP 2 hard rule — only V.10 (Pseudo Engine V.1.1) is allowed.
+    // No silent V.09 wrapper fallback.
+    if (!pkRecord) {
+      toast.error("Belum ada record V.1.1", {
+        description:
+          pkStatus === "loading"
+            ? "Pseudo Engine extractor masih jalan. Tunggu badge ✅ siap."
+            : pkStatus === "failed"
+              ? `Pseudo Engine extractor gagal${pkFailReason ? ` (${pkFailReason})` : ""}. Tidak ada V.1.1 untuk dicopy.`
+              : "Jalankan ekstraksi dulu sebelum copy JSON.",
+      });
+      return;
+    }
 
     try {
-      // STEP 2 — prefer raw PkV10Record (V.10 native).
-      // Fallback ke wrapper V.09 lama bila pk-extractor belum/gagal selesai.
-      let jsonString: string;
-      let label: string;
-      if (pkRecord) {
-        jsonString = JSON.stringify(pkRecord, null, 2);
-        label = `${jsonString.length} karakter • PkV10Record (PKB_Wolfbrain V.10)`;
-      } else {
-        const sourceMap: Record<string, V09ExtractionSource> = {
-          url: "url",
-          text: "text",
-          image: "image",
-        };
-        const wrapped = wrapV09(extractedPromo!, {
-          source: sourceMap[inputMode] ?? "text",
-          source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
-        });
-        jsonString = JSON.stringify(wrapped, null, 2);
-        label = `${jsonString.length} karakter • fallback wrapper V.09 (PK belum siap)`;
-      }
+      const jsonString = JSON.stringify(pkRecord, null, 2);
+      const label = `${jsonString.length} karakter • Pseudo Engine V.1.1 (PkV10Record)`;
       await navigator.clipboard.writeText(jsonString);
       toast.success("JSON disalin ke clipboard", { description: label });
     } catch {
