@@ -13,10 +13,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const GEMINI_MODEL = "gemini-2.5-pro";
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_MODEL = "google/gemini-2.5-pro";
+const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL_PASS1 = "claude-sonnet-4-5-20250929";
 const MODEL_PASS2 = "claude-opus-4-20250514";
 
