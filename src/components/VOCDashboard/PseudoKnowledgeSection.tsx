@@ -2063,18 +2063,18 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               </Button>
             </div>
             
-            {/* Center: PK V.09 status badge */}
+            {/* Center: Wolfbrain.V10 status badge */}
             <div className="flex items-center gap-3">
               {pkStatus === "loading" && (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-muted/50 text-xs font-medium text-muted-foreground">
-                  <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                  PK V.09: ⏳ loading ({pkElapsedSec}s)
+                  <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  Wolfbrain.V10 ({pkElapsedSec}s)
                 </div>
               )}
               {pkStatus === "ready" && (
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-                  PK V.09: ✅ siap
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                  Wolfbrain.V10
                 </div>
               )}
               {pkStatus === "failed" && (
@@ -2083,7 +2083,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     <TooltipTrigger asChild>
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/30 bg-destructive/10 text-xs font-medium text-destructive cursor-help">
                         <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
-                        PK V.09: ❌ gagal{pkFailReason ? ` (${pkFailReason})` : ""} — fallback aktif
+                        Wolfbrain.V10: gagal{pkFailReason ? ` (${pkFailReason})` : ""}
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs">
