@@ -494,9 +494,10 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     className="px-5 py-4 text-sm text-foreground leading-relaxed"
                   />
                 ) : (
-                  <pre className="whitespace-pre-wrap break-words px-5 py-4 text-sm text-foreground font-mono leading-relaxed">
-                    {result}
-                  </pre>
+                  <MiniMarkdown
+                    text={result}
+                    className="px-5 py-4 text-sm text-foreground font-mono leading-relaxed whitespace-pre-wrap break-words"
+                  />
                 )}
               </div>
             </div>
