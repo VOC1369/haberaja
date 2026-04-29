@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef } from "react";
-import { Loader2, Plus, X, ArrowUp, Copy, Send, Sparkles, Undo2, AlertTriangle, Wand2 } from "lucide-react";
+import { Loader2, Plus, X, ArrowUp, Copy, Send, Undo2, AlertTriangle, Wand2 } from "lucide-react";
 import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,7 +31,6 @@ import { MiniMarkdown } from "@/lib/mini-markdown";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const PARSER_URL = `${SUPABASE_URL}/functions/v1/parser`;
-const POLISHER_URL = `${SUPABASE_URL}/functions/v1/polisher`;
 
 export const PARSER_HANDOFF_KEY = "parser_handoff_text_v1";
 
@@ -46,9 +45,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   // result = displayed text (raw or polished). rawResult = baseline for Back-to-Raw.
   const [result, setResult] = useState<string | null>(null);
   const [rawResult, setRawResult] = useState<string | null>(null);
+  // isPolished kept for backward-compat (LLM enhance path, currently unused in UI).
   const [isPolished, setIsPolished] = useState(false);
   const [isRestructured, setIsRestructured] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
   const [polishWarning, setPolishWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -178,73 +177,6 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     }
   };
 
-  // ── Enhance (Step 2 — LLM polish) ─────────────────────
-  const handleEnhance = async () => {
-    if (!rawResult || isEnhancing) return;
-    setIsEnhancing(true);
-    setPolishWarning(null);
-
-    try {
-      const resp = await fetch(POLISHER_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ text: rawResult }),
-      });
-
-      if (!resp.ok) {
-        const body = await resp.json().catch(() => ({}));
-        const msg = body?.error || `Enhance gagal (HTTP ${resp.status})`;
-        toast.error("Polisher gagal", { description: msg });
-        return;
-      }
-
-      const data = await resp.json();
-
-      // Soft-fail dari edge function (upstream 5xx / rate limit / credit habis)
-      if (data?.fallback) {
-        const msg = data?.message || data?.error || "Polisher tidak tersedia. Tetap pakai versi asli.";
-        setPolishWarning(msg);
-        toast.error("Polish dilewati", { description: msg });
-        return;
-      }
-
-      const polished = (data?.output as string) || "";
-      if (!polished.trim()) {
-        toast.error("Polisher mengembalikan output kosong");
-        return;
-      }
-
-      // Integrity check — angka, %, Rp, brand caps, dates, multipliers
-      const integ = checkIntegrity(rawResult, polished);
-      if (!integ.ok) {
-        // Fallback ke raw + tampilkan warning badge
-        setResult(rawResult);
-        setIsPolished(false);
-        setPolishWarning(
-          integ.reason ||
-            "Polisher mengubah data — hasilnya dibatalkan demi keamanan.",
-        );
-        toast.error("Polish dibatalkan", {
-          description: "Integritas data tidak lolos. Hasil dikembalikan ke versi asli.",
-        });
-        return;
-      }
-
-      setResult(polished);
-      setIsPolished(true);
-      toast.success("Polished");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Network error";
-      toast.error("Polisher gagal", { description: msg });
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
   const handleBackToRaw = () => {
     if (!rawResult) return;
     setResult(rawResult);
@@ -253,17 +185,19 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     setPolishWarning(null);
   };
 
-  // ── Restructure (Level 2 — deterministic, opt-in) ─────
-  const handleRestructure = () => {
+  // ── Polish (unified, deterministic, integrity-checked) ─
+  // Internally: cleanup baseline (already applied) → Level 2 restructure
+  // → integrity check → fallback to raw on failure.
+  const handlePolish = () => {
     if (!rawResult) return;
     try {
       const restructured = polishLevel2(rawResult);
       const integ = checkIntegrityLevel2(rawResult, restructured);
       if (!integ.ok) {
         setPolishWarning(
-          integ.reason || "Restructure dibatalkan — integrity check gagal.",
+          integ.reason || "Polish dibatalkan — integrity check gagal.",
         );
-        toast.error("Restructure dibatalkan", {
+        toast.error("Polish dibatalkan", {
           description: "Integritas data tidak lolos. Tetap pakai versi asli.",
         });
         return;
@@ -272,10 +206,10 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
       setIsRestructured(true);
       setIsPolished(false);
       setPolishWarning(null);
-      toast.success("Restructured");
+      toast.success("Polished");
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Restructure gagal";
-      toast.error("Restructure gagal", { description: msg });
+      const msg = e instanceof Error ? e.message : "Polish gagal";
+      toast.error("Polish gagal", { description: msg });
     }
   };
 
@@ -488,18 +422,12 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     <Badge
                       variant="outline"
                       className={
-                        isPolished
+                        isPolished || isRestructured
                           ? "bg-button-hover/10 text-button-hover border-button-hover/30"
-                          : isRestructured
-                            ? "bg-button-hover/10 text-button-hover border-button-hover/30"
-                            : "bg-success/10 text-success border-success/30"
+                          : "bg-success/10 text-success border-success/30"
                       }
                     >
-                      {isPolished
-                        ? "Polished"
-                        : isRestructured
-                          ? "Restructured"
-                          : "Parser Result"}
+                      {isPolished || isRestructured ? "Polished" : "Parser Result"}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {result.length} karakter
@@ -528,34 +456,17 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                         Back to Raw
                       </Button>
                     ) : (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleRestructure}
-                          disabled={!rawResult}
-                          title="Restructure tampilan secara deterministic (no AI, no data change)"
-                          className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
-                        >
-                          <Wand2 className="h-3.5 w-3.5" />
-                          Restructure
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleEnhance}
-                          disabled={isEnhancing || !rawResult}
-                          title="Rapikan tampilan dengan AI (tidak mengubah data)"
-                          className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
-                        >
-                          {isEnhancing ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Sparkles className="h-3.5 w-3.5" />
-                          )}
-                          {isEnhancing ? "Polishing…" : "Enhance"}
-                        </Button>
-                      </>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handlePolish}
+                        disabled={!rawResult}
+                        title="Rapikan tampilan (deterministic, tidak mengubah data)"
+                        className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
+                      >
+                        <Wand2 className="h-3.5 w-3.5" />
+                        Polish
+                      </Button>
                     )}
                     <Button
                       variant="ghost"
