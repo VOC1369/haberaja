@@ -1,26 +1,28 @@
-// Parser edge function — calls Anthropic via shared key.
-// Cleans raw promo text (+ optional images) into structured human-readable text.
+// Parser edge function — input-based routing.
 //
-// TWO-PASS PARSING (v3 — AI-first, no regex orchestration):
-//   Pass 1: Standard parse (text + image) → readable output.
-//   Pass 2 (auto when image present): Structural audit on full image + Pass 1 output.
-//          Repairs merged-cell / rowspan / colspan propagation only. Minimum-diff.
-//          If no table in image → returns Pass 1 output unchanged.
+// ROUTING (v4 — simple, input-based):
+//   - hasImage  → Gemini 2.5 Pro (single call). On fail/empty → fallback Claude image flow.
+//   - text-only → Claude Sonnet 4.5 (Pass 1 only).
 //
-// Trigger rule (simple, AI-first):
-//   - Text only         → Pass 1 only.
-//   - Any image present → Pass 1 + Pass 2.
+// Fallback trigger (B): HTTP/network error, empty output, OR output < 50 chars.
+// Temperature: 0 (deterministic). Max tokens: 8000.
 //
-// Model routing:
-//   - Pass 1: Sonnet 4.5
-//   - Pass 2: Claude Opus 4 (vision + structural reasoning)
+// Prompts: reuse SYSTEM_PROMPT_PASS1 (Mode A+) for Gemini AND Claude Pass 1.
+// Claude fallback retains Pass 2 (Opus) structural audit.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+const GEMINI_MODEL = "gemini-2.5-pro";
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const MODEL_PASS1 = "claude-sonnet-4-5-20250929";
 const MODEL_PASS2 = "claude-opus-4-20250514";
+
+const MAX_TOKENS = 8000;
+const TEMPERATURE = 0;
+const MIN_OUTPUT_CHARS = 50;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,7 +31,7 @@ const corsHeaders = {
 };
 
 // ============================================================
-// SYSTEM PROMPT — PASS 1 (Verbatim + Structural Reasoning)
+// SYSTEM PROMPT — PASS 1 / Gemini (Verbatim + Structural Reasoning)
 // ============================================================
 const SYSTEM_PROMPT_PASS1 = `Anda adalah PARSER PROMO (Mode A+ — Verbatim Source Preservation + Structural Cleanup).
 
@@ -153,7 +155,7 @@ LARANGAN PRESENTASI:
 ATURAN UMUM OUTPUT:
 - TIDAK ADA template heading wajib. Heading ikuti sumber.
 - Bahasa output = bahasa sumber. Jangan terjemahkan.
-- Output text mentah saja, tanpa code fence \`\`\`.
+- Output text mentah saja, tanpa code fence \`\`\`, tanpa preamble, tanpa komentar.
 
 ═══════════════════════════════════════════════
 PRINSIP:
@@ -163,7 +165,7 @@ Kalau ragu soal STRUKTUR (merged cell, layout) → WAJIB reasoning, propagate de
 Lebih baik output "kotor sedikit tapi setia + struktur benar" daripada "rapi tapi salah propagate cell".`;
 
 // ============================================================
-// SYSTEM PROMPT — PASS 2 (Generic Structural Audit)
+// SYSTEM PROMPT — PASS 2 (Claude fallback only)
 // ============================================================
 const SYSTEM_PROMPT_PASS2 = `Anda adalah AUDITOR STRUKTUR VISUAL (Pass 2).
 
@@ -173,9 +175,7 @@ merged cell, rowspan, colspan, shared cell. Repair propagation kalau ada cell ya
 seharusnya terisi (karena dicakup merged cell) tapi di Pass 1 ditulis \`(kosong)\`,
 \`—\`, atau hilang. Minimum-diff.
 
-═══════════════════════════════════════════════
 DILARANG KERAS:
-═══════════════════════════════════════════════
 - Mengubah wording bagian non-tabel (narasi, syarat & ketentuan).
 - Normalize angka (jangan ubah "Rp. 50,000" jadi "Rp 50.000" atau sebaliknya).
 - Fix typo (jangan ubah "Mircogaming" jadi "Microgaming").
@@ -187,32 +187,113 @@ DILARANG KERAS:
 - Generate JSON.
 - Mengubah cell yang sudah punya nilai di Pass 1.
 
-═══════════════════════════════════════════════
 HANYA BOLEH:
-═══════════════════════════════════════════════
 - Mengganti \`(kosong)\` / \`—\` / cell hilang di field yang TERBUKTI dicakup merged cell di image.
 - Nilai pengganti = VERBATIM dari merged cell di image (jangan normalize).
 
-═══════════════════════════════════════════════
 PROSEDUR:
-═══════════════════════════════════════════════
 1. Scan image: apakah ada tabel sama sekali?
-   - KALAU TIDAK ADA TABEL di image → return output Pass 1 APA ADANYA, character-identik,
-     tanpa perubahan apapun. Selesai.
+   - KALAU TIDAK ADA TABEL di image → return output Pass 1 APA ADANYA, character-identik. Selesai.
 
-2. KALAU ADA TABEL di image:
+2. KALAU ADA TABEL:
    - Untuk setiap row × kolom, cek visual grid: apakah cell itu dicakup rowspan/colspan?
    - Kalau YA dan Pass 1 menulis \`(kosong)\`/\`—\` → ganti dengan nilai verbatim dari merged cell.
    - Kalau TIDAK → biarkan apa adanya.
 
-3. OUTPUT FORMAT:
-   Kembalikan FULL output Pass 1 yang sudah diperbaiki — character-identik dengan input
-   kecuali cell-cell yang berhasil di-repair dari merged cell.
+3. OUTPUT:
+   FULL output Pass 1 yang sudah diperbaiki — character-identik kecuali cell yang di-repair.
+   Tanpa preamble, tanpa code fence.
 
-4. JANGAN tambah komentar, JANGAN tambah preamble, JANGAN tulis "berikut hasil audit:".
-   Langsung output text final saja, tanpa code fence.
+PRINSIP: Minimum-diff. Kalau ragu → jangan ubah.`;
 
-PRINSIP: Minimum-diff repair. Kalau ragu → jangan ubah.`;
+// ============================================================
+// Helpers
+// ============================================================
+type ImageBlock = { mediaType: string; data: string };
+
+function parseImages(images: unknown): ImageBlock[] {
+  const out: ImageBlock[] = [];
+  if (!Array.isArray(images)) return out;
+  for (const img of images) {
+    if (typeof img !== "string") continue;
+    const m = /^data:(image\/[a-zA-Z+]+);base64,(.+)$/.exec(img);
+    if (!m) continue;
+    out.push({ mediaType: m[1], data: m[2] });
+  }
+  return out;
+}
+
+function buildUserText(text: string, imageCount: number): string {
+  const trimmed = text.trim();
+  if (trimmed) {
+    return `Input promo mentah dari user (text + ${imageCount} image):\n\n${trimmed}\n\nIngat: Mode A+ STRICT VERBATIM untuk wording, tapi WAJIB structural reasoning untuk merged cell di tabel image.`;
+  }
+  return `Tidak ada text input. Gunakan ${imageCount} image di atas sebagai sumber tunggal. Mode A+ STRICT VERBATIM untuk wording. WAJIB structural reasoning untuk merged cell.`;
+}
+
+// ============================================================
+// Gemini call
+// ============================================================
+async function callGemini(opts: {
+  systemPrompt: string;
+  userText: string;
+  images: ImageBlock[];
+}): Promise<{ ok: true; text: string } | { ok: false; reason: string }> {
+  if (!GEMINI_API_KEY) return { ok: false, reason: "GEMINI_API_KEY not set" };
+
+  const parts: any[] = [];
+  for (const img of opts.images) {
+    parts.push({ inlineData: { mimeType: img.mediaType, data: img.data } });
+  }
+  parts.push({ text: opts.userText });
+
+  const body = {
+    systemInstruction: { parts: [{ text: opts.systemPrompt }] },
+    contents: [{ role: "user", parts }],
+    generationConfig: {
+      temperature: TEMPERATURE,
+      maxOutputTokens: MAX_TOKENS,
+    },
+  };
+
+  let resp: Response;
+  try {
+    resp = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    return { ok: false, reason: `network: ${e instanceof Error ? e.message : String(e)}` };
+  }
+
+  if (!resp.ok) {
+    const errBody = await resp.text().catch(() => "");
+    return { ok: false, reason: `http ${resp.status}: ${errBody.slice(0, 300)}` };
+  }
+
+  let data: any;
+  try {
+    data = await resp.json();
+  } catch (e) {
+    return { ok: false, reason: `invalid json: ${e instanceof Error ? e.message : String(e)}` };
+  }
+
+  const text = (data?.candidates?.[0]?.content?.parts ?? [])
+    .filter((p: any) => typeof p?.text === "string")
+    .map((p: any) => p.text)
+    .join("\n")
+    .trim();
+
+  if (!text) {
+    const finishReason = data?.candidates?.[0]?.finishReason ?? "unknown";
+    return { ok: false, reason: `empty output (finishReason=${finishReason})` };
+  }
+  if (text.length < MIN_OUTPUT_CHARS) {
+    return { ok: false, reason: `output too short (${text.length} chars)` };
+  }
+  return { ok: true, text };
+}
 
 // ============================================================
 // Anthropic call helper
@@ -233,7 +314,7 @@ async function callAnthropic(opts: {
     body: JSON.stringify({
       model: opts.model,
       max_tokens: opts.maxTokens,
-      temperature: 0,
+      temperature: TEMPERATURE,
       system: opts.system,
       messages: [{ role: "user", content: opts.content }],
     }),
@@ -278,6 +359,64 @@ function mapAnthropicError(status: number, errBody: any): Response {
   );
 }
 
+// ============================================================
+// Claude image flow (fallback): Pass 1 Sonnet + Pass 2 Opus
+// ============================================================
+async function claudeImageFlow(
+  text: string,
+  images: ImageBlock[],
+): Promise<{ ok: true; output: string; pass2: boolean } | { ok: false; status: number; errBody: any }> {
+  const imageBlocks = images.map((img) => ({
+    type: "image",
+    source: { type: "base64", media_type: img.mediaType, data: img.data },
+  }));
+
+  const userText = buildUserText(text, images.length);
+  const pass1Content: any[] = [...imageBlocks, { type: "text", text: userText }];
+
+  const pass1 = await callAnthropic({
+    model: MODEL_PASS1,
+    system: SYSTEM_PROMPT_PASS1,
+    content: pass1Content,
+    maxTokens: MAX_TOKENS,
+  });
+  if (!pass1.ok) return { ok: false, status: pass1.status, errBody: pass1.errBody };
+
+  // Pass 2 Opus structural audit
+  const pass2Content: any[] = [
+    ...imageBlocks,
+    {
+      type: "text",
+      text: `=== OUTPUT PASS 1 (verbatim) ===
+${pass1.text}
+
+=== AUDIT TASK ===
+Audit struktur visual semua tabel di image vs output Pass 1.
+Fokus: merged cell, rowspan, colspan, shared cell propagation.
+Repair HANYA cell yang ditulis (kosong)/—/hilang padahal di image dicakup merged cell.
+Minimum-diff. Kalau image tidak ada tabel → return output Pass 1 apa adanya.
+
+Output FULL dokumen final, tanpa preamble, tanpa komentar, tanpa code fence.`,
+    },
+  ];
+
+  const pass2 = await callAnthropic({
+    model: MODEL_PASS2,
+    system: SYSTEM_PROMPT_PASS2,
+    content: pass2Content,
+    maxTokens: MAX_TOKENS,
+  });
+
+  if (pass2.ok && pass2.text.trim().length > 0) {
+    return { ok: true, output: pass2.text, pass2: true };
+  }
+  if (!pass2.ok) console.warn("[parser] Claude Pass 2 failed:", pass2.status, pass2.errBody);
+  return { ok: true, output: pass1.text, pass2: false };
+}
+
+// ============================================================
+// Main handler
+// ============================================================
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -286,89 +425,65 @@ serve(async (req) => {
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not set");
     const { text = "", images = [] } = await req.json();
 
-    if (!text.trim() && (!Array.isArray(images) || images.length === 0)) {
+    if (!String(text).trim() && (!Array.isArray(images) || images.length === 0)) {
       return new Response(
         JSON.stringify({ error: "Input kosong. Berikan text atau minimal 1 image." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Build image content blocks (reused for Pass 1 and Pass 2)
-    const imageBlocks: any[] = [];
-    if (Array.isArray(images)) {
-      for (const img of images) {
-        const match = /^data:(image\/[a-zA-Z+]+);base64,(.+)$/.exec(img);
-        if (!match) continue;
-        imageBlocks.push({
-          type: "image",
-          source: { type: "base64", media_type: match[1], data: match[2] },
-        });
-      }
+    const imgs = parseImages(images);
+    const hasImage = imgs.length > 0;
+
+    // ============= TEXT-ONLY → Claude Sonnet Pass 1 only =============
+    if (!hasImage) {
+      const userText = buildUserText(String(text), 0);
+      const pass1 = await callAnthropic({
+        model: MODEL_PASS1,
+        system: SYSTEM_PROMPT_PASS1,
+        content: [{ type: "text", text: userText }],
+        maxTokens: MAX_TOKENS,
+      });
+      if (!pass1.ok) return mapAnthropicError(pass1.status, pass1.errBody);
+
+      return new Response(
+        JSON.stringify({
+          output: pass1.text,
+          debug: { route: "claude_text", model: MODEL_PASS1 },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    const hasImage = imageBlocks.length > 0;
-
-    // ============= PASS 1 =============
-    const pass1Content: any[] = [...imageBlocks];
-    pass1Content.push({
-      type: "text",
-      text: text.trim()
-        ? `Input promo mentah dari user (text + ${imageBlocks.length} image):\n\n${text.trim()}\n\nIngat: Mode A+ STRICT VERBATIM untuk wording, tapi WAJIB structural reasoning untuk merged cell di tabel image.`
-        : `Tidak ada text input. Gunakan ${imageBlocks.length} image di atas sebagai sumber tunggal. Mode A+ STRICT VERBATIM untuk wording. WAJIB structural reasoning untuk merged cell.`,
+    // ============= IMAGE → Gemini 2.5 Pro single call =============
+    const gemini = await callGemini({
+      systemPrompt: SYSTEM_PROMPT_PASS1,
+      userText: buildUserText(String(text), imgs.length),
+      images: imgs,
     });
 
-    const pass1 = await callAnthropic({
-      model: MODEL_PASS1,
-      system: SYSTEM_PROMPT_PASS1,
-      content: pass1Content,
-      maxTokens: 4000,
-    });
-    if (!pass1.ok) return mapAnthropicError(pass1.status, pass1.errBody);
-
-    let finalOutput = pass1.text;
-    let pass2Triggered = false;
-
-    // ============= PASS 2 (auto when image present) =============
-    if (hasImage) {
-      pass2Triggered = true;
-
-      const pass2Content: any[] = [...imageBlocks];
-      pass2Content.push({
-        type: "text",
-        text: `=== OUTPUT PASS 1 (verbatim) ===
-${pass1.text}
-
-=== AUDIT TASK ===
-Audit struktur visual semua tabel di image di atas vs output Pass 1.
-Fokus: merged cell, rowspan, colspan, shared cell propagation.
-Repair HANYA cell yang ditulis (kosong)/—/hilang padahal di image dicakup merged cell.
-Minimum-diff. Kalau di image tidak ada tabel sama sekali → return output Pass 1 apa adanya.
-
-Output FULL dokumen final, tanpa preamble, tanpa komentar, tanpa code fence.`,
-      });
-
-      const pass2 = await callAnthropic({
-        model: MODEL_PASS2,
-        system: SYSTEM_PROMPT_PASS2,
-        content: pass2Content,
-        maxTokens: 4000,
-      });
-
-      if (pass2.ok && pass2.text.trim().length > 0) {
-        finalOutput = pass2.text;
-      } else if (!pass2.ok) {
-        console.warn("[parser] Pass 2 failed:", pass2.status, pass2.errBody);
-        // Keep Pass 1 output as fallback
-      }
+    if (gemini.ok) {
+      return new Response(
+        JSON.stringify({
+          output: gemini.text,
+          debug: { route: "gemini", model: GEMINI_MODEL },
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
+
+    // Gemini failed → fallback Claude image flow
+    console.warn("[parser] Gemini failed, falling back to Claude:", gemini.reason);
+    const fallback = await claudeImageFlow(String(text), imgs);
+    if (!fallback.ok) return mapAnthropicError(fallback.status, fallback.errBody);
 
     return new Response(
       JSON.stringify({
-        output: finalOutput,
+        output: fallback.output,
         debug: {
-          pass2Triggered,
-          modelPass1: MODEL_PASS1,
-          modelPass2: pass2Triggered ? MODEL_PASS2 : null,
+          route: "gemini_fallback_claude",
+          model: fallback.pass2 ? MODEL_PASS2 : MODEL_PASS1,
+          gemini_fail_reason: gemini.reason,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
