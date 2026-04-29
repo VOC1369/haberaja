@@ -293,7 +293,10 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   const handleSendToPseudo = () => {
     if (!result) return;
     try {
-      localStorage.setItem(PARSER_HANDOFF_KEY, result);
+      // Always send the raw parser baseline to extractor — never the polished/
+      // restructured presentation layer (markdown markers would pollute parsing).
+      const payload = rawResult ?? result;
+      localStorage.setItem(PARSER_HANDOFF_KEY, payload);
       toast.success("Dikirim ke Pseudo Extractor");
       if (onSendToPseudo) onSendToPseudo();
     } catch {
