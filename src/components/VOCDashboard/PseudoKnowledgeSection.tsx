@@ -2203,54 +2203,6 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         </div>
       )}
 
-      {/* Visual Result Modal — preview PkV10Record (PKB_Wolfbrain V.10) */}
-      <Dialog open={showVisualResult} onOpenChange={setShowVisualResult}>
-        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="w-5 h-5" />
-              Visual Result — PkV10Record (V.10)
-            </DialogTitle>
-            <DialogDescription>
-              {pkRecord
-                ? "Raw PkV10Record — 22 engine, schema PKB_Wolfbrain V.10, locked 2026-04-28. Inilah JSON yang akan disalin / disimpan."
-                : "PK-extractor belum selesai atau gagal — fallback ke wrapper V.09 lama (legacy)."}
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="flex-1 rounded-md border bg-muted/30 p-4">
-            <pre className="text-xs font-mono whitespace-pre-wrap break-words">
-{pkRecord
-  ? JSON.stringify(pkRecord, null, 2)
-  : extractedPromo
-    ? JSON.stringify(
-        wrapV09(extractedPromo, {
-          source: (inputMode === "image" ? "image" : inputMode === "url" ? "url" : "text"),
-          source_label: inputMode === "image" ? "image_upload" : currentInput?.slice(0, 200) || undefined,
-        }),
-        null,
-        2,
-      )
-    : "// Belum ada hasil ekstraksi"}
-            </pre>
-          </ScrollArea>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setShowVisualResult(false)}>
-              Tutup
-            </Button>
-            <Button
-              variant="golden"
-              onClick={() => {
-                handleCopyJSON();
-              }}
-              className="gap-2"
-            >
-              <Copy className="w-4 h-4" />
-              Copy JSON
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Leave Warning Dialog */}
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
         <AlertDialogContent>
