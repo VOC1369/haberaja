@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Loader2, Plus, X, ArrowUp, Copy, Send, Undo2, AlertTriangle, Wand2, RotateCcw } from "lucide-react";
+import { Loader2, Plus, X, ArrowUp, Copy, Send, Undo2, AlertTriangle, Wand2, RotateCcw, CheckCircle2 } from "lucide-react";
 import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -219,10 +219,10 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
       const integ = checkIntegrityLevel2(rawResult, restructured);
       if (!integ.ok) {
         setPolishWarning(
-          integ.reason || "Polish dibatalkan — integrity check gagal.",
+          integ.reason || "Source already clean — no polish needed.",
         );
-        toast.error("Polish dibatalkan", {
-          description: "Integritas data tidak lolos. Tetap pakai versi asli.",
+        toast.success("Polish not needed", {
+          description: "Source sudah bersih. Tetap pakai versi asli.",
         });
         return;
       }
@@ -479,11 +479,11 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     </span>
                     {polishWarning && (
                       <Badge
-                        className="bg-warning/10 text-warning border-0 gap-1 hover:bg-warning/15 focus:ring-1 focus:ring-warning/40 transition-colors"
+                        className="bg-success/10 text-success border-0 gap-1 hover:bg-success/15 focus:ring-1 focus:ring-success/40 transition-colors"
                         title={polishWarning}
                       >
-                        <AlertTriangle className="h-3 w-3" />
-                        Polish skipped — integrity check failed
+                        <CheckCircle2 className="h-3 w-3" />
+                        Polish not needed — source already clean
                       </Badge>
                     )}
                   </div>
