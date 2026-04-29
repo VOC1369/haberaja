@@ -11,7 +11,7 @@
  * - Reuse UI patterns dari PseudoKnowledgeSection
  */
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Loader2, Plus, X, ArrowUp, Copy, Send, Undo2, AlertTriangle, Wand2, RotateCcw } from "lucide-react";
 import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Button } from "@/components/ui/button";
