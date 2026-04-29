@@ -75,41 +75,79 @@ Deno.serve(async (req) => {
       );
     }
 
-    const resp = await fetch(LOVABLE_AI_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        temperature: 0,
-        max_tokens: 8000,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: text },
-        ],
-      }),
-    });
+    // Retry up to 3x on transient upstream 5xx (Cloudflare 502/503/504)
+    let resp: Response | null = null;
+    let lastErrSnippet = "";
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        resp = await fetch(LOVABLE_AI_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-pro",
+            temperature: 0,
+            max_tokens: 8000,
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: text },
+            ],
+          }),
+        });
+      } catch (netErr) {
+        lastErrSnippet = netErr instanceof Error ? netErr.message : String(netErr);
+        console.error(`Polisher fetch attempt ${attempt} network error:`, lastErrSnippet);
+        if (attempt < 3) await new Promise((r) => setTimeout(r, 400 * attempt));
+        continue;
+      }
+
+      if (resp.ok) break;
+
+      // Don't retry on auth/quota/client errors
+      if (resp.status === 429 || resp.status === 402 || (resp.status >= 400 && resp.status < 500)) {
+        break;
+      }
+
+      // 5xx — retry with backoff
+      try { lastErrSnippet = (await resp.text()).slice(0, 200); } catch { /* ignore */ }
+      console.error(`Polisher LLM attempt ${attempt} status ${resp.status}:`, lastErrSnippet);
+      if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt));
+    }
+
+    if (!resp) {
+      // Total network failure → fallback signal (200 so client can revert to raw cleanly)
+      return new Response(
+        JSON.stringify({ error: "UPSTREAM_NETWORK_FAILED", fallback: true, message: "Tidak bisa menghubungi LLM. Hasil tetap pakai versi asli." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     if (resp.status === 429) {
       return new Response(
-        JSON.stringify({ error: "Rate limit. Coba lagi sebentar." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Rate limit. Coba lagi sebentar.", fallback: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
     if (resp.status === 402) {
       return new Response(
-        JSON.stringify({ error: "Lovable AI credits habis. Top-up di Settings → Workspace → Usage." }),
-        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Lovable AI credits habis. Top-up di Settings → Workspace → Usage.", fallback: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
     if (!resp.ok) {
-      const err = await resp.text();
-      console.error("Polisher LLM error:", resp.status, err);
+      console.error("Polisher LLM final error:", resp.status, lastErrSnippet);
+      // Soft-fail: return 200 + fallback so frontend gracefully degrades to raw
       return new Response(
-        JSON.stringify({ error: `LLM error (HTTP ${resp.status})` }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          error: `LLM_UPSTREAM_${resp.status}`,
+          fallback: true,
+          message: resp.status >= 500
+            ? "Server LLM sedang sibuk (502/503). Coba lagi sebentar — hasil tetap pakai versi asli."
+            : `LLM error (HTTP ${resp.status})`,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 

@@ -194,6 +194,15 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
       }
 
       const data = await resp.json();
+
+      // Soft-fail dari edge function (upstream 5xx / rate limit / credit habis)
+      if (data?.fallback) {
+        const msg = data?.message || data?.error || "Polisher tidak tersedia. Tetap pakai versi asli.";
+        setPolishWarning(msg);
+        toast.error("Polish dilewati", { description: msg });
+        return;
+      }
+
       const polished = (data?.output as string) || "";
       if (!polished.trim()) {
         toast.error("Polisher mengembalikan output kosong");
