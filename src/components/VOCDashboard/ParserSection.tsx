@@ -254,7 +254,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     <div className="relative flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
         <div
-          className={`page-wrapper p-6 pb-20 ${
+          className={`page-wrapper p-6 ${result ? "pb-28" : "pb-20"} ${
             !result && !isLoading ? "min-h-[calc(100vh-160px)] flex flex-col justify-center" : ""
           } space-y-6`}
         >
