@@ -355,7 +355,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
                       </Badge>
                       <span className="text-[10px] text-muted-foreground">{q.reason}</span>
                     </div>
-                    <p className="text-xs text-foreground mt-1">{q.question}</p>
+                    <p className="text-xs text-foreground mt-1">{q.spec.question}</p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       current:{" "}
                       <span className="font-mono">
