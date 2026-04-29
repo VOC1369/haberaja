@@ -37,7 +37,12 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<{ id: string; preview: string; base64: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  // result = displayed text (raw or polished). rawResult = baseline for Back-to-Raw.
   const [result, setResult] = useState<string | null>(null);
+  const [rawResult, setRawResult] = useState<string | null>(null);
+  const [isPolished, setIsPolished] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [polishWarning, setPolishWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
