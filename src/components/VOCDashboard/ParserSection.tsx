@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef } from "react";
-import { Loader2, Plus, X, ArrowUp, Copy, Send } from "lucide-react";
+import { Loader2, Plus, X, ArrowUp, Copy, Send, Sparkles, Undo2, AlertTriangle } from "lucide-react";
 import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,10 +20,12 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/lib/notify";
+import { deterministicPolish, checkIntegrity } from "@/lib/promo-polisher";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const PARSER_URL = `${SUPABASE_URL}/functions/v1/parser`;
+const POLISHER_URL = `${SUPABASE_URL}/functions/v1/polisher`;
 
 export const PARSER_HANDOFF_KEY = "parser_handoff_text_v1";
 
@@ -35,7 +37,12 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   const [text, setText] = useState("");
   const [images, setImages] = useState<{ id: string; preview: string; base64: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  // result = displayed text (raw or polished). rawResult = baseline for Back-to-Raw.
   const [result, setResult] = useState<string | null>(null);
+  const [rawResult, setRawResult] = useState<string | null>(null);
+  const [isPolished, setIsPolished] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [polishWarning, setPolishWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,6 +107,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     setIsLoading(true);
     setError(null);
     setResult(null);
+    setRawResult(null);
+    setIsPolished(false);
+    setPolishWarning(null);
 
     try {
       const resp = await fetch(PARSER_URL, {
@@ -134,7 +144,22 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
         toast.error(msg);
         return;
       }
-      setResult(output);
+
+      // Step 1 — Deterministic polish (auto, silent, integrity-checked)
+      let baseline = output;
+      try {
+        const cleaned = deterministicPolish(output);
+        const integ = checkIntegrity(output, cleaned);
+        if (integ.ok) baseline = cleaned;
+        // kalau gagal integrity (mestinya tidak akan terjadi karena deterministic),
+        // pakai output mentah parser.
+      } catch {
+        // safe fallback ke output mentah
+      }
+
+      setRawResult(baseline);
+      setResult(baseline);
+      setIsPolished(false);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Network error";
       setError(msg);
@@ -142,6 +167,71 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ── Enhance (Step 2 — LLM polish) ─────────────────────
+  const handleEnhance = async () => {
+    if (!rawResult || isEnhancing) return;
+    setIsEnhancing(true);
+    setPolishWarning(null);
+
+    try {
+      const resp = await fetch(POLISHER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ text: rawResult }),
+      });
+
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        const msg = body?.error || `Enhance gagal (HTTP ${resp.status})`;
+        toast.error("Polisher gagal", { description: msg });
+        return;
+      }
+
+      const data = await resp.json();
+      const polished = (data?.output as string) || "";
+      if (!polished.trim()) {
+        toast.error("Polisher mengembalikan output kosong");
+        return;
+      }
+
+      // Integrity check — angka, %, Rp, brand caps, dates, multipliers
+      const integ = checkIntegrity(rawResult, polished);
+      if (!integ.ok) {
+        // Fallback ke raw + tampilkan warning badge
+        setResult(rawResult);
+        setIsPolished(false);
+        setPolishWarning(
+          integ.reason ||
+            "Polisher mengubah data — hasilnya dibatalkan demi keamanan.",
+        );
+        toast.error("Polish dibatalkan", {
+          description: "Integritas data tidak lolos. Hasil dikembalikan ke versi asli.",
+        });
+        return;
+      }
+
+      setResult(polished);
+      setIsPolished(true);
+      toast.success("Polished");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Network error";
+      toast.error("Polisher gagal", { description: msg });
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
+  const handleBackToRaw = () => {
+    if (!rawResult) return;
+    setResult(rawResult);
+    setIsPolished(false);
+    setPolishWarning(null);
   };
 
   // ── Result actions ────────────────────────────────────
@@ -170,6 +260,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     setText("");
     setImages([]);
     setResult(null);
+    setRawResult(null);
+    setIsPolished(false);
+    setPolishWarning(null);
     setError(null);
   };
 
@@ -341,24 +434,71 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
           {result && !isLoading && (
             <div className="space-y-4">
               <div className="relative rounded-xl border border-border bg-card">
-                <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-success/10 text-success border-success/30">
-                      Parser Result
+                <div className="flex items-center justify-between px-5 py-3 border-b border-border gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge
+                      variant="outline"
+                      className={
+                        isPolished
+                          ? "bg-button-hover/10 text-button-hover border-button-hover/30"
+                          : "bg-success/10 text-success border-success/30"
+                      }
+                    >
+                      {isPolished ? "Polished" : "Parser Result"}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {result.length} karakter
                     </span>
+                    {polishWarning && (
+                      <Badge
+                        variant="outline"
+                        className="bg-warning/10 text-warning border-warning/40 gap-1"
+                        title={polishWarning}
+                      >
+                        <AlertTriangle className="h-3 w-3" />
+                        Polish skipped — integrity check failed
+                      </Badge>
+                    )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={handleCopy}
-                    title="Copy hasil parser"
-                    className="rounded-full"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {isPolished ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleBackToRaw}
+                        title="Kembalikan ke versi asli parser"
+                        className="rounded-full gap-1.5 h-8"
+                      >
+                        <Undo2 className="h-3.5 w-3.5" />
+                        Back to Raw
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleEnhance}
+                        disabled={isEnhancing || !rawResult}
+                        title="Rapikan tampilan dengan AI (tidak mengubah data)"
+                        className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
+                      >
+                        {isEnhancing ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5" />
+                        )}
+                        {isEnhancing ? "Polishing…" : "Enhance"}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={handleCopy}
+                      title="Copy hasil parser"
+                      className="rounded-full"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <pre className="whitespace-pre-wrap break-words px-5 py-4 text-sm text-foreground font-mono leading-relaxed">
                   {result}
