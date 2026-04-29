@@ -422,18 +422,12 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     <Badge
                       variant="outline"
                       className={
-                        isPolished
+                        isPolished || isRestructured
                           ? "bg-button-hover/10 text-button-hover border-button-hover/30"
-                          : isRestructured
-                            ? "bg-button-hover/10 text-button-hover border-button-hover/30"
-                            : "bg-success/10 text-success border-success/30"
+                          : "bg-success/10 text-success border-success/30"
                       }
                     >
-                      {isPolished
-                        ? "Polished"
-                        : isRestructured
-                          ? "Restructured"
-                          : "Parser Result"}
+                      {isPolished || isRestructured ? "Polished" : "Parser Result"}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {result.length} karakter
