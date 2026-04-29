@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef } from "react";
-import { Loader2, Plus, X, ArrowUp, Copy, Send } from "lucide-react";
+import { Loader2, Plus, X, ArrowUp, Copy, Send, Sparkles, Undo2, AlertTriangle } from "lucide-react";
 import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,10 +20,12 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/lib/notify";
+import { deterministicPolish, checkIntegrity } from "@/lib/promo-polisher";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const PARSER_URL = `${SUPABASE_URL}/functions/v1/parser`;
+const POLISHER_URL = `${SUPABASE_URL}/functions/v1/polisher`;
 
 export const PARSER_HANDOFF_KEY = "parser_handoff_text_v1";
 
