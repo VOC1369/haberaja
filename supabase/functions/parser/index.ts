@@ -173,7 +173,63 @@ Format output ADAPTIF terhadap bentuk sumber.
      2. LIVE CASINO — Rollingan 0.8%
         TURNOVER: 500.000
 
-   CATATAN: List S&K (syarat & ketentuan) tetap pakai numbering normal karena memang berurutan.
+    CATATAN: List S&K (syarat & ketentuan) tetap pakai numbering normal karena memang berurutan.
+
+   ═══════════════════════════════════════════════
+   ATURAN HEADLINE PENTING (REASONING — BUKAN REGEX):
+   ═══════════════════════════════════════════════
+   Setiap baris yang secara semantik adalah HEADLINE / SECTION HEADER WAJIB
+   diberi prefix \`## \` (dua hash + spasi) di awal baris.
+
+   Cara reasoning (tanya pada diri sendiri sebelum menulis tiap baris):
+   "Apakah baris ini berfungsi sebagai JUDUL/HEADER yang memayungi konten di
+   bawahnya, ATAU baris ini adalah konten/field/data?"
+   - Kalau HEADER (memayungi blok di bawahnya) → prefix \`## \`.
+   - Kalau KONTEN (field, data, item, kalimat) → JANGAN prefix.
+
+   Contoh yang BIASANYA headline (tapi keputusan tetap reasoning per kasus):
+   - Judul utama promo (cth: "EXTRA CUAN REFERRAL UP TO 15%")
+   - "SYARAT DAN KETENTUAN" / "Syarat & Ketentuan" / "S&K"
+   - "Contoh Perhitungan" / "Contoh perhitungan 5%" (header sub-blok contoh)
+   - "Tier Downline and Percentage"
+   - "Rumus Komisi"
+   - "Cara Klaim" / "Cara Mendapatkan Bonus"
+   - "Paket Bonus" / "Tabel Bonus"
+   - Nama section apapun yang di sumber memang berfungsi sebagai header
+
+   Yang BUKAN headline (JANGAN diberi \`## \`):
+   - Field label dengan nilai: "Tanggal akhir: 08-Okt-2037", "WINLOSE: 10.000.000"
+   - Item list / bullet
+   - Kalimat narasi
+   - Baris numbering item ("1. Multi-akun / self-referral")
+
+   PRINSIP HEADLINE:
+   - Konsisten: kalau "SYARAT DAN KETENTUAN" dapat \`## \`, maka "Contoh Perhitungan"
+     dan "Rumus Komisi" juga harus dapat \`## \` (karena sama-sama header).
+   - Verbatim: teks setelah \`## \` = wording asli sumber. Jangan ubah huruf
+     besar/kecil, jangan terjemahkan, jangan parafrase.
+   - Marker \`## \` adalah SATU-SATUNYA hint presentasi yang boleh ditambahkan
+     parser. Jangan pakai \`#\`, \`###\`, \`**bold**\`, atau marker lain.
+
+   Contoh KONTRAS:
+
+   ❌ SALAH (headline tidak ditandai → tampilan tidak konsisten)
+     EXTRA CUAN REFERRAL UP TO 15%
+     Tanggal akhir: -
+     SYARAT DAN KETENTUAN
+     - Pemilik referral WAJIB KYC...
+     Contoh perhitungan 5%
+     Jumlah player: 5 ID
+
+   ✅ BENAR (semua header konsisten dapat \`## \`)
+     ## EXTRA CUAN REFERRAL UP TO 15%
+     Tanggal akhir: -
+
+     ## SYARAT DAN KETENTUAN
+     - Pemilik referral WAJIB KYC...
+
+     ## Contoh perhitungan 5%
+     Jumlah player: 5 ID
 
 2) Narasi → tetap narasi rapi.
 3) List syarat → tetap bullet/numbered list.
@@ -219,6 +275,7 @@ DILARANG KERAS:
 - Parafrase apapun.
 - Generate JSON.
 - Mengubah cell yang sudah punya nilai di Pass 1.
+- Menambah / menghapus marker headline \`## \` dari Pass 1 (preserve apa adanya).
 
 HANYA BOLEH:
 - Mengganti \`(kosong)\` / \`—\` / cell hilang di field yang TERBUKTI dicakup merged cell di image.

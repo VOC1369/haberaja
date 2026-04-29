@@ -241,7 +241,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
   const handleCopy = async () => {
     if (!result) return;
     try {
-      await navigator.clipboard.writeText(result);
+      // Strip "## " presentation markers when copying — user expects clean text.
+      const clean = result.replace(/^##\s+/gm, "");
+      await navigator.clipboard.writeText(clean);
       toast.success("Copied");
     } catch {
       toast.error("Gagal menyalin");
@@ -253,7 +255,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     try {
       // Always send the raw parser baseline to extractor — never the polished/
       // restructured presentation layer (markdown markers would pollute parsing).
-      const payload = rawResult ?? result;
+      // Strip "## " headline markers (presentation-only hint) before handoff.
+      const baseline = rawResult ?? result;
+      const payload = baseline.replace(/^##\s+/gm, "");
       localStorage.setItem(PARSER_HANDOFF_KEY, payload);
       toast.success("Dikirim ke Pseudo Extractor");
       if (onSendToPseudo) onSendToPseudo();
@@ -494,9 +498,10 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     className="px-5 py-4 text-sm text-foreground leading-relaxed"
                   />
                 ) : (
-                  <pre className="whitespace-pre-wrap break-words px-5 py-4 text-sm text-foreground font-mono leading-relaxed">
-                    {result}
-                  </pre>
+                  <MiniMarkdown
+                    text={result}
+                    className="px-5 py-4 text-sm text-foreground font-mono leading-relaxed whitespace-pre-wrap break-words"
+                  />
                 )}
               </div>
             </div>
