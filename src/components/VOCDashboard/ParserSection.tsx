@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef } from "react";
-import { Loader2, Plus, X, ArrowUp, Copy, Send, Undo2, AlertTriangle, Wand2 } from "lucide-react";
+import { Loader2, Plus, X, ArrowUp, Copy, Send, Undo2, AlertTriangle, Wand2, RotateCcw } from "lucide-react";
 import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -254,7 +254,7 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
     <div className="relative flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
         <div
-          className={`page-wrapper p-6 pb-20 ${
+          className={`page-wrapper p-6 ${result ? "pb-28" : "pb-20"} ${
             !result && !isLoading ? "min-h-[calc(100vh-160px)] flex flex-col justify-center" : ""
           } space-y-6`}
         >
@@ -443,41 +443,6 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-1">
-                    {isPolished || isRestructured ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleBackToRaw}
-                        title="Kembalikan ke versi asli parser"
-                        className="rounded-full gap-1.5 h-8"
-                      >
-                        <Undo2 className="h-3.5 w-3.5" />
-                        Back to Raw
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handlePolish}
-                        disabled={!rawResult}
-                        title="Rapikan tampilan (deterministic, tidak mengubah data)"
-                        className="rounded-full gap-1.5 h-8 text-button-hover hover:text-button-hover hover:bg-button-hover/10"
-                      >
-                        <Wand2 className="h-3.5 w-3.5" />
-                        Polish
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={handleCopy}
-                      title="Copy hasil parser"
-                      className="rounded-full"
-                    >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
                 {isRestructured ? (
                   <MiniMarkdown
@@ -490,21 +455,77 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                   </pre>
                 )}
               </div>
-
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <Button variant="outline" onClick={handleReset} className="rounded-full">
-                  <X className="h-4 w-4" />
-                  Mulai ulang
-                </Button>
-                <Button variant="golden" onClick={handleSendToPseudo} className="rounded-full">
-                  <Send className="h-4 w-4" />
-                  Send to Pseudo Extractor
-                </Button>
-              </div>
             </div>
           )}
         </div>
       </ScrollArea>
+
+      {/* FIXED ACTION BAR — Consistent with PseudoKnowledgeSection */}
+      {result && !isLoading && (
+        <div className="footer-bar">
+          <div className="footer-bar-content">
+            {/* Left: Restart */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                className="h-11 px-6 gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Restart
+              </Button>
+            </div>
+
+            {/* Center: empty (reserved for status badges, parity with extractor) */}
+            <div className="flex items-center gap-3" />
+
+            {/* Right: Polish/Back to Raw + Copy + Send */}
+            <div className="flex items-center gap-3">
+              {isPolished || isRestructured ? (
+                <Button
+                  variant="outline"
+                  onClick={handleBackToRaw}
+                  className="h-11 px-4 gap-2"
+                  title="Kembalikan ke versi asli parser"
+                >
+                  <Undo2 className="w-4 h-4" />
+                  Back to Raw
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={handlePolish}
+                  disabled={!rawResult}
+                  className="h-11 px-4 gap-2"
+                  title="Rapikan tampilan (deterministic, tidak mengubah data)"
+                >
+                  <Wand2 className="w-4 h-4" />
+                  Polish
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                onClick={handleCopy}
+                className="h-11 px-4 gap-2"
+                title="Copy hasil parser"
+              >
+                <Copy className="w-4 h-4" />
+                Copy
+              </Button>
+
+              <Button
+                variant="golden"
+                onClick={handleSendToPseudo}
+                className="h-11 px-6 gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Send to Pseudo Extractor
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
