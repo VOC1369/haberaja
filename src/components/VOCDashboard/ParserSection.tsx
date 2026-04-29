@@ -474,9 +474,6 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                     >
                       {isPolished || isRestructured ? "Polished" : "Parser Result"}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {result.length} karakter
-                    </span>
                     {polishWarning && (
                       <Badge
                         className="bg-success/10 text-success border-0 gap-1 hover:bg-success/15 focus:ring-1 focus:ring-success/40 transition-colors"
@@ -487,6 +484,9 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                       </Badge>
                     )}
                   </div>
+                  <Badge className="bg-muted text-muted-foreground border-0 hover:bg-muted/80 transition-colors">
+                    {result.length} karakter
+                  </Badge>
                 </div>
                 {isRestructured ? (
                   <MiniMarkdown
