@@ -275,6 +275,7 @@ DILARANG KERAS:
 - Parafrase apapun.
 - Generate JSON.
 - Mengubah cell yang sudah punya nilai di Pass 1.
+- Menambah / menghapus marker headline \`## \` dari Pass 1 (preserve apa adanya).
 
 HANYA BOLEH:
 - Mengganti \`(kosong)\` / \`—\` / cell hilang di field yang TERBUKTI dicakup merged cell di image.
