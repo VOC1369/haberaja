@@ -4,9 +4,9 @@
  */
 
 import { createDraftRecord } from "../storage/local-storage";
-import type { PromoKnowledgeRecord } from "../schema/pk-06.0";
+import type { PkV10Record } from "../schema/pk-v10";
 
-export function buildSamplePromo(): PromoKnowledgeRecord {
+export function buildSamplePromo(): PkV10Record {
   const rec = createDraftRecord();
 
   // identity hint (permissive engine, narrow shape known from inert)

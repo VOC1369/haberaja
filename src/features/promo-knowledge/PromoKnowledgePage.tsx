@@ -30,7 +30,8 @@ import {
 import { validatePromoKnowledge } from "@/features/promo-knowledge/validator";
 import { buildSamplePromo } from "@/features/promo-knowledge/fixtures/sample-claim-engine";
 import { PK_REGISTRY } from "@/features/promo-knowledge/registry";
-import type { PromoKnowledgeRecord, LifecycleState } from "@/features/promo-knowledge/schema/pk-06.0";
+import type { LifecycleState } from "@/features/promo-knowledge/schema/pk-06.0";
+import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 
 const NEXT_STATE: Partial<Record<LifecycleState, LifecycleState>> = {
   ai_draft: "reviewed",
@@ -40,7 +41,7 @@ const NEXT_STATE: Partial<Record<LifecycleState, LifecycleState>> = {
 };
 
 export default function PromoKnowledgePage() {
-  const [record, setRecord] = useState<PromoKnowledgeRecord>(() => createDraftRecord());
+  const [record, setRecord] = useState<PkV10Record>(() => createDraftRecord());
   const [list, setList] = useState<PkIndexEntry[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
 

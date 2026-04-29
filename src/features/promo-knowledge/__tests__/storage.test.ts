@@ -1,17 +1,17 @@
 /**
- * PK-06.0 STORAGE — Gate 1.5 hardening test.
+ * STORAGE — V.10 contract test.
  *
- * Contract:
- *   saveRecord() MUST re-inject governance_version, domain_version, and domain
- *   from the Registry, even if the caller mutated/tampered them before save.
- *   This is D-6 enforcement at the storage boundary.
+ * Updated for Step 2 (V.10 migration). The legacy D-6 re-injection contract
+ * (governance_version / domain_version / domain top-level fields) has been
+ * dropped. V.10 carries its schema stamp inside `meta_engine.schema_block`.
+ *
+ * This test now asserts the V.10 dumb-upsert contract: updated_at bumps,
+ * record persists, no legacy field injection.
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { saveRecord, createDraftRecord } from "../storage/local-storage";
-import { PK_REGISTRY } from "../registry";
 
-// Minimal in-memory localStorage stub for node test env.
 class MemoryStorage {
   private store = new Map<string, string>();
   getItem(k: string) {
@@ -38,30 +38,12 @@ beforeEach(() => {
   (globalThis as { localStorage?: Storage }).localStorage = new MemoryStorage() as unknown as Storage;
 });
 
-describe("PK-06.0 Storage — D-6 re-injection on save", () => {
-  it("re-injects governance metadata even when caller tampers all three fields", () => {
+describe("PKB_Wolfbrain V.10 Storage — dumb upsert", () => {
+  it("persists V.10 schema stamp inside meta_engine.schema_block", () => {
     const rec = createDraftRecord();
-    // Tamper with all three D-6 fields
-    (rec as { governance_version: string }).governance_version = "V.99-TAMPERED";
-    (rec as { domain_version: string }).domain_version = "PK-99.9-TAMPERED";
-    (rec as { domain: string }).domain = "evil_domain";
-
     const saved = saveRecord(rec);
-
-    expect(saved.governance_version).toBe(PK_REGISTRY.governance_version);
-    expect(saved.domain_version).toBe(PK_REGISTRY.domain_version);
-    expect(saved.domain).toBe(PK_REGISTRY.domain);
-  });
-
-  it("re-injects on every subsequent save (idempotent enforcement)", () => {
-    const rec = createDraftRecord();
-    const first = saveRecord(rec);
-    // Tamper after save and re-save
-    (first as { domain: string }).domain = "tampered_again";
-    const second = saveRecord(first);
-    expect(second.domain).toBe(PK_REGISTRY.domain);
-    expect(second.governance_version).toBe(PK_REGISTRY.governance_version);
-    expect(second.domain_version).toBe(PK_REGISTRY.domain_version);
+    expect(saved.meta_engine.schema_block.schema_name).toBe("PKB_Wolfbrain");
+    expect(saved.meta_engine.schema_block.schema_version).toBe("V.10");
   });
 
   it("bumps updated_at on save", async () => {
@@ -70,5 +52,13 @@ describe("PK-06.0 Storage — D-6 re-injection on save", () => {
     await new Promise((r) => setTimeout(r, 5));
     const saved = saveRecord(rec);
     expect(saved.updated_at >= before).toBe(true);
+  });
+
+  it("does NOT inject legacy V.09 governance fields", () => {
+    const rec = createDraftRecord();
+    const saved = saveRecord(rec);
+    expect((saved as unknown as Record<string, unknown>).governance_version).toBeUndefined();
+    expect((saved as unknown as Record<string, unknown>).domain_version).toBeUndefined();
+    expect((saved as unknown as Record<string, unknown>)._schema).toBeUndefined();
   });
 });
