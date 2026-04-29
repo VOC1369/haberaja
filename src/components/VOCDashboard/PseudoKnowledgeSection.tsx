@@ -2083,7 +2083,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     <TooltipTrigger asChild>
                       <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-destructive/30 bg-destructive/10 text-xs font-medium text-destructive cursor-help">
                         <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
-                        PK V.09: ❌ gagal{pkFailReason ? ` (${pkFailReason})` : ""} — fallback aktif
+                        Wolfbrain.V10: gagal{pkFailReason ? ` (${pkFailReason})` : ""}
                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="top" className="max-w-xs">
