@@ -623,20 +623,20 @@ function QuestionCard({
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant={priority === "A" ? "destructive" : "warning"} size="sm">
-              {priority === "A" ? "Wajib" : "Konfirmasi"}
-            </Badge>
-            {isAnswered && (
-              <Badge variant="success" size="sm">
-                <CheckCircle2 className="h-3 w-3" />
-                Terjawab
-              </Badge>
-            )}
-          </div>
           <h4 className="text-sm font-medium text-foreground">
             {number}. {spec.question}
           </h4>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant={priority === "A" ? "destructive" : "warning"} size="sm">
+            {priority === "A" ? "Wajib" : "Konfirmasi"}
+          </Badge>
+          {isAnswered && (
+            <Badge variant="success" size="sm">
+              <CheckCircle2 className="h-3 w-3" />
+              Terjawab
+            </Badge>
+          )}
         </div>
       </div>
 
