@@ -488,9 +488,16 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                       </Badge>
                     )}
                   </div>
-                  <Badge className="bg-muted text-muted-foreground border-0 hover:bg-muted/80 transition-colors">
-                    {result.length}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {elapsedMs > 0 && (
+                      <Badge className="bg-muted text-muted-foreground border-0 hover:bg-muted/80 transition-colors">
+                        ⏱ {(elapsedMs / 1000).toFixed(1)}s
+                      </Badge>
+                    )}
+                    <Badge className="bg-muted text-muted-foreground border-0 hover:bg-muted/80 transition-colors">
+                      {result.length}
+                    </Badge>
+                  </div>
                 </div>
                 {isRestructured ? (
                   <MiniMarkdown
