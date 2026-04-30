@@ -582,6 +582,73 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       log.push(entry);
     }
 
+    // ── Provider verify commit ─────────────────────────────────────────
+    if (providerTrigger.show && providerAnswered) {
+      const prevWhitelist = draft.scope_engine?.game_block?.eligible_providers ?? [];
+      const prevBlacklist = draft.scope_engine?.blacklist_block?.providers ?? [];
+      const prevWConfRaw = draft.ai_confidence[PROVIDER_WHITELIST_PATH];
+      const prevWConf: number | null =
+        typeof prevWConfRaw === "number" ? prevWConfRaw : null;
+      const prevWStatus: string | null =
+        typeof draft._field_status[PROVIDER_WHITELIST_PATH] === "string"
+          ? (draft._field_status[PROVIDER_WHITELIST_PATH] as string)
+          : null;
+
+      if (providerState.mode === "all") {
+        // eligible_providers stays [] AND blacklist stays []
+        // Explicit log entry distinguishes "all confirmed" from "not yet filled".
+        draft._field_status[PROVIDER_WHITELIST_PATH] = "explicit";
+        log.push({
+          field_path: PROVIDER_WHITELIST_PATH,
+          previous_value: [...prevWhitelist],
+          new_value: [],
+          previous_ai_confidence: prevWConf,
+          previous_field_status: prevWStatus,
+          overridden_by: "admin",
+          timestamp: ts,
+          admin_note: "admin confirmed: all providers allowed",
+        });
+      } else if (providerState.mode === "custom") {
+        const newWhitelist = [...providerState.whitelist];
+        const newBlacklist = [...providerState.blacklist];
+        draft.scope_engine.game_block.eligible_providers = newWhitelist as never;
+        draft.scope_engine.blacklist_block.providers = newBlacklist as never;
+        draft._field_status[PROVIDER_WHITELIST_PATH] = "explicit";
+        log.push({
+          field_path: PROVIDER_WHITELIST_PATH,
+          previous_value: [...prevWhitelist],
+          new_value: newWhitelist,
+          previous_ai_confidence: prevWConf,
+          previous_field_status: prevWStatus,
+          overridden_by: "admin",
+          timestamp: ts,
+        });
+        // Only log blacklist if it actually changed
+        const blacklistChanged =
+          prevBlacklist.length !== newBlacklist.length ||
+          prevBlacklist.some((v, i) => v !== newBlacklist[i]);
+        if (blacklistChanged) {
+          const prevBConfRaw = draft.ai_confidence[PROVIDER_BLACKLIST_PATH];
+          const prevBConf: number | null =
+            typeof prevBConfRaw === "number" ? prevBConfRaw : null;
+          const prevBStatus: string | null =
+            typeof draft._field_status[PROVIDER_BLACKLIST_PATH] === "string"
+              ? (draft._field_status[PROVIDER_BLACKLIST_PATH] as string)
+              : null;
+          draft._field_status[PROVIDER_BLACKLIST_PATH] = "explicit";
+          log.push({
+            field_path: PROVIDER_BLACKLIST_PATH,
+            previous_value: [...prevBlacklist],
+            new_value: newBlacklist,
+            previous_ai_confidence: prevBConf,
+            previous_field_status: prevBStatus,
+            overridden_by: "admin",
+            timestamp: ts,
+          });
+        }
+      }
+    }
+
     draftAny._human_override_log = log;
 
     // Atomic commit: apply resolver patches + append _ai_resolver_log
