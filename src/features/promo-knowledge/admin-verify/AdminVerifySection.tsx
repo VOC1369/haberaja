@@ -144,7 +144,35 @@ const isUpfront = (r: PkV10Record) =>
 // FIELD SPECS — radio-first, no jargon labels
 // ─────────────────────────────────────────────────────────────────────────
 
-/** Convert enum string to natural label (capitalize, strip underscores). */
+/** ID label map — Bahasa Indonesia untuk semua opsi enum. */
+const ID_LABELS: Record<string, string> = {
+  // Stacking policy
+  no_stacking: "Tidak bisa digabung",
+  stack_with_whitelist: "Bisa digabung (whitelist)",
+  stack_freely: "Bisa digabung bebas",
+  conditional_stack: "Bersyarat",
+  // Claim method
+  auto: "Otomatis",
+  manual_livechat: "Manual via Livechat",
+  manual_whatsapp: "Manual via WhatsApp",
+  manual_telegram: "Manual via Telegram",
+  in_app_button: "Tombol di Aplikasi",
+  form_submission: "Form",
+  cs_approval: "Approval CS",
+  // Turnover basis
+  deposit_only: "Deposit",
+  bonus_only: "Bonus",
+  deposit_plus_bonus: "Deposit + Bonus",
+  total_bet: "Total Taruhan",
+  total_loss: "Total Kekalahan",
+  // Geo restriction
+  indonesia: "Indonesia",
+  jakarta: "Jakarta",
+  sea: "Asia Tenggara",
+  global: "Semua wilayah",
+};
+
+/** Fallback: capitalize, strip underscores. */
 const naturalize = (s: string): string =>
   s
     .replace(/[_-]+/g, " ")
@@ -152,7 +180,7 @@ const naturalize = (s: string): string =>
     .trim();
 
 const enumToOptions = (values: readonly string[]): ChoiceOption[] =>
-  values.map((v) => ({ value: v, label: naturalize(v) }));
+  values.map((v) => ({ value: v, label: ID_LABELS[v] ?? naturalize(v) }));
 
 const FIELD_SPECS: FieldSpec[] = [
   // 1. Validity
