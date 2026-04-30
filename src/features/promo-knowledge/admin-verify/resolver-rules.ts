@@ -54,50 +54,15 @@ const containsAny = (hay: string, needles: string[]): boolean =>
 // ─────────────────────────────────────────────────────────────────────────
 // Rule 1 — scope_engine.game_block.eligible_providers
 // ─────────────────────────────────────────────────────────────────────────
-const PROVIDER_SIGNALS = [
-  "provider",
-  "pragmatic",
-  "pg soft",
-  "pg",
-  "habanero",
-  "spadegaming",
-  "joker",
-  "microgaming",
-  "playtech",
-  "kecuali",
-  "tidak termasuk",
-  "hanya",
-];
-
+// HUMAN-VERIFIED MODE (Priority A — wajib).
+// AI TIDAK PERNAH meng-infer provider. Keputusan ini operasional, bukan tekstual.
+// Resolver selalu return null → UI Admin Verify wajib tampilkan pertanyaan
+// jika game_domain terisi tapi eligible_providers kosong.
+// Jawaban admin masuk _human_override_log (bukan _ai_resolver_log).
 export const RULE_ELIGIBLE_PROVIDERS = {
   path: "scope_engine.game_block.eligible_providers",
-  resolve(ctx: ResolverContext): ResolverDecision | null {
-    const game = ctx.record.scope_engine?.game_block;
-    const blacklist = ctx.record.scope_engine?.blacklist_block;
-    const providers = game?.eligible_providers ?? [];
-    const domain = (game?.game_domain ?? "").toLowerCase();
-
-    if (!isEmpty(providers)) return null; // already filled, no question
-
-    const hasWhitelist = !isEmpty(providers);
-    const hasBlacklistProviders = !isEmpty(blacklist?.providers);
-    const hasBlacklistGames = !isEmpty(blacklist?.games);
-
-    // Guard: only infer if raw_content is truly silent about providers
-    if (
-      domain === "slot" &&
-      !hasWhitelist &&
-      !hasBlacklistProviders &&
-      !hasBlacklistGames &&
-      !containsAny(ctx.rawLower, PROVIDER_SIGNALS)
-    ) {
-      return {
-        status: "inferred",
-        reasoning:
-          "game_domain=slot tanpa whitelist/blacklist provider dan source tidak menyebut sinyal provider apapun → diasumsikan berlaku untuk semua provider slot.",
-      };
-    }
-    return null; // fall through to ask
+  resolve(_ctx: ResolverContext): ResolverDecision | null {
+    return null;
   },
 };
 
