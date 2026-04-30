@@ -12,7 +12,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { Loader2, Plus, X, ArrowUp, Copy, Send, Undo2, AlertTriangle, Wand2, RotateCcw, CheckCircle2 } from "lucide-react";
+import { Loader2, Plus, X, ArrowUp, Copy, Send, Undo2, AlertTriangle, Wand2, RotateCcw, CheckCircle2, Timer } from "lucide-react";
 import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -490,8 +490,14 @@ export function ParserSection({ onSendToPseudo }: ParserSectionProps) {
                   </div>
                   <div className="flex items-center gap-2">
                     {elapsedMs > 0 && (
-                      <Badge className="bg-muted text-muted-foreground border-0 hover:bg-muted/80 transition-colors">
-                        ⏱ {(elapsedMs / 1000).toFixed(1)}s
+                      <Badge variant="golden" className="gap-1.5">
+                        <Timer className="h-3.5 w-3.5" />
+                        {(() => {
+                          const totalSec = Math.floor(elapsedMs / 1000);
+                          const mm = String(Math.floor(totalSec / 60)).padStart(2, "0");
+                          const ss = String(totalSec % 60).padStart(2, "0");
+                          return `${mm}.${ss} Second`;
+                        })()}
                       </Badge>
                     )}
                     <Badge className="bg-muted text-muted-foreground border-0 hover:bg-muted/80 transition-colors">
