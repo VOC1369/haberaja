@@ -406,9 +406,17 @@ export interface AdminVerifySectionProps {
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
   const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
 
-  const questions = useMemo<GeneratedQuestion[]>(
-    () => (record ? generateQuestions(record) : []),
+  const resolverOutput = useMemo<ResolverOutput>(
+    () =>
+      record
+        ? resolveRecord(record)
+        : { skipPaths: new Set(), pendingEntries: [], pendingValuePatches: [] },
     [record],
+  );
+
+  const questions = useMemo<GeneratedQuestion[]>(
+    () => (record ? generateQuestions(record, resolverOutput.skipPaths) : []),
+    [record, resolverOutput],
   );
 
   if (!record) return null;
