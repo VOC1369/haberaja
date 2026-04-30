@@ -290,15 +290,38 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     draft._field_status = { ...(draft._field_status ?? {}) };
     draft.ai_confidence = { ...(draft.ai_confidence ?? {}) };
 
+    // Sidecar audit log — root-level, append-only.
+    // Pola konsisten dengan `_field_status` & `ai_confidence` (governance, bukan engine).
+    // Type cast lokal: schema V10 status "locked" — tidak menyentuh interface PkV10Record.
+    const draftAny = draft as PkV10Record & { _human_override_log?: HumanOverrideEntry[] };
+    const existingLog: HumanOverrideEntry[] = Array.isArray(draftAny._human_override_log)
+      ? [...draftAny._human_override_log]
+      : [];
+    const ts = new Date().toISOString();
+
     for (const q of questions) {
       const raw = adminAnswers[q.spec.path];
       if (isEmptyDefault(raw)) continue;
+
+      const previousValue = q.spec.read(draft);
       q.spec.write(draft, raw);
+      const newValue = q.spec.read(draft);
+
       draft._field_status[q.spec.path] = "explicit";
       delete draft.ai_confidence[q.spec.path];
+
+      // Append-only — semua jawaban admin dilog (mengisi kosong / replace / fix typo)
+      existingLog.push({
+        field_path: q.spec.path,
+        previous_value: previousValue ?? null,
+        new_value: newValue ?? null,
+        overridden_by: "admin",
+        timestamp: ts,
+      });
     }
 
-    draft.updated_at = new Date().toISOString();
+    draftAny._human_override_log = existingLog;
+    draft.updated_at = ts;
     onApply(draft);
     setAdminAnswers({});
   };
