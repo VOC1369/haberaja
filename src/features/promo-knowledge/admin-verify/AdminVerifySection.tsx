@@ -708,11 +708,14 @@ function QuestionInput({
   // Radio (with optional date/number for CUSTOM)
   if (!spec.options) return null;
 
+  const useTwoCols = spec.options.length >= 3;
+
   return (
     <div className="space-y-3">
       <RadioGroup
         value={choice}
         onValueChange={(v) => onChange({ choice: v, customValue: v === CUSTOM ? answer?.customValue : undefined })}
+        className={useTwoCols ? "grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2" : "grid gap-2"}
       >
         {spec.options.map((opt) => {
           const id = `${spec.path}-${opt.value}`;
