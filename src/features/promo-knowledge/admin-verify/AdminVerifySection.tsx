@@ -51,12 +51,12 @@ import {
 } from "@/components/ui/select";
 import {
   PK_V10_CLAIM_METHOD,
-  PK_V10_PAYOUT_DIRECTION,
-  PK_V10_GAME_PROVIDER,
   PK_V10_GEO_RESTRICTION,
   PK_V10_STACKING_POLICY,
   PK_V10_TURNOVER_BASIS,
 } from "@/features/promo-knowledge/schema/pk-v10";
+import { Input } from "@/components/ui/input";
+import { X } from "lucide-react";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 import {
   resolveRecord,
@@ -306,18 +306,8 @@ const FIELD_SPECS: FieldSpec[] = [
     isCritical: isUpfront,
   },
 
-  // 8. Game providers (conditional, multi)
-  {
-    path: "scope_engine.game_block.eligible_providers",
-    question: "Provider game mana saja yang boleh?",
-    inputKind: "multi-chip",
-    multiOptions: PK_V10_GAME_PROVIDER,
-    read: (r) => r.scope_engine?.game_block?.eligible_providers,
-    write: (d, a) => {
-      d.scope_engine.game_block.eligible_providers = a.customSelection ?? [];
-    },
-    isCritical: isGameDependent,
-  },
+  // 8. Eligible providers — moved to dedicated ProviderVerifyCard (custom flow).
+  //    See PROVIDER_FIELD_PATH constant + ProviderVerifyCard component below.
 
   // 9. Geo restriction (conditional)
   {
