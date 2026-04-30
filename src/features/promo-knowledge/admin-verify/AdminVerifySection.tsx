@@ -531,8 +531,8 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         )}
       </div>
 
-      {/* Question grid — 2 cols on desktop, 1 col mobile */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Questions stacked full-width; radio options inside use 2 cols when ≥3 */}
+      <div className="space-y-6">
         {questions.map((q, idx) => (
           <QuestionCard
             key={q.spec.path}
