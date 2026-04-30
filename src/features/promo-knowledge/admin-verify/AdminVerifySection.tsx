@@ -51,12 +51,12 @@ import {
 } from "@/components/ui/select";
 import {
   PK_V10_CLAIM_METHOD,
-  PK_V10_PAYOUT_DIRECTION,
-  PK_V10_GAME_PROVIDER,
   PK_V10_GEO_RESTRICTION,
   PK_V10_STACKING_POLICY,
   PK_V10_TURNOVER_BASIS,
 } from "@/features/promo-knowledge/schema/pk-v10";
+import { Input } from "@/components/ui/input";
+import { X } from "lucide-react";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 import {
   resolveRecord,
@@ -137,10 +137,6 @@ const promoTypeOf = (r: PkV10Record): string =>
 const isDepositLike = (r: PkV10Record) => {
   const t = promoTypeOf(r);
   return t.includes("deposit") || t.includes("cashback") || t.includes("rolling");
-};
-const isGameDependent = (r: PkV10Record) => {
-  const t = promoTypeOf(r);
-  return t.includes("rolling") || t.includes("cashback");
 };
 const isUpfront = (r: PkV10Record) =>
   (r.reward_engine?.payout_direction ?? "").toLowerCase() === "upfront";
@@ -306,18 +302,8 @@ const FIELD_SPECS: FieldSpec[] = [
     isCritical: isUpfront,
   },
 
-  // 8. Game providers (conditional, multi)
-  {
-    path: "scope_engine.game_block.eligible_providers",
-    question: "Provider game mana saja yang boleh?",
-    inputKind: "multi-chip",
-    multiOptions: PK_V10_GAME_PROVIDER,
-    read: (r) => r.scope_engine?.game_block?.eligible_providers,
-    write: (d, a) => {
-      d.scope_engine.game_block.eligible_providers = a.customSelection ?? [];
-    },
-    isCritical: isGameDependent,
-  },
+  // 8. Eligible providers — moved to dedicated ProviderVerifyCard (custom flow).
+  //    See PROVIDER_FIELD_PATH constant + ProviderVerifyCard component below.
 
   // 9. Geo restriction (conditional)
   {
@@ -403,8 +389,72 @@ export interface AdminVerifySectionProps {
   onApply: (next: PkV10Record) => void;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// PROVIDER VERIFY — custom flow (V10 paths only, no hardcoded list)
+// ─────────────────────────────────────────────────────────────────────────
+const PROVIDER_WHITELIST_PATH = "scope_engine.game_block.eligible_providers";
+const PROVIDER_BLACKLIST_PATH = "scope_engine.blacklist_block.providers";
+
+type ProviderMode = "" | "all" | "custom";
+
+interface ProviderState {
+  mode: ProviderMode;
+  whitelist: string[];
+  blacklist: string[];
+}
+
+/**
+ * Trigger condition:
+ *   - game_domain empty                                 → no card
+ *   - eligible_providers filled                         → no card
+ *   - eligible empty + blacklist empty  → show "all vs custom" radio
+ *   - eligible empty + blacklist filled → show custom mode prefilled (review)
+ */
+function evaluateProviderTrigger(record: PkV10Record): {
+  show: boolean;
+  domain: string;
+  prefilledBlacklist: string[];
+  initialMode: ProviderMode;
+} {
+  const domain = (record.scope_engine?.game_block?.game_domain ?? "").trim();
+  const whitelist = record.scope_engine?.game_block?.eligible_providers ?? [];
+  const blacklist = record.scope_engine?.blacklist_block?.providers ?? [];
+
+  if (!domain) return { show: false, domain, prefilledBlacklist: [], initialMode: "" };
+  if (whitelist.length > 0)
+    return { show: false, domain, prefilledBlacklist: [], initialMode: "" };
+
+  if (blacklist.length > 0) {
+    return { show: true, domain, prefilledBlacklist: blacklist, initialMode: "custom" };
+  }
+  return { show: true, domain, prefilledBlacklist: [], initialMode: "" };
+}
+
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
   const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
+
+  const providerTrigger = useMemo(
+    () =>
+      record
+        ? evaluateProviderTrigger(record)
+        : { show: false, domain: "", prefilledBlacklist: [] as string[], initialMode: "" as ProviderMode },
+    [record],
+  );
+  const triggerKey = `${providerTrigger.show}|${providerTrigger.domain}|${providerTrigger.prefilledBlacklist.join(",")}|${providerTrigger.initialMode}`;
+  const [providerState, setProviderState] = useState<ProviderState>({
+    mode: providerTrigger.initialMode,
+    whitelist: [],
+    blacklist: [...providerTrigger.prefilledBlacklist],
+  });
+  // Reset when underlying record changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useMemo(() => {
+    setProviderState({
+      mode: providerTrigger.initialMode,
+      whitelist: [],
+      blacklist: [...providerTrigger.prefilledBlacklist],
+    });
+  }, [triggerKey]);
 
   const resolverOutput = useMemo<ResolverOutput>(
     () =>
@@ -427,12 +477,21 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   const hasResolverPending =
     resolverOutput.pendingEntries.length > 0 ||
     resolverOutput.pendingValuePatches.length > 0;
+  // Provider verify is "answered" when admin picked "all" OR picked "custom" with at least 1 whitelist provider
+  const providerAnswered =
+    providerTrigger.show &&
+    (providerState.mode === "all" ||
+      (providerState.mode === "custom" && providerState.whitelist.length > 0));
+  const providerPendingRequired = providerTrigger.show && !providerAnswered;
   // Hybrid: Apply enabled if (admin answered AND no critical missing) OR resolver has pending output
   const canApply =
-    (answeredCount > 0 && unansweredCritical.length === 0) || hasResolverPending;
+    ((answeredCount > 0 || providerAnswered) &&
+      unansweredCritical.length === 0 &&
+      !providerPendingRequired) ||
+    (hasResolverPending && !providerPendingRequired);
 
-  // Empty state — only when truly nothing to do (no questions AND no resolver pending)
-  if (questions.length === 0 && !hasResolverPending) {
+  // Empty state — only when truly nothing to do
+  if (questions.length === 0 && !hasResolverPending && !providerTrigger.show) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
@@ -523,6 +582,73 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       log.push(entry);
     }
 
+    // ── Provider verify commit ─────────────────────────────────────────
+    if (providerTrigger.show && providerAnswered) {
+      const prevWhitelist = draft.scope_engine?.game_block?.eligible_providers ?? [];
+      const prevBlacklist = draft.scope_engine?.blacklist_block?.providers ?? [];
+      const prevWConfRaw = draft.ai_confidence[PROVIDER_WHITELIST_PATH];
+      const prevWConf: number | null =
+        typeof prevWConfRaw === "number" ? prevWConfRaw : null;
+      const prevWStatus: string | null =
+        typeof draft._field_status[PROVIDER_WHITELIST_PATH] === "string"
+          ? (draft._field_status[PROVIDER_WHITELIST_PATH] as string)
+          : null;
+
+      if (providerState.mode === "all") {
+        // eligible_providers stays [] AND blacklist stays []
+        // Explicit log entry distinguishes "all confirmed" from "not yet filled".
+        draft._field_status[PROVIDER_WHITELIST_PATH] = "explicit";
+        log.push({
+          field_path: PROVIDER_WHITELIST_PATH,
+          previous_value: [...prevWhitelist],
+          new_value: [],
+          previous_ai_confidence: prevWConf,
+          previous_field_status: prevWStatus,
+          overridden_by: "admin",
+          timestamp: ts,
+          admin_note: "admin confirmed: all providers allowed",
+        });
+      } else if (providerState.mode === "custom") {
+        const newWhitelist = [...providerState.whitelist];
+        const newBlacklist = [...providerState.blacklist];
+        draft.scope_engine.game_block.eligible_providers = newWhitelist as never;
+        draft.scope_engine.blacklist_block.providers = newBlacklist as never;
+        draft._field_status[PROVIDER_WHITELIST_PATH] = "explicit";
+        log.push({
+          field_path: PROVIDER_WHITELIST_PATH,
+          previous_value: [...prevWhitelist],
+          new_value: newWhitelist,
+          previous_ai_confidence: prevWConf,
+          previous_field_status: prevWStatus,
+          overridden_by: "admin",
+          timestamp: ts,
+        });
+        // Only log blacklist if it actually changed
+        const blacklistChanged =
+          prevBlacklist.length !== newBlacklist.length ||
+          prevBlacklist.some((v, i) => v !== newBlacklist[i]);
+        if (blacklistChanged) {
+          const prevBConfRaw = draft.ai_confidence[PROVIDER_BLACKLIST_PATH];
+          const prevBConf: number | null =
+            typeof prevBConfRaw === "number" ? prevBConfRaw : null;
+          const prevBStatus: string | null =
+            typeof draft._field_status[PROVIDER_BLACKLIST_PATH] === "string"
+              ? (draft._field_status[PROVIDER_BLACKLIST_PATH] as string)
+              : null;
+          draft._field_status[PROVIDER_BLACKLIST_PATH] = "explicit";
+          log.push({
+            field_path: PROVIDER_BLACKLIST_PATH,
+            previous_value: [...prevBlacklist],
+            new_value: newBlacklist,
+            previous_ai_confidence: prevBConf,
+            previous_field_status: prevBStatus,
+            overridden_by: "admin",
+            timestamp: ts,
+          });
+        }
+      }
+    }
+
     draftAny._human_override_log = log;
 
     // Atomic commit: apply resolver patches + append _ai_resolver_log
@@ -563,10 +689,18 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
 
       {/* Questions stacked full-width; radio options inside use 2 cols when ≥3 */}
       <div className="space-y-6">
+        {providerTrigger.show && (
+          <ProviderVerifyCard
+            domain={providerTrigger.domain}
+            prefilledFromBlacklist={providerTrigger.prefilledBlacklist.length > 0}
+            state={providerState}
+            onChange={setProviderState}
+          />
+        )}
         {questions.map((q, idx) => (
           <QuestionCard
             key={q.spec.path}
-            number={idx + 1}
+            number={idx + 1 + (providerTrigger.show ? 1 : 0)}
             question={q}
             answer={answers[q.spec.path]}
             onChange={(patch) => setAnswer(q.spec.path, patch)}
@@ -782,6 +916,167 @@ function QuestionInput({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// PROVIDER VERIFY CARD — custom block (V10 paths only, no hardcoded list)
+// ─────────────────────────────────────────────────────────────────────────
+
+function ProviderVerifyCard({
+  domain,
+  prefilledFromBlacklist,
+  state,
+  onChange,
+}: {
+  domain: string;
+  prefilledFromBlacklist: boolean;
+  state: ProviderState;
+  onChange: (next: ProviderState) => void;
+}) {
+  const isAnswered =
+    state.mode === "all" || (state.mode === "custom" && state.whitelist.length > 0);
+
+  const setMode = (m: ProviderMode) => onChange({ ...state, mode: m });
+  const setWhitelist = (w: string[]) => onChange({ ...state, whitelist: w });
+  const setBlacklist = (b: string[]) => onChange({ ...state, blacklist: b });
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-medium text-foreground">
+            1. Apakah promo ini berlaku untuk semua provider {domain || "ini"}?
+          </h4>
+          {prefilledFromBlacklist && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Sistem mendeteksi blacklist provider sudah terisi. Mohon review aturan
+              provider khusus di bawah.
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant="destructive" size="sm">
+            Wajib
+          </Badge>
+          {isAnswered && (
+            <Badge variant="success" size="sm">
+              <CheckCircle2 className="h-3 w-3" />
+              Terjawab
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {!prefilledFromBlacklist && (
+        <RadioGroup
+          value={state.mode}
+          onValueChange={(v) => setMode(v as ProviderMode)}
+          className="grid gap-2"
+        >
+          <div className="flex items-center gap-3">
+            <RadioGroupItem value="all" id="provider-all" />
+            <Label htmlFor="provider-all" className="cursor-pointer text-sm font-normal text-foreground">
+              Ya, semua provider
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <RadioGroupItem value="custom" id="provider-custom" />
+            <Label htmlFor="provider-custom" className="cursor-pointer text-sm font-normal text-foreground">
+              Tidak, ada aturan provider khusus
+            </Label>
+          </div>
+        </RadioGroup>
+      )}
+
+      {state.mode === "custom" && (
+        <div className="space-y-4 pt-2 border-t border-border">
+          <TagInput
+            label="Provider yang boleh"
+            placeholder="Ketik nama provider, tekan Enter…"
+            tags={state.whitelist}
+            onChange={setWhitelist}
+          />
+          <TagInput
+            label="Provider yang diblokir (opsional)"
+            placeholder="Ketik nama provider, tekan Enter…"
+            tags={state.blacklist}
+            onChange={setBlacklist}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// TAG INPUT — minimal free-text tag input (no hardcoded list)
+// ─────────────────────────────────────────────────────────────────────────
+
+function TagInput({
+  label,
+  placeholder,
+  tags,
+  onChange,
+}: {
+  label: string;
+  placeholder?: string;
+  tags: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  const addTag = (raw: string) => {
+    const v = raw.trim();
+    if (!v) return;
+    if (tags.includes(v)) {
+      setDraft("");
+      return;
+    }
+    onChange([...tags, v]);
+    setDraft("");
+  };
+
+  const removeTag = (t: string) => onChange(tags.filter((x) => x !== t));
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium text-foreground">{label}</Label>
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {tags.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-button-hover/20 text-button-hover border border-button-hover/40"
+            >
+              {t}
+              <button
+                type="button"
+                onClick={() => removeTag(t)}
+                aria-label={`Hapus ${t}`}
+                className="hover:text-destructive transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <Input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            addTag(draft);
+          } else if (e.key === "Backspace" && draft === "" && tags.length > 0) {
+            removeTag(tags[tags.length - 1]);
+          }
+        }}
+        onBlur={() => draft && addTag(draft)}
+        placeholder={placeholder}
+      />
     </div>
   );
 }
