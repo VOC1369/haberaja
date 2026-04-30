@@ -54,6 +54,21 @@ const containsAny = (hay: string, needles: string[]): boolean =>
 // ─────────────────────────────────────────────────────────────────────────
 // Rule 1 — scope_engine.game_block.eligible_providers
 // ─────────────────────────────────────────────────────────────────────────
+const PROVIDER_SIGNALS = [
+  "provider",
+  "pragmatic",
+  "pg soft",
+  "pg",
+  "habanero",
+  "spadegaming",
+  "joker",
+  "microgaming",
+  "playtech",
+  "kecuali",
+  "tidak termasuk",
+  "hanya",
+];
+
 export const RULE_ELIGIBLE_PROVIDERS = {
   path: "scope_engine.game_block.eligible_providers",
   resolve(ctx: ResolverContext): ResolverDecision | null {
@@ -68,12 +83,18 @@ export const RULE_ELIGIBLE_PROVIDERS = {
     const hasBlacklistProviders = !isEmpty(blacklist?.providers);
     const hasBlacklistGames = !isEmpty(blacklist?.games);
 
-    // Inference: slot domain + no whitelist + no blacklist = "all slot providers"
-    if (domain === "slot" && !hasWhitelist && !hasBlacklistProviders && !hasBlacklistGames) {
+    // Guard: only infer if raw_content is truly silent about providers
+    if (
+      domain === "slot" &&
+      !hasWhitelist &&
+      !hasBlacklistProviders &&
+      !hasBlacklistGames &&
+      !containsAny(ctx.rawLower, PROVIDER_SIGNALS)
+    ) {
       return {
         status: "inferred",
         reasoning:
-          "game_domain=slot tanpa whitelist/blacklist provider → diasumsikan berlaku untuk semua provider slot.",
+          "game_domain=slot tanpa whitelist/blacklist provider dan source tidak menyebut sinyal provider apapun → diasumsikan berlaku untuk semua provider slot.",
       };
     }
     return null; // fall through to ask
@@ -83,7 +104,18 @@ export const RULE_ELIGIBLE_PROVIDERS = {
 // ─────────────────────────────────────────────────────────────────────────
 // Rule 2 — dependency_engine.stacking_block.stacking_policy
 // ─────────────────────────────────────────────────────────────────────────
-const NO_STACKING_PHRASES = [
+// IMPORTANT: PARTIAL_STACKING must be checked BEFORE FULL_NO_STACKING.
+// Partial phrases often contain full phrases as substring
+// (e.g. "tidak bisa digabung dengan promo tertentu" contains "tidak bisa digabung").
+// Reversing this order will misclassify partial as full. Do not reorder.
+const PARTIAL_STACKING = [
+  "tidak bisa digabung dengan promo tertentu",
+  "tidak dapat digabung dengan beberapa promo",
+  "kecuali promo",
+  "terkecuali",
+];
+
+const FULL_NO_STACKING = [
   "tidak bisa digabung",
   "tidak dapat digabung",
   "tidak boleh digabung",
@@ -103,13 +135,18 @@ export const RULE_STACKING_POLICY = {
     // Already filled correctly → no resolver action
     if (!isEmpty(current) && current !== "no_stacking") return null;
 
-    // Source explicitly says "no stacking" → normalize to canonical
-    if (containsAny(raw, NO_STACKING_PHRASES)) {
+    // Partial first — substring of full phrases would otherwise misfire
+    if (containsAny(raw, PARTIAL_STACKING)) {
+      return null; // ambiguous, biarkan admin yang putuskan
+    }
+
+    // Full no-stacking → normalize to canonical
+    if (containsAny(raw, FULL_NO_STACKING)) {
       if (current === "no_stacking") return null; // already canonical
       return {
         status: "normalized",
         reasoning:
-          'Source menyebut larangan menggabung promo → di-map ke canonical "no_stacking".',
+          'Source menyebut larangan menggabung promo secara penuh → di-map ke canonical "no_stacking".',
         canonicalValue: "no_stacking",
       };
     }
