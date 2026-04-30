@@ -55,6 +55,10 @@ interface HumanOverrideEntry {
   field_path: string;
   previous_value: unknown;
   new_value: unknown;
+  /** Snapshot of `ai_confidence[path]` BEFORE mutation. May be null. */
+  previous_ai_confidence: number | null;
+  /** Snapshot of `_field_status[path]` BEFORE mutation. May be null. */
+  previous_field_status: string | null;
   overridden_by: "admin";
   timestamp: string;
 }
@@ -319,14 +323,23 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       const raw = adminAnswers[q.spec.path];
       if (isEmptyDefault(raw)) continue;
 
+      // Snapshot BEFORE mutation — provenance completeness.
       const previousValue = q.spec.read(draft);
+      const prevConfRaw = draft.ai_confidence[q.spec.path];
+      const previousAiConfidence: number | null =
+        typeof prevConfRaw === "number" ? prevConfRaw : null;
+      const previousFieldStatus: string | null =
+        typeof draft._field_status[q.spec.path] === "string"
+          ? (draft._field_status[q.spec.path] as string)
+          : null;
+
       q.spec.write(draft, raw);
       const newValue = q.spec.read(draft);
 
-      // Human completion / admin verification → tandai final value sebagai explicit.
-      // PRESERVE `ai_confidence[path]` sebagai provenance AI draft (jangan dihapus).
-      // Jejak siapa yang isi (AI only / human completion / human correction) hidup di
-      // `_human_override_log` di bawah.
+      // `explicit` HANYA berarti field memiliki nilai yang jelas/final.
+      // Verifikasi manusia ditandai HANYA melalui `_human_override_log` (bukan oleh
+      // status ini). `ai_confidence[path]` TIDAK disentuh — tetap sebagai provenance
+      // AI draft.
       draft._field_status[q.spec.path] = "explicit";
 
       // Append-only — semua jawaban admin dilog (mengisi kosong / replace / fix typo)
@@ -334,6 +347,8 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         field_path: q.spec.path,
         previous_value: previousValue ?? null,
         new_value: newValue ?? null,
+        previous_ai_confidence: previousAiConfidence,
+        previous_field_status: previousFieldStatus,
         overridden_by: "admin",
         timestamp: ts,
       });
