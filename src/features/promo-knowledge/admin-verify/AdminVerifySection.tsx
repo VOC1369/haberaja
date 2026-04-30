@@ -138,10 +138,6 @@ const isDepositLike = (r: PkV10Record) => {
   const t = promoTypeOf(r);
   return t.includes("deposit") || t.includes("cashback") || t.includes("rolling");
 };
-const isGameDependent = (r: PkV10Record) => {
-  const t = promoTypeOf(r);
-  return t.includes("rolling") || t.includes("cashback");
-};
 const isUpfront = (r: PkV10Record) =>
   (r.reward_engine?.payout_direction ?? "").toLowerCase() === "upfront";
 
