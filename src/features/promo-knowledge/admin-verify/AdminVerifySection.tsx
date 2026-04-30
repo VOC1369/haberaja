@@ -7,9 +7,10 @@
  *   (Priority C — ambiguity — DEFERRED to Phase 2)
  *
  * Admin answers are kept in local state. On "Terapkan Jawaban":
- *   - merged into a deep-cloned PkV10Record
+ *   - merged into a deep-cloned PkV10Record (human completion / verification of AI draft)
  *   - _field_status[path] := "explicit"  (closest existing enum; gap noted)
- *   - ai_confidence[path] removed
+ *   - ai_confidence[path] PRESERVED as AI draft provenance (NOT deleted)
+ *   - _human_override_log[] appended (audit: AI only vs human completion vs correction)
  *   - updated_at bumped
  *   - parent receives the new record via onApply (NO auto-save)
  *
