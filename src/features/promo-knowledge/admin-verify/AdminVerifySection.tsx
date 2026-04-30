@@ -477,12 +477,21 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   const hasResolverPending =
     resolverOutput.pendingEntries.length > 0 ||
     resolverOutput.pendingValuePatches.length > 0;
+  // Provider verify is "answered" when admin picked "all" OR picked "custom" with at least 1 whitelist provider
+  const providerAnswered =
+    providerTrigger.show &&
+    (providerState.mode === "all" ||
+      (providerState.mode === "custom" && providerState.whitelist.length > 0));
+  const providerPendingRequired = providerTrigger.show && !providerAnswered;
   // Hybrid: Apply enabled if (admin answered AND no critical missing) OR resolver has pending output
   const canApply =
-    (answeredCount > 0 && unansweredCritical.length === 0) || hasResolverPending;
+    ((answeredCount > 0 || providerAnswered) &&
+      unansweredCritical.length === 0 &&
+      !providerPendingRequired) ||
+    (hasResolverPending && !providerPendingRequired);
 
-  // Empty state — only when truly nothing to do (no questions AND no resolver pending)
-  if (questions.length === 0 && !hasResolverPending) {
+  // Empty state — only when truly nothing to do
+  if (questions.length === 0 && !hasResolverPending && !providerTrigger.show) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
