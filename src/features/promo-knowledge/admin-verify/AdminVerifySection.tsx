@@ -424,10 +424,15 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   const answeredCount = Object.values(answers).filter((a) => a && a.choice).length;
   const criticalQuestions = questions.filter((q) => q.priority === "A");
   const unansweredCritical = criticalQuestions.filter((q) => !answers[q.spec.path]?.choice);
-  const canApply = answeredCount > 0 && unansweredCritical.length === 0;
+  const hasResolverPending =
+    resolverOutput.pendingEntries.length > 0 ||
+    resolverOutput.pendingValuePatches.length > 0;
+  // Hybrid: Apply enabled if (admin answered AND no critical missing) OR resolver has pending output
+  const canApply =
+    (answeredCount > 0 && unansweredCritical.length === 0) || hasResolverPending;
 
-  // Empty state
-  if (questions.length === 0) {
+  // Empty state — only when truly nothing to do (no questions AND no resolver pending)
+  if (questions.length === 0 && !hasResolverPending) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
