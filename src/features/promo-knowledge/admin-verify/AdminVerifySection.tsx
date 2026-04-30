@@ -127,7 +127,7 @@ const ALWAYS = () => true;
 const NEVER = () => false;
 
 const promoTypeOf = (r: PkV10Record): string =>
-  (r.meta_engine?.promo_block?.promo_type ?? "").toLowerCase();
+  (r.identity_engine?.promo_block?.promo_type ?? "").toLowerCase();
 
 const isDepositLike = (r: PkV10Record) => {
   const t = promoTypeOf(r);
