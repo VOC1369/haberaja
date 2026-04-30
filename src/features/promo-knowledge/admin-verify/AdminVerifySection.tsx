@@ -689,10 +689,18 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
 
       {/* Questions stacked full-width; radio options inside use 2 cols when ≥3 */}
       <div className="space-y-6">
+        {providerTrigger.show && (
+          <ProviderVerifyCard
+            domain={providerTrigger.domain}
+            prefilledFromBlacklist={providerTrigger.prefilledBlacklist.length > 0}
+            state={providerState}
+            onChange={setProviderState}
+          />
+        )}
         {questions.map((q, idx) => (
           <QuestionCard
             key={q.spec.path}
-            number={idx + 1}
+            number={idx + 1 + (providerTrigger.show ? 1 : 0)}
             question={q}
             answer={answers[q.spec.path]}
             onChange={(patch) => setAnswer(q.spec.path, patch)}
