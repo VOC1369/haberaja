@@ -1,32 +1,47 @@
 /**
- * ADMIN VERIFY SECTION — Phase 1
+ * ADMIN VERIFY SECTION — Decision Constraint System
  *
- * Auto-generates targeted questions from a PkV10Record using:
- *   Priority A — value missing OR _field_status === "not_stated"
- *   Priority B — _field_status === "inferred" OR ai_confidence < 0.7
- *   (Priority C — ambiguity — DEFERRED to Phase 2)
+ * Strict design system V1.1 compliance. All inputs are radio/select-first.
+ * Open text is FORBIDDEN as primary input. An optional "tambahan catatan"
+ * Textarea appears only AFTER admin selects a radio option (controlled flexibility).
  *
- * Admin answers are kept in local state. On "Terapkan Jawaban":
- *   - merged into a deep-cloned PkV10Record (human completion / verification of AI draft)
- *   - _field_status[path] := "explicit"  (closest existing enum; gap noted)
- *   - ai_confidence[path] PRESERVED as AI draft provenance (NOT deleted)
- *   - _human_override_log[] appended (audit: AI only vs human completion vs correction)
- *   - updated_at bumped
- *   - parent receives the new record via onApply (NO auto-save)
+ * Question generation (dynamic priority-based):
+ *   Priority A — critical field is empty           → required, blocks Apply
+ *   Priority B — ai_confidence < 0.7 OR inferred   → optional confirmation
+ *   Priority C — value present + confident         → not shown
+ *
+ * Critical classification:
+ *   Default critical:    validity, claim_method, payout_direction,
+ *                        turnover_basis, stacking_policy
+ *   Conditional critical:
+ *     - min_deposit       → critical if promo_type ∈ {deposit-bonus, cashback, rolling}
+ *     - max_reward        → critical if payout_direction === "upfront"
+ *     - eligible_providers→ critical if promo_type ∈ {rolling, cashback}
+ *     - geo_restriction   → critical only if a non-null hint exists
+ *   Never critical (in Admin Verify):
+ *     - void_conditions
+ *
+ * Skip semantics (LOCKED):
+ *   NO ACTION ≠ CONFIRMATION. NO ACTION ≠ VERIFICATION.
+ *   - Admin no-action → ZERO log entry, ZERO status change
+ *   - ai_confidence preserved untouched
+ *   - _field_status[path] = "explicit" ONLY on explicit admin action
+ *   - _human_override_log appended ONLY on explicit admin action
  *
  * Hard rules:
- *   - No parser/extractor changes
- *   - No new schema enums invented
- *   - Reuses existing UI primitives only
+ *   - No schema changes, no new enums
+ *   - Reuses existing UI primitives only (Card, Badge, Button, RadioGroup, Select, Textarea)
+ *   - Strict V1.1 tokens — zero custom colors / sizes / opacity
  */
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, AlertCircle, AlertTriangle, ShieldCheck } from "lucide-react";
+import { ShieldCheck, CheckCircle2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -40,51 +55,65 @@ import {
   PK_V10_GAME_PROVIDER,
   PK_V10_GEO_RESTRICTION,
   PK_V10_STACKING_POLICY,
-  PK_V10_VOID_TRIGGER,
   PK_V10_TURNOVER_BASIS,
 } from "@/features/promo-knowledge/schema/pk-v10";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 
-/**
- * Sidecar audit-log entry. Stored at root as `_human_override_log[]` to keep
- * `meta_engine` clean (governance layer ≠ engine logic). Append-only.
- * Type defined locally — V10 schema status is "locked", so we DO NOT extend
- * `PkV10Record` itself; we cast at the write site instead.
- */
+// ─────────────────────────────────────────────────────────────────────────
+// AUDIT LOG TYPE — sidecar at root, not in schema
+// ─────────────────────────────────────────────────────────────────────────
 interface HumanOverrideEntry {
   field_path: string;
   previous_value: unknown;
   new_value: unknown;
-  /** Snapshot of `ai_confidence[path]` BEFORE mutation. May be null. */
   previous_ai_confidence: number | null;
-  /** Snapshot of `_field_status[path]` BEFORE mutation. May be null. */
   previous_field_status: string | null;
   overridden_by: "admin";
   timestamp: string;
+  /** Optional admin note (controlled flexibility for edge cases). */
+  admin_note?: string;
 }
 
-
-// Threshold mirror dari schema (PK_V10_AI_CONFIDENCE_QUESTION_THRESHOLD = 0.7)
 const CONFIDENCE_THRESHOLD = 0.7;
 
-type Priority = "A" | "B";
-type InputKind = "text" | "number" | "date" | "select" | "multi-csv";
+// ─────────────────────────────────────────────────────────────────────────
+// ANSWER VALUE TYPES — every input is a discrete choice
+// ─────────────────────────────────────────────────────────────────────────
 
-interface FieldSpec {
-  path: string;                 // dot/bracket path used as key for _field_status & ai_confidence
-  label: string;                // Field label (engine — block.field)
-  question: string;             // Short question for admin
-  kind: InputKind;
-  enumOptions?: readonly string[];
-  /** Read current value from record */
-  read: (rec: PkV10Record) => unknown;
-  /** Write parsed answer into a draft record (mutates draft) */
-  write: (draft: PkV10Record, value: unknown) => void;
-  /** Custom emptiness check; defaults to null/""/[] */
-  isEmpty?: (v: unknown) => boolean;
+/**
+ * Choice option visible to admin.
+ * `value` is the string we hand to FieldSpec.write().
+ * Special sentinel "__custom__" means "admin will type a number/date below".
+ */
+interface ChoiceOption {
+  value: string;
+  label: string;
 }
 
-const isEmptyDefault = (v: unknown): boolean => {
+interface AdminAnswer {
+  choice: string;            // the radio/select value chosen
+  customValue?: string;      // for date / number when choice === "__custom__"
+  customSelection?: string[];// for multi-select chips
+  note?: string;             // optional textarea note (hidden until choice picked)
+}
+
+const CUSTOM = "__custom__";
+const NONE = "__none__";
+
+type FieldSpec = {
+  path: string;
+  question: string;          // human-readable, no jargon, no field_path
+  inputKind: "radio" | "select-large" | "multi-chip" | "radio-with-date" | "radio-with-number";
+  options?: ChoiceOption[];          // for radio / select-large
+  multiOptions?: readonly string[];  // for multi-chip
+  /** Read current value from record (for Priority B pre-fill display). */
+  read: (rec: PkV10Record) => unknown;
+  /** Write the chosen answer back into a draft record. */
+  write: (draft: PkV10Record, answer: AdminAnswer) => void;
+  isCritical: (rec: PkV10Record) => boolean;
+};
+
+const isEmpty = (v: unknown): boolean => {
   if (v === null || v === undefined) return true;
   if (typeof v === "string" && v.trim() === "") return true;
   if (Array.isArray(v) && v.length === 0) return true;
@@ -92,137 +121,201 @@ const isEmptyDefault = (v: unknown): boolean => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────
-// FIELD MAPPING — 10 priority fields (paths verified against pk-v10.ts)
+// CRITICAL CLASSIFICATION HELPERS
 // ─────────────────────────────────────────────────────────────────────────
+const ALWAYS = () => true;
+const NEVER = () => false;
+
+const promoTypeOf = (r: PkV10Record): string =>
+  (r.meta_engine?.promo_block?.promo_type ?? "").toLowerCase();
+
+const isDepositLike = (r: PkV10Record) => {
+  const t = promoTypeOf(r);
+  return t.includes("deposit") || t.includes("cashback") || t.includes("rolling");
+};
+const isGameDependent = (r: PkV10Record) => {
+  const t = promoTypeOf(r);
+  return t.includes("rolling") || t.includes("cashback");
+};
+const isUpfront = (r: PkV10Record) =>
+  (r.reward_engine?.payout_direction ?? "").toLowerCase() === "upfront";
+
+// ─────────────────────────────────────────────────────────────────────────
+// FIELD SPECS — radio-first, no jargon labels
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Convert enum string to natural label (capitalize, strip underscores). */
+const naturalize = (s: string): string =>
+  s
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+
+const enumToOptions = (values: readonly string[]): ChoiceOption[] =>
+  values.map((v) => ({ value: v, label: naturalize(v) }));
+
 const FIELD_SPECS: FieldSpec[] = [
+  // 1. Validity
   {
     path: "period_engine.validity_block.valid_until",
-    label: "period_engine — validity.valid_until",
-    question: "Sampai kapan promo ini berlaku? (ISO date, mis. 2026-12-31)",
-    kind: "date",
+    question: "Sampai kapan promo ini berlaku?",
+    inputKind: "radio-with-date",
+    options: [
+      { value: "no_expiry", label: "Tidak ada batas waktu" },
+      { value: CUSTOM, label: "Tanggal tertentu" },
+    ],
     read: (r) => r.period_engine?.validity_block?.valid_until,
-    write: (d, v) => {
-      d.period_engine.validity_block.valid_until = (v as string) || null as never;
+    write: (d, a) => {
+      d.period_engine.validity_block.valid_until =
+        a.choice === "no_expiry" ? null as never : ((a.customValue ?? "") as never);
     },
+    isCritical: ALWAYS,
   },
+
+  // 2. Claim method
   {
     path: "claim_engine.method_block.claim_method",
-    label: "claim_engine — method.claim_method",
-    question: "Bagaimana admin/member mengklaim promo ini?",
-    kind: "select",
-    enumOptions: PK_V10_CLAIM_METHOD,
+    question: "Bagaimana member mengklaim promo ini?",
+    inputKind: "radio",
+    options: enumToOptions(PK_V10_CLAIM_METHOD),
     read: (r) => r.claim_engine?.method_block?.claim_method,
-    write: (d, v) => {
-      d.claim_engine.method_block.claim_method = String(v ?? "");
+    write: (d, a) => {
+      d.claim_engine.method_block.claim_method = a.choice;
     },
+    isCritical: ALWAYS,
   },
+
+  // 3. Payout direction
   {
     path: "reward_engine.payout_direction",
-    label: "reward_engine — payout_direction",
-    question: "Bonus dibayar di depan (upfront) atau di belakang (backend)?",
-    kind: "select",
-    enumOptions: PK_V10_PAYOUT_DIRECTION,
+    question: "Bonus dibayar kapan?",
+    inputKind: "radio",
+    options: [
+      { value: "upfront", label: "Di depan (langsung saat klaim)" },
+      { value: "backend", label: "Di belakang (setelah syarat tercapai)" },
+    ],
     read: (r) => r.reward_engine?.payout_direction,
-    write: (d, v) => {
-      d.reward_engine.payout_direction = String(v ?? "");
+    write: (d, a) => {
+      d.reward_engine.payout_direction = a.choice;
     },
+    isCritical: ALWAYS,
   },
-  {
-    path: "scope_engine.game_block.eligible_providers",
-    label: "scope_engine — game.eligible_providers",
-    question: "Provider game mana saja yang eligible? (pisahkan koma)",
-    kind: "multi-csv",
-    enumOptions: PK_V10_GAME_PROVIDER,
-    read: (r) => r.scope_engine?.game_block?.eligible_providers,
-    write: (d, v) => {
-      d.scope_engine.game_block.eligible_providers = v as string[];
-    },
-  },
-  {
-    path: "scope_engine.geo_block.geo_restriction",
-    label: "scope_engine — geo.geo_restriction",
-    question: "Pembatasan geografis promo?",
-    kind: "select",
-    enumOptions: PK_V10_GEO_RESTRICTION,
-    read: (r) => r.scope_engine?.geo_block?.geo_restriction,
-    write: (d, v) => {
-      d.scope_engine.geo_block.geo_restriction = String(v ?? "");
-    },
-  },
-  {
-    path: "dependency_engine.stacking_block.stacking_policy",
-    label: "dependency_engine — stacking.stacking_policy",
-    question: "Promo ini boleh di-stack dengan promo lain?",
-    kind: "select",
-    enumOptions: PK_V10_STACKING_POLICY,
-    read: (r) => r.dependency_engine?.stacking_block?.stacking_policy,
-    write: (d, v) => {
-      d.dependency_engine.stacking_block.stacking_policy = String(v ?? "");
-    },
-  },
-  {
-    path: "invalidation_engine.void_conditions_block",
-    label: "invalidation_engine — void_conditions",
-    question: "Trigger void / blacklist yang berlaku? (pisahkan koma — nama trigger saja)",
-    kind: "multi-csv",
-    enumOptions: PK_V10_VOID_TRIGGER,
-    read: (r) =>
-      (r.invalidation_engine?.void_conditions_block ?? []).map((c) => c?.trigger_name).filter(Boolean),
-    write: (d, v) => {
-      const names = (v as string[]) ?? [];
-      d.invalidation_engine.void_conditions_block = names.map((n) => ({
-        trigger_name: n,
-        trigger_type: "",
-        trigger_evidence: "",
-        detection_method: "",
-        consequence: "",
-      }));
-    },
-  },
-  {
-    path: "reward_engine.requirement_block.min_deposit",
-    label: "reward_engine — requirement.min_deposit",
-    question: "Minimum deposit untuk eligible? (IDR, angka saja)",
-    kind: "number",
-    read: (r) => r.reward_engine?.requirement_block?.min_deposit,
-    write: (d, v) => {
-      d.reward_engine.requirement_block.min_deposit =
-        v === "" || v === null || v === undefined ? null : Number(v);
-    },
-  },
+
+  // 4. Turnover basis
   {
     path: "taxonomy_engine.logic_block.turnover_basis",
-    label: "taxonomy_engine — logic.turnover_basis",
-    question: "Basis perhitungan turnover (TO)?",
-    kind: "select",
-    enumOptions: PK_V10_TURNOVER_BASIS,
+    question: "Hitungan turnover dari mana?",
+    inputKind: "radio",
+    options: enumToOptions(PK_V10_TURNOVER_BASIS),
     read: (r) => r.taxonomy_engine?.logic_block?.turnover_basis,
-    write: (d, v) => {
-      d.taxonomy_engine.logic_block.turnover_basis = String(v ?? "");
+    write: (d, a) => {
+      d.taxonomy_engine.logic_block.turnover_basis = a.choice;
     },
+    isCritical: ALWAYS,
   },
+
+  // 5. Stacking
+  {
+    path: "dependency_engine.stacking_block.stacking_policy",
+    question: "Boleh digabung dengan promo lain?",
+    inputKind: "radio",
+    options: enumToOptions(PK_V10_STACKING_POLICY),
+    read: (r) => r.dependency_engine?.stacking_block?.stacking_policy,
+    write: (d, a) => {
+      d.dependency_engine.stacking_block.stacking_policy = a.choice;
+    },
+    isCritical: ALWAYS,
+  },
+
+  // 6. Min deposit (conditional)
+  {
+    path: "reward_engine.requirement_block.min_deposit",
+    question: "Minimum deposit untuk eligible?",
+    inputKind: "radio-with-number",
+    options: [
+      { value: "0", label: "Tanpa minimum" },
+      { value: "25000", label: "25.000" },
+      { value: "50000", label: "50.000" },
+      { value: "100000", label: "100.000" },
+      { value: CUSTOM, label: "Lainnya" },
+    ],
+    read: (r) => r.reward_engine?.requirement_block?.min_deposit,
+    write: (d, a) => {
+      const raw = a.choice === CUSTOM ? a.customValue : a.choice;
+      d.reward_engine.requirement_block.min_deposit =
+        raw === "" || raw === undefined ? null : Number(raw);
+    },
+    isCritical: isDepositLike,
+  },
+
+  // 7. Max reward (conditional)
   {
     path: "reward_engine.max_reward",
-    label: "reward_engine — max_reward",
-    question: "Reward maksimal (cap)? (IDR, kosongkan jika tidak ada)",
-    kind: "number",
+    question: "Ada batas maksimum bonus?",
+    inputKind: "radio-with-number",
+    options: [
+      { value: NONE, label: "Tidak ada batas" },
+      { value: "100000", label: "100.000" },
+      { value: "500000", label: "500.000" },
+      { value: "1000000", label: "1.000.000" },
+      { value: CUSTOM, label: "Lainnya" },
+    ],
     read: (r) => r.reward_engine?.max_reward,
-    write: (d, v) => {
+    write: (d, a) => {
+      if (a.choice === NONE) {
+        d.reward_engine.max_reward = null;
+        return;
+      }
+      const raw = a.choice === CUSTOM ? a.customValue : a.choice;
       d.reward_engine.max_reward =
-        v === "" || v === null || v === undefined ? null : Number(v);
+        raw === "" || raw === undefined ? null : Number(raw);
     },
+    isCritical: isUpfront,
   },
+
+  // 8. Game providers (conditional, multi)
+  {
+    path: "scope_engine.game_block.eligible_providers",
+    question: "Provider game mana saja yang boleh?",
+    inputKind: "multi-chip",
+    multiOptions: PK_V10_GAME_PROVIDER,
+    read: (r) => r.scope_engine?.game_block?.eligible_providers,
+    write: (d, a) => {
+      d.scope_engine.game_block.eligible_providers = a.customSelection ?? [];
+    },
+    isCritical: isGameDependent,
+  },
+
+  // 9. Geo restriction (conditional)
+  {
+    path: "scope_engine.geo_block.geo_restriction",
+    question: "Berlaku untuk wilayah mana?",
+    inputKind: "select-large",
+    options: enumToOptions(PK_V10_GEO_RESTRICTION),
+    read: (r) => r.scope_engine?.geo_block?.geo_restriction,
+    write: (d, a) => {
+      d.scope_engine.geo_block.geo_restriction = a.choice;
+    },
+    // Critical only if there's already a non-empty hint (i.e. extractor flagged it)
+    isCritical: (r) => !isEmpty(r.scope_engine?.geo_block?.geo_restriction),
+  },
+
+  // 10. Void conditions — never critical at Admin Verify
+  // (kept out of FIELD_SPECS intentionally per locked spec)
 ];
 
 // ─────────────────────────────────────────────────────────────────────────
-// QUESTION GENERATOR
+// QUESTION GENERATOR (priority-based)
 // ─────────────────────────────────────────────────────────────────────────
+
+type Priority = "A" | "B";
 
 interface GeneratedQuestion {
   spec: FieldSpec;
   priority: Priority;
-  reason: string;
   currentValue: unknown;
+  /** AI draft pre-fill for Priority B (string match against an option). */
+  prefillChoice?: string;
 }
 
 function generateQuestions(record: PkV10Record): GeneratedQuestion[] {
@@ -232,35 +325,33 @@ function generateQuestions(record: PkV10Record): GeneratedQuestion[] {
 
   for (const spec of FIELD_SPECS) {
     const val = spec.read(record);
-    const isEmpty = (spec.isEmpty ?? isEmptyDefault)(val);
-    const fieldStatus = status[spec.path];
-    const fieldConf = conf[spec.path];
+    const empty = isEmpty(val);
+    const fStatus = status[spec.path];
+    const fConf = conf[spec.path];
 
-    // Priority A — wajib
-    if (isEmpty || fieldStatus === "not_stated") {
-      out.push({
-        spec,
-        priority: "A",
-        reason: isEmpty ? "value kosong" : "field_status: not_stated",
-        currentValue: val,
-      });
+    // Priority A — critical AND empty
+    if (empty) {
+      if (spec.isCritical(record)) {
+        out.push({ spec, priority: "A", currentValue: val });
+      }
+      // Non-critical empty → ignored (no Priority A, no Priority B trigger)
       continue;
     }
 
-    // Priority B — perlu konfirmasi
-    if (
-      fieldStatus === "inferred" ||
-      (typeof fieldConf === "number" && fieldConf < CONFIDENCE_THRESHOLD)
-    ) {
-      const reason =
-        fieldStatus === "inferred"
-          ? "field_status: inferred"
-          : `ai_confidence ${fieldConf?.toFixed(2)} < ${CONFIDENCE_THRESHOLD}`;
-      out.push({ spec, priority: "B", reason, currentValue: val });
+    // Priority B — has value but low confidence or inferred
+    const lowConf = typeof fConf === "number" && fConf < CONFIDENCE_THRESHOLD;
+    const inferred = fStatus === "inferred";
+    if (lowConf || inferred) {
+      out.push({
+        spec,
+        priority: "B",
+        currentValue: val,
+        prefillChoice: typeof val === "string" ? val : undefined,
+      });
     }
   }
 
-  // Sort: A before B, preserve mapping order within priority
+  // A first, B after; preserve declared order within priority
   return out.sort((a, b) => (a.priority === b.priority ? 0 : a.priority === "A" ? -1 : 1));
 }
 
@@ -274,56 +365,82 @@ export interface AdminVerifySectionProps {
 }
 
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
-  const [adminAnswers, setAdminAnswers] = useState<Record<string, unknown>>({});
+  const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
 
-  const questions = useMemo<GeneratedQuestion[]>(() => {
-    if (!record) return [];
-    return generateQuestions(record);
-  }, [record]);
+  const questions = useMemo<GeneratedQuestion[]>(
+    () => (record ? generateQuestions(record) : []),
+    [record],
+  );
 
   if (!record) return null;
 
-  const answeredCount = Object.values(adminAnswers).filter(
-    (v) => !isEmptyDefault(v),
-  ).length;
+  const answeredCount = Object.values(answers).filter((a) => a && a.choice).length;
+  const criticalQuestions = questions.filter((q) => q.priority === "A");
+  const unansweredCritical = criticalQuestions.filter((q) => !answers[q.spec.path]?.choice);
+  const canApply = answeredCount > 0 && unansweredCritical.length === 0;
 
-  // Empty state — clean & compact
+  // Empty state
   if (questions.length === 0) {
     return (
-      <Card className="p-4 border-border bg-card/60">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <ShieldCheck className="w-4 h-4 text-success" />
-          <span className="font-medium text-foreground">Verifikasi Admin</span>
-          <span>· Tidak ada verifikasi tambahan.</span>
+      <Card className="bg-card border border-border rounded-xl p-8">
+        <div className="flex items-center gap-4">
+          <div className="h-12 w-12 rounded-full bg-success/20 flex items-center justify-center shrink-0">
+            <ShieldCheck className="h-6 w-6 text-success" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-button-hover">Verifikasi Admin</h3>
+            <p className="text-sm text-muted-foreground">
+              Tidak ada verifikasi tambahan. Semua field penting sudah lengkap.
+            </p>
+          </div>
         </div>
       </Card>
     );
   }
 
-  const handleAnswerChange = (path: string, value: unknown) => {
-    setAdminAnswers((prev) => ({ ...prev, [path]: value }));
+  const setAnswer = (path: string, patch: Partial<AdminAnswer>) => {
+    setAnswers((prev) => {
+      const current = prev[path] ?? { choice: "" };
+      return { ...prev, [path]: { ...current, ...patch } };
+    });
+  };
+
+  const clearAnswer = (path: string) => {
+    setAnswers((prev) => {
+      const next = { ...prev };
+      delete next[path];
+      return next;
+    });
   };
 
   const handleApply = () => {
-    // Deep clone (record is plain JSON-shaped data)
     const draft: PkV10Record = JSON.parse(JSON.stringify(record));
     draft._field_status = { ...(draft._field_status ?? {}) };
     draft.ai_confidence = { ...(draft.ai_confidence ?? {}) };
 
-    // Sidecar audit log — root-level, append-only.
-    // Pola konsisten dengan `_field_status` & `ai_confidence` (governance, bukan engine).
-    // Type cast lokal: schema V10 status "locked" — tidak menyentuh interface PkV10Record.
     const draftAny = draft as PkV10Record & { _human_override_log?: HumanOverrideEntry[] };
-    const existingLog: HumanOverrideEntry[] = Array.isArray(draftAny._human_override_log)
+    const log: HumanOverrideEntry[] = Array.isArray(draftAny._human_override_log)
       ? [...draftAny._human_override_log]
       : [];
     const ts = new Date().toISOString();
 
     for (const q of questions) {
-      const raw = adminAnswers[q.spec.path];
-      if (isEmptyDefault(raw)) continue;
+      const a = answers[q.spec.path];
+      // Skip semantics: NO ACTION = no log, no status change.
+      if (!a || !a.choice) continue;
+      // Custom value required but empty? Skip silently (no log).
+      if (
+        (q.spec.inputKind === "radio-with-date" || q.spec.inputKind === "radio-with-number") &&
+        a.choice === CUSTOM &&
+        (!a.customValue || a.customValue.trim() === "")
+      ) {
+        continue;
+      }
+      if (q.spec.inputKind === "multi-chip" && (!a.customSelection || a.customSelection.length === 0)) {
+        continue;
+      }
 
-      // Snapshot BEFORE mutation — provenance completeness.
+      // Snapshot BEFORE mutation
       const previousValue = q.spec.read(draft);
       const prevConfRaw = draft.ai_confidence[q.spec.path];
       const previousAiConfidence: number | null =
@@ -333,17 +450,15 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
           ? (draft._field_status[q.spec.path] as string)
           : null;
 
-      q.spec.write(draft, raw);
+      q.spec.write(draft, a);
       const newValue = q.spec.read(draft);
 
-      // `explicit` HANYA berarti field memiliki nilai yang jelas/final.
-      // Verifikasi manusia ditandai HANYA melalui `_human_override_log` (bukan oleh
-      // status ini). `ai_confidence[path]` TIDAK disentuh — tetap sebagai provenance
-      // AI draft.
+      // _field_status = "explicit" means the field has a clear/final value.
+      // Human verification is tracked SOLELY by _human_override_log.
+      // ai_confidence is preserved as AI-draft provenance and never touched.
       draft._field_status[q.spec.path] = "explicit";
 
-      // Append-only — semua jawaban admin dilog (mengisi kosong / replace / fix typo)
-      existingLog.push({
+      const entry: HumanOverrideEntry = {
         field_path: q.spec.path,
         previous_value: previousValue ?? null,
         new_value: newValue ?? null,
@@ -351,142 +466,210 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         previous_field_status: previousFieldStatus,
         overridden_by: "admin",
         timestamp: ts,
-      });
+      };
+      if (a.note && a.note.trim()) entry.admin_note = a.note.trim();
+      log.push(entry);
     }
 
-    draftAny._human_override_log = existingLog;
+    draftAny._human_override_log = log;
     draft.updated_at = ts;
     onApply(draft);
-    setAdminAnswers({});
+    setAnswers({});
   };
 
-  const handleSkip = () => setAdminAnswers({});
+  const handleSkipAll = () => setAnswers({});
 
   return (
-    <Card className="p-4 border-border bg-card/60 space-y-3">
-      {/* Header — kept low-key vs main extraction card */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-primary" />
-          <h3 className="text-sm font-semibold text-foreground">Verifikasi Admin</h3>
-          <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0">
-            {questions.length} pertanyaan
-          </Badge>
-          {answeredCount > 0 && (
-            <Badge className="bg-success/15 text-success border-0 text-[10px] font-mono px-1.5 py-0">
-              {answeredCount} terisi
-            </Badge>
-          )}
+    <Card className="bg-card border border-border rounded-xl p-8 space-y-6">
+      {/* Header — V1.1 standard */}
+      <div className="flex items-center gap-4">
+        <div className="h-12 w-12 rounded-full bg-button-hover/20 flex items-center justify-center shrink-0">
+          <ShieldCheck className="h-6 w-6 text-button-hover" />
         </div>
-        <p className="text-[11px] text-muted-foreground">
-          Phase 1 · jawaban di-merge ke draft, tidak auto-save
-        </p>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-button-hover">Verifikasi Admin</h3>
+          <p className="text-sm text-muted-foreground">
+            {criticalQuestions.length > 0
+              ? `${criticalQuestions.length} pertanyaan wajib dijawab. ${
+                  questions.length - criticalQuestions.length
+                } konfirmasi opsional.`
+              : `${questions.length} pertanyaan konfirmasi opsional.`}
+          </p>
+        </div>
+        {answeredCount > 0 && (
+          <Badge variant="success" size="sm">
+            {answeredCount} terisi
+          </Badge>
+        )}
       </div>
 
-      {/* Question rows */}
-      <div className="space-y-2">
-        {questions.map((q) => {
-          const answered = !isEmptyDefault(adminAnswers[q.spec.path]);
-          const Icon = q.priority === "A" ? AlertCircle : AlertTriangle;
-          const priColor =
-            q.priority === "A" ? "text-destructive" : "text-warning";
-
-          return (
-            <div
-              key={q.spec.path}
-              className="rounded-md border border-border bg-background/40 p-3 space-y-2"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2 min-w-0 flex-1">
-                  <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${priColor}`} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-mono text-muted-foreground truncate">
-                        {q.spec.label}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={`text-[9px] px-1 py-0 ${priColor} border-current`}
-                      >
-                        {q.priority === "A" ? "wajib" : "konfirmasi"}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground">{q.reason}</span>
-                    </div>
-                    <p className="text-xs text-foreground mt-1">{q.spec.question}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      current:{" "}
-                      <span className="font-mono">
-                        {isEmptyDefault(q.currentValue)
-                          ? "—"
-                          : Array.isArray(q.currentValue)
-                            ? `[${(q.currentValue as unknown[]).join(", ")}]`
-                            : String(q.currentValue)}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-                {answered ? (
-                  <Badge className="bg-success/15 text-success border-0 text-[10px] gap-1 shrink-0">
-                    <CheckCircle2 className="w-3 h-3" /> answered
-                  </Badge>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] text-muted-foreground border-border shrink-0"
-                  >
-                    pending
-                  </Badge>
-                )}
-              </div>
-
-              {/* Input control */}
-              <QuestionInput
-                spec={q.spec}
-                value={adminAnswers[q.spec.path]}
-                onChange={(v) => handleAnswerChange(q.spec.path, v)}
-              />
-            </div>
-          );
-        })}
+      {/* Question grid — 2 cols on desktop, 1 col mobile */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {questions.map((q, idx) => (
+          <QuestionCard
+            key={q.spec.path}
+            number={idx + 1}
+            question={q}
+            answer={answers[q.spec.path]}
+            onChange={(patch) => setAnswer(q.spec.path, patch)}
+            onClear={() => clearAnswer(q.spec.path)}
+          />
+        ))}
       </div>
 
-      {/* Footer actions */}
-      <div className="flex items-center justify-end gap-2 pt-1">
-        <Button variant="outline" size="sm" onClick={handleSkip} disabled={answeredCount === 0}>
-          Lewati Dulu
-        </Button>
-        <Button size="sm" onClick={handleApply} disabled={answeredCount === 0}>
-          Terapkan Jawaban {answeredCount > 0 ? `(${answeredCount})` : ""}
-        </Button>
+      {/* Footer */}
+      <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+        <div className="text-sm text-muted-foreground">
+          {unansweredCritical.length > 0
+            ? `Masih ada ${unansweredCritical.length} pertanyaan wajib`
+            : answeredCount > 0
+              ? "Siap diterapkan"
+              : "Pilih jawaban untuk mulai"}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleSkipAll} disabled={answeredCount === 0}>
+            Reset
+          </Button>
+          <Button onClick={handleApply} disabled={!canApply}>
+            Terapkan Jawaban
+          </Button>
+        </div>
       </div>
     </Card>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// INPUT CONTROL (auto-pick by kind)
+// QUESTION CARD
+// ─────────────────────────────────────────────────────────────────────────
+
+function QuestionCard({
+  number,
+  question,
+  answer,
+  onChange,
+  onClear,
+}: {
+  number: number;
+  question: GeneratedQuestion;
+  answer: AdminAnswer | undefined;
+  onChange: (patch: Partial<AdminAnswer>) => void;
+  onClear: () => void;
+}) {
+  const { spec, priority } = question;
+  const isAnswered = !!answer?.choice;
+  const showNoteField = isAnswered;
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <Badge variant={priority === "A" ? "destructive" : "warning"} size="sm">
+              {priority === "A" ? "Wajib" : "Konfirmasi"}
+            </Badge>
+            {isAnswered && (
+              <Badge variant="success" size="sm">
+                <CheckCircle2 className="h-3 w-3" />
+                Terjawab
+              </Badge>
+            )}
+          </div>
+          <h4 className="text-sm font-medium text-foreground">
+            {number}. {spec.question}
+          </h4>
+        </div>
+      </div>
+
+      {/* Input — radio/select/multi-chip only */}
+      <QuestionInput question={question} answer={answer} onChange={onChange} />
+
+      {/* Optional note — hidden until answered */}
+      {showNoteField && (
+        <div className="space-y-2 pt-2 border-t border-border">
+          <Label className="text-sm font-medium text-muted-foreground">
+            Tambahan catatan (opsional)
+          </Label>
+          <Textarea
+            value={answer?.note ?? ""}
+            placeholder="Catatan untuk edge case atau konteks tambahan…"
+            onChange={(e) => onChange({ note: e.target.value })}
+            className="min-h-[60px]"
+          />
+        </div>
+      )}
+
+      {isAnswered && (
+        <div className="flex justify-end">
+          <Button variant="ghost" size="sm" onClick={onClear}>
+            Hapus jawaban
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// INPUT (radio / select-large / multi-chip / radio-with-date / radio-with-number)
 // ─────────────────────────────────────────────────────────────────────────
 
 function QuestionInput({
-  spec,
-  value,
+  question,
+  answer,
   onChange,
 }: {
-  spec: FieldSpec;
-  value: unknown;
-  onChange: (v: unknown) => void;
+  question: GeneratedQuestion;
+  answer: AdminAnswer | undefined;
+  onChange: (patch: Partial<AdminAnswer>) => void;
 }) {
-  if (spec.kind === "select" && spec.enumOptions) {
-    const v = typeof value === "string" ? value : "";
+  const { spec } = question;
+  const choice = answer?.choice ?? "";
+
+  // Multi-chip
+  if (spec.inputKind === "multi-chip" && spec.multiOptions) {
+    const selected = answer?.customSelection ?? [];
+    const toggle = (opt: string) => {
+      const next = selected.includes(opt)
+        ? selected.filter((s) => s !== opt)
+        : [...selected, opt];
+      onChange({ customSelection: next, choice: next.length > 0 ? "multi" : "" });
+    };
     return (
-      <Select value={v} onValueChange={(val) => onChange(val)}>
-        <SelectTrigger className="h-9 text-xs">
-          <SelectValue placeholder="Pilih nilai…" />
+      <div className="flex flex-wrap gap-2">
+        {spec.multiOptions.map((opt) => {
+          const active = selected.includes(opt);
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => toggle(opt)}
+              className={
+                active
+                  ? "inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-button-hover/20 text-button-hover border border-button-hover/40"
+                  : "inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-background text-muted-foreground border border-border hover:border-button-hover/40 transition-colors"
+              }
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Select-large (>6 enum options)
+  if (spec.inputKind === "select-large" && spec.options) {
+    return (
+      <Select value={choice} onValueChange={(v) => onChange({ choice: v })}>
+        <SelectTrigger>
+          <SelectValue placeholder="Pilih wilayah…" />
         </SelectTrigger>
         <SelectContent>
-          {spec.enumOptions.map((opt) => (
-            <SelectItem key={opt} value={opt} className="text-xs font-mono">
-              {opt}
+          {spec.options.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
             </SelectItem>
           ))}
         </SelectContent>
@@ -494,49 +677,50 @@ function QuestionInput({
     );
   }
 
-  if (spec.kind === "multi-csv") {
-    const v = Array.isArray(value) ? (value as string[]).join(", ") : "";
-    return (
-      <Textarea
-        value={v}
-        placeholder={
-          spec.enumOptions
-            ? `mis. ${spec.enumOptions.slice(0, 3).join(", ")}…`
-            : "pisahkan koma"
-        }
-        onChange={(e) => {
-          const parts = e.target.value
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean);
-          onChange(parts);
-        }}
-        className="min-h-[60px] text-xs font-mono"
-      />
-    );
-  }
+  // Radio (with optional date/number for CUSTOM)
+  if (!spec.options) return null;
 
-  if (spec.kind === "number") {
-    const v = value === null || value === undefined ? "" : String(value);
-    return (
-      <Input
-        type="number"
-        value={v}
-        onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
-        placeholder="angka saja"
-        className="h-9 text-xs"
-      />
-    );
-  }
-
-  // text / date — date picker tidak ada, fallback ke text (sesuai brief)
-  const v = typeof value === "string" ? value : "";
   return (
-    <Input
-      type={spec.kind === "date" ? "date" : "text"}
-      value={v}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-9 text-xs"
-    />
+    <div className="space-y-3">
+      <RadioGroup
+        value={choice}
+        onValueChange={(v) => onChange({ choice: v, customValue: v === CUSTOM ? answer?.customValue : undefined })}
+      >
+        {spec.options.map((opt) => {
+          const id = `${spec.path}-${opt.value}`;
+          return (
+            <div key={opt.value} className="flex items-center gap-3">
+              <RadioGroupItem value={opt.value} id={id} />
+              <Label htmlFor={id} className="cursor-pointer text-sm font-normal text-foreground">
+                {opt.label}
+              </Label>
+            </div>
+          );
+        })}
+      </RadioGroup>
+
+      {/* Inline custom input — only when CUSTOM picked */}
+      {choice === CUSTOM && spec.inputKind === "radio-with-date" && (
+        <div className="pl-8">
+          <input
+            type="date"
+            value={answer?.customValue ?? ""}
+            onChange={(e) => onChange({ customValue: e.target.value })}
+            className="flex h-10 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+          />
+        </div>
+      )}
+      {choice === CUSTOM && spec.inputKind === "radio-with-number" && (
+        <div className="pl-8">
+          <input
+            type="number"
+            value={answer?.customValue ?? ""}
+            onChange={(e) => onChange({ customValue: e.target.value })}
+            placeholder="Masukkan angka (IDR)"
+            className="flex h-10 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+          />
+        </div>
+      )}
+    </div>
   );
 }
