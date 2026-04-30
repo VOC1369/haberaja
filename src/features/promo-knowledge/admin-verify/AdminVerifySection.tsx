@@ -389,8 +389,72 @@ export interface AdminVerifySectionProps {
   onApply: (next: PkV10Record) => void;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// PROVIDER VERIFY — custom flow (V10 paths only, no hardcoded list)
+// ─────────────────────────────────────────────────────────────────────────
+const PROVIDER_WHITELIST_PATH = "scope_engine.game_block.eligible_providers";
+const PROVIDER_BLACKLIST_PATH = "scope_engine.blacklist_block.providers";
+
+type ProviderMode = "" | "all" | "custom";
+
+interface ProviderState {
+  mode: ProviderMode;
+  whitelist: string[];
+  blacklist: string[];
+}
+
+/**
+ * Trigger condition:
+ *   - game_domain empty                                 → no card
+ *   - eligible_providers filled                         → no card
+ *   - eligible empty + blacklist empty  → show "all vs custom" radio
+ *   - eligible empty + blacklist filled → show custom mode prefilled (review)
+ */
+function evaluateProviderTrigger(record: PkV10Record): {
+  show: boolean;
+  domain: string;
+  prefilledBlacklist: string[];
+  initialMode: ProviderMode;
+} {
+  const domain = (record.scope_engine?.game_block?.game_domain ?? "").trim();
+  const whitelist = record.scope_engine?.game_block?.eligible_providers ?? [];
+  const blacklist = record.scope_engine?.blacklist_block?.providers ?? [];
+
+  if (!domain) return { show: false, domain, prefilledBlacklist: [], initialMode: "" };
+  if (whitelist.length > 0)
+    return { show: false, domain, prefilledBlacklist: [], initialMode: "" };
+
+  if (blacklist.length > 0) {
+    return { show: true, domain, prefilledBlacklist: blacklist, initialMode: "custom" };
+  }
+  return { show: true, domain, prefilledBlacklist: [], initialMode: "" };
+}
+
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
   const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
+
+  const providerTrigger = useMemo(
+    () =>
+      record
+        ? evaluateProviderTrigger(record)
+        : { show: false, domain: "", prefilledBlacklist: [] as string[], initialMode: "" as ProviderMode },
+    [record],
+  );
+  const triggerKey = `${providerTrigger.show}|${providerTrigger.domain}|${providerTrigger.prefilledBlacklist.join(",")}|${providerTrigger.initialMode}`;
+  const [providerState, setProviderState] = useState<ProviderState>({
+    mode: providerTrigger.initialMode,
+    whitelist: [],
+    blacklist: [...providerTrigger.prefilledBlacklist],
+  });
+  // Reset when underlying record changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useMemo(() => {
+    setProviderState({
+      mode: providerTrigger.initialMode,
+      whitelist: [],
+      blacklist: [...providerTrigger.prefilledBlacklist],
+    });
+  }, [triggerKey]);
 
   const resolverOutput = useMemo<ResolverOutput>(
     () =>
