@@ -322,8 +322,11 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       q.spec.write(draft, raw);
       const newValue = q.spec.read(draft);
 
+      // Human completion / admin verification → tandai final value sebagai explicit.
+      // PRESERVE `ai_confidence[path]` sebagai provenance AI draft (jangan dihapus).
+      // Jejak siapa yang isi (AI only / human completion / human correction) hidup di
+      // `_human_override_log` di bawah.
       draft._field_status[q.spec.path] = "explicit";
-      delete draft.ai_confidence[q.spec.path];
 
       // Append-only — semua jawaban admin dilog (mengisi kosong / replace / fix typo)
       existingLog.push({
