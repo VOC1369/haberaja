@@ -351,12 +351,18 @@ interface GeneratedQuestion {
   prefillChoice?: string;
 }
 
-function generateQuestions(record: PkV10Record): GeneratedQuestion[] {
+function generateQuestions(
+  record: PkV10Record,
+  skipPaths: Set<string>,
+): GeneratedQuestion[] {
   const status = record._field_status ?? {};
   const conf = record.ai_confidence ?? {};
   const out: GeneratedQuestion[] = [];
 
   for (const spec of FIELD_SPECS) {
+    // Resolver handled this field — skip the question entirely
+    if (skipPaths.has(spec.path)) continue;
+
     const val = spec.read(record);
     const empty = isEmpty(val);
     const fStatus = status[spec.path];
