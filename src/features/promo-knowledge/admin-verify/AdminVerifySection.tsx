@@ -919,3 +919,164 @@ function QuestionInput({
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// PROVIDER VERIFY CARD — custom block (V10 paths only, no hardcoded list)
+// ─────────────────────────────────────────────────────────────────────────
+
+function ProviderVerifyCard({
+  domain,
+  prefilledFromBlacklist,
+  state,
+  onChange,
+}: {
+  domain: string;
+  prefilledFromBlacklist: boolean;
+  state: ProviderState;
+  onChange: (next: ProviderState) => void;
+}) {
+  const isAnswered =
+    state.mode === "all" || (state.mode === "custom" && state.whitelist.length > 0);
+
+  const setMode = (m: ProviderMode) => onChange({ ...state, mode: m });
+  const setWhitelist = (w: string[]) => onChange({ ...state, whitelist: w });
+  const setBlacklist = (b: string[]) => onChange({ ...state, blacklist: b });
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-medium text-foreground">
+            1. Apakah promo ini berlaku untuk semua provider {domain || "ini"}?
+          </h4>
+          {prefilledFromBlacklist && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Sistem mendeteksi blacklist provider sudah terisi. Mohon review aturan
+              provider khusus di bawah.
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant="destructive" size="sm">
+            Wajib
+          </Badge>
+          {isAnswered && (
+            <Badge variant="success" size="sm">
+              <CheckCircle2 className="h-3 w-3" />
+              Terjawab
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {!prefilledFromBlacklist && (
+        <RadioGroup
+          value={state.mode}
+          onValueChange={(v) => setMode(v as ProviderMode)}
+          className="grid gap-2"
+        >
+          <div className="flex items-center gap-3">
+            <RadioGroupItem value="all" id="provider-all" />
+            <Label htmlFor="provider-all" className="cursor-pointer text-sm font-normal text-foreground">
+              Ya, semua provider
+            </Label>
+          </div>
+          <div className="flex items-center gap-3">
+            <RadioGroupItem value="custom" id="provider-custom" />
+            <Label htmlFor="provider-custom" className="cursor-pointer text-sm font-normal text-foreground">
+              Tidak, ada aturan provider khusus
+            </Label>
+          </div>
+        </RadioGroup>
+      )}
+
+      {state.mode === "custom" && (
+        <div className="space-y-4 pt-2 border-t border-border">
+          <TagInput
+            label="Provider yang boleh"
+            placeholder="Ketik nama provider, tekan Enter…"
+            tags={state.whitelist}
+            onChange={setWhitelist}
+          />
+          <TagInput
+            label="Provider yang diblokir (opsional)"
+            placeholder="Ketik nama provider, tekan Enter…"
+            tags={state.blacklist}
+            onChange={setBlacklist}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// TAG INPUT — minimal free-text tag input (no hardcoded list)
+// ─────────────────────────────────────────────────────────────────────────
+
+function TagInput({
+  label,
+  placeholder,
+  tags,
+  onChange,
+}: {
+  label: string;
+  placeholder?: string;
+  tags: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  const addTag = (raw: string) => {
+    const v = raw.trim();
+    if (!v) return;
+    if (tags.includes(v)) {
+      setDraft("");
+      return;
+    }
+    onChange([...tags, v]);
+    setDraft("");
+  };
+
+  const removeTag = (t: string) => onChange(tags.filter((x) => x !== t));
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium text-foreground">{label}</Label>
+      {tags.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {tags.map((t) => (
+            <span
+              key={t}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm bg-button-hover/20 text-button-hover border border-button-hover/40"
+            >
+              {t}
+              <button
+                type="button"
+                onClick={() => removeTag(t)}
+                aria-label={`Hapus ${t}`}
+                className="hover:text-destructive transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <Input
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            addTag(draft);
+          } else if (e.key === "Backspace" && draft === "" && tags.length > 0) {
+            removeTag(tags[tags.length - 1]);
+          }
+        }}
+        onBlur={() => draft && addTag(draft)}
+        placeholder={placeholder}
+      />
+    </div>
+  );
+}
