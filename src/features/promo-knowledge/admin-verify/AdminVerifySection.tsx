@@ -58,6 +58,11 @@ import {
   PK_V10_TURNOVER_BASIS,
 } from "@/features/promo-knowledge/schema/pk-v10";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
+import {
+  resolveRecord,
+  commitResolverOutput,
+  type ResolverOutput,
+} from "./question-resolver";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AUDIT LOG TYPE — sidecar at root, not in schema
@@ -346,12 +351,18 @@ interface GeneratedQuestion {
   prefillChoice?: string;
 }
 
-function generateQuestions(record: PkV10Record): GeneratedQuestion[] {
+function generateQuestions(
+  record: PkV10Record,
+  skipPaths: Set<string>,
+): GeneratedQuestion[] {
   const status = record._field_status ?? {};
   const conf = record.ai_confidence ?? {};
   const out: GeneratedQuestion[] = [];
 
   for (const spec of FIELD_SPECS) {
+    // Resolver handled this field — skip the question entirely
+    if (skipPaths.has(spec.path)) continue;
+
     const val = spec.read(record);
     const empty = isEmpty(val);
     const fStatus = status[spec.path];
@@ -395,9 +406,17 @@ export interface AdminVerifySectionProps {
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
   const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
 
-  const questions = useMemo<GeneratedQuestion[]>(
-    () => (record ? generateQuestions(record) : []),
+  const resolverOutput = useMemo<ResolverOutput>(
+    () =>
+      record
+        ? resolveRecord(record)
+        : { skipPaths: new Set(), pendingEntries: [], pendingValuePatches: [] },
     [record],
+  );
+
+  const questions = useMemo<GeneratedQuestion[]>(
+    () => (record ? generateQuestions(record, resolverOutput.skipPaths) : []),
+    [record, resolverOutput],
   );
 
   if (!record) return null;
@@ -405,10 +424,15 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   const answeredCount = Object.values(answers).filter((a) => a && a.choice).length;
   const criticalQuestions = questions.filter((q) => q.priority === "A");
   const unansweredCritical = criticalQuestions.filter((q) => !answers[q.spec.path]?.choice);
-  const canApply = answeredCount > 0 && unansweredCritical.length === 0;
+  const hasResolverPending =
+    resolverOutput.pendingEntries.length > 0 ||
+    resolverOutput.pendingValuePatches.length > 0;
+  // Hybrid: Apply enabled if (admin answered AND no critical missing) OR resolver has pending output
+  const canApply =
+    (answeredCount > 0 && unansweredCritical.length === 0) || hasResolverPending;
 
-  // Empty state
-  if (questions.length === 0) {
+  // Empty state — only when truly nothing to do (no questions AND no resolver pending)
+  if (questions.length === 0 && !hasResolverPending) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
@@ -500,6 +524,12 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     }
 
     draftAny._human_override_log = log;
+
+    // Atomic commit: apply resolver patches + append _ai_resolver_log
+    // (after admin answers so admin choice always wins on shared paths — though
+    //  resolver paths are excluded from FIELD_SPECS via skipPaths, so no overlap)
+    commitResolverOutput(draft, resolverOutput, ts);
+
     draft.updated_at = ts;
     onApply(draft);
     setAnswers({});
