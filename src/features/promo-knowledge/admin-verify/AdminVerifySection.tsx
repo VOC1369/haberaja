@@ -58,6 +58,11 @@ import {
   PK_V10_TURNOVER_BASIS,
 } from "@/features/promo-knowledge/schema/pk-v10";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
+import {
+  resolveRecord,
+  commitResolverOutput,
+  type ResolverOutput,
+} from "./question-resolver";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AUDIT LOG TYPE — sidecar at root, not in schema
