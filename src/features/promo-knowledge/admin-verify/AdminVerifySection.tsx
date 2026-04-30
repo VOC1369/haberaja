@@ -44,6 +44,21 @@ import {
 } from "@/features/promo-knowledge/schema/pk-v10";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 
+/**
+ * Sidecar audit-log entry. Stored at root as `_human_override_log[]` to keep
+ * `meta_engine` clean (governance layer ≠ engine logic). Append-only.
+ * Type defined locally — V10 schema status is "locked", so we DO NOT extend
+ * `PkV10Record` itself; we cast at the write site instead.
+ */
+interface HumanOverrideEntry {
+  field_path: string;
+  previous_value: unknown;
+  new_value: unknown;
+  overridden_by: "admin";
+  timestamp: string;
+}
+
+
 // Threshold mirror dari schema (PK_V10_AI_CONFIDENCE_QUESTION_THRESHOLD = 0.7)
 const CONFIDENCE_THRESHOLD = 0.7;
 
