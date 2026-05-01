@@ -150,6 +150,76 @@ function subcategoryCount(rec: PkV10Record): number {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
+// Per-variant DIRECT selectors (Step 3.2)
+// ────────────────────────────────────────────────────────────────────────────
+// Read `variant_engine.items_block.subcategories[i]`, cast as `PkV10Subcategory`
+// for opt-in typing, and return the leaf value at the requested path.
+//
+// STRICT CONTRACT (same as record-level selectors):
+//  - Out-of-range index → null (or [] for list selectors).
+//  - Empty / missing field → null (or []).
+//  - NO fallback to `reward_engine.*` or any record-level engine.
+//  - NO default values, NO transforms, NO string→number parsing.
+// ──────────────────────────────────────────────────────────────────────────
+
+/** Internal: get the i-th subcategory entry, cast for opt-in typing. */
+function subAt(rec: PkV10Record, i: number): PkV10Subcategory | null {
+  const list = arr(rec?.variant_engine?.items_block?.subcategories);
+  if (i < 0 || i >= list.length) return null;
+  return list[i] as PkV10Subcategory;
+}
+
+/** sub.variant_id */
+function subVariantId(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.variant_id);
+}
+
+/** sub.variant_name */
+function subVariantName(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.variant_name);
+}
+
+/** sub.game_category */
+function subGameCategory(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.game_category);
+}
+
+/** sub.game_providers */
+function subGameProviders(rec: PkV10Record, i: number): string[] {
+  return arr(subAt(rec, i)?.game_providers);
+}
+
+/** sub.game_exclusions */
+function subGameExclusions(rec: PkV10Record, i: number): string[] {
+  return arr(subAt(rec, i)?.game_exclusions);
+}
+
+/** sub.min_deposit */
+function subMinDeposit(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.min_deposit);
+}
+
+/** sub.max_bonus */
+function subMaxBonus(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.max_bonus);
+}
+
+/** sub.bonus_percentage */
+function subBonusPercentage(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.bonus_percentage);
+}
+
+/** sub.turnover_multiplier — number only, no string parsing */
+function subTurnoverMultiplier(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.turnover_multiplier);
+}
+
+/** sub.currency */
+function subCurrency(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.currency);
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 // Public selector namespace
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -169,6 +239,17 @@ export const sel = {
   apkRequired,
   triggerEvent,
   subcategoryCount,
+  // Per-variant DIRECT (Step 3.2)
+  subVariantId,
+  subVariantName,
+  subGameCategory,
+  subGameProviders,
+  subGameExclusions,
+  subMinDeposit,
+  subMaxBonus,
+  subBonusPercentage,
+  subTurnoverMultiplier,
+  subCurrency,
 } as const;
 
 export type PkV10Selectors = typeof sel;
