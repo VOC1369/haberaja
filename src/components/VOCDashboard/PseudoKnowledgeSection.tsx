@@ -786,8 +786,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       return <span className="text-muted-foreground">-</span>;
     };
     
-    // ✅ Use normalized subcategory count for badge display
-    const effectiveSubCount = mappedPreview?.subcategories?.length || extractedPromo?.subcategories.length || 1;
+    // PHASE 2 — Step 4D: subcount sourced from pkRecord via selector only.
+    // No fallback to mappedPreview/extractedPromo.
+    const effectiveSubCount = sel.subcategoryCount(pkRecord as PkV10Record);
     
     return (
       <div 
