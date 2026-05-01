@@ -1562,6 +1562,7 @@ export function createInertPkV10Record(
       validity_block: {
         valid_from: null,
         valid_until: null,
+        valid_until_unlimited: false,
         validity_mode: "",
         validity_duration_value: null,
         validity_duration_unit: "",
@@ -1629,6 +1630,7 @@ export function createInertPkV10Record(
         matrix_cells: [],
       },
       conditional_reward_block: { conditions: [], default_reward: null },
+      reward_identity_block: { item_name: null, quantity: null },
       calculation_basis: "",
       calculation_method: "",
       calculation_value: null,
@@ -1637,6 +1639,7 @@ export function createInertPkV10Record(
       reward_type: "",
       voucher_kind: null,
       max_reward: null,
+      max_reward_unlimited: false,
       currency: null,
     },
 
