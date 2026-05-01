@@ -786,8 +786,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       return <span className="text-muted-foreground">-</span>;
     };
     
-    // ✅ Use normalized subcategory count for badge display
-    const effectiveSubCount = mappedPreview?.subcategories?.length || extractedPromo?.subcategories.length || 1;
+    // PHASE 2 — Step 4D: subcount sourced from pkRecord via selector only.
+    // No fallback to mappedPreview/extractedPromo.
+    const effectiveSubCount = sel.subcategoryCount(pkRecord as PkV10Record);
     
     return (
       <div 
@@ -1102,17 +1103,19 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           <div className="bg-muted rounded-lg p-3">
             <span className="text-muted-foreground text-xs block mb-1">Payout</span>
             {(() => {
-              // ✅ V1.2: APK/Freechip promos have NO payout direction
-              const isApkPromo = mappedPreview?.trigger_event === 'APK Download' || 
-                mappedPreview?.require_apk === true ||
-                /apk|download|aplikasi|freechip|freebet/i.test(extractedPromo?.promo_name || '');
-              
+              // PHASE 2 — Step 4E: APK suppress uses V10 selectors only.
+              // No regex/keyword detection on promo name.
+              const isApkPromo =
+                sel.apkRequired(pkRecord as PkV10Record) ||
+                sel.triggerEvent(pkRecord as PkV10Record) === "apk_download";
+
               if (isApkPromo) {
                 return <span className="text-muted-foreground/60 italic">-</span>;
               }
-              
-              // Normal display for non-APK promos
-              const payoutValue = mappedPreview?.payout_direction || sub.payout_direction;
+
+              // PHASE 2 — Step 4E: payout sourced from pkRecord via selector only.
+              // Per-variant payout degraded to record-level (BL5 decision).
+              const payoutValue = sel.payoutDirection(pkRecord as PkV10Record);
               const isDepan = payoutValue === 'depan';
               const isBelakang = payoutValue === 'belakang';
               return (
