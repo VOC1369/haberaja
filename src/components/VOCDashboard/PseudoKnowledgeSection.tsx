@@ -1376,14 +1376,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         {/* Content */}
         <div className="px-6 pb-6 space-y-6">
           {/* Review Info (was Errors/Warnings - now informational only) */}
-          {warnings.length > 0 && (
+          {headerWarnings.length > 0 && (
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
               <h4 className="text-blue-400 font-medium text-sm flex items-center gap-2 mb-2">
                 <Info className="w-4 h-4" />
-                Review ({warnings.length}) — Dapat dilengkapi manual
+                Review ({headerWarnings.length}) — Dapat dilengkapi manual
               </h4>
               <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-muted-foreground">
-                {warnings.map((warn, idx) => <li key={idx}>{warn}</li>)}
+                {headerWarnings.map((warn, idx) => <li key={idx}>{warn}</li>)}
               </ul>
             </div>
           )}
