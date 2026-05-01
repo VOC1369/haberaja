@@ -702,6 +702,36 @@ export const PK_V10_RISK_LEVEL = [
 ] as const;
 export type PkV10RiskLevel = (typeof PK_V10_RISK_LEVEL)[number];
 
+// ─── 1.20.bis Mechanics Data Conventions (Step 5C) ────────────────────────
+// Locked vocabulary for mechanics_engine.items[].data conventions defined in
+// Step 5D doctrine. Enums only — no usage at this step. Wired in Step 6+.
+
+/** Step 5C — external execution system referenced by mechanics_engine.items[].data.external_system.system. */
+export const PK_V10_EXTERNAL_SYSTEM = [
+  "spin_engine",
+  "voucher_system",
+  "freespin_engine",
+  "ticket_system",
+  "none",
+] as const;
+export type PkV10ExternalSystem = (typeof PK_V10_EXTERNAL_SYSTEM)[number];
+
+/** Step 5C — scope of a time_window mechanic item, written at data.scope. */
+export const PK_V10_TIME_WINDOW_SCOPE = [
+  "reward_validity",
+  "claim_window",
+  "promo_period",
+] as const;
+export type PkV10TimeWindowScope = (typeof PK_V10_TIME_WINDOW_SCOPE)[number];
+
+/** Step 5C — how the reward is redeemed against the external system. */
+export const PK_V10_REDEMPTION_METHOD = [
+  "auto",
+  "manual",
+  "claim_required",
+] as const;
+export type PkV10RedemptionMethod = (typeof PK_V10_REDEMPTION_METHOD)[number];
+
 // ─── 1.21 Field Status & Confidence ───────────────────────────────────────
 
 export const PK_V10_FIELD_STATUS = [
@@ -1048,6 +1078,8 @@ export interface PkV10PeriodEngine {
   validity_block: {
     valid_from: string | null;
     valid_until: string | null;
+    /** Step 5B — sibling unlimited flag. true = explicit unlimited; null valid_until + false = unknown. */
+    valid_until_unlimited: boolean;
     validity_mode: string; // PkV10ValidityMode when filled
     validity_duration_value: number | null;
     validity_duration_unit: string; // PkV10ValidityDurationUnit when filled
@@ -1186,6 +1218,17 @@ export interface PkV10RewardEngine {
     conditions: unknown[];
     default_reward: Record<string, unknown> | null;
   };
+  /**
+   * Step 5A — REWARD IDENTITY BLOCK.
+   * "What the user gets" — physical reward identity ONLY.
+   * For reward_type !== "physical", both fields stay null.
+   * Execution metadata (validity, max_per_day, external_ref_id) lives in
+   * mechanics_engine.items[].data (Authority Order #1).
+   */
+  reward_identity_block: {
+    item_name: string | null;
+    quantity: number | null;
+  };
   // FLAT FIELDS — display summary only (authority order #4).
   // Source of truth lives in mechanics_engine.items[].
   calculation_basis: string; // PkV10CalculationBasis when filled
@@ -1196,6 +1239,8 @@ export interface PkV10RewardEngine {
   reward_type: string; // PkV10RewardType when filled
   voucher_kind: string | null; // PkV10VoucherKind when filled
   max_reward: number | null;
+  /** Step 5B — sibling unlimited flag. true = explicit unlimited; null max_reward + false = unknown. */
+  max_reward_unlimited: boolean;
   currency: string | null;
 }
 
@@ -1547,6 +1592,7 @@ export function createInertPkV10Record(
       validity_block: {
         valid_from: null,
         valid_until: null,
+        valid_until_unlimited: false,
         validity_mode: "",
         validity_duration_value: null,
         validity_duration_unit: "",
@@ -1614,6 +1660,7 @@ export function createInertPkV10Record(
         matrix_cells: [],
       },
       conditional_reward_block: { conditions: [], default_reward: null },
+      reward_identity_block: { item_name: null, quantity: null },
       calculation_basis: "",
       calculation_method: "",
       calculation_value: null,
@@ -1622,6 +1669,7 @@ export function createInertPkV10Record(
       reward_type: "",
       voucher_kind: null,
       max_reward: null,
+      max_reward_unlimited: false,
       currency: null,
     },
 

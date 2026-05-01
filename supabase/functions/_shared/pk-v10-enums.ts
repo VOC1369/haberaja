@@ -219,6 +219,17 @@ export const PK_V10_SCHEMA_STATUS = ["locked", "draft"];
 // ─── 1.20 Risk Engine ─────────────────────────────────────────────────────
 export const PK_V10_RISK_LEVEL = ["low", "medium", "high", "critical"];
 
+// ─── 1.20.bis Mechanics Data Conventions (Step 5C) ────────────────────────
+// Locked vocabulary for mechanics_engine.items[].data shapes (Step 5D doctrine).
+// Enums only — no usage at this step. Wired in Step 6+.
+export const PK_V10_EXTERNAL_SYSTEM = [
+  "spin_engine", "voucher_system", "freespin_engine", "ticket_system", "none",
+];
+export const PK_V10_TIME_WINDOW_SCOPE = [
+  "reward_validity", "claim_window", "promo_period",
+];
+export const PK_V10_REDEMPTION_METHOD = ["auto", "manual", "claim_required"];
+
 // ─── 1.21 Field Status & Confidence ───────────────────────────────────────
 export const PK_V10_FIELD_STATUS = [
   "explicit", "inferred", "derived", "propagated", "not_stated", "not_applicable",
@@ -293,4 +304,7 @@ export const ENUMS = {
   risk_level: PK_V10_RISK_LEVEL,
   field_status: PK_V10_FIELD_STATUS,
   intent_category: PK_V10_INTENT_CATEGORY,
+  external_system: PK_V10_EXTERNAL_SYSTEM,
+  time_window_scope: PK_V10_TIME_WINDOW_SCOPE,
+  redemption_method: PK_V10_REDEMPTION_METHOD,
 };
