@@ -1238,7 +1238,7 @@ export interface PkV10Subcategory {
   min_deposit?: number | null;
   max_bonus?: number | null;
   bonus_percentage?: number | null;
-  turnover_multiplier?: number | string | null;
+  turnover_multiplier?: number | null;
   currency?: string | null;
   // Permissive tail — entries may carry additional fields (e.g. PkV10TierDimension).
   [key: string]: unknown;
