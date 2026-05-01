@@ -799,9 +799,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
           <h4 className="text-base font-semibold text-button-hover">
-              {displaySub.sub_name || (effectiveSubCount === 1 
-                ? extractedPromo?.promo_name 
-                : `Varian ${idx + 1}`)}
+              {sel.subVariantName(pkRecord as PkV10Record, idx) ?? `Varian ${idx + 1}`}
             </h4>
             {hasCriticalIssue && (
               <Badge variant="outline" className="bg-destructive/20 text-destructive border-destructive/40 text-xs">
