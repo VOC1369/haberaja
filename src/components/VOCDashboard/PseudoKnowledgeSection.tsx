@@ -704,31 +704,23 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   };
   
   // Separated commit logic for reuse after gate confirmation
-  // STEP 2 — save raw PkV10Record (V.10) ke localStorage via savePkRecord.
-  // Fallback ke legacy `localDraftKB.save(mappedPreview)` bila pkRecord belum siap.
+  // PHASE 2 — pkRecord-only commit. NO fallback to mappedPreview.
+  // Single source of truth: PkV10Record. If not ready, user must retry extract.
   const proceedWithCommit = async () => {
     try {
-      if (pkRecord) {
-        const saved = savePkRecord(pkRecord);
-        const promoName =
-          saved.identity_engine?.promo_block?.promo_name || "Promo Tanpa Nama";
-        toast.success("Promo (V.10) disimpan sebagai draft!", {
-          description: `"${promoName}" — record_id: ${saved.record_id}`,
+      if (!pkRecord) {
+        toast.error("Wolfbrain V.10 belum siap", {
+          description:
+            "Data final belum berhasil dibuat. Silakan tunggu proses extractor selesai atau jalankan ulang extract.",
         });
-        handleRestart();
-        if (onNavigateToPromo) onNavigateToPromo();
         return;
       }
 
-      // Fallback (PK belum siap): pakai mapper lama supaya user gak stuck.
-      if (!mappedPreview) {
-        toast.error("Belum ada data untuk disimpan");
-        return;
-      }
-      const draftPromo = { ...mappedPreview, status: "draft" as const };
-      const savedDraft = localDraftKB.save(draftPromo);
-      toast.success("Promo disimpan sebagai draft! (fallback legacy)", {
-        description: `"${savedDraft.promo_name}" — pk-extractor belum selesai, gunakan mapper lama`,
+      const saved = savePkRecord(pkRecord);
+      const promoName =
+        saved.identity_engine?.promo_block?.promo_name || "Promo Tanpa Nama";
+      toast.success("Promo (V.10) disimpan sebagai draft!", {
+        description: `"${promoName}" — record_id: ${saved.record_id}`,
       });
       handleRestart();
       if (onNavigateToPromo) onNavigateToPromo();
