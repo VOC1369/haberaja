@@ -1213,13 +1213,44 @@ export interface PkV10LoyaltyEngine {
   };
 }
 
+/**
+ * Per-variant subcategory shape — OPT-IN TYPING ONLY.
+ *
+ * Phase 2, Step 3.1.
+ *
+ * NOT a runtime schema change:
+ *  - `PkV10VariantEngine.items_block.subcategories` remains `unknown[]`.
+ *  - This interface exists purely so per-variant selectors (Step 3.2) can
+ *    narrow individual entries via an explicit cast (e.g.
+ *    `subcategories[i] as PkV10Subcategory | undefined`).
+ *  - Inert factory, extractor, validator, and UI all stay untouched.
+ *
+ * Field set is the minimal DIRECT (1:1 mappable) surface identified by the
+ * Step 4B audit. All fields optional + nullable: presence is not guaranteed
+ * by the V10 contract, and selectors must never invent values.
+ */
+export interface PkV10Subcategory {
+  variant_id?: string | null;
+  variant_name?: string | null;
+  game_category?: string | null;
+  game_providers?: string[] | null;
+  game_exclusions?: string[] | null;
+  min_deposit?: number | null;
+  max_bonus?: number | null;
+  bonus_percentage?: number | null;
+  turnover_multiplier?: number | string | null;
+  currency?: string | null;
+  // Permissive tail — entries may carry additional fields (e.g. PkV10TierDimension).
+  [key: string]: unknown;
+}
+
 export interface PkV10VariantEngine {
   summary_block: {
     has_subcategories: boolean;
     expected_count: number | null;
   };
   items_block: {
-    subcategories: unknown[]; // entries may carry PkV10TierDimension
+    subcategories: unknown[]; // entries may carry PkV10TierDimension / PkV10Subcategory
   };
 }
 
