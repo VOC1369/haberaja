@@ -70,6 +70,7 @@ import { extractPromoV10 } from "@/features/promo-knowledge/extractor/extract-cl
 import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 import { AdminVerifySection } from "@/features/promo-knowledge/admin-verify/AdminVerifySection";
+import { sel } from "@/features/promo-knowledge/selectors/pk-v10-selectors";
 
 // Helper: Title Case for mode badges
 const formatPromoMode = (mode: string | null | undefined): string => {
@@ -1257,13 +1258,20 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     
     const status = extractedPromo.validation?.status || 'draft';
     const warnings = extractedPromo.validation?.warnings || [];
-    
+
+    // PHASE 2 — header display sources from pkRecord via selectors only.
+    const headerPromoName = sel.promoName(pkRecord as PkV10Record) ?? "-";
+    const headerStatusRaw = sel.validationStatus(pkRecord as PkV10Record);
+    const headerStatus = headerStatusRaw ?? "-";
+    const headerClientId = sel.clientId(pkRecord as PkV10Record);
+    const headerWarnings = sel.validationWarnings(pkRecord as PkV10Record);
+
     return (
       <Card className="w-full bg-card border border-border rounded-xl overflow-hidden">
         {/* Header */}
         <div className="p-6 pb-4 flex items-start gap-4">
           <div className="icon-circle">
-            {status === 'ready' ? (
+            {headerStatusRaw === 'ready' ? (
               <CheckCircle2 className="icon-circle-icon" />
             ) : (
               <Info className="icon-circle-icon text-blue-400" />
@@ -1273,23 +1281,20 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             {/* Row 1: Title + Status Badge (right-aligned) */}
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-semibold text-foreground">
-                {extractedPromo.promo_name || mappedPreview?.promo_name || "Promo Tanpa Nama"}
+                {headerPromoName}
               </h3>
-              <Badge variant="outline" className={getStatusBadgeStyle(status)}>
-                {status === 'ready' && <CheckCircle2 className="w-3 h-3 mr-1" />}
-                {status === 'draft' && <Info className="w-3 h-3 mr-1" />}
-                {getStatusLabel(status)}
+              <Badge variant="outline" className={getStatusBadgeStyle((headerStatusRaw as 'draft' | 'ready') ?? 'draft')}>
+                {headerStatusRaw === 'ready' && <CheckCircle2 className="w-3 h-3 mr-1" />}
+                {headerStatusRaw === 'draft' && <Info className="w-3 h-3 mr-1" />}
+                {headerStatusRaw ? getStatusLabel(headerStatusRaw as 'draft' | 'ready') : "-"}
               </Badge>
             </div>
             {/* Row 2: Other badges */}
             <div className="flex gap-2 mt-2 flex-wrap">
               {/* Client/Website Badge */}
-              {extractedPromo.client_id && (
+              {headerClientId && (
                 <Badge variant="outline" className="bg-cyan-500/20 text-cyan-400 border-cyan-500/40">
-                  🌐 {extractedPromo.client_id}
-                  {extractedPromo.client_id_confidence === 'derived' && (
-                    <span className="ml-1 text-xs opacity-60">(derived)</span>
-                  )}
+                  🌐 {headerClientId}
                 </Badge>
               )}
             </div>
@@ -1371,14 +1376,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         {/* Content */}
         <div className="px-6 pb-6 space-y-6">
           {/* Review Info (was Errors/Warnings - now informational only) */}
-          {warnings.length > 0 && (
+          {headerWarnings.length > 0 && (
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
               <h4 className="text-blue-400 font-medium text-sm flex items-center gap-2 mb-2">
                 <Info className="w-4 h-4" />
-                Review ({warnings.length}) — Dapat dilengkapi manual
+                Review ({headerWarnings.length}) — Dapat dilengkapi manual
               </h4>
               <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-muted-foreground">
-                {warnings.map((warn, idx) => <li key={idx}>{warn}</li>)}
+                {headerWarnings.map((warn, idx) => <li key={idx}>{warn}</li>)}
               </ul>
             </div>
           )}
