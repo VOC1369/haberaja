@@ -1048,6 +1048,8 @@ export interface PkV10PeriodEngine {
   validity_block: {
     valid_from: string | null;
     valid_until: string | null;
+    /** Step 5B — sibling unlimited flag. true = explicit unlimited; null valid_until + false = unknown. */
+    valid_until_unlimited: boolean;
     validity_mode: string; // PkV10ValidityMode when filled
     validity_duration_value: number | null;
     validity_duration_unit: string; // PkV10ValidityDurationUnit when filled
@@ -1186,6 +1188,17 @@ export interface PkV10RewardEngine {
     conditions: unknown[];
     default_reward: Record<string, unknown> | null;
   };
+  /**
+   * Step 5A — REWARD IDENTITY BLOCK.
+   * "What the user gets" — physical reward identity ONLY.
+   * For reward_type !== "physical", both fields stay null.
+   * Execution metadata (validity, max_per_day, external_ref_id) lives in
+   * mechanics_engine.items[].data (Authority Order #1).
+   */
+  reward_identity_block: {
+    item_name: string | null;
+    quantity: number | null;
+  };
   // FLAT FIELDS — display summary only (authority order #4).
   // Source of truth lives in mechanics_engine.items[].
   calculation_basis: string; // PkV10CalculationBasis when filled
@@ -1196,6 +1209,8 @@ export interface PkV10RewardEngine {
   reward_type: string; // PkV10RewardType when filled
   voucher_kind: string | null; // PkV10VoucherKind when filled
   max_reward: number | null;
+  /** Step 5B — sibling unlimited flag. true = explicit unlimited; null max_reward + false = unknown. */
+  max_reward_unlimited: boolean;
   currency: string | null;
 }
 
