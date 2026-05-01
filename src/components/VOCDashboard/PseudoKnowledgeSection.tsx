@@ -1283,10 +1283,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               <h3 className="text-lg font-semibold text-foreground">
                 {headerPromoName}
               </h3>
-              <Badge variant="outline" className={getStatusBadgeStyle(headerStatus)}>
+              <Badge variant="outline" className={getStatusBadgeStyle((headerStatusRaw as 'draft' | 'ready') ?? 'draft')}>
                 {headerStatusRaw === 'ready' && <CheckCircle2 className="w-3 h-3 mr-1" />}
                 {headerStatusRaw === 'draft' && <Info className="w-3 h-3 mr-1" />}
-                {headerStatusRaw ? getStatusLabel(headerStatus) : "-"}
+                {headerStatusRaw ? getStatusLabel(headerStatusRaw as 'draft' | 'ready') : "-"}
               </Badge>
             </div>
             {/* Row 2: Other badges */}
