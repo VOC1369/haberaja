@@ -702,6 +702,36 @@ export const PK_V10_RISK_LEVEL = [
 ] as const;
 export type PkV10RiskLevel = (typeof PK_V10_RISK_LEVEL)[number];
 
+// ─── 1.20.bis Mechanics Data Conventions (Step 5C) ────────────────────────
+// Locked vocabulary for mechanics_engine.items[].data conventions defined in
+// Step 5D doctrine. Enums only — no usage at this step. Wired in Step 6+.
+
+/** Step 5C — external execution system referenced by mechanics_engine.items[].data.external_system.system. */
+export const PK_V10_EXTERNAL_SYSTEM = [
+  "spin_engine",
+  "voucher_system",
+  "freespin_engine",
+  "ticket_system",
+  "none",
+] as const;
+export type PkV10ExternalSystem = (typeof PK_V10_EXTERNAL_SYSTEM)[number];
+
+/** Step 5C — scope of a time_window mechanic item, written at data.scope. */
+export const PK_V10_TIME_WINDOW_SCOPE = [
+  "reward_validity",
+  "claim_window",
+  "promo_period",
+] as const;
+export type PkV10TimeWindowScope = (typeof PK_V10_TIME_WINDOW_SCOPE)[number];
+
+/** Step 5C — how the reward is redeemed against the external system. */
+export const PK_V10_REDEMPTION_METHOD = [
+  "auto",
+  "manual",
+  "claim_required",
+] as const;
+export type PkV10RedemptionMethod = (typeof PK_V10_REDEMPTION_METHOD)[number];
+
 // ─── 1.21 Field Status & Confidence ───────────────────────────────────────
 
 export const PK_V10_FIELD_STATUS = [
