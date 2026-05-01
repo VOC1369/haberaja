@@ -924,6 +924,64 @@ export interface PkV10VoidCondition {
   consequence: string; // PkV10VoidAction when filled
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// MECHANIC DATA DISCRIMINATORS (Phase 2 — typing tightening only)
+//
+// NOTE: These are *opt-in narrowing types* for consumers (selectors, UI).
+// They do NOT change runtime shape. `PkV10MechanicItem.data` is still
+// `Record<string, unknown>`. Consumers may cast based on `mechanic_type`:
+//
+//   const m: PkV10MechanicItem = ...;
+//   if (m.mechanic_type === "calc") {
+//     const data = m.data as PkV10MechanicCalcData;
+//   }
+//
+// All fields are optional + nullable to reflect the inert/partial reality
+// of AI-extracted data. No new fields are introduced — these only describe
+// keys the extractor already produces today.
+// ──────────────────────────────────────────────────────────────────────────
+
+/**
+ * Calculation mechanic data shape (e.g. percentage / fixed-amount payout calc).
+ * Use when `mechanic_type` indicates a calculation primitive.
+ */
+export interface PkV10MechanicCalcData {
+  calculation_method?: string | null;
+  calculation_value?: number | string | null;
+  min_calculation?: number | string | null;
+  max_calculation?: number | string | null;
+  payout_direction?: string | null;
+  evidence?: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * Reward mechanic data shape (e.g. bonus, freechip, cashback payout).
+ * Use when `mechanic_type` indicates a reward primitive.
+ */
+export interface PkV10MechanicRewardData {
+  reward_type?: string | null;
+  reward_mode?: string | null;
+  reward_amount?: number | string | null;
+  reward_currency?: string | null;
+  reward_unit?: string | null;
+  evidence?: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * Turnover mechanic data shape (e.g. wagering / rollover requirement).
+ * Use when `mechanic_type` indicates a turnover primitive.
+ */
+export interface PkV10MechanicTurnoverData {
+  turnover_rule?: string | null;
+  turnover_multiplier?: number | string | null;
+  turnover_basis?: string | null;
+  turnover_scope?: string | null;
+  evidence?: string | null;
+  [key: string]: unknown;
+}
+
 export interface PkV10MechanicItem {
   mechanic_id: string; // "M01", "M02", ...
   mechanic_type: string; // PkV10MechanicType when filled
