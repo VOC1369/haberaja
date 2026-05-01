@@ -79,9 +79,11 @@ function validationWarnings(rec: PkV10Record): string[] {
  *      else     → "dinamis"
  *    Never read `reward_mode` from mechanics_engine or any legacy source.
  */
-function rewardMode(rec: PkV10Record): "fixed" | "dinamis" {
+function rewardMode(rec: PkV10Record): "fixed" | "dinamis" | null {
   const mode = rec?.taxonomy_engine?.mode_block?.mode;
-  return mode === "fixed" ? "fixed" : "dinamis";
+  if (mode === "fixed") return "fixed";
+  if (mode === "dinamis") return "dinamis";
+  return null;
 }
 
 /** 6. Calculation value — `reward_engine.calculation_value` */
