@@ -1258,13 +1258,20 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     
     const status = extractedPromo.validation?.status || 'draft';
     const warnings = extractedPromo.validation?.warnings || [];
-    
+
+    // PHASE 2 — header display sources from pkRecord via selectors only.
+    const headerPromoName = sel.promoName(pkRecord as PkV10Record) ?? "-";
+    const headerStatusRaw = sel.validationStatus(pkRecord as PkV10Record);
+    const headerStatus = headerStatusRaw ?? "-";
+    const headerClientId = sel.clientId(pkRecord as PkV10Record);
+    const headerWarnings = sel.validationWarnings(pkRecord as PkV10Record);
+
     return (
       <Card className="w-full bg-card border border-border rounded-xl overflow-hidden">
         {/* Header */}
         <div className="p-6 pb-4 flex items-start gap-4">
           <div className="icon-circle">
-            {status === 'ready' ? (
+            {headerStatusRaw === 'ready' ? (
               <CheckCircle2 className="icon-circle-icon" />
             ) : (
               <Info className="icon-circle-icon text-blue-400" />
@@ -1274,23 +1281,20 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             {/* Row 1: Title + Status Badge (right-aligned) */}
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-semibold text-foreground">
-                {extractedPromo.promo_name || mappedPreview?.promo_name || "Promo Tanpa Nama"}
+                {headerPromoName}
               </h3>
-              <Badge variant="outline" className={getStatusBadgeStyle(status)}>
-                {status === 'ready' && <CheckCircle2 className="w-3 h-3 mr-1" />}
-                {status === 'draft' && <Info className="w-3 h-3 mr-1" />}
-                {getStatusLabel(status)}
+              <Badge variant="outline" className={getStatusBadgeStyle(headerStatus)}>
+                {headerStatusRaw === 'ready' && <CheckCircle2 className="w-3 h-3 mr-1" />}
+                {headerStatusRaw === 'draft' && <Info className="w-3 h-3 mr-1" />}
+                {headerStatusRaw ? getStatusLabel(headerStatus) : "-"}
               </Badge>
             </div>
             {/* Row 2: Other badges */}
             <div className="flex gap-2 mt-2 flex-wrap">
               {/* Client/Website Badge */}
-              {extractedPromo.client_id && (
+              {headerClientId && (
                 <Badge variant="outline" className="bg-cyan-500/20 text-cyan-400 border-cyan-500/40">
-                  🌐 {extractedPromo.client_id}
-                  {extractedPromo.client_id_confidence === 'derived' && (
-                    <span className="ml-1 text-xs opacity-60">(derived)</span>
-                  )}
+                  🌐 {headerClientId}
                 </Badge>
               )}
             </div>
