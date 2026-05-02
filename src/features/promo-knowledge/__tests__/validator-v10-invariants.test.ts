@@ -10,10 +10,6 @@
  *   #6 external_system=none → ref_id="" — pass + fail (WARNING)
  *   #7 external_system!=none → ref_id   — pass + fail (WARNING)
  */
- *
- * #2 (reward_form ↔ reward_type mapping) is intentionally NOT tested:
- *     deferred until mapping matrix is locked.
- */
 
 import { describe, it, expect } from "vitest";
 import { validatePkV10Invariants } from "../validator/pk-v10-invariants";
