@@ -166,7 +166,7 @@ Dua selector berbeda, dua label berbeda, tidak boleh dicampur.
 | 1 | "ID Lucky Spin"                        | `sel.luckySpinRefId`         | **DIRECT**             | Gate JSX `rewardType === 'lucky_spin'` (sudah ada).           |
 | 2 | "Max Spin/Hari"                        | `sel.luckySpinMaxPerDay`     | **DIRECT**             | Same gate.                                                    |
 | 3 | "Hadiah Fisik" name                    | `sel.physicalItemName`       | **DIRECT**             | Gate JSX `rewardType === 'physical'`.                         |
-| 4 | "Hadiah Fisik" quantity                | `sel.physicalQuantity`       | **DIRECT + GUARDED**   | Per Rule SEM-2: `if rewardType !== 'physical' → null`.        |
+| 4 | "Hadiah Fisik" quantity                | `sel.physicalQuantity`       | **AMBIGUOUS — TUNDA**  | Lihat catatan §7.4. Tidak ada leaf JSX physical quantity.     |
 | 5 | `max_reward_unlimited` flag            | `sel.maxRewardUnlimited`     | **DIRECT**             | Boolean, default false. Lokasi JSX dikonfirmasi saat Step 8.  |
 | 6 | "Promo Berlaku" unlimited (period)     | `sel.validUntilUnlimited`    | **DIRECT**             | Per Rule SEM-3: period_engine ONLY.                           |
 | 7 | "Reward Berlaku" date (spin)           | `sel.spinValidUntil`         | **AMBIGUOUS — TUNDA**  | Tunggu UI dipecah per Rule SEM-1.                             |
