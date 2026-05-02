@@ -1224,6 +1224,35 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           );
         })()}
 
+        {/* Step 9 — Detail Hadiah Fisik (gated by sel.rewardType === "physical") */}
+        {(() => {
+          if (sel.rewardType(pkRecord as PkV10Record) !== "physical") return null;
+          const itemName = sel.physicalItemName(pkRecord as PkV10Record);
+          const qty = sel.physicalQuantity(pkRecord as PkV10Record);
+          return (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <span className="text-sm font-medium text-purple-400">
+                  Detail Hadiah Fisik
+                </span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-muted rounded-lg p-3">
+                  <span className="text-muted-foreground text-xs block mb-1">Nama Item</span>
+                  <span className="text-foreground font-medium">{itemName ?? "-"}</span>
+                </div>
+                <div className="bg-muted rounded-lg p-3">
+                  <span className="text-muted-foreground text-xs block mb-1">Jumlah Item</span>
+                  <span className="text-foreground font-medium">
+                    {qty !== null ? qty.toLocaleString("id-ID") : "-"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {hasBlacklist && (
           <div className="mt-4 pt-4 border-t border-border">
             <div className="bg-destructive/10 rounded-lg p-3">
@@ -1300,6 +1329,34 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   🌐 {headerClientId}
                 </Badge>
               )}
+              {/* Step 9 — Periode Promo (period_engine.validity_block) */}
+              {(() => {
+                const unlimited = sel.validUntilUnlimited(pkRecord as PkV10Record);
+                const validUntil = sel.promoValidUntil(pkRecord as PkV10Record);
+                const display = unlimited
+                  ? "Tidak Terbatas"
+                  : validUntil ?? "-";
+                return (
+                  <Badge variant="outline" className="bg-muted text-foreground border-border">
+                    📅 Periode Promo: {display}
+                  </Badge>
+                );
+              })()}
+              {/* Step 9 — Max Total Reward (reward_engine.max_reward + max_reward_unlimited) */}
+              {(() => {
+                const unlimited = sel.maxRewardUnlimited(pkRecord as PkV10Record);
+                const maxR = sel.maxReward(pkRecord as PkV10Record);
+                const display = unlimited
+                  ? "Tidak Terbatas"
+                  : maxR !== null
+                    ? maxR.toLocaleString("id-ID")
+                    : "-";
+                return (
+                  <Badge variant="outline" className="bg-muted text-foreground border-border">
+                    🏆 Max Total Reward: {display}
+                  </Badge>
+                );
+              })()}
             </div>
           </div>
         </div>
