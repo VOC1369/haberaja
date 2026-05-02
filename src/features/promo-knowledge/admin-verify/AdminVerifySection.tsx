@@ -464,6 +464,14 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     [record],
   );
 
+  // Gate: resolver is single source of decision. If it skipped the provider
+  // path (e.g. game_domain=all → not_applicable), UI MUST NOT render the card
+  // even when the legacy evaluateProviderTrigger says show=true.
+  const providerSkippedByResolver = resolverOutput.skipPaths.has(
+    PROVIDER_WHITELIST_PATH,
+  );
+  const showProviderCard = providerTrigger.show && !providerSkippedByResolver;
+
   const questions = useMemo<GeneratedQuestion[]>(
     () => (record ? generateQuestions(record, resolverOutput.skipPaths) : []),
     [record, resolverOutput],
