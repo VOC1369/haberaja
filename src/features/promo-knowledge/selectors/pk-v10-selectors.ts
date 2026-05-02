@@ -360,6 +360,16 @@ export const sel = {
   subBonusPercentage,
   subTurnoverMultiplier,
   subCurrency,
+  // Step 7 — mechanics_engine (predicate-disambiguated)
+  luckySpinRefId,
+  luckySpinMaxPerDay,
+  spinValidUntil,
+  spinValidUntilUnlimited,
+  // Step 7 — reward identity + unlimited siblings (flat engine paths)
+  physicalItemName,
+  physicalQuantity,
+  maxRewardUnlimited,
+  validUntilUnlimited,
 } as const;
 
 export type PkV10Selectors = typeof sel;
