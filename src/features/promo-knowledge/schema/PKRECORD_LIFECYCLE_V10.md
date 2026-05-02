@@ -227,7 +227,7 @@ guard, tapi tidak ada consumer UI di Step 8 yang memanggilnya.
 1. ✅ Lifecycle phases (`validated`, `ready_for_ui` sebagai derived) — APPROVED.
 2. ✅ Zero-fallback policy — APPROVED.
 3. ✅ Semantic UI rules SEM-1 / SEM-2 / SEM-3 — LOCKED.
-4. ✅ Final classification: **DIRECT = 6, AMBIGUOUS = 2**.
+4. ✅ Final classification: **DIRECT = 5, AMBIGUOUS = 3** (Step 8C+8D skipped).
 5. ⏳ Step 8 execution: per-leaf, incremental, diff kecil. Mulai dari 6 DIRECT leaf.
 6. ⏳ Lokasi exact `maxRewardUnlimited` di JSX akan dikonfirmasi via grep saat Step 8 mulai.
 
