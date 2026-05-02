@@ -462,6 +462,20 @@ export const PK_V10_VOUCHER_KIND = [
 ] as const;
 export type PkV10VoucherKind = (typeof PK_V10_VOUCHER_KIND)[number];
 
+// ─── 1.11.bis Reward Form (Step 6.3) ──────────────────────────────────────
+// Locked vocabulary for mechanics_engine.items[].data.reward_form.
+// Deterministic — Claude must NOT invent new values. If unsure → omit.
+export const PK_V10_REWARD_FORM = [
+  "spin_token",
+  "voucher_code",
+  "cashback",
+  "physical_item",
+  "freespin_token",
+  "credit_game",
+  "mystery_reward",
+] as const;
+export type PkV10RewardForm = (typeof PK_V10_REWARD_FORM)[number];
+
 // ─── 1.12 Loyalty Engine ──────────────────────────────────────────────────
 
 export const PK_V10_POINT_NAME = [
