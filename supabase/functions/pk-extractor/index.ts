@@ -413,6 +413,9 @@ function buildExtractorToolSchema(): AnyObj {
               validity_mode: enumStr("validity_mode"),
               validity_duration_value: { type: ["number", "null"] },
               validity_duration_unit: enumStr("validity_duration_unit"),
+              // Step 6.2 additive — Step 5B unlimited sibling for valid_until.
+              // true ⇒ valid_until MUST be null. Validator enforcement = Step 6B.
+              valid_until_unlimited: { type: "boolean" },
             },
           },
           distribution_block: {
