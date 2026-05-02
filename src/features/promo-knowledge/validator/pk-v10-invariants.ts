@@ -6,6 +6,8 @@
  *
  * SCOPE — Step 6B only:
  *   #1 reward_form must be in PK_V10_REWARD_FORM         [ERROR]
+ *   #2 reward_form ↔ reward_type mapping consistency      [WARNING]
+ *       (Phase A soft launch — see REWARD_MAPPING_MATRIX_V10.md)
  *   #3 max_reward_unlimited=true → max_reward===null      [ERROR]
  *   #4 valid_until_unlimited=true → valid_until===null    [ERROR]
  *   #5 reward_identity_block (item_name|quantity) only when
@@ -13,10 +15,7 @@
  *   #6 external_system.system === "none" → ref_id === ""  [WARNING]
  *   #7 external_system.system !== "none" → ref_id non-empty[WARNING]
  *
- * EXPLICITLY OUT OF SCOPE (deferred to a later step):
- *   #2 reward_form ↔ reward_type mapping consistency
- *       Reason: mapping matrix not yet locked. Premature constraint
- *       would yield false-negatives on valid cases.
+ * EXPLICITLY OUT OF SCOPE: (none — Step 6B is fully wired post matrix lock)
  *
  * DESIGN NOTES:
  *   - Severity tier mirrors validator/index.ts (error|warning|info).
@@ -60,6 +59,26 @@ const issue = (
 // ─── Local type guards ────────────────────────────────────────────────────
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
+
+/**
+ * Reward Mapping Matrix V10 (Invariant #2 — Phase A WARNING).
+ * Source of truth: src/features/promo-knowledge/schema/REWARD_MAPPING_MATRIX_V10.md
+ *
+ * Rules:
+ *   - `combo` is intentionally absent → handled as "skip" by caller (always pass).
+ *   - Empty / missing reward_form → skip (not validated here).
+ *   - reward_type not in this map → skip (no opinion until matrix amended).
+ */
+const REWARD_TYPE_TO_ALLOWED_FORMS: Readonly<Record<string, readonly string[]>> = {
+  cash: ["cashback", "credit_game"],
+  lucky_spin: ["spin_token"],
+  voucher: ["voucher_code"],
+  physical: ["physical_item"],
+  freespin: ["freespin_token"],
+  ticket: ["mystery_reward"],
+  credit_game: ["credit_game"],
+  discount: ["voucher_code"],
+};
 
 /**
  * validatePkV10Invariants
@@ -134,6 +153,38 @@ export function validatePkV10Invariants(rec: PkV10Record): PkV10ValidationReport
             `reward_form "${String(rf)}" is not in PK_V10_REWARD_FORM enum.`,
           ),
         );
+      }
+    }
+
+    // #2 reward_form ↔ reward_type mapping consistency (Phase A WARNING)
+    //   - only fires when mechanic_type === "reward"
+    //   - skips when reward_form empty/missing OR reward_type empty
+    //   - skips combo (open by design)
+    //   - skips reward_form values that already failed enum check (#1)
+    //   - skips reward_type values not present in the matrix (no opinion)
+    if (item?.mechanic_type === "reward") {
+      const rt = reward?.reward_type;
+      const rfStr = typeof rf === "string" ? rf : "";
+      const rfIsValidEnum =
+        rfStr.length > 0 &&
+        (PK_V10_REWARD_FORM as readonly string[]).includes(rfStr);
+      if (
+        rfIsValidEnum &&
+        typeof rt === "string" &&
+        rt.length > 0 &&
+        rt !== "combo"
+      ) {
+        const allowed = REWARD_TYPE_TO_ALLOWED_FORMS[rt];
+        if (allowed && !allowed.includes(rfStr)) {
+          issues.push(
+            issue(
+              "warning",
+              `mechanics_engine.items[${idx}].data.reward_form`,
+              "REWARD_FORM_TYPE_MISMATCH",
+              `reward_form "${rfStr}" is not a valid mapping for reward_type "${rt}". Allowed: [${allowed.join(", ")}].`,
+            ),
+          );
+        }
       }
     }
 
