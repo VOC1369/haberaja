@@ -128,37 +128,66 @@ sebagian ada di `handleSave` (PHASE 2 commit), tidak diubah di Step 8.
 
 ---
 
-## 7. Leaf 1:1 mapping audit (8 leaf dari Step 8 scope)
+## 7. Leaf 1:1 mapping audit (8 leaf dari Step 8 scope) — REVISED
 
-Klasifikasi per requested leaf:
+**Revision note (post-review):** Klasifikasi sebelumnya keliru menggabungkan
+3 kasus ke "AMBIGUOUS". Setelah dibedah, hanya 2 yang benar-benar ambiguous
+(spin validity); sisanya adalah **semantic-layer separation** yang sudah
+deterministic begitu rule berikut diadopsi:
 
-- **DIRECT 1:1** — boleh rebind di Step 8.
-- **AMBIGUOUS** — semantik V10 ↔ V.09 belum jelas, jangan rebind.
-- **MISSING** — V10 source belum ada, jangan rebind.
+### 7.1 Semantic UI Rules (LOCKED)
 
-| # | UI display location                            | V.09 source (current)                      | V10 selector              | Class       | Note                                                                 |
-|---|------------------------------------------------|--------------------------------------------|---------------------------|-------------|----------------------------------------------------------------------|
-| 1 | "ID Lucky Spin" (line ~1189)                   | `mappedPreview.fixed_lucky_spin_id`        | `sel.luckySpinRefId`      | DIRECT 1:1  | Predicate `reward_form==="spin_token"` + `external_system.ref_id`.   |
-| 2 | "Max Spin/Hari" (line ~1183)                   | `mappedPreview.fixed_lucky_spin_max_per_day` | `sel.luckySpinMaxPerDay`| DIRECT 1:1  | Same predicate; `execution.max_per_day` numeric.                     |
-| 3 | "Waktu Berlaku" → `fixed_voucher_valid_until`  | `mappedPreview.fixed_voucher_valid_until`  | `sel.spinValidUntil`      | AMBIGUOUS   | UI mencampur voucher validity & spin validity di satu blok. Selector V10 hanya cover spin-validity (`scope==="reward_validity"`). |
-| 4 | "Waktu Berlaku" → `fixed_voucher_valid_unlimited` | `mappedPreview.fixed_voucher_valid_unlimited` | `sel.spinValidUntilUnlimited` / `sel.validUntilUnlimited` | AMBIGUOUS | Dua selector berbeda (mechanic spin vs period_engine). UI tidak tahu mana yang dimaksud. |
-| 5 | "Hadiah Fisik" name (line ~998)                | `mappedPreview.fixed_physical_reward_name` | `sel.physicalItemName`    | DIRECT 1:1  | `reward_engine.reward_identity_block.item_name`.                     |
-| 6 | "Hadiah Fisik" quantity (line ~1175)           | `mappedPreview.fixed_reward_quantity`      | `sel.physicalQuantity`    | AMBIGUOUS   | UI field generic "reward quantity"; V10 selector hanya valid kalau `reward_type==="physical"` (gated by Invariant #5). Perlu guard `rewardType === "physical"` sebelum rebind. |
-| 7 | `max_reward_unlimited` flag (di `Max Bonus` blok) | `mappedPreview.max_reward_unlimited` (jika ada) | `sel.maxRewardUnlimited` | DIRECT 1:1 | Boolean flag, sudah default false di selector.                       |
-| 8 | `valid_until_unlimited` flag (period)          | `mappedPreview.fixed_voucher_valid_unlimited` (overlap) | `sel.validUntilUnlimited` | AMBIGUOUS | Overlap dengan #4. Butuh penegasan: period_engine validity vs reward validity. |
+**Rule SEM-1 — "Waktu Berlaku" tidak boleh satu label untuk dua konsep.**
+Label tunggal "Waktu Berlaku" wajib dipecah menjadi 2 label berbeda di UI:
 
-### Verdict scope Step 8
+| UI label                 | Source V10                                                     | Layer          |
+|--------------------------|----------------------------------------------------------------|----------------|
+| **"Promo Berlaku"**      | `period_engine.validity_block.valid_until` (+ `_unlimited`)    | promo-level    |
+| **"Reward Berlaku"**     | `mechanics_engine.items[scope==="reward_validity"].validity.*` | reward-level   |
 
-**Boleh rebind sekarang (DIRECT 1:1):**
-1. `sel.luckySpinRefId` → "ID Lucky Spin" (gated by `rewardType === 'lucky_spin'` yang sudah ada di JSX).
-2. `sel.luckySpinMaxPerDay` → "Max Spin/Hari" (same gate).
-3. `sel.physicalItemName` → "Hadiah Fisik" name (gated by `rewardType === 'physical'`).
-5. `sel.maxRewardUnlimited` → max-reward unlimited flag (jika dipakai di JSX; perlu cek lokasi exact).
+Sampai UI dipecah, **jangan rebind** spin/reward validity.
 
-**TUNDA (AMBIGUOUS / butuh design lanjut):**
-3. "Waktu Berlaku" untuk lucky-spin vs voucher → butuh keputusan: blok ini mau dipecah jadi 2 blok (spin vs voucher) atau tetap 1 blok dengan branching `rewardType`?
-4. `physicalQuantity` → butuh konfirmasi: UI "fixed_reward_quantity" sekarang generic untuk semua reward type; V10 hanya untuk physical. Pisah atau tidak?
-6. `validUntilUnlimited` (period) vs `spinValidUntilUnlimited` (mechanic) → mana yang dimaksud "Waktu Berlaku"?
+**Rule SEM-2 — `physicalQuantity` adalah DIRECT + GUARDED.**
+Bukan ambiguous. Selector dipanggil dengan guard:
+```
+if (rewardType !== "physical") return null;
+return sel.physicalQuantity(rec);
+```
+
+**Rule SEM-3 — `validUntilUnlimited` adalah promo-level, BUKAN reward-level.**
+- `sel.validUntilUnlimited` → `period_engine` ONLY (promo "Promo Berlaku").
+- `sel.spinValidUntilUnlimited` → `mechanics_engine` ONLY (reward "Reward Berlaku").
+Dua selector berbeda, dua label berbeda, tidak boleh dicampur.
+
+### 7.2 Final classification table
+
+| # | Leaf / UI                              | V10 selector                 | Class                  | Guard / Note                                                  |
+|---|----------------------------------------|------------------------------|------------------------|---------------------------------------------------------------|
+| 1 | "ID Lucky Spin"                        | `sel.luckySpinRefId`         | **DIRECT**             | Gate JSX `rewardType === 'lucky_spin'` (sudah ada).           |
+| 2 | "Max Spin/Hari"                        | `sel.luckySpinMaxPerDay`     | **DIRECT**             | Same gate.                                                    |
+| 3 | "Hadiah Fisik" name                    | `sel.physicalItemName`       | **DIRECT**             | Gate JSX `rewardType === 'physical'`.                         |
+| 4 | "Hadiah Fisik" quantity                | `sel.physicalQuantity`       | **DIRECT + GUARDED**   | Per Rule SEM-2: `if rewardType !== 'physical' → null`.        |
+| 5 | `max_reward_unlimited` flag            | `sel.maxRewardUnlimited`     | **DIRECT**             | Boolean, default false. Lokasi JSX dikonfirmasi saat Step 8.  |
+| 6 | "Promo Berlaku" unlimited (period)     | `sel.validUntilUnlimited`    | **DIRECT**             | Per Rule SEM-3: period_engine ONLY.                           |
+| 7 | "Reward Berlaku" date (spin)           | `sel.spinValidUntil`         | **AMBIGUOUS — TUNDA**  | Tunggu UI dipecah per Rule SEM-1.                             |
+| 8 | "Reward Berlaku" unlimited (spin)      | `sel.spinValidUntilUnlimited`| **AMBIGUOUS — TUNDA**  | Tunggu UI dipecah per Rule SEM-1.                             |
+
+### 7.3 Verdict scope Step 8
+
+**DIRECT (6 leaf — boleh rebind sekarang, incremental):**
+1. `sel.luckySpinRefId`
+2. `sel.luckySpinMaxPerDay`
+3. `sel.physicalItemName`
+4. `sel.physicalQuantity` (with `rewardType === "physical"` guard)
+5. `sel.maxRewardUnlimited`
+6. `sel.validUntilUnlimited` (period_engine, label = "Promo Berlaku")
+
+**AMBIGUOUS — TUNDA (2 leaf):**
+- `sel.spinValidUntil`
+- `sel.spinValidUntilUnlimited`
+
+Block ini di-unblock setelah label "Reward Berlaku" terpisah dari
+"Promo Berlaku" di JSX (separate design pass, di luar Step 8).
 
 ---
 
@@ -169,21 +198,20 @@ Klasifikasi per requested leaf:
 - ❌ Tidak boleh refactor `mappedPreview` itself di Step 8.
 - ❌ Tidak boleh ubah `pkStatus` state machine.
 - ❌ Tidak boleh tambah state variable baru (`validated`, `ready_for_ui` adalah derived).
-- ❌ Tidak boleh sentuh leaf AMBIGUOUS / MISSING.
+- ❌ Tidak boleh sentuh leaf AMBIGUOUS (#7, #8).
+- ❌ Tidak boleh pakai 1 label "Waktu Berlaku" untuk dua konsep (Rule SEM-1).
+- ❌ Tidak boleh panggil `physicalQuantity` tanpa guard `rewardType === "physical"` (Rule SEM-2).
+- ❌ Tidak boleh tukar `validUntilUnlimited` ↔ `spinValidUntilUnlimited` (Rule SEM-3).
 
 ---
 
-## 9. Output yang dibutuhkan untuk Step 8 next
+## 9. Status & Step 8 entry criteria
 
-Sebelum Step 8 mulai, user perlu konfirmasi:
+1. ✅ Lifecycle phases (`validated`, `ready_for_ui` sebagai derived) — APPROVED.
+2. ✅ Zero-fallback policy — APPROVED.
+3. ✅ Semantic UI rules SEM-1 / SEM-2 / SEM-3 — LOCKED.
+4. ✅ Final classification: **DIRECT = 6, AMBIGUOUS = 2**.
+5. ⏳ Step 8 execution: per-leaf, incremental, diff kecil. Mulai dari 6 DIRECT leaf.
+6. ⏳ Lokasi exact `maxRewardUnlimited` di JSX akan dikonfirmasi via grep saat Step 8 mulai.
 
-1. ✅ Approve lifecycle phases (`validated`, `ready_for_ui` sebagai derived).
-2. ✅ Approve fallback policy (zero fallback per rebound leaf).
-3. ⏳ Decision untuk 3 AMBIGUOUS leaf:
-   - "Waktu Berlaku" — pisah blok atau branching?
-   - `physicalQuantity` — gate by `rewardType==='physical'`?
-   - `valid_until_unlimited` — period_engine atau mechanic?
-4. ⏳ Konfirmasi lokasi exact `maxRewardUnlimited` di JSX (perlu grep saat Step 8).
-
-Setelah ini clear, Step 8 boleh dieksekusi **per leaf** (bukan bulk),
-dengan diff kecil per perubahan.
+Step 8 sekarang **deterministic dan aman dieksekusi** untuk 6 DIRECT leaf.
