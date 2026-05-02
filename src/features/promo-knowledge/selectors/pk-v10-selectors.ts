@@ -25,7 +25,11 @@
  *  `PkV10MechanicRewardData`. Mapping: "fixed" → "fixed", else → "dinamis".
  */
 
-import type { PkV10Record, PkV10Subcategory } from "../schema/pk-v10";
+import type {
+  PkV10Record,
+  PkV10Subcategory,
+  PkV10MechanicItem,
+} from "../schema/pk-v10";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Internal helpers (read-only)
@@ -220,6 +224,112 @@ function subCurrency(rec: PkV10Record, i: number): string | null {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
+// Step 7 — mechanics_engine helper + selectors
+// ──────────────────────────────────────────────────────────────────────────
+//
+// CONTRACT:
+//  - `findMechanic` walks `mechanics_engine.items_block.items[]` in order and
+//    returns the FIRST item whose `mechanic_type` matches AND, when a
+//    predicate is supplied, whose `data` satisfies the predicate.
+//  - Predicate is the disambiguation channel. Selectors MUST NOT rely on
+//    `mechanic_type` alone — e.g. "reward" can be lucky_spin, cashback,
+//    physical, voucher, etc. The predicate filters on `data.reward_form`
+//    or another data-level discriminator.
+//  - No fallback, no default, no transform. Missing → null (or false for
+//    boolean unlimited flags, per Step 5B sibling convention).
+
+type MechanicData = Record<string, unknown>;
+
+/**
+ * Find the first mechanic item matching `mechanic_type` and (optionally) a
+ * `data` predicate. Returns `null` when no item matches.
+ */
+function findMechanic(
+  rec: PkV10Record,
+  mechanic_type: string,
+  predicate?: (data: MechanicData) => boolean,
+): PkV10MechanicItem | null {
+  const items = arr(rec?.mechanics_engine?.items_block?.items);
+  for (const it of items) {
+    if (!it || it.mechanic_type !== mechanic_type) continue;
+    const data = (it.data ?? {}) as MechanicData;
+    if (predicate && !predicate(data)) continue;
+    return it;
+  }
+  return null;
+}
+
+// Predicate: lucky-spin reward instance.
+const isSpinTokenReward = (d: MechanicData): boolean =>
+  (d as { reward_form?: unknown }).reward_form === "spin_token";
+
+// Predicate: time_window scoped to reward validity (lucky-spin validity).
+const isRewardValidityWindow = (d: MechanicData): boolean =>
+  (d as { scope?: unknown }).scope === "reward_validity";
+
+/** 16. Lucky-spin external ref id (mechanics_engine, predicate-disambiguated). */
+function luckySpinRefId(rec: PkV10Record): string | null {
+  const m = findMechanic(rec, "reward", isSpinTokenReward);
+  const ext = (m?.data as { external_system?: { ref_id?: unknown } } | undefined)
+    ?.external_system;
+  const v = ext?.ref_id;
+  return typeof v === "string" ? s(v) : null;
+}
+
+/** 17. Lucky-spin max-per-day cap (mechanics_engine, predicate-disambiguated). */
+function luckySpinMaxPerDay(rec: PkV10Record): number | null {
+  const m = findMechanic(rec, "reward", isSpinTokenReward);
+  const exec = (m?.data as { execution?: { max_per_day?: unknown } } | undefined)
+    ?.execution;
+  const v = exec?.max_per_day;
+  return typeof v === "number" ? n(v) : null;
+}
+
+/** 18. Spin validity (time_window scope=reward_validity). */
+function spinValidUntil(rec: PkV10Record): string | null {
+  const m = findMechanic(rec, "time_window", isRewardValidityWindow);
+  const validity = (m?.data as { validity?: { valid_until?: unknown } } | undefined)
+    ?.validity;
+  const v = validity?.valid_until;
+  return typeof v === "string" ? s(v) : null;
+}
+
+/** 19. Spin validity unlimited flag — Step 5B sibling. Defaults to false. */
+function spinValidUntilUnlimited(rec: PkV10Record): boolean {
+  const m = findMechanic(rec, "time_window", isRewardValidityWindow);
+  const validity = (
+    m?.data as { validity?: { valid_until_unlimited?: unknown } } | undefined
+  )?.validity;
+  return validity?.valid_until_unlimited === true;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Reward identity + record-level unlimited flags (flat engine paths).
+// These do NOT need `findMechanic` — they live on `reward_engine` /
+// `period_engine` directly.
+// ──────────────────────────────────────────────────────────────────────────
+
+/** 20. Physical item name — `reward_engine.reward_identity_block.item_name`. */
+function physicalItemName(rec: PkV10Record): string | null {
+  return s(rec?.reward_engine?.reward_identity_block?.item_name);
+}
+
+/** 21. Physical item quantity — `reward_engine.reward_identity_block.quantity`. */
+function physicalQuantity(rec: PkV10Record): number | null {
+  return n(rec?.reward_engine?.reward_identity_block?.quantity);
+}
+
+/** 22. Max-reward unlimited flag — Step 5B sibling. Defaults to false. */
+function maxRewardUnlimited(rec: PkV10Record): boolean {
+  return rec?.reward_engine?.max_reward_unlimited === true;
+}
+
+/** 23. Promo validity unlimited flag — Step 5B sibling. Defaults to false. */
+function validUntilUnlimited(rec: PkV10Record): boolean {
+  return rec?.period_engine?.validity_block?.valid_until_unlimited === true;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 // Public selector namespace
 // ──────────────────────────────────────────────────────────────────────────
 
@@ -250,6 +360,16 @@ export const sel = {
   subBonusPercentage,
   subTurnoverMultiplier,
   subCurrency,
+  // Step 7 — mechanics_engine (predicate-disambiguated)
+  luckySpinRefId,
+  luckySpinMaxPerDay,
+  spinValidUntil,
+  spinValidUntilUnlimited,
+  // Step 7 — reward identity + unlimited siblings (flat engine paths)
+  physicalItemName,
+  physicalQuantity,
+  maxRewardUnlimited,
+  validUntilUnlimited,
 } as const;
 
 export type PkV10Selectors = typeof sel;
