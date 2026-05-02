@@ -15,10 +15,7 @@
  *   #6 external_system.system === "none" → ref_id === ""  [WARNING]
  *   #7 external_system.system !== "none" → ref_id non-empty[WARNING]
  *
- * EXPLICITLY OUT OF SCOPE (deferred to a later step):
- *   #2 reward_form ↔ reward_type mapping consistency
- *       Reason: mapping matrix not yet locked. Premature constraint
- *       would yield false-negatives on valid cases.
+ * EXPLICITLY OUT OF SCOPE: (none — Step 6B is fully wired post matrix lock)
  *
  * DESIGN NOTES:
  *   - Severity tier mirrors validator/index.ts (error|warning|info).
