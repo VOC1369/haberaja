@@ -16,9 +16,13 @@
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 import { RESOLVER_RULES, type ResolverStatus } from "./resolver-rules";
 
+export type ResolverClassification = "explicit" | "not_applicable" | "ambiguous";
+
 export interface AiResolverLogEntry {
   field_path: string;
-  resolved_status: Exclude<ResolverStatus, "ask">;
+  resolved_status: ResolverStatus;
+  /** Audit tag — orthogonal to status. Tells WHY this decision was made. */
+  classification?: ResolverClassification;
   reasoning: string;
   resolved_at: string;
   resolved_by: "ai_resolver";
