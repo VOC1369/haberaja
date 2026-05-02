@@ -64,19 +64,89 @@ const containsAny = (hay: string, needles: string[]): boolean =>
   needles.some((n) => hay.includes(n));
 
 // ─────────────────────────────────────────────────────────────────────────
-// Rule 1 — scope_engine.game_block.eligible_providers
+// Rule — scope_engine.game_block.eligible_providers (FIELD-FIRST)
 // ─────────────────────────────────────────────────────────────────────────
-// HUMAN-VERIFIED MODE (Priority A — wajib).
-// AI TIDAK PERNAH meng-infer provider. Keputusan ini operasional, bukan tekstual.
-// Resolver selalu return null → UI Admin Verify wajib tampilkan pertanyaan
-// jika game_domain terisi tapi eligible_providers kosong.
-// Jawaban admin masuk _human_override_log (bukan _ai_resolver_log).
-export const RULE_ELIGIBLE_PROVIDERS = {
+// PURE pkRecord field check. ZERO raw_text, ZERO regex, ZERO inference.
+// Only reads:
+//   - scope_engine.game_block.game_domain    (canonical enum / string)
+//   - scope_engine.game_block.eligible_providers (array)
+//
+// Decision matrix:
+//   game_domain ∈ {null, "", "all", "none"}    → not_applicable / not_applicable
+//   game_domain specific + providers non-empty → not_applicable / explicit
+//   game_domain specific + providers empty     → ask            / ambiguous
+const GAME_DOMAIN_NA_VALUES = new Set(["", "all", "none"]);
+
+export const RULE_PROVIDER_FIELD_FIRST = {
   path: "scope_engine.game_block.eligible_providers",
-  resolve(_ctx: ResolverContext): ResolverDecision | null {
-    return null;
+  resolve(ctx: ResolverContext): ResolverDecision | null {
+    const gb = ctx.record.scope_engine?.game_block;
+    const domainRaw = gb?.game_domain;
+    const providers = gb?.eligible_providers;
+
+    const domainNorm =
+      domainRaw === null || domainRaw === undefined
+        ? ""
+        : String(domainRaw).trim().toLowerCase();
+
+    // Case 1: game_domain absent or canonical "all"/"none" → not applicable
+    if (GAME_DOMAIN_NA_VALUES.has(domainNorm)) {
+      return {
+        status: "not_applicable",
+        classification: "not_applicable",
+        reasoning: `game_domain="${domainNorm || "null"}" → provider scope tidak relevan.`,
+      };
+    }
+
+    // Case 2: specific game_domain + providers already filled → explicit
+    if (Array.isArray(providers) && providers.length > 0) {
+      return {
+        status: "not_applicable",
+        classification: "explicit",
+        reasoning: `eligible_providers sudah terisi (${providers.length} item) untuk game_domain="${domainNorm}".`,
+      };
+    }
+
+    // Case 3: specific game_domain + providers empty → ambiguous, ASK admin
+    return {
+      status: "ask",
+      classification: "ambiguous",
+      reasoning: `game_domain="${domainNorm}" tapi eligible_providers kosong → admin harus tentukan.`,
+    };
   },
 };
+
+// ─────────────────────────────────────────────────────────────────────────
+// Rule — taxonomy_engine.logic_block.turnover_basis (FIELD-FIRST)
+// ─────────────────────────────────────────────────────────────────────────
+// PURE field read. Resolver bukan reasoning engine kedua.
+// Hanya baca turnover_basis. Jika extractor tidak menentukan, itu ASK admin.
+//
+// Decision matrix:
+//   turnover_basis non-empty → not_applicable / explicit  (extractor sudah jawab)
+//   turnover_basis empty     → ask            / ambiguous (extractor gagal/diam)
+export const RULE_TURNOVER_FIELD_FIRST = {
+  path: "taxonomy_engine.logic_block.turnover_basis",
+  resolve(ctx: ResolverContext): ResolverDecision | null {
+    const tb = ctx.record.taxonomy_engine?.logic_block?.turnover_basis;
+
+    if (!isEmpty(tb)) {
+      return {
+        status: "not_applicable",
+        classification: "explicit",
+        reasoning: `turnover_basis="${tb}" sudah ditentukan extractor.`,
+      };
+    }
+
+    return {
+      status: "ask",
+      classification: "ambiguous",
+      reasoning:
+        "turnover_basis kosong → resolver tidak menebak; admin harus konfirmasi applicability.",
+    };
+  },
+};
+
 
 // ─────────────────────────────────────────────────────────────────────────
 // Rule 2 — dependency_engine.stacking_block.stacking_policy
