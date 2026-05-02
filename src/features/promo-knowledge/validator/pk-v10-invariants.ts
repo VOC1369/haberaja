@@ -6,6 +6,8 @@
  *
  * SCOPE — Step 6B only:
  *   #1 reward_form must be in PK_V10_REWARD_FORM         [ERROR]
+ *   #2 reward_form ↔ reward_type mapping consistency      [WARNING]
+ *       (Phase A soft launch — see REWARD_MAPPING_MATRIX_V10.md)
  *   #3 max_reward_unlimited=true → max_reward===null      [ERROR]
  *   #4 valid_until_unlimited=true → valid_until===null    [ERROR]
  *   #5 reward_identity_block (item_name|quantity) only when
