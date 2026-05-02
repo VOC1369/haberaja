@@ -156,6 +156,38 @@ export function validatePkV10Invariants(rec: PkV10Record): PkV10ValidationReport
       }
     }
 
+    // #2 reward_form ↔ reward_type mapping consistency (Phase A WARNING)
+    //   - only fires when mechanic_type === "reward"
+    //   - skips when reward_form empty/missing OR reward_type empty
+    //   - skips combo (open by design)
+    //   - skips reward_form values that already failed enum check (#1)
+    //   - skips reward_type values not present in the matrix (no opinion)
+    if (item?.mechanic_type === "reward") {
+      const rt = reward?.reward_type;
+      const rfStr = typeof rf === "string" ? rf : "";
+      const rfIsValidEnum =
+        rfStr.length > 0 &&
+        (PK_V10_REWARD_FORM as readonly string[]).includes(rfStr);
+      if (
+        rfIsValidEnum &&
+        typeof rt === "string" &&
+        rt.length > 0 &&
+        rt !== "combo"
+      ) {
+        const allowed = REWARD_TYPE_TO_ALLOWED_FORMS[rt];
+        if (allowed && !allowed.includes(rfStr)) {
+          issues.push(
+            issue(
+              "warning",
+              `mechanics_engine.items[${idx}].data.reward_form`,
+              "REWARD_FORM_TYPE_MISMATCH",
+              `reward_form "${rfStr}" is not a valid mapping for reward_type "${rt}". Allowed: [${allowed.join(", ")}].`,
+            ),
+          );
+        }
+      }
+    }
+
     // #6 / #7 — external_system ↔ ref_id consistency
     const ext = data.external_system;
     if (isPlainObject(ext)) {
