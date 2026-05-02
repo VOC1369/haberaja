@@ -229,6 +229,22 @@ Untuk menggunakan `sel.maxRewardUnlimited`:
 - Dibutuhkan **leaf baru record-level** seperti "Max Total Reward".
 - **Tidak dilakukan di Step 8** (no layout change rule).
 
+### 7.6 Catatan: kenapa `validUntilUnlimited` direklasifikasi (Step 8F — SKIP)
+
+`validUntilUnlimited` adalah **promo-level** (`period_engine.validity_block`),
+bukan reward-level. UI saat ini hanya memiliki leaf "Waktu Berlaku" di
+**dalam loop reward**, yang membaca voucher/spin validity (reward-level).
+Tidak ada leaf promo-level untuk "Promo Berlaku".
+
+Force-rebind ke leaf yang ada akan melanggar:
+- **SEM-1** — "Promo Berlaku" ≠ "Reward Berlaku" (label collision).
+- **SEM-3** — period validity ≠ reward validity (layer collision).
+
+Untuk menggunakan `sel.validUntilUnlimited`:
+- Dibutuhkan **leaf baru promo-level** "Promo Berlaku" di header / period
+  section (di luar reward loop).
+- **Tidak dilakukan di Step 8** (no layout change rule).
+
 ---
 
 ## 8. Anti-patterns (Step 8 hard rules)
