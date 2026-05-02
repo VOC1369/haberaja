@@ -174,15 +174,17 @@ Dua selector berbeda, dua label berbeda, tidak boleh dicampur.
 
 ### 7.3 Verdict scope Step 8
 
-**DIRECT (5 leaf — boleh rebind sekarang, incremental):**
+**DIRECT (boleh rebind sekarang, incremental):**
 1. `sel.luckySpinRefId` ✅ (Step 8A done)
 2. `sel.luckySpinMaxPerDay` ✅ (Step 8B done)
 3. `sel.physicalItemName` (Step 8C — SKIPPED, tidak ada DIRECT leaf record-level)
-4. `sel.maxRewardUnlimited`
-5. `sel.validUntilUnlimited` (period_engine, label = "Promo Berlaku")
+4. `sel.physicalQuantity` (Step 8D — SKIPPED, lihat §7.4)
+5. `sel.maxRewardUnlimited` (Step 8E — SKIPPED, lihat §7.5)
+6. `sel.validUntilUnlimited` (period_engine, label = "Promo Berlaku") — Step 8F
 
-**AMBIGUOUS — TUNDA (3 leaf):**
+**AMBIGUOUS — TUNDA (5 leaf):**
 - `sel.physicalQuantity` — butuh leaf JSX baru (lihat §7.4)
+- `sel.maxRewardUnlimited` — butuh leaf JSX baru record-level (lihat §7.5)
 - `sel.spinValidUntil` — tunggu UI dipecah per Rule SEM-1
 - `sel.spinValidUntilUnlimited` — tunggu UI dipecah per Rule SEM-1
 
@@ -205,6 +207,24 @@ Untuk menggunakan `sel.physicalQuantity`:
 
 Konsekuensi: Rule SEM-2 (lihat §7.1) tetap valid sebagai kontrak selector
 guard, tapi tidak ada consumer UI di Step 8 yang memanggilnya.
+
+### 7.5 Catatan: kenapa `maxRewardUnlimited` direklasifikasi (Step 8E — SKIP)
+
+`maxRewardUnlimited` = **record-level total reward cap** (apakah jumlah total
+reward yang bisa dibagikan di promo ini unlimited).
+
+UI saat ini **tidak punya leaf 1:1** untuk konsep itu. Kandidat yang ditolak:
+- **Line 938** → `max_per_day` / rate limit (per hari), bukan total cap.
+- **Line 962–967** → per-sub max bonus / unlimited (sub-level APK flags),
+  bukan record-level engine flag.
+- **Line 977** → fallback string literal, bukan flag-driven source.
+
+Force-rebind ke salah satu line di atas akan melanggar SEM rule (semantic
+collision: rate-limit vs total-cap, sub-level vs record-level).
+
+Untuk menggunakan `sel.maxRewardUnlimited`:
+- Dibutuhkan **leaf baru record-level** seperti "Max Total Reward".
+- **Tidak dilakukan di Step 8** (no layout change rule).
 
 ---
 
