@@ -172,3 +172,106 @@ describe("PK-V10 Invariants — #6/#7 external_system ↔ ref_id (WARNING)", () 
     expect(hit?.severity).toBe("warning");
   });
 });
+
+describe("PK-V10 Invariants — #2 reward_form ↔ reward_type mapping (WARNING)", () => {
+  it("PASS: cash + cashback (allowed)", () => {
+    const rec = baseRecord();
+    rec.reward_engine.reward_type = "cash";
+    rec.mechanics_engine.items_block.items = [
+      { ...mkItem({ reward_form: "cashback" }), mechanic_type: "reward" },
+    ];
+    const r = validatePkV10Invariants(rec);
+    expect(r.warningCount).toBe(0);
+    expect(r.errorCount).toBe(0);
+  });
+
+  it("PASS: cash + credit_game (dual mapping allowed)", () => {
+    const rec = baseRecord();
+    rec.reward_engine.reward_type = "cash";
+    rec.mechanics_engine.items_block.items = [
+      { ...mkItem({ reward_form: "credit_game" }), mechanic_type: "reward" },
+    ];
+    expect(validatePkV10Invariants(rec).warningCount).toBe(0);
+  });
+
+  it("PASS: ticket + mystery_reward", () => {
+    const rec = baseRecord();
+    rec.reward_engine.reward_type = "ticket";
+    rec.mechanics_engine.items_block.items = [
+      { ...mkItem({ reward_form: "mystery_reward" }), mechanic_type: "reward" },
+    ];
+    expect(validatePkV10Invariants(rec).warningCount).toBe(0);
+  });
+
+  it("FAIL (warn): physical + cashback", () => {
+    const rec = baseRecord();
+    rec.reward_engine.reward_type = "physical";
+    rec.mechanics_engine.items_block.items = [
+      { ...mkItem({ reward_form: "cashback" }), mechanic_type: "reward" },
+    ];
+    const r = validatePkV10Invariants(rec);
+    const hit = r.issues.find((i) => i.code === "REWARD_FORM_TYPE_MISMATCH");
+    expect(hit?.severity).toBe("warning");
+    expect(r.ok).toBe(true); // warning, not blocking
+  });
+
+  it("FAIL (warn): lucky_spin + voucher_code", () => {
+    const rec = baseRecord();
+    rec.reward_engine.reward_type = "lucky_spin";
+    rec.mechanics_engine.items_block.items = [
+      { ...mkItem({ reward_form: "voucher_code" }), mechanic_type: "reward" },
+    ];
+    const r = validatePkV10Invariants(rec);
+    const hit = r.issues.find((i) => i.code === "REWARD_FORM_TYPE_MISMATCH");
+    expect(hit?.severity).toBe("warning");
+  });
+
+  it("SKIP: combo allows any reward_form (no warning)", () => {
+    const rec = baseRecord();
+    rec.reward_engine.reward_type = "combo";
+    rec.mechanics_engine.items_block.items = [
+      { ...mkItem({ reward_form: "spin_token" }), mechanic_type: "reward" },
+      { ...mkItem({ reward_form: "physical_item" }), mechanic_type: "reward" },
+    ];
+    expect(validatePkV10Invariants(rec).warningCount).toBe(0);
+  });
+
+  it("SKIP: empty reward_form (no warning)", () => {
+    const rec = baseRecord();
+    rec.reward_engine.reward_type = "physical";
+    rec.mechanics_engine.items_block.items = [
+      { ...mkItem({ reward_form: "" }), mechanic_type: "reward" },
+    ];
+    expect(validatePkV10Invariants(rec).warningCount).toBe(0);
+  });
+
+  it("SKIP: empty reward_type (no warning)", () => {
+    const rec = baseRecord();
+    rec.reward_engine.reward_type = "";
+    rec.mechanics_engine.items_block.items = [
+      { ...mkItem({ reward_form: "cashback" }), mechanic_type: "reward" },
+    ];
+    expect(validatePkV10Invariants(rec).warningCount).toBe(0);
+  });
+
+  it("SKIP: non-reward mechanic_type (no warning even on mismatch)", () => {
+    const rec = baseRecord();
+    rec.reward_engine.reward_type = "physical";
+    rec.mechanics_engine.items_block.items = [
+      { ...mkItem({ reward_form: "cashback" }), mechanic_type: "claim" },
+    ];
+    expect(validatePkV10Invariants(rec).warningCount).toBe(0);
+  });
+
+  it("Invariant #2 does not affect ok=true (warning-only Phase A)", () => {
+    const rec = baseRecord();
+    rec.reward_engine.reward_type = "voucher";
+    rec.mechanics_engine.items_block.items = [
+      { ...mkItem({ reward_form: "spin_token" }), mechanic_type: "reward" },
+    ];
+    const r = validatePkV10Invariants(rec);
+    expect(r.warningCount).toBeGreaterThan(0);
+    expect(r.errorCount).toBe(0);
+    expect(r.ok).toBe(true);
+  });
+});
