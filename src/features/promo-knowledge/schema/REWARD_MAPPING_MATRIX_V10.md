@@ -58,6 +58,26 @@ This is **validation-only**. It is NOT used by the extractor to infer `reward_fo
 
 ---
 
+## 4b. Clarification Notes (post-approval)
+
+1. **`mystery_reward` semantics (clarification)**
+   - `mystery_reward` is the **outcome** reward — the actual random prize delivered to the user (result of a draw / undian / random reveal).
+   - It is NOT a representation of a `ticket` or access to an event.
+   - Example: *"hadiah misteri senilai X"* → user receives the mystery prize directly.
+
+2. **`ticket` semantics (clarification)**
+   - `ticket` is **access** to an event or draw — an entry credential, not a final reward.
+   - It is NOT the outcome itself.
+   - Example: *"dapatkan 1 tiket undian"* → the ticket is access; the prize comes later via a separate mechanic.
+   - Pairing `ticket` → `mystery_reward` reflects the typical flow where a ticket grants entry into a draw whose outcome is a mystery prize. The two fields describe different layers (access vs. outcome) within the same record.
+
+3. **`combo` (clarification)**
+   - Remains **unrestricted** for now (Invariant #2 skips `combo`).
+   - Combo-specific validation will be added in a separate layer later (combo decomposition step).
+   - Reason: a combo can legitimately bundle any valid `reward_form` values; validating it requires per-leg decomposition, not a flat matrix lookup.
+
+---
+
 ## 5. Invalid Combinations (canonical examples)
 
 These MUST trigger Invariant #2 once activated:
