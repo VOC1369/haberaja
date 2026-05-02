@@ -1300,6 +1300,34 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   🌐 {headerClientId}
                 </Badge>
               )}
+              {/* Step 9 — Periode Promo (period_engine.validity_block) */}
+              {(() => {
+                const unlimited = sel.validUntilUnlimited(pkRecord as PkV10Record);
+                const validUntil = sel.promoValidUntil(pkRecord as PkV10Record);
+                const display = unlimited
+                  ? "Tidak Terbatas"
+                  : validUntil ?? "-";
+                return (
+                  <Badge variant="outline" className="bg-muted text-foreground border-border">
+                    📅 Periode Promo: {display}
+                  </Badge>
+                );
+              })()}
+              {/* Step 9 — Max Total Reward (reward_engine.max_reward + max_reward_unlimited) */}
+              {(() => {
+                const unlimited = sel.maxRewardUnlimited(pkRecord as PkV10Record);
+                const maxR = sel.maxReward(pkRecord as PkV10Record);
+                const display = unlimited
+                  ? "Tidak Terbatas"
+                  : maxR !== null
+                    ? maxR.toLocaleString("id-ID")
+                    : "-";
+                return (
+                  <Badge variant="outline" className="bg-muted text-foreground border-border">
+                    🏆 Max Total Reward: {display}
+                  </Badge>
+                );
+              })()}
             </div>
           </div>
         </div>
