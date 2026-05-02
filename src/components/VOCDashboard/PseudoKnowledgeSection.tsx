@@ -1027,77 +1027,29 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-muted rounded-lg p-3">
-            {/* ✅ Use mappedPreview for Fixed mode turnover */}
+            {/*
+             * Canonical turnover display — reads pkRecord.taxonomy_engine.logic_block.turnover_basis ONLY.
+             * Aligned with field-first resolver (RULE_TURNOVER_FIELD_FIRST).
+             * NO mappedPreview, NO sub.turnover_rule, NO getFieldStatus, NO regex.
+             * Mapping:
+             *   pkRecord undefined           → "-"
+             *   turnover_basis === "none"    → "Tidak Berlaku"
+             *   turnover_basis null / ""     → "Perlu Verifikasi"
+             *   turnover_basis other value   → "Memiliki Syarat Turnover"
+             */}
+            <span className="text-muted-foreground text-xs block mb-1">Turnover</span>
             {(() => {
-              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
-              
-              // Fixed mode: read from mappedPreview
-              if (isFixedMode) {
-                const turnoverEnabled = mappedPreview?.fixed_turnover_rule_enabled;
-                const turnoverValue = mappedPreview?.fixed_turnover_rule;
-                return (
-                  <>
-                    <span className="text-muted-foreground text-xs block mb-1">Turnover</span>
-                    <span className="text-foreground font-medium">
-                      {!turnoverEnabled ? 'Tidak Berlaku' : (turnoverValue || '-')}
-                    </span>
-                  </>
-                );
+              if (!pkRecord) {
+                return <span className="text-muted-foreground/60">-</span>;
               }
-              
-              // Dinamis mode: ✅ Read from mappedPreview (single source of truth)
-              const turnoverEnabled = mappedPreview?.turnover_rule_enabled;
-              const turnoverValue = mappedPreview?.turnover_rule;
-              
-              // If mappedPreview has turnover data, use it
-              if (turnoverEnabled && turnoverValue) {
-                // ✅ FIX: Prevent double suffix (e.g., "1xx")
-                const displayTurnover = String(turnoverValue).toLowerCase().endsWith('x')
-                  ? turnoverValue
-                  : `${turnoverValue}x`;
-                return (
-                  <>
-                    <span className="text-muted-foreground text-xs block mb-1">Turnover</span>
-                    <span className="text-foreground font-medium">{displayTurnover}</span>
-                  </>
-                );
+              const basis = (pkRecord as PkV10Record)?.taxonomy_engine?.logic_block?.turnover_basis;
+              if (basis === "none") {
+                return <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>;
               }
-              
-              // Fallback: original logic from sub (legacy/extraction)
-              const isMinRupiahFormat = sub.turnover_rule_format === 'min_rupiah' 
-                || sub.calculation_base === 'turnover';
-              return (
-                <>
-                  <span className="text-muted-foreground text-xs block mb-1">
-                    {isMinRupiahFormat ? 'Min Turnover' : 'Turnover'}
-                  </span>
-                  {getFieldStatus('turnover_rule', archetype) === 'not_applicable' ? (
-                    <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>
-                  ) : (
-                    <span className="text-foreground font-medium">
-                      {(() => {
-                        const displayValue = isMinRupiahFormat
-                          ? (sub.turnover_rule && String(sub.turnover_rule) !== '0' && Number(sub.turnover_rule) !== 0)
-                              ? sub.turnover_rule
-                              : (sub as any).minimum_base || (sub as any).min_calculation
-                          : sub.turnover_rule;
-                        
-                        if (displayValue == null || displayValue === '' || displayValue === '0' || displayValue === 0) {
-                          return '-';
-                        }
-                        
-                        // ✅ FIX: Prevent double suffix
-                        if (isMinRupiahFormat) {
-                          return `Rp ${Number(displayValue).toLocaleString('id-ID')}`;
-                        }
-                        // Check if already has 'x' suffix
-                        const strVal = String(displayValue);
-                        return strVal.toLowerCase().endsWith('x') ? strVal : `${strVal}x`;
-                      })()}
-                    </span>
-                  )}
-                </>
-              );
+              if (basis === null || basis === undefined || basis === "") {
+                return <span className="text-warning italic">Perlu Verifikasi</span>;
+              }
+              return <span className="text-foreground font-medium">Memiliki Syarat Turnover</span>;
             })()}
           </div>
           <div className="bg-muted rounded-lg p-3">
