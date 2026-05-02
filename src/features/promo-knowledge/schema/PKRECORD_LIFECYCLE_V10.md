@@ -247,8 +247,8 @@ Untuk menggunakan `sel.maxRewardUnlimited`:
 1. ✅ Lifecycle phases (`validated`, `ready_for_ui` sebagai derived) — APPROVED.
 2. ✅ Zero-fallback policy — APPROVED.
 3. ✅ Semantic UI rules SEM-1 / SEM-2 / SEM-3 — LOCKED.
-4. ✅ Final classification: **DIRECT = 5, AMBIGUOUS = 3** (Step 8C+8D skipped).
-5. ⏳ Step 8 execution: per-leaf, incremental, diff kecil. Mulai dari 6 DIRECT leaf.
-6. ⏳ Lokasi exact `maxRewardUnlimited` di JSX akan dikonfirmasi via grep saat Step 8 mulai.
+4. ✅ Final classification: **DIRECT executable = 3 (8A, 8B, 8F), SKIPPED = 3 (8C, 8D, 8E), AMBIGUOUS = 2 (spin validity)**.
+5. ⏳ Step 8 execution: per-leaf, incremental, diff kecil. Lanjut Step 8F (`validUntilUnlimited`).
+6. ⏳ Lokasi exact `validUntilUnlimited` di JSX akan dikonfirmasi via grep saat Step 8F mulai.
 
-Step 8 sekarang **deterministic dan aman dieksekusi** untuk 6 DIRECT leaf.
+Step 8 sekarang **deterministic dan aman dieksekusi** untuk leaf DIRECT yang tersisa.
