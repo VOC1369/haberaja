@@ -329,6 +329,17 @@ function validUntilUnlimited(rec: PkV10Record): boolean {
   return rec?.period_engine?.validity_block?.valid_until_unlimited === true;
 }
 
+/**
+ * 24. Promo valid_until raw value — `period_engine.validity_block.valid_until`.
+ *     DIRECT 1:1 leaf. No transform, no formatting. Empty/missing → null.
+ *     Pair with `validUntilUnlimited` (Step 5B sibling) at the consumer layer.
+ */
+function promoValidUntil(rec: PkV10Record): string | null {
+  const v = (rec?.period_engine?.validity_block as { valid_until?: unknown } | undefined)
+    ?.valid_until;
+  return typeof v === "string" ? s(v) : null;
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 // Public selector namespace
 // ──────────────────────────────────────────────────────────────────────────
@@ -370,6 +381,7 @@ export const sel = {
   physicalQuantity,
   maxRewardUnlimited,
   validUntilUnlimited,
+  promoValidUntil,
 } as const;
 
 export type PkV10Selectors = typeof sel;
