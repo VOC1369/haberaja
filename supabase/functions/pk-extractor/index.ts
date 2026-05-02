@@ -943,7 +943,20 @@ function mechanicItemShape(): JSONSchema {
       ambiguity: { type: "boolean" },
       ambiguity_reason: { type: ["string", "null"] },
       activation_rule: { type: ["object", "null"], additionalProperties: true },
-      data: { type: "object", additionalProperties: true },
+      // Step 6.3 — narrow `reward_form` to PK_V10_REWARD_FORM enum.
+      // `data` stays open (additionalProperties: true) so other shape fields
+      // (external_system, execution, validity, scope, etc.) remain free,
+      // but `reward_form`, when present, MUST match the locked vocabulary.
+      data: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          reward_form: {
+            type: "string",
+            enum: [...(ENUMS.reward_form as string[])],
+          },
+        },
+      },
     },
   };
 }
