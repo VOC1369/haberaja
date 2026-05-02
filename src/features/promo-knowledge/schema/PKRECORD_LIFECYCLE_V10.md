@@ -174,20 +174,37 @@ Dua selector berbeda, dua label berbeda, tidak boleh dicampur.
 
 ### 7.3 Verdict scope Step 8
 
-**DIRECT (6 leaf — boleh rebind sekarang, incremental):**
-1. `sel.luckySpinRefId`
-2. `sel.luckySpinMaxPerDay`
-3. `sel.physicalItemName`
-4. `sel.physicalQuantity` (with `rewardType === "physical"` guard)
-5. `sel.maxRewardUnlimited`
-6. `sel.validUntilUnlimited` (period_engine, label = "Promo Berlaku")
+**DIRECT (5 leaf — boleh rebind sekarang, incremental):**
+1. `sel.luckySpinRefId` ✅ (Step 8A done)
+2. `sel.luckySpinMaxPerDay` ✅ (Step 8B done)
+3. `sel.physicalItemName` (Step 8C — SKIPPED, tidak ada DIRECT leaf record-level)
+4. `sel.maxRewardUnlimited`
+5. `sel.validUntilUnlimited` (period_engine, label = "Promo Berlaku")
 
-**AMBIGUOUS — TUNDA (2 leaf):**
-- `sel.spinValidUntil`
-- `sel.spinValidUntilUnlimited`
+**AMBIGUOUS — TUNDA (3 leaf):**
+- `sel.physicalQuantity` — butuh leaf JSX baru (lihat §7.4)
+- `sel.spinValidUntil` — tunggu UI dipecah per Rule SEM-1
+- `sel.spinValidUntilUnlimited` — tunggu UI dipecah per Rule SEM-1
 
-Block ini di-unblock setelah label "Reward Berlaku" terpisah dari
-"Promo Berlaku" di JSX (separate design pass, di luar Step 8).
+Block ini di-unblock setelah leaf JSX yang sesuai ditambahkan (separate
+design pass, di luar Step 8).
+
+### 7.4 Catatan: kenapa `physicalQuantity` direklasifikasi (Step 8D — SKIP)
+
+"Jumlah Reward" di UI saat ini (line ~1175 `PseudoKnowledgeSection.tsx`)
+merepresentasikan **unit-based quantity** (lucky_spin, voucher, ticket),
+bukan physical quantity. Branch JSX ini di-gate oleh `isUnitBased`, yang
+secara eksplisit **mengecualikan** `rewardType === 'physical'`.
+
+`sel.physicalQuantity` (V10) adalah jumlah item fisik (`reward_type === 'physical'`)
+dan belum memiliki leaf JSX yang sesuai di layout saat ini.
+
+Untuk menggunakan `sel.physicalQuantity`:
+- Dibutuhkan **leaf baru** di branch `rewardType === 'physical'`.
+- **Tidak dilakukan di Step 8** (no layout change rule).
+
+Konsekuensi: Rule SEM-2 (lihat §7.1) tetap valid sebagai kontrak selector
+guard, tapi tidak ada consumer UI di Step 8 yang memanggilnya.
 
 ---
 
