@@ -61,15 +61,30 @@ export function resolveRecord(record: PkV10Record): ResolverOutput {
 
   for (const rule of RESOLVER_RULES) {
     const decision = rule.resolve(ctx);
-    if (!decision || decision.status === "ask") continue;
+    if (!decision) continue;
+
+    // ASK decisions: log for audit (classification=ambiguous) but DO NOT skip.
+    // UI will still render the question for this path.
+    if (decision.status === "ask") {
+      pendingEntries.push({
+        field_path: rule.path,
+        resolved_status: "ask",
+        classification: decision.classification,
+        reasoning: decision.reasoning,
+        resolved_at: "",
+        resolved_by: "ai_resolver",
+      });
+      continue;
+    }
 
     skipPaths.add(rule.path);
 
     pendingEntries.push({
       field_path: rule.path,
       resolved_status: decision.status,
+      classification: decision.classification,
       reasoning: decision.reasoning,
-      resolved_at: "", // filled at commit time for atomic timestamp
+      resolved_at: "",
       resolved_by: "ai_resolver",
     });
 
