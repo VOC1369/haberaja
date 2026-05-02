@@ -3,11 +3,13 @@
  *
  * Coverage matrix:
  *   #1 reward_form enum                 — pass + fail (ERROR)
+ *   #2 reward_form ↔ reward_type mapping     — pass + fail (WARNING)
  *   #3 max_reward_unlimited mutex       — pass + fail (ERROR)
  *   #4 valid_until_unlimited mutex      — pass + fail (ERROR)
  *   #5 reward_identity_block boundary   — pass + fail (WARNING)
  *   #6 external_system=none → ref_id="" — pass + fail (WARNING)
  *   #7 external_system!=none → ref_id   — pass + fail (WARNING)
+ */
  *
  * #2 (reward_form ↔ reward_type mapping) is intentionally NOT tested:
  *     deferred until mapping matrix is locked.
