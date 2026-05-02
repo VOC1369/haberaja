@@ -591,7 +591,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     }
 
     // ── Provider verify commit ─────────────────────────────────────────
-    if (providerTrigger.show && providerAnswered) {
+    if (showProviderCard && providerAnswered) {
       const prevWhitelist = draft.scope_engine?.game_block?.eligible_providers ?? [];
       const prevBlacklist = draft.scope_engine?.blacklist_block?.providers ?? [];
       const prevWConfRaw = draft.ai_confidence[PROVIDER_WHITELIST_PATH];
@@ -697,7 +697,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
 
       {/* Questions stacked full-width; radio options inside use 2 cols when ≥3 */}
       <div className="space-y-6">
-        {providerTrigger.show && (
+        {showProviderCard && (
           <ProviderVerifyCard
             domain={providerTrigger.domain}
             prefilledFromBlacklist={providerTrigger.prefilledBlacklist.length > 0}
@@ -708,7 +708,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         {questions.map((q, idx) => (
           <QuestionCard
             key={q.spec.path}
-            number={idx + 1 + (providerTrigger.show ? 1 : 0)}
+            number={idx + 1 + (showProviderCard ? 1 : 0)}
             question={q}
             answer={answers[q.spec.path]}
             onChange={(patch) => setAnswer(q.spec.path, patch)}
