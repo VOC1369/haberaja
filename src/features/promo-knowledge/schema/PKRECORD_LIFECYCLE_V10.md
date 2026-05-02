@@ -168,7 +168,7 @@ Dua selector berbeda, dua label berbeda, tidak boleh dicampur.
 | 3 | "Hadiah Fisik" name                    | `sel.physicalItemName`       | **DIRECT**             | Gate JSX `rewardType === 'physical'`.                         |
 | 4 | "Hadiah Fisik" quantity                | `sel.physicalQuantity`       | **AMBIGUOUS — TUNDA**  | Lihat catatan §7.4. Tidak ada leaf JSX physical quantity.     |
 | 5 | `max_reward_unlimited` flag            | `sel.maxRewardUnlimited`     | **AMBIGUOUS — TUNDA**  | Lihat catatan §7.5. Tidak ada leaf JSX record-level total cap.|
-| 6 | "Promo Berlaku" unlimited (period)     | `sel.validUntilUnlimited`    | **DIRECT**             | Per Rule SEM-3: period_engine ONLY.                           |
+| 6 | "Promo Berlaku" unlimited (period)     | `sel.validUntilUnlimited`    | **AMBIGUOUS — TUNDA**  | Lihat catatan §7.6. Tidak ada leaf JSX promo-level "Promo Berlaku". |
 | 7 | "Reward Berlaku" date (spin)           | `sel.spinValidUntil`         | **AMBIGUOUS — TUNDA**  | Tunggu UI dipecah per Rule SEM-1.                             |
 | 8 | "Reward Berlaku" unlimited (spin)      | `sel.spinValidUntilUnlimited`| **AMBIGUOUS — TUNDA**  | Tunggu UI dipecah per Rule SEM-1.                             |
 
