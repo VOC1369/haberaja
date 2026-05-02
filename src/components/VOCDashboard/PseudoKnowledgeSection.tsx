@@ -1186,7 +1186,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     <div className="bg-muted rounded-lg p-3">
                       <span className="text-muted-foreground text-xs block mb-1">ID Lucky Spin</span>
                       <span className="text-foreground font-medium">
-                        {mappedPreview?.fixed_lucky_spin_id || '-'}
+                        {/* Step 8A — V10 selector, no fallback to mappedPreview */}
+                        {sel.luckySpinRefId(pkRecord as PkV10Record) ?? '-'}
                       </span>
                     </div>
                   </>
