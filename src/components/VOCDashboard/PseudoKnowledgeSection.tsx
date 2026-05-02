@@ -1043,10 +1043,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 return <span className="text-muted-foreground/60">-</span>;
               }
               const basis = (pkRecord as PkV10Record)?.taxonomy_engine?.logic_block?.turnover_basis;
-              if (basis === "none") {
+              const normalized =
+                typeof basis === "string" ? basis.trim().toLowerCase() : basis;
+              if (normalized === "none") {
                 return <span className="text-muted-foreground/60 italic">Tidak Berlaku</span>;
               }
-              if (basis === null || basis === undefined || basis === "") {
+              if (normalized == null || normalized === "") {
                 return <span className="text-warning italic">Perlu Verifikasi</span>;
               }
               return <span className="text-foreground font-medium">Memiliki Syarat Turnover</span>;
