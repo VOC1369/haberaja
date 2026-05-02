@@ -21,9 +21,21 @@ import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 
 export type ResolverStatus = "ask" | "inferred" | "not_applicable" | "normalized";
 
+/**
+ * Audit tag — orthogonal to status. Classification explains WHY a decision
+ * was made, independent of the orchestrator action (skip vs ask).
+ *
+ *   - "explicit"        → field already filled by extractor; resolver respects it
+ *   - "not_applicable"  → pkRecord state proves field doesn't apply
+ *   - "ambiguous"       → cannot decide from pkRecord alone; admin must answer
+ */
+export type ResolverClassification = "explicit" | "not_applicable" | "ambiguous";
+
 export interface ResolverDecision {
   status: ResolverStatus;
   reasoning: string;
+  /** Audit tag. Optional for legacy rules; required for field-first rules. */
+  classification?: ResolverClassification;
   /** Only set when status === "normalized". The canonical value to write. */
   canonicalValue?: unknown;
   /** Only set for "normalized" of an array (e.g. void_conditions): index→canonical map. */
