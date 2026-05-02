@@ -337,7 +337,8 @@ export const RULE_VOID_TRIGGER_NORMALIZATION = {
 // ─────────────────────────────────────────────────────────────────────────
 
 export const RESOLVER_RULES = [
-  RULE_ELIGIBLE_PROVIDERS,
+  RULE_PROVIDER_FIELD_FIRST,
+  RULE_TURNOVER_FIELD_FIRST,
   RULE_STACKING_POLICY,
   RULE_CLAIM_METHOD,
   RULE_MIN_DEPOSIT,
