@@ -205,6 +205,104 @@ L. _field_status MAP (WAJIB minimal 10 path).
    Server akan compute defaults — tapi LLM yang tahu evidence semantic, jadi
    isi minimal untuk path-path utama.
 
+M. MECHANICS DATA SHAPE DOCTRINE (Step 5D — Step 6.1 prompt-only).
+   Aturan tambahan untuk isi 'data' blob di mechanics_engine.items[].
+   Tool schema BELUM di-tighten — 'data' masih open (additionalProperties),
+   jadi field di bawah ini DIIZINKAN dan AKAN diabsorb tanpa rejection.
+   Aturan ini ADDITIVE: tidak menggantikan contoh data per mechanic_type
+   di section D — ia memperkaya bentuk untuk dua tipe spesifik.
+
+   M.1  mechanic_type = "reward"
+        Selain field dasar (reward_type, reward_form, reward_unit,
+        voucher_kind), tambahkan SUB-OBJECT berikut bila evidence ada:
+
+        data.external_system = {
+          system: <PK_V10_EXTERNAL_SYSTEM>,
+                  // "spin_engine" | "voucher_system" | "reward_catalog"
+                  // | "manual_ops" | "none"
+          ref_id: <string>,            // handle di sistem itu (mis. "LS-001",
+                                       // "VCH-CASHBACK-25"). "" kalau tidak ada.
+          redemption_method: <PK_V10_REDEMPTION_METHOD>
+                  // "auto" | "manual" | "claim_required"
+        }
+
+        Aturan:
+        - system === "none" ↔ tidak ada sistem eksternal yang gating reward
+          (mis. cash payout langsung). Untuk kasus ini ref_id = "".
+        - Boleh diomit seluruh sub-object kalau memang reward trivial cash
+          tanpa ref eksternal. JANGAN tulis {} kosong.
+        - JANGAN tebak system. Ragu → omit, set ai_confidence rendah pada
+          path mechanics_engine yang relevan.
+
+        data.execution = {
+          max_per_day: <number | null>,
+          max_per_period: <number | null>,
+          consumption: <string>          // mis. "single_use", "multi_use"
+        }
+
+        Aturan:
+        - Hanya isi field yang explicit di sumber. Sisanya null / omit.
+        - JANGAN duplikasi nilai ini ke reward_engine flat — flat hanya
+          ringkasan utama; truth ada di sini.
+
+   M.2  mechanic_type = "time_window"
+        Item ini adalah SUMBER TUNGGAL untuk semantik validity di luar
+        period_engine.validity_block. Bentuk:
+
+        data.scope = <PK_V10_TIME_WINDOW_SCOPE>
+                  // "reward_validity" | "claim_window" | "promo_period"
+                  //   | "trigger_window" | "calculation_window"
+
+        data.validity = {
+          validity_mode: <PK_V10_VALIDITY_MODE>,   // "absolute" | "relative"
+          valid_until: <ISO date string | null>,
+          duration: <number | null>,
+          duration_unit: <PK_V10_VALIDITY_DURATION_UNIT | null>
+        }
+
+        Aturan:
+        - Boleh ada >1 item time_window dalam satu record dengan scope berbeda
+          (mis. satu untuk reward_validity spin, satu untuk claim_window).
+        - JANGAN duplikasi promo_period ke sini kalau period_engine sudah
+          mengikatnya — gunakan scope="promo_period" hanya jika sumber
+          eksplisit memisahkan window promo dari validity_block.
+
+   M.3  CARRY-OVER ke Step 6.2 (JANGAN populate sekarang).
+        Field-field berikut sudah masuk schema TS PkV10Record tapi tool
+        schema Anthropic BELUM dibuka (additionalProperties: false di
+        sub-engine terkait). Mengisi sekarang akan kena schema rejection.
+        Aturan reasoning-nya tetap dicatat di sini supaya doctrine align,
+        tapi extractor TIDAK BOLEH menulis field-field ini di Step 6.1:
+
+        - reward_engine.reward_identity_block
+            [CARRIES OVER TO STEP 6.2]
+            Hanya untuk reward_type === "physical".
+            Bentuk: { item_name: <string|null>, quantity: <number|null> }.
+            Untuk reward_type lain (cashback, lucky_spin, voucher, dll)
+            block ini WAJIB null. Detail item lucky-spin / voucher / dll
+            TIDAK boleh masuk ke sini — mereka pergi ke
+            mechanics_engine.items[] (reward + external_system).
+
+        - reward_engine.max_reward_unlimited
+            [CARRIES OVER TO STEP 6.2]
+            true HANYA jika sumber EKSPLISIT menyatakan tidak ada batas
+            atas reward DAN ada evidence string yang mendukung. Tidak ada
+            keyword/regex detection. Default false. Saat true, max_reward
+            harus null.
+
+        - period_engine.validity_block.valid_until_unlimited
+            [CARRIES OVER TO STEP 6.2]
+            true HANYA jika sumber EKSPLISIT menyatakan promo berlaku
+            tanpa batas waktu (mis. "berlaku selamanya"). Default false.
+            Saat true, valid_until harus null.
+
+        Catatan implementasi:
+        - Step 6.1 = validasi reasoning Claude pada data blob mechanics.
+        - Step 6.2 = tool schema additive untuk 3 field carry-over di atas.
+        - Step 6B = validator enforcement (max_reward_unlimited ↔ max_reward
+          null, valid_until_unlimited ↔ valid_until null, identity_block
+          hanya bila reward_type=physical).
+
 OUTPUT
 Panggil tool '${TOOL_NAME}' dengan input PkV10Record (boleh partial — server
 akan merge ke inert full-shape). JANGAN balas teks. JANGAN mark-down.`;
