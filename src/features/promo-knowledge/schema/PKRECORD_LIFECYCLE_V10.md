@@ -167,22 +167,24 @@ Dua selector berbeda, dua label berbeda, tidak boleh dicampur.
 | 2 | "Max Spin/Hari"                        | `sel.luckySpinMaxPerDay`     | **DIRECT**             | Same gate.                                                    |
 | 3 | "Hadiah Fisik" name                    | `sel.physicalItemName`       | **DIRECT**             | Gate JSX `rewardType === 'physical'`.                         |
 | 4 | "Hadiah Fisik" quantity                | `sel.physicalQuantity`       | **AMBIGUOUS — TUNDA**  | Lihat catatan §7.4. Tidak ada leaf JSX physical quantity.     |
-| 5 | `max_reward_unlimited` flag            | `sel.maxRewardUnlimited`     | **DIRECT**             | Boolean, default false. Lokasi JSX dikonfirmasi saat Step 8.  |
+| 5 | `max_reward_unlimited` flag            | `sel.maxRewardUnlimited`     | **AMBIGUOUS — TUNDA**  | Lihat catatan §7.5. Tidak ada leaf JSX record-level total cap.|
 | 6 | "Promo Berlaku" unlimited (period)     | `sel.validUntilUnlimited`    | **DIRECT**             | Per Rule SEM-3: period_engine ONLY.                           |
 | 7 | "Reward Berlaku" date (spin)           | `sel.spinValidUntil`         | **AMBIGUOUS — TUNDA**  | Tunggu UI dipecah per Rule SEM-1.                             |
 | 8 | "Reward Berlaku" unlimited (spin)      | `sel.spinValidUntilUnlimited`| **AMBIGUOUS — TUNDA**  | Tunggu UI dipecah per Rule SEM-1.                             |
 
 ### 7.3 Verdict scope Step 8
 
-**DIRECT (5 leaf — boleh rebind sekarang, incremental):**
+**DIRECT (boleh rebind sekarang, incremental):**
 1. `sel.luckySpinRefId` ✅ (Step 8A done)
 2. `sel.luckySpinMaxPerDay` ✅ (Step 8B done)
 3. `sel.physicalItemName` (Step 8C — SKIPPED, tidak ada DIRECT leaf record-level)
-4. `sel.maxRewardUnlimited`
-5. `sel.validUntilUnlimited` (period_engine, label = "Promo Berlaku")
+4. `sel.physicalQuantity` (Step 8D — SKIPPED, lihat §7.4)
+5. `sel.maxRewardUnlimited` (Step 8E — SKIPPED, lihat §7.5)
+6. `sel.validUntilUnlimited` (period_engine, label = "Promo Berlaku") — Step 8F
 
-**AMBIGUOUS — TUNDA (3 leaf):**
+**AMBIGUOUS — TUNDA (5 leaf):**
 - `sel.physicalQuantity` — butuh leaf JSX baru (lihat §7.4)
+- `sel.maxRewardUnlimited` — butuh leaf JSX baru record-level (lihat §7.5)
 - `sel.spinValidUntil` — tunggu UI dipecah per Rule SEM-1
 - `sel.spinValidUntilUnlimited` — tunggu UI dipecah per Rule SEM-1
 
@@ -206,6 +208,24 @@ Untuk menggunakan `sel.physicalQuantity`:
 Konsekuensi: Rule SEM-2 (lihat §7.1) tetap valid sebagai kontrak selector
 guard, tapi tidak ada consumer UI di Step 8 yang memanggilnya.
 
+### 7.5 Catatan: kenapa `maxRewardUnlimited` direklasifikasi (Step 8E — SKIP)
+
+`maxRewardUnlimited` = **record-level total reward cap** (apakah jumlah total
+reward yang bisa dibagikan di promo ini unlimited).
+
+UI saat ini **tidak punya leaf 1:1** untuk konsep itu. Kandidat yang ditolak:
+- **Line 938** → `max_per_day` / rate limit (per hari), bukan total cap.
+- **Line 962–967** → per-sub max bonus / unlimited (sub-level APK flags),
+  bukan record-level engine flag.
+- **Line 977** → fallback string literal, bukan flag-driven source.
+
+Force-rebind ke salah satu line di atas akan melanggar SEM rule (semantic
+collision: rate-limit vs total-cap, sub-level vs record-level).
+
+Untuk menggunakan `sel.maxRewardUnlimited`:
+- Dibutuhkan **leaf baru record-level** seperti "Max Total Reward".
+- **Tidak dilakukan di Step 8** (no layout change rule).
+
 ---
 
 ## 8. Anti-patterns (Step 8 hard rules)
@@ -227,8 +247,8 @@ guard, tapi tidak ada consumer UI di Step 8 yang memanggilnya.
 1. ✅ Lifecycle phases (`validated`, `ready_for_ui` sebagai derived) — APPROVED.
 2. ✅ Zero-fallback policy — APPROVED.
 3. ✅ Semantic UI rules SEM-1 / SEM-2 / SEM-3 — LOCKED.
-4. ✅ Final classification: **DIRECT = 5, AMBIGUOUS = 3** (Step 8C+8D skipped).
-5. ⏳ Step 8 execution: per-leaf, incremental, diff kecil. Mulai dari 6 DIRECT leaf.
-6. ⏳ Lokasi exact `maxRewardUnlimited` di JSX akan dikonfirmasi via grep saat Step 8 mulai.
+4. ✅ Final classification: **DIRECT executable = 3 (8A, 8B, 8F), SKIPPED = 3 (8C, 8D, 8E), AMBIGUOUS = 2 (spin validity)**.
+5. ⏳ Step 8 execution: per-leaf, incremental, diff kecil. Lanjut Step 8F (`validUntilUnlimited`).
+6. ⏳ Lokasi exact `validUntilUnlimited` di JSX akan dikonfirmasi via grep saat Step 8F mulai.
 
-Step 8 sekarang **deterministic dan aman dieksekusi** untuk 6 DIRECT leaf.
+Step 8 sekarang **deterministic dan aman dieksekusi** untuk leaf DIRECT yang tersisa.
