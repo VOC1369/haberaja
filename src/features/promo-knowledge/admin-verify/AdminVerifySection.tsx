@@ -464,6 +464,14 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     [record],
   );
 
+  // Gate: resolver is single source of decision. If it skipped the provider
+  // path (e.g. game_domain=all → not_applicable), UI MUST NOT render the card
+  // even when the legacy evaluateProviderTrigger says show=true.
+  const providerSkippedByResolver = resolverOutput.skipPaths.has(
+    PROVIDER_WHITELIST_PATH,
+  );
+  const showProviderCard = providerTrigger.show && !providerSkippedByResolver;
+
   const questions = useMemo<GeneratedQuestion[]>(
     () => (record ? generateQuestions(record, resolverOutput.skipPaths) : []),
     [record, resolverOutput],
@@ -479,10 +487,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     resolverOutput.pendingValuePatches.length > 0;
   // Provider verify is "answered" when admin picked "all" OR picked "custom" with at least 1 whitelist provider
   const providerAnswered =
-    providerTrigger.show &&
+    showProviderCard &&
     (providerState.mode === "all" ||
       (providerState.mode === "custom" && providerState.whitelist.length > 0));
-  const providerPendingRequired = providerTrigger.show && !providerAnswered;
+  const providerPendingRequired = showProviderCard && !providerAnswered;
   // Hybrid: Apply enabled if (admin answered AND no critical missing) OR resolver has pending output
   const canApply =
     ((answeredCount > 0 || providerAnswered) &&
@@ -491,7 +499,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     (hasResolverPending && !providerPendingRequired);
 
   // Empty state — only when truly nothing to do
-  if (questions.length === 0 && !hasResolverPending && !providerTrigger.show) {
+  if (questions.length === 0 && !hasResolverPending && !showProviderCard) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
@@ -583,7 +591,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     }
 
     // ── Provider verify commit ─────────────────────────────────────────
-    if (providerTrigger.show && providerAnswered) {
+    if (showProviderCard && providerAnswered) {
       const prevWhitelist = draft.scope_engine?.game_block?.eligible_providers ?? [];
       const prevBlacklist = draft.scope_engine?.blacklist_block?.providers ?? [];
       const prevWConfRaw = draft.ai_confidence[PROVIDER_WHITELIST_PATH];
@@ -689,7 +697,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
 
       {/* Questions stacked full-width; radio options inside use 2 cols when ≥3 */}
       <div className="space-y-6">
-        {providerTrigger.show && (
+        {showProviderCard && (
           <ProviderVerifyCard
             domain={providerTrigger.domain}
             prefilledFromBlacklist={providerTrigger.prefilledBlacklist.length > 0}
@@ -700,7 +708,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         {questions.map((q, idx) => (
           <QuestionCard
             key={q.spec.path}
-            number={idx + 1 + (providerTrigger.show ? 1 : 0)}
+            number={idx + 1 + (showProviderCard ? 1 : 0)}
             question={q}
             answer={answers[q.spec.path]}
             onChange={(patch) => setAnswer(q.spec.path, patch)}
