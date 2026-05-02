@@ -245,6 +245,25 @@ M. MECHANICS DATA SHAPE DOCTRINE (Step 5D — Step 6.1 prompt-only).
         - JANGAN duplikasi nilai ini ke reward_engine flat — flat hanya
           ringkasan utama; truth ada di sini.
 
+        data.reward_form  [Step 6.3 — DETERMINISTIC ENUM]
+          WAJIB salah satu dari PK_V10_REWARD_FORM:
+            "spin_token"     → lucky spin / putaran berhadiah
+            "voucher_code"   → voucher / kupon redeemable
+            "cashback"       → cashback / pengembalian kekalahan
+            "physical_item"  → hadiah fisik / merchandise
+            "freespin_token" → free spin slot
+            "credit_game"    → kredit game / saldo bonus game
+            "mystery_reward" → hadiah acak / mystery box
+
+          Aturan KERAS:
+          - DILARANG membuat nilai baru di luar enum.
+            Contoh SALAH: "lucky_spin", "spin", "spin_ticket", "voucher",
+            "kupon", "freespin", "merchandise", "cash", "credit".
+            Contoh BENAR: "spin_token", "voucher_code", "freespin_token".
+          - Mapping wajib: lucky spin → "spin_token" (BUKAN "lucky_spin").
+          - Jika ragu / tidak yakin → OMIT field. JANGAN isi bebas.
+          - Tool schema akan reject nilai di luar enum.
+
    M.2  mechanic_type = "time_window"
         Item ini adalah SUMBER TUNGGAL untuk semantik validity di luar
         period_engine.validity_block. Bentuk:
@@ -943,7 +962,20 @@ function mechanicItemShape(): JSONSchema {
       ambiguity: { type: "boolean" },
       ambiguity_reason: { type: ["string", "null"] },
       activation_rule: { type: ["object", "null"], additionalProperties: true },
-      data: { type: "object", additionalProperties: true },
+      // Step 6.3 — narrow `reward_form` to PK_V10_REWARD_FORM enum.
+      // `data` stays open (additionalProperties: true) so other shape fields
+      // (external_system, execution, validity, scope, etc.) remain free,
+      // but `reward_form`, when present, MUST match the locked vocabulary.
+      data: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          reward_form: {
+            type: "string",
+            enum: [...(ENUMS.reward_form as string[])],
+          },
+        },
+      },
     },
   };
 }

@@ -141,6 +141,19 @@ export const PK_V10_VOUCHER_KIND = [
   "free_play", "cashback_voucher", "other",
 ];
 
+// ─── 1.11.bis Reward Form (Step 6.3) ──────────────────────────────────────
+// Locked vocabulary for mechanics_engine.items[].data.reward_form.
+// Deterministic — Claude must NOT invent new values. If unsure → omit.
+export const PK_V10_REWARD_FORM = [
+  "spin_token",
+  "voucher_code",
+  "cashback",
+  "physical_item",
+  "freespin_token",
+  "credit_game",
+  "mystery_reward",
+];
+
 // ─── 1.12 Loyalty Engine ──────────────────────────────────────────────────
 export const PK_V10_POINT_NAME = ["LP", "EXP", "XP", "COIN", "GEM"];
 export const PK_V10_LOYALTY_MODE = ["exp_store", "level_up", "both"];
@@ -307,4 +320,5 @@ export const ENUMS = {
   external_system: PK_V10_EXTERNAL_SYSTEM,
   time_window_scope: PK_V10_TIME_WINDOW_SCOPE,
   redemption_method: PK_V10_REDEMPTION_METHOD,
+  reward_form: PK_V10_REWARD_FORM,
 };
