@@ -61,6 +61,26 @@ const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
 /**
+ * Reward Mapping Matrix V10 (Invariant #2 — Phase A WARNING).
+ * Source of truth: src/features/promo-knowledge/schema/REWARD_MAPPING_MATRIX_V10.md
+ *
+ * Rules:
+ *   - `combo` is intentionally absent → handled as "skip" by caller (always pass).
+ *   - Empty / missing reward_form → skip (not validated here).
+ *   - reward_type not in this map → skip (no opinion until matrix amended).
+ */
+const REWARD_TYPE_TO_ALLOWED_FORMS: Readonly<Record<string, readonly string[]>> = {
+  cash: ["cashback", "credit_game"],
+  lucky_spin: ["spin_token"],
+  voucher: ["voucher_code"],
+  physical: ["physical_item"],
+  freespin: ["freespin_token"],
+  ticket: ["mystery_reward"],
+  credit_game: ["credit_game"],
+  discount: ["voucher_code"],
+};
+
+/**
  * validatePkV10Invariants
  * Pure function. Returns a severity-tiered report.
  */
