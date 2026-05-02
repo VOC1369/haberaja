@@ -261,13 +261,26 @@ Untuk menggunakan `sel.validUntilUnlimited`:
 
 ---
 
-## 9. Status & Step 8 entry criteria
+## 9. Status & Step 8 closeout
 
 1. ✅ Lifecycle phases (`validated`, `ready_for_ui` sebagai derived) — APPROVED.
 2. ✅ Zero-fallback policy — APPROVED.
 3. ✅ Semantic UI rules SEM-1 / SEM-2 / SEM-3 — LOCKED.
-4. ✅ Final classification: **DIRECT executable = 3 (8A, 8B, 8F), SKIPPED = 3 (8C, 8D, 8E), AMBIGUOUS = 2 (spin validity)**.
-5. ⏳ Step 8 execution: per-leaf, incremental, diff kecil. Lanjut Step 8F (`validUntilUnlimited`).
-6. ⏳ Lokasi exact `validUntilUnlimited` di JSX akan dikonfirmasi via grep saat Step 8F mulai.
+4. ✅ Final classification: **SUCCESS = 2 (8A, 8B), TUNDA = 6 (8C, 8D, 8E, 8F, spinValidUntil, spinValidUntilUnlimited)**.
+5. ✅ Step 8 — **CLOSED**. Dua leaf rebound (luckySpinRefId, luckySpinMaxPerDay).
+   Sisa enam leaf TUNDA: selector layer benar, tapi UI belum punya semantic
+   slot yang sesuai.
 
-Step 8 sekarang **deterministic dan aman dieksekusi** untuk leaf DIRECT yang tersisa.
+### 9.1 Next phase — Design UI semantic layer
+
+Outside Step 8 scope. Butuh design pass terpisah untuk menambahkan leaf JSX:
+
+- **"Promo Berlaku"** (promo-level, period_engine) — header / period section.
+- **"Reward Berlaku"** (reward-level, mechanics) — di dalam reward loop,
+  dipisah label dari "Promo Berlaku" per Rule SEM-1.
+- **"Hadiah Fisik" detail** (item name + quantity) — branch
+  `rewardType === 'physical'`, untuk `physicalItemName` + `physicalQuantity`.
+- **"Max Total Reward"** (record-level total cap) — untuk `maxRewardUnlimited`.
+
+Setelah leaf-leaf ini ada di JSX, sisa selector V10 bisa di-rebind dengan
+kontrak yang sama (zero fallback, null → "-", guarded per SEM rules).
