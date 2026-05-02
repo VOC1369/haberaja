@@ -413,6 +413,9 @@ function buildExtractorToolSchema(): AnyObj {
               validity_mode: enumStr("validity_mode"),
               validity_duration_value: { type: ["number", "null"] },
               validity_duration_unit: enumStr("validity_duration_unit"),
+              // Step 6.2 additive — Step 5B unlimited sibling for valid_until.
+              // true ⇒ valid_until MUST be null. Validator enforcement = Step 6B.
+              valid_until_unlimited: { type: "boolean" },
             },
           },
           distribution_block: {
@@ -625,6 +628,20 @@ function buildExtractorToolSchema(): AnyObj {
           voucher_kind: enumStrNullable("voucher_kind"),
           max_reward: { type: ["number", "null"] },
           currency: { type: ["string", "null"] },
+          // Step 6.2 additive — Step 5B unlimited sibling for max_reward.
+          // true ⇒ max_reward MUST be null. Validator enforcement = Step 6B.
+          max_reward_unlimited: { type: "boolean" },
+          // Step 6.2 additive — Step 4F-tris reward_identity_block.
+          // STRICT BOUNDARY: only populated when reward_type = "physical".
+          // For all other reward_type values, both fields MUST be null.
+          // Validator enforcement = Step 6B.
+          reward_identity_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              item_name: { type: ["string", "null"] },
+              quantity: { type: ["number", "null"] },
+            },
+          },
         },
       },
       loyalty_engine: {
