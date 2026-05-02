@@ -172,24 +172,27 @@ Dua selector berbeda, dua label berbeda, tidak boleh dicampur.
 | 7 | "Reward Berlaku" date (spin)           | `sel.spinValidUntil`         | **AMBIGUOUS — TUNDA**  | Tunggu UI dipecah per Rule SEM-1.                             |
 | 8 | "Reward Berlaku" unlimited (spin)      | `sel.spinValidUntilUnlimited`| **AMBIGUOUS — TUNDA**  | Tunggu UI dipecah per Rule SEM-1.                             |
 
-### 7.3 Verdict scope Step 8
+### 7.3 Verdict scope Step 8 — CLOSED
 
-**DIRECT (boleh rebind sekarang, incremental):**
+**SUCCESS (rebound to V10 selectors):**
 1. `sel.luckySpinRefId` ✅ (Step 8A done)
 2. `sel.luckySpinMaxPerDay` ✅ (Step 8B done)
+
+**TUNDA (deferred — UI semantic slot belum tersedia):**
 3. `sel.physicalItemName` (Step 8C — SKIPPED, tidak ada DIRECT leaf record-level)
 4. `sel.physicalQuantity` (Step 8D — SKIPPED, lihat §7.4)
 5. `sel.maxRewardUnlimited` (Step 8E — SKIPPED, lihat §7.5)
-6. `sel.validUntilUnlimited` (period_engine, label = "Promo Berlaku") — Step 8F
+6. `sel.validUntilUnlimited` (Step 8F — SKIPPED, lihat §7.6)
+7. `sel.spinValidUntil` — tunggu UI dipecah per Rule SEM-1
+8. `sel.spinValidUntilUnlimited` — tunggu UI dipecah per Rule SEM-1
 
-**AMBIGUOUS — TUNDA (5 leaf):**
-- `sel.physicalQuantity` — butuh leaf JSX baru (lihat §7.4)
-- `sel.maxRewardUnlimited` — butuh leaf JSX baru record-level (lihat §7.5)
-- `sel.spinValidUntil` — tunggu UI dipecah per Rule SEM-1
-- `sel.spinValidUntilUnlimited` — tunggu UI dipecah per Rule SEM-1
+**Alasan umum TUNDA:** Selector layer sudah benar dan typed. Yang belum ada
+adalah **semantic slot** di UI: layout saat ini tidak menyediakan leaf JSX
+yang sesuai untuk konsep promo-level (Promo Berlaku, Max Total Reward) dan
+physical-reward detail (item name + quantity di branch `rewardType === 'physical'`).
 
-Block ini di-unblock setelah leaf JSX yang sesuai ditambahkan (separate
-design pass, di luar Step 8).
+Block ini di-unblock setelah leaf JSX yang sesuai ditambahkan di **next phase:
+"Design UI semantic layer"** (separate design pass, di luar Step 8).
 
 ### 7.4 Catatan: kenapa `physicalQuantity` direklasifikasi (Step 8D — SKIP)
 
