@@ -25,7 +25,11 @@
  *  `PkV10MechanicRewardData`. Mapping: "fixed" → "fixed", else → "dinamis".
  */
 
-import type { PkV10Record, PkV10Subcategory } from "../schema/pk-v10";
+import type {
+  PkV10Record,
+  PkV10Subcategory,
+  PkV10MechanicItem,
+} from "../schema/pk-v10";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Internal helpers (read-only)
