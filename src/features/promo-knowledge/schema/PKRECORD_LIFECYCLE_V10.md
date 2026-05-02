@@ -166,7 +166,7 @@ Dua selector berbeda, dua label berbeda, tidak boleh dicampur.
 | 1 | "ID Lucky Spin"                        | `sel.luckySpinRefId`         | **DIRECT**             | Gate JSX `rewardType === 'lucky_spin'` (sudah ada).           |
 | 2 | "Max Spin/Hari"                        | `sel.luckySpinMaxPerDay`     | **DIRECT**             | Same gate.                                                    |
 | 3 | "Hadiah Fisik" name                    | `sel.physicalItemName`       | **DIRECT**             | Gate JSX `rewardType === 'physical'`.                         |
-| 4 | "Hadiah Fisik" quantity                | `sel.physicalQuantity`       | **DIRECT + GUARDED**   | Per Rule SEM-2: `if rewardType !== 'physical' → null`.        |
+| 4 | "Hadiah Fisik" quantity                | `sel.physicalQuantity`       | **AMBIGUOUS — TUNDA**  | Lihat catatan §7.4. Tidak ada leaf JSX physical quantity.     |
 | 5 | `max_reward_unlimited` flag            | `sel.maxRewardUnlimited`     | **DIRECT**             | Boolean, default false. Lokasi JSX dikonfirmasi saat Step 8.  |
 | 6 | "Promo Berlaku" unlimited (period)     | `sel.validUntilUnlimited`    | **DIRECT**             | Per Rule SEM-3: period_engine ONLY.                           |
 | 7 | "Reward Berlaku" date (spin)           | `sel.spinValidUntil`         | **AMBIGUOUS — TUNDA**  | Tunggu UI dipecah per Rule SEM-1.                             |
@@ -174,20 +174,37 @@ Dua selector berbeda, dua label berbeda, tidak boleh dicampur.
 
 ### 7.3 Verdict scope Step 8
 
-**DIRECT (6 leaf — boleh rebind sekarang, incremental):**
-1. `sel.luckySpinRefId`
-2. `sel.luckySpinMaxPerDay`
-3. `sel.physicalItemName`
-4. `sel.physicalQuantity` (with `rewardType === "physical"` guard)
-5. `sel.maxRewardUnlimited`
-6. `sel.validUntilUnlimited` (period_engine, label = "Promo Berlaku")
+**DIRECT (5 leaf — boleh rebind sekarang, incremental):**
+1. `sel.luckySpinRefId` ✅ (Step 8A done)
+2. `sel.luckySpinMaxPerDay` ✅ (Step 8B done)
+3. `sel.physicalItemName` (Step 8C — SKIPPED, tidak ada DIRECT leaf record-level)
+4. `sel.maxRewardUnlimited`
+5. `sel.validUntilUnlimited` (period_engine, label = "Promo Berlaku")
 
-**AMBIGUOUS — TUNDA (2 leaf):**
-- `sel.spinValidUntil`
-- `sel.spinValidUntilUnlimited`
+**AMBIGUOUS — TUNDA (3 leaf):**
+- `sel.physicalQuantity` — butuh leaf JSX baru (lihat §7.4)
+- `sel.spinValidUntil` — tunggu UI dipecah per Rule SEM-1
+- `sel.spinValidUntilUnlimited` — tunggu UI dipecah per Rule SEM-1
 
-Block ini di-unblock setelah label "Reward Berlaku" terpisah dari
-"Promo Berlaku" di JSX (separate design pass, di luar Step 8).
+Block ini di-unblock setelah leaf JSX yang sesuai ditambahkan (separate
+design pass, di luar Step 8).
+
+### 7.4 Catatan: kenapa `physicalQuantity` direklasifikasi (Step 8D — SKIP)
+
+"Jumlah Reward" di UI saat ini (line ~1175 `PseudoKnowledgeSection.tsx`)
+merepresentasikan **unit-based quantity** (lucky_spin, voucher, ticket),
+bukan physical quantity. Branch JSX ini di-gate oleh `isUnitBased`, yang
+secara eksplisit **mengecualikan** `rewardType === 'physical'`.
+
+`sel.physicalQuantity` (V10) adalah jumlah item fisik (`reward_type === 'physical'`)
+dan belum memiliki leaf JSX yang sesuai di layout saat ini.
+
+Untuk menggunakan `sel.physicalQuantity`:
+- Dibutuhkan **leaf baru** di branch `rewardType === 'physical'`.
+- **Tidak dilakukan di Step 8** (no layout change rule).
+
+Konsekuensi: Rule SEM-2 (lihat §7.1) tetap valid sebagai kontrak selector
+guard, tapi tidak ada consumer UI di Step 8 yang memanggilnya.
 
 ---
 
@@ -210,7 +227,7 @@ Block ini di-unblock setelah label "Reward Berlaku" terpisah dari
 1. ✅ Lifecycle phases (`validated`, `ready_for_ui` sebagai derived) — APPROVED.
 2. ✅ Zero-fallback policy — APPROVED.
 3. ✅ Semantic UI rules SEM-1 / SEM-2 / SEM-3 — LOCKED.
-4. ✅ Final classification: **DIRECT = 6, AMBIGUOUS = 2**.
+4. ✅ Final classification: **DIRECT = 5, AMBIGUOUS = 3** (Step 8C+8D skipped).
 5. ⏳ Step 8 execution: per-leaf, incremental, diff kecil. Mulai dari 6 DIRECT leaf.
 6. ⏳ Lokasi exact `maxRewardUnlimited` di JSX akan dikonfirmasi via grep saat Step 8 mulai.
 
