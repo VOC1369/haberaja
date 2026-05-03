@@ -214,7 +214,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     (providerState.mode === "all" ||
       (providerState.mode === "custom" && providerState.whitelist.length > 0));
   const providerPendingRequired = showProviderCard && !providerAnswered;
-  // Hybrid: Apply enabled if (admin answered AND no critical missing) OR resolver has pending output
+  // Apply enabled if (admin answered AND no critical missing) OR normalizer has pending enum patches
   const canApply =
     ((answeredCount > 0 || providerAnswered) &&
       unansweredCritical.length === 0 &&
@@ -382,9 +382,8 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
 
     draftAny._human_override_log = log;
 
-    // Atomic commit: apply resolver patches + append _ai_resolver_log
-    // (after admin answers so admin choice always wins on shared paths — though
-    //  resolver paths are excluded from FIELD_SPECS via skipPaths, so no overlap)
+    // Atomic commit: apply enum normalizer patches + append _ai_resolver_log
+    // (pure value-level normalization on existing fields, no question authority)
     commitNormalizerOutput(draft, normalizerOutput, ts);
 
     draft.updated_at = ts;
