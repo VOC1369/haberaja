@@ -53,10 +53,10 @@ import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 import {
-  resolveRecord,
-  commitResolverOutput,
-  type ResolverOutput,
-} from "./question-resolver";
+  normalizeRecord,
+  commitNormalizerOutput,
+  type NormalizerOutput,
+} from "./enum-normalizer";
 import {
   FIELD_REGISTRY,
   FIELD_REGISTRY_INDEX,
