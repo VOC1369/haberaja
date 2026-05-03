@@ -142,26 +142,49 @@ function readProviderVisualContext(record: PkV10Record): {
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
   const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
 
-  const providerTrigger = useMemo(
+  // Visual context only — does NOT decide whether the card is shown.
+  const providerVisual = useMemo(
     () =>
       record
-        ? evaluateProviderTrigger(record)
-        : { show: false, domain: "", prefilledBlacklist: [] as string[], initialMode: "" as ProviderMode },
+        ? readProviderVisualContext(record)
+        : { domain: "", prefilledBlacklist: [] as string[], initialMode: "" as ProviderMode },
     [record],
   );
-  const triggerKey = `${providerTrigger.show}|${providerTrigger.domain}|${providerTrigger.prefilledBlacklist.join(",")}|${providerTrigger.initialMode}`;
+
+  // GapQuestion (JSON-driven) joined with FieldRegistryEntry for UI rendering.
+  // gap-reader is the single source of truth for ALL questions, including provider.
+  const gaps = useMemo<GapQuestion[]>(
+    () => (record ? readGapsFromJson(record) : []),
+    [record],
+  );
+
+  // Provider card visibility = strictly derived from gap-reader output.
+  // No direct field inspection. No promo_type branching. No raw_content access.
+  const providerGap = useMemo(
+    () =>
+      gaps.find(
+        (g) =>
+          g.path === PROVIDER_WHITELIST_PATH || g.path === PROVIDER_BLACKLIST_PATH,
+      ),
+    [gaps],
+  );
+  const showProviderCard = !!providerGap;
+  const providerPriority: "blocker" | "confirm" | "optional" =
+    providerGap?.priority ?? "confirm";
+
+  const triggerKey = `${showProviderCard}|${providerVisual.domain}|${providerVisual.prefilledBlacklist.join(",")}|${providerVisual.initialMode}`;
   const [providerState, setProviderState] = useState<ProviderState>({
-    mode: providerTrigger.initialMode,
+    mode: providerVisual.initialMode,
     whitelist: [],
-    blacklist: [...providerTrigger.prefilledBlacklist],
+    blacklist: [...providerVisual.prefilledBlacklist],
   });
   // Reset when underlying record changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useMemo(() => {
     setProviderState({
-      mode: providerTrigger.initialMode,
+      mode: providerVisual.initialMode,
       whitelist: [],
-      blacklist: [...providerTrigger.prefilledBlacklist],
+      blacklist: [...providerVisual.prefilledBlacklist],
     });
   }, [triggerKey]);
 
@@ -173,24 +196,20 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     [record],
   );
 
-  // Provider card visibility is owned solely by the JSON-driven trigger.
-  // Resolver-based skipPaths override has been retired (see enum-normalizer.ts).
-  const showProviderCard = providerTrigger.show;
-
-  // GapQuestion (JSON-driven) joined with FieldRegistryEntry for UI rendering.
-  // No resolver overrides — gap-reader is the single source of truth.
+  // Render-list excludes provider gap (provider has its own dedicated card).
   const questions = useMemo<RenderQuestion[]>(() => {
-    if (!record) return [];
-    const gaps = readGapsFromJson(record);
     const out: RenderQuestion[] = [];
     for (const g of gaps) {
+      if (g.path === PROVIDER_WHITELIST_PATH || g.path === PROVIDER_BLACKLIST_PATH) {
+        continue;
+      }
       const spec = FIELD_REGISTRY_INDEX.get(g.path);
       if (!spec) continue;
       out.push({ ...g, spec });
     }
     const rank: Record<string, number> = { blocker: 0, confirm: 1, optional: 2 };
     return out.sort((a, b) => rank[a.priority] - rank[b.priority]);
-  }, [record]);
+  }, [gaps]);
 
   if (!record) return null;
 
@@ -205,7 +224,9 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     showProviderCard &&
     (providerState.mode === "all" ||
       (providerState.mode === "custom" && providerState.whitelist.length > 0));
-  const providerPendingRequired = showProviderCard && !providerAnswered;
+  // Only required-to-answer when gap-reader marked the provider gap as a blocker.
+  const providerPendingRequired =
+    showProviderCard && providerPriority === "blocker" && !providerAnswered;
   // Apply enabled if (admin answered AND no critical missing) OR normalizer has pending enum patches
   const canApply =
     ((answeredCount > 0 || providerAnswered) &&
