@@ -29,6 +29,7 @@ import {
   computeFieldStatus,
   type AnyObj,
 } from "../_shared/pk-v10-inert.ts";
+import { propagateNotApplicable } from "../_shared/pk-v10-propagator.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -1349,7 +1350,12 @@ serve(async (req) => {
       aiConfidence,
       PK_V10_AI_CONFIDENCE_QUESTION_THRESHOLD,
     );
-    merged._field_status = fieldStatus;
+    // Structural NA propagation (single-brain compliant — no new decisions)
+    const { fieldStatus: propagated, stats: propStats } = propagateNotApplicable(
+      merged as AnyObj,
+      fieldStatus as Record<string, "explicit"|"inferred"|"derived"|"propagated"|"not_stated"|"not_applicable">,
+    );
+    merged._field_status = propagated;
 
     console.log("[pk-extractor V10] OK", {
       model: modelUsed,
@@ -1358,7 +1364,8 @@ serve(async (req) => {
       latency_ms: latencyMs,
       mechanics_items: _a(_o((merged.mechanics_engine as AnyObj).items_block).items).length,
       ai_confidence_keys: Object.keys(aiConfidence).length,
-      field_status_keys: Object.keys(fieldStatus).length,
+      field_status_keys: Object.keys(propagated).length,
+      propagation_stats: propStats,
       schema_version: ((merged.meta_engine as AnyObj).schema_block as AnyObj).schema_version,
     });
 
