@@ -2264,7 +2264,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   {pkStatus === "loading"
-                    ? `⏳ Menyiapkan V.09... ${pkElapsedSec}s`
+                    ? `Menyiapkan ${pkElapsedSec}s`
                     : pkStatus === "failed"
                       ? "Gunakan Promo (fallback)"
                       : "Gunakan Promo"}
