@@ -2199,37 +2199,35 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             
             {/* Right: Copy JSON + Primary Action */}
             <div className="flex items-center gap-3">
-              {/* Copy JSON V.09 — bungkus ExtractedPromo dgn Json Schema Contract V.09 */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span tabIndex={0}>
-                      <Button
-                        variant="outline"
-                        onClick={handleCopyJSON}
-                        disabled={pkStatus === "loading"}
-                        className="h-11 px-4 gap-2"
-                      >
-                        <Copy className="w-4 h-4" />
-                        {pkStatus === "loading"
-                          ? `⏳ Menyiapkan V.09... ${pkElapsedSec}s`
-                          : pkStatus === "failed"
-                            ? "Copy JSON (fallback)"
-                            : "Copy JSON"}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <p>
-                      {pkStatus === "loading"
-                        ? "PK-extractor masih jalan. Tunggu sampai badge ✅ siap supaya hasilnya pkRecord, bukan fallback wrapper lama."
-                        : pkStatus === "failed"
-                          ? "PK-extractor gagal — output akan berupa wrapper V.09 lama (legacy)."
-                          : "Salin JSON hasil ekstraksi ke clipboard, dibungkus dengan Json Schema Contract V.09 (meta + data)."}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {/* JSON File — dropdown: Copy or Download */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={pkStatus === "loading"}
+                    className="h-11 px-6 gap-2"
+                    title="Pilih aksi untuk JSON V.10"
+                  >
+                    <FileJson className="w-4 h-4" />
+                    {pkStatus === "loading"
+                      ? `⏳ Menyiapkan... ${pkElapsedSec}s`
+                      : pkStatus === "failed"
+                        ? "Json File (fallback)"
+                        : "Json File"}
+                    <ChevronDown className="w-4 h-4 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleCopyJSON} className="gap-2 cursor-pointer">
+                    <Copy className="w-4 h-4" />
+                    Copy JSON
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadJSON} className="gap-2 cursor-pointer">
+                    <Download className="w-4 h-4" />
+                    Download JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               {/* System Rule (C) cannot be saved to promo KB */}
               {extractedPromo.program_classification === 'C' ? (
                 <TooltipProvider>
