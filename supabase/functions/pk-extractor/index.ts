@@ -1353,6 +1353,65 @@ serve(async (req) => {
     );
     merged._field_status = propagated;
 
+    // ============================================================
+    // GAP #2 — Multi-variant summary hygiene (structural only)
+    // ------------------------------------------------------------
+    // IF variant_engine.items_block.subcategories.length > 1
+    // AND projection_engine.summary_block has no explicit/inferred values
+    // THEN mark all summary_block leaf paths as not_applicable.
+    //
+    // Reason: record-level single summary cannot represent multiple
+    // variants without guessing. Canonical detail remains in
+    // variant_engine. JSON remains source of truth.
+    // ============================================================
+    try {
+      const variantEngine = (merged.variant_engine as AnyObj) ?? {};
+      const itemsBlock = (variantEngine.items_block as AnyObj) ?? {};
+      const subs = Array.isArray(itemsBlock.subcategories) ? itemsBlock.subcategories : [];
+      if (subs.length > 1) {
+        const projEngine = (merged.projection_engine as AnyObj) ?? {};
+        const summary = (projEngine.summary_block as AnyObj) ?? {};
+        const fs = merged._field_status as Record<string, string>;
+        // Check no explicit/inferred values exist under summary_block
+        let hasAuthored = false;
+        for (const [k, v] of Object.entries(summary)) {
+          if (k.startsWith("_")) continue;
+          const path = `projection_engine.summary_block.${k}`;
+          const status = fs[path];
+          if (status === "explicit" || status === "inferred" || status === "derived") {
+            hasAuthored = true;
+            break;
+          }
+          // Also treat non-empty value as authored even if status missing
+          if (v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)) {
+            // Only count as authored if status isn't already not_applicable/propagated
+            if (status !== "not_applicable" && status !== "propagated") {
+              hasAuthored = true;
+              break;
+            }
+          }
+        }
+        if (!hasAuthored) {
+          let demoted = 0;
+          for (const k of Object.keys(summary)) {
+            if (k.startsWith("_")) continue;
+            const path = `projection_engine.summary_block.${k}`;
+            const cur = fs[path];
+            if (cur === "explicit" || cur === "inferred" || cur === "derived" || cur === "propagated") continue;
+            fs[path] = "not_applicable";
+            demoted++;
+          }
+          summary._summary_skipped_reason = "record_level_summary_not_applicable_data_in_variant_engine";
+          (propStats as AnyObj).summary_demoted_multi_variant = demoted;
+        }
+      }
+    } catch (e) {
+      console.warn("[pk-extractor V10] multi-variant summary hygiene skipped:", e instanceof Error ? e.message : String(e));
+    }
+
+    // GAP #1 — attach propagation stats as observability metadata
+    (merged as AnyObj)._propagation_stats = propStats;
+
     console.log("[pk-extractor V10] OK", {
       model: modelUsed,
       stop_reason: stopReason,
