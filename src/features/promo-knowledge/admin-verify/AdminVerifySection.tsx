@@ -434,8 +434,9 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       <div className="space-y-6">
         {showProviderCard && (
           <ProviderVerifyCard
-            domain={providerTrigger.domain}
-            prefilledFromBlacklist={providerTrigger.prefilledBlacklist.length > 0}
+            domain={providerVisual.domain}
+            prefilledFromBlacklist={providerVisual.prefilledBlacklist.length > 0}
+            priority={providerPriority}
             state={providerState}
             onChange={setProviderState}
           />
