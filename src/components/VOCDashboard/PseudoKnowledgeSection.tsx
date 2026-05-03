@@ -2218,7 +2218,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   >
                     <FileJson className="w-4 h-4" />
                     {pkStatus === "loading"
-                      ? `⏳ Menyiapkan... ${pkElapsedSec}s`
+                      ? `Menyiapkan ${pkElapsedSec}s`
                       : pkStatus === "failed"
                         ? "Json File (fallback)"
                         : "Json File"}
