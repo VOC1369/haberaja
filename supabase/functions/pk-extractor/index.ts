@@ -75,9 +75,69 @@ PRINSIP UTAMA (F1 + F2 + F3 V.10):
      * inferred       → reasoning kuat, tidak literal
      * derived        → diturunkan dari field lain
      * propagated     → diisi otomatis dari context (mis. client_id dari URL)
-     * not_stated     → tidak ada di sumber (DEFAULT untuk field kosong)
-     * not_applicable → memang tidak relevan untuk promo ini
+     * not_stated     → tidak ada di sumber TAPI field ini RELEVAN untuk promo ini
+     * not_applicable → field ini TIDAK RELEVAN untuk promo ini (apapun isi sumber)
    Threshold ai_confidence untuk kandidat pertanyaan ke Admin: < ${PK_V10_AI_CONFIDENCE_QUESTION_THRESHOLD}.
+
+4.1 APPLICABILITY DECISION (WAJIB — root contract single-brain).
+    SEBELUM menetapkan _field_status untuk SETIAP field yang akan ditulis ke map,
+    LLM WAJIB menjalankan decision tree berikut secara eksplisit:
+
+      Step 1 — APAKAH FIELD INI RELEVAN untuk promo ini?
+              (Reasoning, bukan keyword. Pikirkan: apakah konsep field ini
+               punya makna pada promo bertype + mechanic + intent ini?)
+
+         JIKA TIDAK RELEVAN
+           → _field_status[path] = "not_applicable"
+           → value: biarkan blank default (tidak perlu diisi)
+           → STOP. Jangan evaluasi step 2.
+
+         JIKA RELEVAN
+           → lanjut Step 2.
+
+      Step 2 — APAKAH SUMBER MENYATAKAN NILAINYA?
+         - Ada bukti literal           → "explicit"
+         - Reasoning kuat dari sumber  → "inferred" + ai_confidence sesuai
+         - Diturunkan dari field lain  → "derived"
+         - Diisi dari context caller   → "propagated"
+         - Tidak disebut / ambigu      → "not_stated"
+
+    PRINSIP REASONING (bukan template, bukan rule per-promo):
+
+      • Jika promo secara semantik tidak melibatkan TURNOVER/wagering
+        (mis. cashback langsung, voucher, hadiah fisik, referral commission)
+        → SEMUA field turnover_* / wagering_* = not_applicable.
+
+      • Jika promo tidak melibatkan DEPOSIT sebagai trigger
+        (mis. login bonus, achievement reward, lucky spin gratis)
+        → field deposit_* / min_deposit / deposit_method = not_applicable.
+
+      • Jika reward_type bukan voucher
+        → voucher_kind = not_applicable.
+
+      • Jika promo tidak punya sub-variants
+        → variant_engine.items_block.subcategories[] = not_applicable
+          (bukan not_stated).
+
+      • Jika tidak ada loyalty/point system
+        → loyalty_engine.* = not_applicable.
+
+      • Jika tidak ada periode terbatas / promo evergreen
+        → valid_until = not_applicable (set valid_until_unlimited=true).
+
+      Pola umum: gunakan reward_type, primary_action, mechanic_type, dan
+      intent_block sebagai konteks untuk memutuskan applicability field-field
+      di engine lain. JANGAN cocok kata. JANGAN hardcode per nama promo.
+
+    LARANGAN KERAS:
+      ✗ JANGAN default ke "not_stated" untuk field yang jelas tidak relevan.
+      ✗ JANGAN pakai "not_applicable" untuk field yang sebenarnya relevan
+        tapi sumber tidak menyebut (itu "not_stated").
+      ✗ JANGAN tinggalkan path penting tanpa _field_status sama sekali.
+
+    KONSEKUENSI: Question Engine downstream HANYA bertanya untuk path dengan
+    _field_status ∈ { "not_stated", "inferred"<threshold }. Salah klasifikasi
+    di sini = pertanyaan irrelevant ke admin. Ini adalah kontrak utama.
 
 5. STATE (F1 §1).
    readiness_engine.state_block.state = "draft" (default — server akan stamp).
@@ -200,10 +260,13 @@ K. ai_confidence MAP (WAJIB minimal 10 path penting).
      period_engine.validity_block.valid_from
      period_engine.validity_block.valid_until
 
-L. _field_status MAP (WAJIB minimal 10 path).
-   Format: { "engine.block.field": "explicit" | "inferred" | ... }
-   Server akan compute defaults — tapi LLM yang tahu evidence semantic, jadi
-   isi minimal untuk path-path utama.
+L. _field_status MAP (WAJIB).
+   Format: { "engine.block.field": "explicit" | "inferred" | "not_applicable" | ... }
+   - WAJIB isi minimal 10 path utama (lihat list di section K).
+   - WAJIB isi SEMUA path yang Anda nilai "not_applicable" via decision tree §4.1.
+     Ini krusial: server tidak bisa menebak applicability — hanya LLM yang tahu.
+   - Path yang tidak Anda sebut akan dihitung server sebagai "not_stated" (default).
+     Maka untuk field tidak relevan, WAJIB sebut eksplisit dengan "not_applicable".
 
 M. MECHANICS DATA SHAPE DOCTRINE (Step 5D — Step 6.1 prompt-only).
    Aturan tambahan untuk isi 'data' blob di mechanics_engine.items[].
