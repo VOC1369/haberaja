@@ -14,8 +14,14 @@ import {
   Send, Sparkles, Loader2, FileText, ExternalLink, CheckCircle2, 
   AlertTriangle, Copy, XCircle, AlertCircle, ChevronDown,
   X, RotateCcw, Terminal, HelpCircle, Paperclip, Lightbulb, Ban, Info,
-  Plus, ArrowUp
+  Plus, ArrowUp, RefreshCw, FileJson, Download
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { formatGameTypeLabel, formatProvidersDisplay } from "@/lib/promo-display";
@@ -670,6 +676,45 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     } catch {
       toast.error("Gagal menyalin ke clipboard");
     }
+  };
+
+  const handleDownloadJSON = () => {
+    if (!pkRecord) {
+      toast.error("Belum ada record V.1.1", {
+        description:
+          pkStatus === "loading"
+            ? "Pseudo Engine extractor masih jalan. Tunggu badge ✅ siap."
+            : pkStatus === "failed"
+              ? `Pseudo Engine extractor gagal${pkFailReason ? ` (${pkFailReason})` : ""}.`
+              : "Jalankan ekstraksi dulu sebelum download JSON.",
+      });
+      return;
+    }
+    try {
+      const jsonString = JSON.stringify(pkRecord, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      a.href = url;
+      a.download = `pkb-wolfbrain-v10-${ts}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("JSON file di-download");
+    } catch {
+      toast.error("Gagal download JSON");
+    }
+  };
+
+  const handleReExtract = () => {
+    if (isExtracting) return;
+    if (!currentInput.trim() && !imageBase64) {
+      toast.error("Tidak ada input untuk di-extract ulang");
+      return;
+    }
+    handleExtract();
   };
 
   const handleCommitPromo = () => {
@@ -2068,7 +2113,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       {extractedPromo && (
         <div className="footer-bar">
           <div className="footer-bar-content">
-            {/* Left: Back/Restart */}
+            {/* Left: Restart + Re-Extract */}
             <div className="flex items-center gap-2">
               <Button 
                 variant="outline"
@@ -2077,6 +2122,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               >
                 <RotateCcw className="w-4 h-4" />
                 Restart
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleReExtract}
+                disabled={isExtracting || (!currentInput.trim() && !imageBase64)}
+                className="h-11 px-6 gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+                title="Jalankan ulang extraction dengan input yang sama"
+              >
+                <RefreshCw className={`w-4 h-4 ${isExtracting ? "animate-spin" : ""}`} />
+                Re-Extract
               </Button>
             </div>
             
@@ -2144,37 +2199,35 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             
             {/* Right: Copy JSON + Primary Action */}
             <div className="flex items-center gap-3">
-              {/* Copy JSON V.09 — bungkus ExtractedPromo dgn Json Schema Contract V.09 */}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span tabIndex={0}>
-                      <Button
-                        variant="outline"
-                        onClick={handleCopyJSON}
-                        disabled={pkStatus === "loading"}
-                        className="h-11 px-4 gap-2"
-                      >
-                        <Copy className="w-4 h-4" />
-                        {pkStatus === "loading"
-                          ? `⏳ Menyiapkan V.09... ${pkElapsedSec}s`
-                          : pkStatus === "failed"
-                            ? "Copy JSON (fallback)"
-                            : "Copy JSON"}
-                      </Button>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-xs">
-                    <p>
-                      {pkStatus === "loading"
-                        ? "PK-extractor masih jalan. Tunggu sampai badge ✅ siap supaya hasilnya pkRecord, bukan fallback wrapper lama."
-                        : pkStatus === "failed"
-                          ? "PK-extractor gagal — output akan berupa wrapper V.09 lama (legacy)."
-                          : "Salin JSON hasil ekstraksi ke clipboard, dibungkus dengan Json Schema Contract V.09 (meta + data)."}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              {/* JSON File — dropdown: Copy or Download */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={pkStatus === "loading"}
+                    className="h-11 px-6 gap-2"
+                    title="Pilih aksi untuk JSON V.10"
+                  >
+                    <FileJson className="w-4 h-4" />
+                    {pkStatus === "loading"
+                      ? `⏳ Menyiapkan... ${pkElapsedSec}s`
+                      : pkStatus === "failed"
+                        ? "Json File (fallback)"
+                        : "Json File"}
+                    <ChevronDown className="w-4 h-4 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={handleCopyJSON} className="gap-2 cursor-pointer">
+                    <Copy className="w-4 h-4" />
+                    Copy JSON
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadJSON} className="gap-2 cursor-pointer">
+                    <Download className="w-4 h-4" />
+                    Download JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               {/* System Rule (C) cannot be saved to promo KB */}
               {extractedPromo.program_classification === 'C' ? (
                 <TooltipProvider>
