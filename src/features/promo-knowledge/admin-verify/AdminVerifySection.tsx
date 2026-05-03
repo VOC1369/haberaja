@@ -49,12 +49,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  PK_V10_CLAIM_METHOD,
-  PK_V10_GEO_RESTRICTION,
-  PK_V10_STACKING_POLICY,
-  PK_V10_TURNOVER_BASIS,
-} from "@/features/promo-knowledge/schema/pk-v10";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
@@ -63,6 +57,15 @@ import {
   commitResolverOutput,
   type ResolverOutput,
 } from "./question-resolver";
+import {
+  FIELD_REGISTRY,
+  FIELD_REGISTRY_INDEX,
+  CUSTOM,
+  NONE,
+  type FieldRegistryEntry,
+  type AdminAnswer,
+} from "./field-registry";
+import { readGapsFromJson, type GapQuestion } from "./gap-reader";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AUDIT LOG TYPE — sidecar at root, not in schema
