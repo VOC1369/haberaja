@@ -82,121 +82,117 @@ PRINSIP UTAMA (F1 + F2 + F3 V.10):
 
 4.1 APPLICABILITY DECISION
 
-    Before assigning any field value or field_status, decide whether the
-    field is applicable to the promotion mechanism.
+    Before assigning any field value or field_status:
 
     Step 1 — Applicability
       Ask: "Does this field have a logical role in explaining this promotion?"
 
       If NO:
         - set _field_status[path] = "not_applicable"
-        - leave value null or use the canonical neutral value if defined by schema
-        - do not mark it as not_stated
+        - leave value null or use the canonical neutral value
+        - DO NOT mark as not_stated
+        - STOP for this field
 
     Step 2 — Evidence
-      If YES, then classify evidence:
-        - explicit:   directly stated in source
-        - inferred:   logically derived from source context
-        - derived:    deterministically computed from other fields
-        - propagated: system/client context
-        - not_stated: applicable, but source does not provide enough information
+      If YES, classify evidence:
+        - explicit:   directly stated
+        - inferred:   logically derived
+        - derived:    deterministic from other fields
+        - propagated: from system/client context
+        - not_stated: relevant but missing/ambiguous
 
     Core distinction:
-      - not_applicable = field has no logical role in this promotion
-      - not_stated     = field is relevant, but the source does not say enough
+      - not_applicable = field has no logical role
+      - not_stated     = field is relevant but unknown
 
-    Do not decide applicability from promo type labels.
-    Do not use keyword or regex.
-    Do not use archetype templates.
-    Use semantic reasoning from the actual promotion mechanism.
-
-    Output requirement:
-       If a field is not_applicable, include its path explicitly in _field_status.
-       Do not omit it.
+    DO NOT decide applicability from:
+      - promo type labels
+      - keyword matching
+      - regex
+      - templates
+    Use semantic reasoning only.
 
 4.2 APPLICABILITY CONSISTENCY CHECK (MANDATORY)
 
-    After filling all fields and _field_status, run this checklist BEFORE
-    finalizing output. This is an internal self-audit — do not skip.
+    After filling all fields:
 
     A. Coverage
-       - For every relevant field path, there MUST be an entry in _field_status.
-       - Do not omit paths. If unsure, choose a status explicitly.
+       - Every relevant field MUST appear in _field_status.
+       - Do not omit paths.
 
     B. Not Applicable Enforcement
-       - If any statement implies the absence of a requirement
-         (e.g., no wagering, no provider restriction, no deposit requirement),
-         then ALL related fields MUST be marked _field_status = "not_applicable".
-       - Do NOT use "not_stated" for fields that are logically irrelevant.
+       - If text implies absence of a requirement
+         → all related fields MUST be not_applicable.
 
     C. Not Stated Discipline
-       - "not_stated" is ONLY for fields that are relevant BUT the source
-         provides insufficient or ambiguous information.
-       - If the field has no logical role → it is NOT "not_stated",
-         it is "not_applicable".
+       - Use only when relevant but unknown.
+       - NEVER use for irrelevant fields.
 
     D. Consistency Sweep
-       - If one field is marked not_applicable, check all sibling/related
-         fields and align them.
-         (Example: if wagering is not applicable → all turnover-related
-         fields must be not_applicable.)
+       - If one field is not_applicable
+         → check related fields for alignment.
 
-    E. Confidence Sanity
-       - If you used "inferred", you MUST include ai_confidence.
-       - Do not use "inferred" when "not_applicable" is logically correct.
+    E. Confidence Rule
+       - "inferred" MUST include ai_confidence.
 
-    F. Final Assertion (internal)
-       - Ask: "Have I used not_stated anywhere I should have used not_applicable?"
-       - If YES → correct before output.
-
-    Output must include explicit _field_status entries for all relevant paths.
-    Do not rely on server-side defaults to guess applicability.
+    F. Final Self-Check
+       Ask: "Did I incorrectly use not_stated instead of not_applicable?"
+       Fix before output.
 
 4.3 PROPAGATION CONSISTENCY (MANDATORY)
 
-    After determining not_applicable for any field, you MUST propagate that
-    decision to all related fields.
+    After applicability decisions:
 
     A. Mirror Propagation
        If a canonical field is not_applicable:
-         - All projection_engine mirror fields MUST also be not_applicable.
+         → all projection mirror fields MUST also be not_applicable.
        Example:
-         If taxonomy_engine.logic_block.turnover_basis = not_applicable
-         Then ALL projection turnover fields MUST also be not_applicable.
+         taxonomy_engine.logic_block.turnover_basis = not_applicable
+         → projection_engine.summary_block.turnover_basis      = not_applicable
+         → projection_engine.summary_block.turnover_multiplier = not_applicable
 
-    B. Block-Level Propagation
-       If an entire block has no logical role:
-         - ALL leaf fields in that block MUST be not_applicable.
-       Examples of blocks:
-         - reward_engine.combo_reward_block
-         - reward_engine.matrix_reward_block
-         - reward_engine.conditional_reward_block
-         - proof_engine.social_proof_block
-         - time_window_engine.*
-         - loyalty_engine.exchange_block
-       Do not leave any child field as not_stated in such blocks.
+    B. Block-Level Propagation (WITH ANCHOR — MANDATORY)
+       If a block has no logical role:
+         - Mark ALL child leaf fields as not_applicable.
+         - ALSO mark the parent block path itself as not_applicable
+           (MANDATORY ANCHOR — required for downstream propagation).
+       Example:
+         reward_engine.combo_reward_block.combo_items = not_applicable
+         → reward_engine.combo_reward_block            = not_applicable
+       INVALID state (do NOT produce):
+         - parent missing from _field_status
+         - children = not_applicable
+       Both must be present and consistent.
 
     C. Shape Exclusivity
-       If one reward structure is used:
-         - All alternative reward structures MUST be not_applicable.
-       Example:
-         If flat/tier reward is used:
-           combo, matrix, conditional, event reward structures → not_applicable.
+       If one structure is used:
+         → all alternative empty structures MUST be not_applicable.
+       ONLY if:
+         - they have no content
+         - they are not explicitly defined.
 
-    D. Consistency Check (MANDATORY)
-       Before finalizing output:
-         - Scan for any field marked not_stated.
-         - Ask: "Is this field actually irrelevant?"
-         - If YES → convert to not_applicable.
-
-    E. No Partial Applicability
-       Do not mix:
+    D. No Partial Applicability
+       Do NOT mix:
          - parent = not_applicable
          - child  = not_stated
-       This is invalid. All related fields must be consistent.
+       All related fields must be consistent.
 
-    This is NOT template logic.
-    This is structural consistency of the JSON.
+    E. Final Sweep (MANDATORY)
+       Before returning output, scan entire JSON and ensure no:
+         - mirror mismatch
+         - block inconsistency
+         - partial applicability
+       Fix BEFORE output.
+
+    This is NOT template logic. This is structural consistency of the JSON.
+
+FINAL ASSERTION (before output)
+    Confirm:
+      - All irrelevant fields are marked not_applicable
+      - All relevant unknown fields are not_stated
+      - All mirrors and blocks are consistent
+      - No partial propagation exists
+    If not, fix before returning.
 
 5. STATE (F1 §1).
    readiness_engine.state_block.state = "draft" (default — server akan stamp).
