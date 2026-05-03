@@ -135,6 +135,8 @@ export function propagateNotApplicable(
     mirror_promoted: 0,
     block_promoted: 0,
     shape_promoted: 0,
+    parent_anchored: 0,
+    parent_paths_promoted: [],
   };
 
   // (1) MIRROR PROPAGATION
