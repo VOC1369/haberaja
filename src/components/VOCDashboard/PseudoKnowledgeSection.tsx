@@ -2138,14 +2138,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             {/* Center: Wolfbrain.V10 status badge */}
             <div className="flex items-center gap-3">
               {pkStatus === "loading" && (
-                <div className="h-11 inline-flex items-center gap-2 px-4 rounded-full border-0 bg-muted text-xs font-medium text-muted-foreground">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground" />
+                <div className="h-11 inline-flex items-center gap-2 px-4 rounded-full border-0 bg-muted text-sm font-medium text-muted-foreground">
+                  <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
                   Wolfbrain.V10 ({pkElapsedSec}s)
                 </div>
               )}
               {pkStatus === "ready" && (
-                <div className="h-11 inline-flex items-center gap-2 px-4 rounded-full border-0 bg-emerald-500/10 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                <div className="h-11 inline-flex items-center gap-2 px-4 rounded-full border-0 bg-emerald-500/10 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                   Wolfbrain.V10
                 </div>
               )}
@@ -2153,7 +2153,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <div className="h-11 inline-flex items-center gap-2 px-4 rounded-full border-0 bg-destructive/10 text-xs font-medium text-destructive cursor-help">
+                      <div className="h-11 inline-flex items-center gap-2 px-4 rounded-full border-0 bg-destructive/10 text-sm font-medium text-destructive cursor-help">
                         <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
                         Wolfbrain.V10: gagal{pkFailReason ? ` (${pkFailReason})` : ""}
                       </div>
