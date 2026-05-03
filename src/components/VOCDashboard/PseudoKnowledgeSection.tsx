@@ -14,8 +14,14 @@ import {
   Send, Sparkles, Loader2, FileText, ExternalLink, CheckCircle2, 
   AlertTriangle, Copy, XCircle, AlertCircle, ChevronDown,
   X, RotateCcw, Terminal, HelpCircle, Paperclip, Lightbulb, Ban, Info,
-  Plus, ArrowUp
+  Plus, ArrowUp, RefreshCw, FileJson, Download
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import wolfclawIcon from "@/assets/wolfclaw-icon.png";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { formatGameTypeLabel, formatProvidersDisplay } from "@/lib/promo-display";
