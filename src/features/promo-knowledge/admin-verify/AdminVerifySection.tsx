@@ -173,39 +173,32 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     });
   }, [triggerKey]);
 
-  const resolverOutput = useMemo<ResolverOutput>(
+  const normalizerOutput = useMemo<NormalizerOutput>(
     () =>
       record
-        ? resolveRecord(record)
-        : { skipPaths: new Set(), pendingEntries: [], pendingValuePatches: [] },
+        ? normalizeRecord(record)
+        : { pendingEntries: [], pendingValuePatches: [] },
     [record],
   );
 
-  // Gate: resolver is single source of decision. If it skipped the provider
-  // path (e.g. game_domain=all → not_applicable), UI MUST NOT render the card
-  // even when the legacy evaluateProviderTrigger says show=true.
-  const providerSkippedByResolver = resolverOutput.skipPaths.has(
-    PROVIDER_WHITELIST_PATH,
-  );
-  const showProviderCard = providerTrigger.show && !providerSkippedByResolver;
+  // Provider card visibility is owned solely by the JSON-driven trigger.
+  // Resolver-based skipPaths override has been retired (see enum-normalizer.ts).
+  const showProviderCard = providerTrigger.show;
 
   // GapQuestion (JSON-driven) joined with FieldRegistryEntry for UI rendering.
-  // Resolver skipPaths still suppress questions to avoid double-asking on
-  // paths the resolver has already normalized.
+  // No resolver overrides — gap-reader is the single source of truth.
   const questions = useMemo<RenderQuestion[]>(() => {
     if (!record) return [];
     const gaps = readGapsFromJson(record);
     const out: RenderQuestion[] = [];
     for (const g of gaps) {
-      if (resolverOutput.skipPaths.has(g.path)) continue;
       const spec = FIELD_REGISTRY_INDEX.get(g.path);
       if (!spec) continue;
       out.push({ ...g, spec });
     }
-    // Blockers first, then confirms, then optional — preserve registry order within tier
     const rank: Record<string, number> = { blocker: 0, confirm: 1, optional: 2 };
     return out.sort((a, b) => rank[a.priority] - rank[b.priority]);
-  }, [record, resolverOutput]);
+  }, [record]);
 
   if (!record) return null;
 
