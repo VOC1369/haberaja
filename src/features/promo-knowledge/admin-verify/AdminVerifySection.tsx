@@ -219,10 +219,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     ((answeredCount > 0 || providerAnswered) &&
       unansweredCritical.length === 0 &&
       !providerPendingRequired) ||
-    (hasResolverPending && !providerPendingRequired);
+    (hasNormalizerPending && !providerPendingRequired);
 
   // Empty state — only when truly nothing to do
-  if (questions.length === 0 && !hasResolverPending && !showProviderCard) {
+  if (questions.length === 0 && !hasNormalizerPending && !showProviderCard) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
@@ -385,7 +385,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     // Atomic commit: apply resolver patches + append _ai_resolver_log
     // (after admin answers so admin choice always wins on shared paths — though
     //  resolver paths are excluded from FIELD_SPECS via skipPaths, so no overlap)
-    commitResolverOutput(draft, resolverOutput, ts);
+    commitNormalizerOutput(draft, normalizerOutput, ts);
 
     draft.updated_at = ts;
     onApply(draft);
