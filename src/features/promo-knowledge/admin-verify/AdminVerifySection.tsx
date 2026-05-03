@@ -482,7 +482,7 @@ function QuestionCard({
   onClear,
 }: {
   number: number;
-  question: GeneratedQuestion;
+  question: RenderQuestion;
   answer: AdminAnswer | undefined;
   onChange: (patch: Partial<AdminAnswer>) => void;
   onClear: () => void;
@@ -501,8 +501,8 @@ function QuestionCard({
           </h4>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Badge variant={priority === "A" ? "destructive" : "warning"} size="sm">
-            {priority === "A" ? "Wajib" : "Konfirmasi"}
+          <Badge variant={priority === "blocker" ? "destructive" : "warning"} size="sm">
+            {priority === "blocker" ? "Wajib" : "Konfirmasi"}
           </Badge>
           {isAnswered && (
             <Badge variant="success" size="sm">
@@ -551,7 +551,7 @@ function QuestionInput({
   answer,
   onChange,
 }: {
-  question: GeneratedQuestion;
+  question: RenderQuestion;
   answer: AdminAnswer | undefined;
   onChange: (patch: Partial<AdminAnswer>) => void;
 }) {
