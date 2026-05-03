@@ -260,10 +260,13 @@ K. ai_confidence MAP (WAJIB minimal 10 path penting).
      period_engine.validity_block.valid_from
      period_engine.validity_block.valid_until
 
-L. _field_status MAP (WAJIB minimal 10 path).
-   Format: { "engine.block.field": "explicit" | "inferred" | ... }
-   Server akan compute defaults — tapi LLM yang tahu evidence semantic, jadi
-   isi minimal untuk path-path utama.
+L. _field_status MAP (WAJIB).
+   Format: { "engine.block.field": "explicit" | "inferred" | "not_applicable" | ... }
+   - WAJIB isi minimal 10 path utama (lihat list di section K).
+   - WAJIB isi SEMUA path yang Anda nilai "not_applicable" via decision tree §4.1.
+     Ini krusial: server tidak bisa menebak applicability — hanya LLM yang tahu.
+   - Path yang tidak Anda sebut akan dihitung server sebagai "not_stated" (default).
+     Maka untuk field tidak relevan, WAJIB sebut eksplisit dengan "not_applicable".
 
 M. MECHANICS DATA SHAPE DOCTRINE (Step 5D — Step 6.1 prompt-only).
    Aturan tambahan untuk isi 'data' blob di mechanics_engine.items[].
