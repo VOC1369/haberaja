@@ -122,6 +122,8 @@ export interface PropagationStats {
   mirror_promoted: number;
   block_promoted: number;
   shape_promoted: number;
+  parent_anchored: number;
+  parent_paths_promoted: string[];
 }
 
 export function propagateNotApplicable(
@@ -133,6 +135,8 @@ export function propagateNotApplicable(
     mirror_promoted: 0,
     block_promoted: 0,
     shape_promoted: 0,
+    parent_anchored: 0,
+    parent_paths_promoted: [],
   };
 
   // (1) MIRROR PROPAGATION
@@ -188,6 +192,54 @@ export function propagateNotApplicable(
         }
       }
     }
+  }
+
+  // (4) PARENT ANCHOR PROMOTION (structural consensus only)
+  // If a block path has NO entry yet AND every leaf inside it is "not_applicable"
+  // (i.e. unanimous child consensus), promote the parent block path itself to NA.
+  // Strict guards:
+  //   - parent must currently be unset (no override of any LLM decision)
+  //   - block must contain at least one leaf
+  //   - ALL tracked leaves under that block must be "not_applicable"
+  //   - if ANY leaf is explicit/inferred/derived/propagated/not_stated/missing → skip
+  // No semantics. No raw_content. No keyword. Pure structural rollup.
+  function collectBlockPaths(obj: unknown, base: string, acc: string[]): void {
+    if (obj === null || obj === undefined || typeof obj !== "object") return;
+    if (Array.isArray(obj)) return; // skip array containers as "blocks"
+    const keys = Object.keys(obj as AnyRec).filter((k) => !k.startsWith("_"));
+    if (keys.length === 0) return;
+    // Only treat as a block candidate if it has at least one nested object/array (i.e. is a block, not a leaf record).
+    // Even simple sub-blocks qualify.
+    if (base) acc.push(base);
+    for (const k of keys) {
+      collectBlockPaths((obj as AnyRec)[k], base ? `${base}.${k}` : k, acc);
+    }
+  }
+  const blockPaths: string[] = [];
+  collectBlockPaths(record, "", blockPaths);
+
+  // Sort longest-first so deeper blocks resolve before parents (bottom-up rollup).
+  blockPaths.sort((a, b) => b.length - a.length);
+
+  for (const block of blockPaths) {
+    if (fs[block] !== undefined) continue; // do not override any existing decision
+    const sub = getAt(record, block);
+    if (sub === null || typeof sub !== "object") continue;
+
+    let leafCount = 0;
+    let allNA = true;
+    for (const [path] of leafPaths(sub, block)) {
+      if (path === block) continue;
+      leafCount++;
+      const s = fs[path];
+      if (s !== "not_applicable") { allNA = false; break; }
+    }
+    if (leafCount === 0) continue;
+    if (!allNA) continue;
+
+    fs[block] = "not_applicable";
+    stats.parent_anchored++;
+    stats.parent_paths_promoted.push(block);
   }
 
   return { fieldStatus: fs, stats };
