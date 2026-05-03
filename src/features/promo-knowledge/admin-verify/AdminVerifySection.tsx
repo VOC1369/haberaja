@@ -214,7 +214,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     (providerState.mode === "all" ||
       (providerState.mode === "custom" && providerState.whitelist.length > 0));
   const providerPendingRequired = showProviderCard && !providerAnswered;
-  // Hybrid: Apply enabled if (admin answered AND no critical missing) OR resolver has pending output
+  // Apply enabled if (admin answered AND no critical missing) OR normalizer has pending enum patches
   const canApply =
     ((answeredCount > 0 || providerAnswered) &&
       unansweredCritical.length === 0 &&
