@@ -110,8 +110,46 @@ PRINSIP UTAMA (F1 + F2 + F3 V.10):
     Use semantic reasoning from the actual promotion mechanism.
 
     Output requirement:
-      If a field is not_applicable, include its path explicitly in _field_status.
-      Do not omit it.
+       If a field is not_applicable, include its path explicitly in _field_status.
+       Do not omit it.
+
+4.2 APPLICABILITY CONSISTENCY CHECK (MANDATORY)
+
+    After filling all fields and _field_status, run this checklist BEFORE
+    finalizing output. This is an internal self-audit — do not skip.
+
+    A. Coverage
+       - For every relevant field path, there MUST be an entry in _field_status.
+       - Do not omit paths. If unsure, choose a status explicitly.
+
+    B. Not Applicable Enforcement
+       - If any statement implies the absence of a requirement
+         (e.g., no wagering, no provider restriction, no deposit requirement),
+         then ALL related fields MUST be marked _field_status = "not_applicable".
+       - Do NOT use "not_stated" for fields that are logically irrelevant.
+
+    C. Not Stated Discipline
+       - "not_stated" is ONLY for fields that are relevant BUT the source
+         provides insufficient or ambiguous information.
+       - If the field has no logical role → it is NOT "not_stated",
+         it is "not_applicable".
+
+    D. Consistency Sweep
+       - If one field is marked not_applicable, check all sibling/related
+         fields and align them.
+         (Example: if wagering is not applicable → all turnover-related
+         fields must be not_applicable.)
+
+    E. Confidence Sanity
+       - If you used "inferred", you MUST include ai_confidence.
+       - Do not use "inferred" when "not_applicable" is logically correct.
+
+    F. Final Assertion (internal)
+       - Ask: "Have I used not_stated anywhere I should have used not_applicable?"
+       - If YES → correct before output.
+
+    Output must include explicit _field_status entries for all relevant paths.
+    Do not rely on server-side defaults to guess applicability.
 
 5. STATE (F1 §1).
    readiness_engine.state_block.state = "draft" (default — server akan stamp).
