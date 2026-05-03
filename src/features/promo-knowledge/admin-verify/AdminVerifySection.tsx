@@ -49,12 +49,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  PK_V10_CLAIM_METHOD,
-  PK_V10_GEO_RESTRICTION,
-  PK_V10_STACKING_POLICY,
-  PK_V10_TURNOVER_BASIS,
-} from "@/features/promo-knowledge/schema/pk-v10";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
@@ -63,6 +57,15 @@ import {
   commitResolverOutput,
   type ResolverOutput,
 } from "./question-resolver";
+import {
+  FIELD_REGISTRY,
+  FIELD_REGISTRY_INDEX,
+  CUSTOM,
+  NONE,
+  type FieldRegistryEntry,
+  type AdminAnswer,
+} from "./field-registry";
+import { readGapsFromJson, type GapQuestion } from "./gap-reader";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AUDIT LOG TYPE — sidecar at root, not in schema
@@ -79,44 +82,13 @@ interface HumanOverrideEntry {
   admin_note?: string;
 }
 
-const CONFIDENCE_THRESHOLD = 0.7;
+// CONFIDENCE_THRESHOLD removed — confidence is no longer a primary driver.
+// Decisions are owned by gap-reader.ts (JSON-driven from _field_status + flags).
+// FIELD_SPECS removed — replaced by FIELD_REGISTRY (./field-registry).
+// generateQuestions removed — replaced by readGapsFromJson (./gap-reader).
 
-// ─────────────────────────────────────────────────────────────────────────
-// ANSWER VALUE TYPES — every input is a discrete choice
-// ─────────────────────────────────────────────────────────────────────────
-
-/**
- * Choice option visible to admin.
- * `value` is the string we hand to FieldSpec.write().
- * Special sentinel "__custom__" means "admin will type a number/date below".
- */
-interface ChoiceOption {
-  value: string;
-  label: string;
-}
-
-interface AdminAnswer {
-  choice: string;            // the radio/select value chosen
-  customValue?: string;      // for date / number when choice === "__custom__"
-  customSelection?: string[];// for multi-select chips
-  note?: string;             // optional textarea note (hidden until choice picked)
-}
-
-const CUSTOM = "__custom__";
-const NONE = "__none__";
-
-type FieldSpec = {
-  path: string;
-  question: string;          // human-readable, no jargon, no field_path
-  inputKind: "radio" | "select-large" | "multi-chip" | "radio-with-date" | "radio-with-number";
-  options?: ChoiceOption[];          // for radio / select-large
-  multiOptions?: readonly string[];  // for multi-chip
-  /** Read current value from record (for Priority B pre-fill display). */
-  read: (rec: PkV10Record) => unknown;
-  /** Write the chosen answer back into a draft record. */
-  write: (draft: PkV10Record, answer: AdminAnswer) => void;
-  isCritical: (rec: PkV10Record) => boolean;
-};
+/** Render-time view: GapQuestion joined with its UI descriptor. */
+type RenderQuestion = GapQuestion & { spec: FieldRegistryEntry };
 
 const isEmpty = (v: unknown): boolean => {
   if (v === null || v === undefined) return true;
@@ -124,261 +96,6 @@ const isEmpty = (v: unknown): boolean => {
   if (Array.isArray(v) && v.length === 0) return true;
   return false;
 };
-
-// ─────────────────────────────────────────────────────────────────────────
-// CRITICAL CLASSIFICATION HELPERS
-// ─────────────────────────────────────────────────────────────────────────
-const ALWAYS = () => true;
-const NEVER = () => false;
-
-const promoTypeOf = (r: PkV10Record): string =>
-  (r.identity_engine?.promo_block?.promo_type ?? "").toLowerCase();
-
-const isDepositLike = (r: PkV10Record) => {
-  const t = promoTypeOf(r);
-  return t.includes("deposit") || t.includes("cashback") || t.includes("rolling");
-};
-const isUpfront = (r: PkV10Record) =>
-  (r.reward_engine?.payout_direction ?? "").toLowerCase() === "upfront";
-
-// ─────────────────────────────────────────────────────────────────────────
-// FIELD SPECS — radio-first, no jargon labels
-// ─────────────────────────────────────────────────────────────────────────
-
-/** ID label map — Bahasa Indonesia untuk semua opsi enum. */
-const ID_LABELS: Record<string, string> = {
-  // Stacking policy
-  no_stacking: "Tidak bisa digabung",
-  stack_with_whitelist: "Bisa digabung (whitelist)",
-  stack_freely: "Bisa digabung bebas",
-  conditional_stack: "Bersyarat",
-  // Claim method
-  auto: "Otomatis",
-  manual_livechat: "Manual via Livechat",
-  manual_whatsapp: "Manual via WhatsApp",
-  manual_telegram: "Manual via Telegram",
-  in_app_button: "Tombol di Aplikasi",
-  form_submission: "Form",
-  cs_approval: "Approval CS",
-  // Turnover basis
-  deposit_only: "Deposit",
-  bonus_only: "Bonus",
-  deposit_plus_bonus: "Deposit + Bonus",
-  total_bet: "Total Taruhan",
-  total_loss: "Total Kekalahan",
-  // Geo restriction
-  indonesia: "Indonesia",
-  jakarta: "Jakarta",
-  sea: "Asia Tenggara",
-  global: "Semua wilayah",
-};
-
-/** Fallback: capitalize, strip underscores. */
-const naturalize = (s: string): string =>
-  s
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim();
-
-const enumToOptions = (values: readonly string[]): ChoiceOption[] =>
-  values.map((v) => ({ value: v, label: ID_LABELS[v] ?? naturalize(v) }));
-
-const FIELD_SPECS: FieldSpec[] = [
-  // 1. Validity
-  {
-    path: "period_engine.validity_block.valid_until",
-    question: "Sampai kapan promo ini berlaku?",
-    inputKind: "radio-with-date",
-    options: [
-      { value: "no_expiry", label: "Tidak ada batas waktu" },
-      { value: CUSTOM, label: "Tanggal tertentu" },
-    ],
-    read: (r) => r.period_engine?.validity_block?.valid_until,
-    write: (d, a) => {
-      d.period_engine.validity_block.valid_until =
-        a.choice === "no_expiry" ? null as never : ((a.customValue ?? "") as never);
-    },
-    isCritical: ALWAYS,
-  },
-
-  // 2. Claim method
-  {
-    path: "claim_engine.method_block.claim_method",
-    question: "Bagaimana member mengklaim promo ini?",
-    inputKind: "radio",
-    options: enumToOptions(PK_V10_CLAIM_METHOD),
-    read: (r) => r.claim_engine?.method_block?.claim_method,
-    write: (d, a) => {
-      d.claim_engine.method_block.claim_method = a.choice;
-    },
-    isCritical: ALWAYS,
-  },
-
-  // 3. Payout direction
-  {
-    path: "reward_engine.payout_direction",
-    question: "Bonus dibayar kapan?",
-    inputKind: "radio",
-    options: [
-      { value: "upfront", label: "Di depan (langsung saat klaim)" },
-      { value: "backend", label: "Di belakang (setelah syarat tercapai)" },
-    ],
-    read: (r) => r.reward_engine?.payout_direction,
-    write: (d, a) => {
-      d.reward_engine.payout_direction = a.choice;
-    },
-    isCritical: ALWAYS,
-  },
-
-  // 4. Turnover basis
-  {
-    path: "taxonomy_engine.logic_block.turnover_basis",
-    question: "Hitungan turnover dari mana?",
-    inputKind: "radio",
-    options: enumToOptions(PK_V10_TURNOVER_BASIS),
-    read: (r) => r.taxonomy_engine?.logic_block?.turnover_basis,
-    write: (d, a) => {
-      d.taxonomy_engine.logic_block.turnover_basis = a.choice;
-    },
-    isCritical: ALWAYS,
-  },
-
-  // 5. Stacking
-  {
-    path: "dependency_engine.stacking_block.stacking_policy",
-    question: "Boleh digabung dengan promo lain?",
-    inputKind: "radio",
-    options: enumToOptions(PK_V10_STACKING_POLICY),
-    read: (r) => r.dependency_engine?.stacking_block?.stacking_policy,
-    write: (d, a) => {
-      d.dependency_engine.stacking_block.stacking_policy = a.choice;
-    },
-    isCritical: ALWAYS,
-  },
-
-  // 6. Min deposit (conditional)
-  {
-    path: "reward_engine.requirement_block.min_deposit",
-    question: "Minimum deposit untuk eligible?",
-    inputKind: "radio-with-number",
-    options: [
-      { value: "0", label: "Tanpa minimum" },
-      { value: "25000", label: "25.000" },
-      { value: "50000", label: "50.000" },
-      { value: "100000", label: "100.000" },
-      { value: CUSTOM, label: "Lainnya" },
-    ],
-    read: (r) => r.reward_engine?.requirement_block?.min_deposit,
-    write: (d, a) => {
-      const raw = a.choice === CUSTOM ? a.customValue : a.choice;
-      d.reward_engine.requirement_block.min_deposit =
-        raw === "" || raw === undefined ? null : Number(raw);
-    },
-    isCritical: isDepositLike,
-  },
-
-  // 7. Max reward (conditional)
-  {
-    path: "reward_engine.max_reward",
-    question: "Ada batas maksimum bonus?",
-    inputKind: "radio-with-number",
-    options: [
-      { value: NONE, label: "Tidak ada batas" },
-      { value: "100000", label: "100.000" },
-      { value: "500000", label: "500.000" },
-      { value: "1000000", label: "1.000.000" },
-      { value: CUSTOM, label: "Lainnya" },
-    ],
-    read: (r) => r.reward_engine?.max_reward,
-    write: (d, a) => {
-      if (a.choice === NONE) {
-        d.reward_engine.max_reward = null;
-        return;
-      }
-      const raw = a.choice === CUSTOM ? a.customValue : a.choice;
-      d.reward_engine.max_reward =
-        raw === "" || raw === undefined ? null : Number(raw);
-    },
-    isCritical: isUpfront,
-  },
-
-  // 8. Eligible providers — moved to dedicated ProviderVerifyCard (custom flow).
-  //    See PROVIDER_FIELD_PATH constant + ProviderVerifyCard component below.
-
-  // 9. Geo restriction (conditional)
-  {
-    path: "scope_engine.geo_block.geo_restriction",
-    question: "Berlaku untuk wilayah mana?",
-    inputKind: "select-large",
-    options: enumToOptions(PK_V10_GEO_RESTRICTION),
-    read: (r) => r.scope_engine?.geo_block?.geo_restriction,
-    write: (d, a) => {
-      d.scope_engine.geo_block.geo_restriction = a.choice;
-    },
-    // Critical only if there's already a non-empty hint (i.e. extractor flagged it)
-    isCritical: (r) => !isEmpty(r.scope_engine?.geo_block?.geo_restriction),
-  },
-
-  // 10. Void conditions — never critical at Admin Verify
-  // (kept out of FIELD_SPECS intentionally per locked spec)
-];
-
-// ─────────────────────────────────────────────────────────────────────────
-// QUESTION GENERATOR (priority-based)
-// ─────────────────────────────────────────────────────────────────────────
-
-type Priority = "A" | "B";
-
-interface GeneratedQuestion {
-  spec: FieldSpec;
-  priority: Priority;
-  currentValue: unknown;
-  /** AI draft pre-fill for Priority B (string match against an option). */
-  prefillChoice?: string;
-}
-
-function generateQuestions(
-  record: PkV10Record,
-  skipPaths: Set<string>,
-): GeneratedQuestion[] {
-  const status = record._field_status ?? {};
-  const conf = record.ai_confidence ?? {};
-  const out: GeneratedQuestion[] = [];
-
-  for (const spec of FIELD_SPECS) {
-    // Resolver handled this field — skip the question entirely
-    if (skipPaths.has(spec.path)) continue;
-
-    const val = spec.read(record);
-    const empty = isEmpty(val);
-    const fStatus = status[spec.path];
-    const fConf = conf[spec.path];
-
-    // Priority A — critical AND empty
-    if (empty) {
-      if (spec.isCritical(record)) {
-        out.push({ spec, priority: "A", currentValue: val });
-      }
-      // Non-critical empty → ignored (no Priority A, no Priority B trigger)
-      continue;
-    }
-
-    // Priority B — has value but low confidence or inferred
-    const lowConf = typeof fConf === "number" && fConf < CONFIDENCE_THRESHOLD;
-    const inferred = fStatus === "inferred";
-    if (lowConf || inferred) {
-      out.push({
-        spec,
-        priority: "B",
-        currentValue: val,
-        prefillChoice: typeof val === "string" ? val : undefined,
-      });
-    }
-  }
-
-  // A first, B after; preserve declared order within priority
-  return out.sort((a, b) => (a.priority === b.priority ? 0 : a.priority === "A" ? -1 : 1));
-}
 
 // ─────────────────────────────────────────────────────────────────────────
 // COMPONENT
@@ -472,15 +189,28 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   );
   const showProviderCard = providerTrigger.show && !providerSkippedByResolver;
 
-  const questions = useMemo<GeneratedQuestion[]>(
-    () => (record ? generateQuestions(record, resolverOutput.skipPaths) : []),
-    [record, resolverOutput],
-  );
+  // GapQuestion (JSON-driven) joined with FieldRegistryEntry for UI rendering.
+  // Resolver skipPaths still suppress questions to avoid double-asking on
+  // paths the resolver has already normalized.
+  const questions = useMemo<RenderQuestion[]>(() => {
+    if (!record) return [];
+    const gaps = readGapsFromJson(record);
+    const out: RenderQuestion[] = [];
+    for (const g of gaps) {
+      if (resolverOutput.skipPaths.has(g.path)) continue;
+      const spec = FIELD_REGISTRY_INDEX.get(g.path);
+      if (!spec) continue;
+      out.push({ ...g, spec });
+    }
+    // Blockers first, then confirms, then optional — preserve registry order within tier
+    const rank: Record<string, number> = { blocker: 0, confirm: 1, optional: 2 };
+    return out.sort((a, b) => rank[a.priority] - rank[b.priority]);
+  }, [record, resolverOutput]);
 
   if (!record) return null;
 
   const answeredCount = Object.values(answers).filter((a) => a && a.choice).length;
-  const criticalQuestions = questions.filter((q) => q.priority === "A");
+  const criticalQuestions = questions.filter((q) => q.priority === "blocker");
   const unansweredCritical = criticalQuestions.filter((q) => !answers[q.spec.path]?.choice);
   const hasResolverPending =
     resolverOutput.pendingEntries.length > 0 ||
@@ -751,7 +481,7 @@ function QuestionCard({
   onClear,
 }: {
   number: number;
-  question: GeneratedQuestion;
+  question: RenderQuestion;
   answer: AdminAnswer | undefined;
   onChange: (patch: Partial<AdminAnswer>) => void;
   onClear: () => void;
@@ -770,8 +500,8 @@ function QuestionCard({
           </h4>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Badge variant={priority === "A" ? "destructive" : "warning"} size="sm">
-            {priority === "A" ? "Wajib" : "Konfirmasi"}
+          <Badge variant={priority === "blocker" ? "destructive" : "warning"} size="sm">
+            {priority === "blocker" ? "Wajib" : "Konfirmasi"}
           </Badge>
           {isAnswered && (
             <Badge variant="success" size="sm">
@@ -820,7 +550,7 @@ function QuestionInput({
   answer,
   onChange,
 }: {
-  question: GeneratedQuestion;
+  question: RenderQuestion;
   answer: AdminAnswer | undefined;
   onChange: (patch: Partial<AdminAnswer>) => void;
 }) {
