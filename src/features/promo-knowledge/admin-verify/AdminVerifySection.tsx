@@ -87,6 +87,9 @@ interface HumanOverrideEntry {
 // FIELD_SPECS removed — replaced by FIELD_REGISTRY (./field-registry).
 // generateQuestions removed — replaced by readGapsFromJson (./gap-reader).
 
+/** Render-time view: GapQuestion joined with its UI descriptor. */
+type RenderQuestion = GapQuestion & { spec: FieldRegistryEntry };
+
 const isEmpty = (v: unknown): boolean => {
   if (v === null || v === undefined) return true;
   if (typeof v === "string" && v.trim() === "") return true;
