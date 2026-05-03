@@ -326,10 +326,65 @@ FINAL ASSERTION (before output)
          - Simpan nilai apa adanya pada variant terkait.
          - WAJIB catat di readiness_engine.observability_block
            .ambiguity_flags[] dengan penjelasan kolom mana, variant mana,
-           dan kenapa dianggap anomali.
+            dan kenapa dianggap anomali.
 
-   PRINSIP: jangan asumsi tanpa evidence; jangan perbaiki sumber;
-   jangan hapus tanpa catatan; semua keputusan harus dapat dijelaskan.
+    9.D PLACEHOLDER VALUE HANDLING (bukan data final)
+        Bedakan TIGA kondisi untuk setiap field operasional penting
+        (mis. period_engine.validity_block.valid_until, valid_from,
+        reward_engine.requirement_block.min_deposit,
+        projection_engine.summary_block.turnover_multiplier,
+        time_window_engine.*, dst):
+
+          (a) Field TIDAK disebut di sumber
+              → value blank ("" / null / [])
+              → _field_status = "not_stated"
+              → tidak perlu ambiguity_flag
+
+          (b) Field DISEBUT tapi nilainya BUKAN data nyata —
+              hanya simbol pengisi tempat. Contoh placeholder yang
+              sering muncul: tanda hubung tunggal, "N/A", "TBA",
+              "TBD", "?", titik-titik, sel berisi spasi saja, atau
+              label seperti "akan diumumkan". Daftar ini hanya CONTOH;
+              gunakan penalaran kontekstual, BUKAN regex/keyword match.
+              → JANGAN tafsirkan sebagai unlimited.
+              → JANGAN tafsirkan sebagai data final.
+              → JANGAN hapus tanda placeholder tanpa jejak.
+              → JANGAN tebak tanggal/angka sendiri.
+              → value = null (atau "" untuk string)
+              → _field_status = "not_stated"
+              → ai_confidence[path] diturunkan (≤ 0.4)
+              → WAJIB tambahkan entry di
+                readiness_engine.observability_block.ambiguity_flags[]
+                berisi: path field, token placeholder yang ditemukan
+                (verbatim, singkat), dan reason kenapa ini bukan data
+                final → admin harus konfirmasi.
+              → set readiness_engine.observability_block.review_required = true.
+
+          (c) Field DISEBUT secara EKSPLISIT sebagai unlimited /
+              tanpa batas (mis. "selamanya", "lifetime", "tanpa
+              batas waktu", "no expiry", "unlimited", "selama promo
+              berjalan tanpa tanggal akhir").
+              → khusus untuk validitas waktu:
+                period_engine.validity_block.valid_until_unlimited = true,
+                valid_until = null,
+                _field_status valid_until_unlimited = "explicit".
+              → khusus untuk max_reward / batas nominal:
+                max_reward_unlimited = true (jika field tersedia).
+              Tanpa frasa eksplisit semacam itu, JANGAN tandai unlimited.
+
+        SEL KOSONG DALAM TABEL VARIANT:
+          Sel yang memang kosong di kolom tabel variant (tidak diisi
+          placeholder apa pun) tetap diperlakukan sebagai explicit empty
+          untuk variant tersebut — bukan placeholder. Jangan dipaksa
+          jadi ambiguity_flag kecuali kolom header-nya sendiri yang
+          berisi placeholder.
+
+        PRINSIP 9.D: kalau field penting disebut tapi nilainya tidak
+        bermakna → jangan menebak, jangan diam, surface ke admin lewat
+        ambiguity_flags + review_required.
+
+    PRINSIP: jangan asumsi tanpa evidence; jangan perbaiki sumber;
+    jangan hapus tanpa catatan; semua keputusan harus dapat dijelaskan.
 
 ENGINE WAJIB DIISI (jika ada konten):
 
