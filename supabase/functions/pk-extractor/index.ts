@@ -313,9 +313,10 @@ FINAL ASSERTION (before output)
        maka:
          - JANGAN gunakan sebagai data utama / variant / mechanics.
          - JANGAN hapus tanpa jejak.
-         - WAJIB catat di readiness_engine.observability_block.warnings[]
-           dengan indikasi "kemungkinan source contamination" beserta
-           kutipan singkat.
+         - WAJIB catat di readiness_engine.validation_block.warnings[]
+           (PATH WAJIB — bukan observability_block) dengan indikasi
+           "kemungkinan source contamination" beserta kutipan singkat
+           dari teks yang mencurigakan.
 
    9.C ANOMALI NILAI DALAM TABEL (ambiguity_flags)
        Jika nilai sel tidak sesuai tipe/konteks kolomnya
