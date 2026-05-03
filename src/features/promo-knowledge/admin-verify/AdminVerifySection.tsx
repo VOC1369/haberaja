@@ -192,7 +192,6 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   // GapQuestion (JSON-driven) joined with FieldRegistryEntry for UI rendering.
   // Resolver skipPaths still suppress questions to avoid double-asking on
   // paths the resolver has already normalized.
-  type RenderQuestion = GapQuestion & { spec: FieldRegistryEntry };
   const questions = useMemo<RenderQuestion[]>(() => {
     if (!record) return [];
     const gaps = readGapsFromJson(record);
