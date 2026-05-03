@@ -671,11 +671,13 @@ function QuestionInput({
 function ProviderVerifyCard({
   domain,
   prefilledFromBlacklist,
+  priority,
   state,
   onChange,
 }: {
   domain: string;
   prefilledFromBlacklist: boolean;
+  priority: "blocker" | "confirm" | "optional";
   state: ProviderState;
   onChange: (next: ProviderState) => void;
 }) {
@@ -701,8 +703,8 @@ function ProviderVerifyCard({
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Badge variant="destructive" size="sm">
-            Wajib
+          <Badge variant={priority === "blocker" ? "destructive" : "warning"} size="sm">
+            {priority === "blocker" ? "Wajib" : "Konfirmasi"}
           </Badge>
           {isAnswered && (
             <Badge variant="success" size="sm">
