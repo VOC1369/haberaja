@@ -2146,9 +2146,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             {/* Center: Wolfbrain.V10 status badge */}
             <div className="flex items-center gap-3">
               {pkStatus === "loading" && (
-                <div className="h-11 inline-flex items-center gap-2 px-4 rounded-full border-0 bg-muted text-sm font-medium text-muted-foreground">
-                  <CheckCircle2 className="w-4 h-4 text-muted-foreground" />
-                  Wolfbrain.V10 ({pkElapsedSec}s)
+                <div className="h-11 inline-flex items-center px-4 rounded-full border-0 bg-muted text-sm font-medium text-muted-foreground">
+                  Menyiapkan {pkElapsedSec}s
                 </div>
               )}
               {pkStatus === "ready" && (
