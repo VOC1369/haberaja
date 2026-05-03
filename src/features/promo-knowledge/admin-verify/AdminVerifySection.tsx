@@ -205,9 +205,9 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   const answeredCount = Object.values(answers).filter((a) => a && a.choice).length;
   const criticalQuestions = questions.filter((q) => q.priority === "blocker");
   const unansweredCritical = criticalQuestions.filter((q) => !answers[q.spec.path]?.choice);
-  const hasResolverPending =
-    resolverOutput.pendingEntries.length > 0 ||
-    resolverOutput.pendingValuePatches.length > 0;
+  const hasNormalizerPending =
+    normalizerOutput.pendingEntries.length > 0 ||
+    normalizerOutput.pendingValuePatches.length > 0;
   // Provider verify is "answered" when admin picked "all" OR picked "custom" with at least 1 whitelist provider
   const providerAnswered =
     showProviderCard &&
