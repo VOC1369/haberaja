@@ -287,6 +287,49 @@ FINAL ASSERTION (before output)
    JANGAN isi projection_engine — ini DERIVED only. Biarkan blank.
    (Server akan generate post-extraction.)
 
+9. ANOMALY REASONING (REASONING-FIRST — BUKAN PATTERN MATCHING).
+   Selama membaca sumber, gunakan reasoning untuk mendeteksi 3 jenis
+   anomali. JANGAN gunakan regex/keyword. JANGAN perbaiki data sumber.
+   JANGAN menghapus tanpa jejak. Setiap anomali WAJIB tercatat.
+
+   9.A KONTRADIKSI ANTAR BAGIAN (contradiction_flags)
+       Jika terdapat konflik antar bagian promo (mis. tabel paket vs
+       Syarat & Ketentuan, header vs body, gambar vs teks):
+         - JANGAN diam-diam pilih salah satu.
+         - JANGAN hapus salah satu sisi konflik.
+         - Isi field utama dengan nilai yang PALING KONSISTEN secara
+           keseluruhan dan memiliki evidence paling kuat.
+         - WAJIB catat di readiness_engine.observability_block
+           .contradiction_flags[] dengan deskripsi konflik yang jelas
+           (sebut kedua sisi).
+         - Jika konflik berdampak pada interpretasi promo:
+           set readiness_engine.observability_block.review_required = true.
+
+   9.B SOURCE CONTAMINATION / TEKS NYASAR (warnings)
+       Jika ada potongan teks yang:
+         - tidak konsisten dengan konteks utama promo, ATAU
+         - menyebut mekanik/konsep promo lain (mis. "Level Up" muncul
+           di tengah Welcome Bonus),
+       maka:
+         - JANGAN gunakan sebagai data utama / variant / mechanics.
+         - JANGAN hapus tanpa jejak.
+         - WAJIB catat di readiness_engine.observability_block.warnings[]
+           dengan indikasi "kemungkinan source contamination" beserta
+           kutipan singkat.
+
+   9.C ANOMALI NILAI DALAM TABEL (ambiguity_flags)
+       Jika nilai sel tidak sesuai tipe/konteks kolomnya
+       (mis. nominal Rp pada kolom yang seharusnya berisi nama produk):
+         - JANGAN koreksi sendiri.
+         - JANGAN tebak nilai yang "seharusnya".
+         - Simpan nilai apa adanya pada variant terkait.
+         - WAJIB catat di readiness_engine.observability_block
+           .ambiguity_flags[] dengan penjelasan kolom mana, variant mana,
+           dan kenapa dianggap anomali.
+
+   PRINSIP: jangan asumsi tanpa evidence; jangan perbaiki sumber;
+   jangan hapus tanpa catatan; semua keputusan harus dapat dijelaskan.
+
 ENGINE WAJIB DIISI (jika ada konten):
 
 A. identity_engine.client_block
