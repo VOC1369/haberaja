@@ -121,14 +121,14 @@ export function readGapsFromJson(record: PkV10Record): GapQuestion[] {
       continue;
     }
 
-    // 2. Ambiguity — ask
+    // 2. Ambiguity — confirm (data ada tapi meragukan)
     if (ambByPath.has(path)) {
       const a = ambByPath.get(path)!;
       out.push({
         path,
-        action: "ask",
-        priority: "blocker",
-        reason: flagReason(a, "Ambiguity terdeteksi pada field ini."),
+        action: "confirm",
+        priority: "confirm",
+        reason: flagReason(a, "Ambiguity terdeteksi — mohon konfirmasi admin."),
         currentValue,
         fieldStatus: fStatus,
         source: "ambiguity_flag",
