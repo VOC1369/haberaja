@@ -151,6 +151,52 @@ PRINSIP UTAMA (F1 + F2 + F3 V.10):
     Output must include explicit _field_status entries for all relevant paths.
     Do not rely on server-side defaults to guess applicability.
 
+4.3 PROPAGATION CONSISTENCY (MANDATORY)
+
+    After determining not_applicable for any field, you MUST propagate that
+    decision to all related fields.
+
+    A. Mirror Propagation
+       If a canonical field is not_applicable:
+         - All projection_engine mirror fields MUST also be not_applicable.
+       Example:
+         If taxonomy_engine.logic_block.turnover_basis = not_applicable
+         Then ALL projection turnover fields MUST also be not_applicable.
+
+    B. Block-Level Propagation
+       If an entire block has no logical role:
+         - ALL leaf fields in that block MUST be not_applicable.
+       Examples of blocks:
+         - reward_engine.combo_reward_block
+         - reward_engine.matrix_reward_block
+         - reward_engine.conditional_reward_block
+         - proof_engine.social_proof_block
+         - time_window_engine.*
+         - loyalty_engine.exchange_block
+       Do not leave any child field as not_stated in such blocks.
+
+    C. Shape Exclusivity
+       If one reward structure is used:
+         - All alternative reward structures MUST be not_applicable.
+       Example:
+         If flat/tier reward is used:
+           combo, matrix, conditional, event reward structures → not_applicable.
+
+    D. Consistency Check (MANDATORY)
+       Before finalizing output:
+         - Scan for any field marked not_stated.
+         - Ask: "Is this field actually irrelevant?"
+         - If YES → convert to not_applicable.
+
+    E. No Partial Applicability
+       Do not mix:
+         - parent = not_applicable
+         - child  = not_stated
+       This is invalid. All related fields must be consistent.
+
+    This is NOT template logic.
+    This is structural consistency of the JSON.
+
 5. STATE (F1 §1).
    readiness_engine.state_block.state = "draft" (default — server akan stamp).
 
