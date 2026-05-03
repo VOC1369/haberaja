@@ -1364,7 +1364,8 @@ serve(async (req) => {
       latency_ms: latencyMs,
       mechanics_items: _a(_o((merged.mechanics_engine as AnyObj).items_block).items).length,
       ai_confidence_keys: Object.keys(aiConfidence).length,
-      field_status_keys: Object.keys(fieldStatus).length,
+      field_status_keys: Object.keys(propagated).length,
+      propagation_stats: propStats,
       schema_version: ((merged.meta_engine as AnyObj).schema_block as AnyObj).schema_version,
     });
 
