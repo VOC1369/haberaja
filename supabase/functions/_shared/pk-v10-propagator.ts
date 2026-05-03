@@ -122,6 +122,8 @@ export interface PropagationStats {
   mirror_promoted: number;
   block_promoted: number;
   shape_promoted: number;
+  parent_anchored: number;
+  parent_paths_promoted: string[];
 }
 
 export function propagateNotApplicable(
