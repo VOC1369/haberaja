@@ -186,15 +186,29 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   );
   const showProviderCard = providerTrigger.show && !providerSkippedByResolver;
 
-  const questions = useMemo<GeneratedQuestion[]>(
-    () => (record ? generateQuestions(record, resolverOutput.skipPaths) : []),
-    [record, resolverOutput],
-  );
+  // GapQuestion (JSON-driven) joined with FieldRegistryEntry for UI rendering.
+  // Resolver skipPaths still suppress questions to avoid double-asking on
+  // paths the resolver has already normalized.
+  type RenderQuestion = GapQuestion & { spec: FieldRegistryEntry };
+  const questions = useMemo<RenderQuestion[]>(() => {
+    if (!record) return [];
+    const gaps = readGapsFromJson(record);
+    const out: RenderQuestion[] = [];
+    for (const g of gaps) {
+      if (resolverOutput.skipPaths.has(g.path)) continue;
+      const spec = FIELD_REGISTRY_INDEX.get(g.path);
+      if (!spec) continue;
+      out.push({ ...g, spec });
+    }
+    // Blockers first, then confirms, then optional — preserve registry order within tier
+    const rank: Record<string, number> = { blocker: 0, confirm: 1, optional: 2 };
+    return out.sort((a, b) => rank[a.priority] - rank[b.priority]);
+  }, [record, resolverOutput]);
 
   if (!record) return null;
 
   const answeredCount = Object.values(answers).filter((a) => a && a.choice).length;
-  const criticalQuestions = questions.filter((q) => q.priority === "A");
+  const criticalQuestions = questions.filter((q) => q.priority === "blocker");
   const unansweredCritical = criticalQuestions.filter((q) => !answers[q.spec.path]?.choice);
   const hasResolverPending =
     resolverOutput.pendingEntries.length > 0 ||
