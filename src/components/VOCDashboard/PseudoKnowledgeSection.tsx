@@ -2113,7 +2113,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       {extractedPromo && (
         <div className="footer-bar">
           <div className="footer-bar-content">
-            {/* Left: Back/Restart */}
+            {/* Left: Restart + Re-Extract */}
             <div className="flex items-center gap-2">
               <Button 
                 variant="outline"
@@ -2122,6 +2122,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               >
                 <RotateCcw className="w-4 h-4" />
                 Restart
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleReExtract}
+                disabled={isExtracting || (!currentInput.trim() && !imageBase64)}
+                className="h-11 px-6 gap-2 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
+                title="Jalankan ulang extraction dengan input yang sama"
+              >
+                <RefreshCw className={`w-4 h-4 ${isExtracting ? "animate-spin" : ""}`} />
+                Re-Extract
               </Button>
             </div>
             
