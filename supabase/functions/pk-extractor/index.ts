@@ -78,7 +78,79 @@ PRINSIP UTAMA (F1 + F2 + F3 V.10):
      * propagated     → diisi otomatis dari context (mis. client_id dari URL)
      * not_stated     → tidak ada di sumber TAPI field ini RELEVAN untuk promo ini
      * not_applicable → field ini TIDAK RELEVAN untuk promo ini (apapun isi sumber)
-   Threshold ai_confidence untuk kandidat pertanyaan ke Admin: < ${PK_V10_AI_CONFIDENCE_QUESTION_THRESHOLD}.
+    Threshold ai_confidence untuk kandidat pertanyaan ke Admin: < ${PK_V10_AI_CONFIDENCE_QUESTION_THRESHOLD}.
+
+================================================================
+JSON STRUCTURE UNDERSTANDING (WAJIB — align WB_F2)
+================================================================
+
+Bagian ini mengikat. JANGAN sederhanakan struktur, JANGAN gabungkan
+data berbeda, JANGAN buat interpretasi sendiri di luar struktur.
+
+S1. GLOBAL vs VARIANT (INTI)
+   Sebelum mengisi field, tanya:
+     "Nilai ini berlaku untuk SELURUH promo, atau hanya sebagian paket?"
+   - Berlaku semua  → isi field global.
+   - Berbeda antar paket → JANGAN isi global. Simpan di
+     variant_engine.items_block.subcategories (per variant).
+   DILARANG: ambil nilai terbesar, ambil baris pertama, atau merge
+   nilai berbeda jadi satu nilai global.
+
+S2. VARIANT / MULTI-PACKAGE
+   Jika promo berbentuk: tabel bonus, list paket, pilihan produk
+   (slot/casino/sports), atau tier dengan aturan berbeda:
+     → promo_mode = "multi"
+     → setiap baris/paket = 1 variant
+     → WAJIB simpan di variant_engine, JANGAN digabung.
+
+S3. TABLE STRUCTURE
+   Jika sumber berupa tabel: setiap row = 1 unit data.
+   - Pertahankan struktur row-by-row.
+   - Ambil semua field per row.
+   DILARANG: flatten tabel, ringkas jadi summary, atau menghilangkan
+   variasi antar row.
+
+S4. EMPTY VALUE (SANGAT PENTING)
+   Jika cell berisi "(kosong)", "-", atau cell kosong eksplisit:
+     → field ADA, tapi nilainya kosong.
+   Maka:
+     - value = null / "" (sesuai tipe)
+     - _field_status = "explicit"
+     - ai_confidence tinggi
+   DILARANG: ubah jadi not_stated, anggap missing, isi dari row lain,
+   atau jadikan kandidat pertanyaan ke Admin.
+   PRINSIP: "kosong" = data valid, bukan data hilang.
+
+S5. GLOBAL FIELD RULE
+   Field global hanya diisi jika nilainya SAMA untuk semua variant.
+   Jika berbeda antar variant:
+     - global field = null / "" / []
+     - _field_status = "not_applicable" di level global
+     - nilai sebenarnya hidup di variant-level.
+
+S6. AUTHORITY (ringkas)
+   Urutan kebenaran struktural:
+     1. mechanics_engine.items[]    ← PALING UTAMA (structural truth)
+     2. taxonomy_engine
+     3. engine lain (trigger, claim, scope)
+     4. reward_engine               ← HANYA summary/display
+   JANGAN isi reward_engine tanpa data padanan di mechanics_engine.
+
+S7. ANTI-HARDCODE
+   DILARANG default tanpa evidence eksplisit untuk:
+     currency, timezone, target_user, claim_method, payout_direction.
+   Jika tidak jelas → kosongkan + _field_status = "not_stated".
+
+S8. GAP RULE (singkat — selaras 4.1 di bawah)
+   - relevan + tidak ada di sumber → not_stated (gap)
+   - tidak relevan untuk promo ini → not_applicable
+   - kosong eksplisit di sumber    → explicit (bukan gap)
+
+PRINSIP AKHIR: satu promo bisa punya banyak aturan (per paket).
+Extractor WAJIB menjaga struktur itu. JANGAN memaksa satu jawaban
+untuk data yang berbeda.
+
+================================================================
 
 4.1 APPLICABILITY DECISION
 
