@@ -1350,7 +1350,12 @@ serve(async (req) => {
       aiConfidence,
       PK_V10_AI_CONFIDENCE_QUESTION_THRESHOLD,
     );
-    merged._field_status = fieldStatus;
+    // Structural NA propagation (single-brain compliant — no new decisions)
+    const { fieldStatus: propagated, stats: propStats } = propagateNotApplicable(
+      merged as AnyObj,
+      fieldStatus as Record<string, "explicit"|"inferred"|"derived"|"propagated"|"not_stated"|"not_applicable">,
+    );
+    merged._field_status = propagated;
 
     console.log("[pk-extractor V10] OK", {
       model: modelUsed,
