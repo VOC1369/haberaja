@@ -678,6 +678,45 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     }
   };
 
+  const handleDownloadJSON = () => {
+    if (!pkRecord) {
+      toast.error("Belum ada record V.1.1", {
+        description:
+          pkStatus === "loading"
+            ? "Pseudo Engine extractor masih jalan. Tunggu badge ✅ siap."
+            : pkStatus === "failed"
+              ? `Pseudo Engine extractor gagal${pkFailReason ? ` (${pkFailReason})` : ""}.`
+              : "Jalankan ekstraksi dulu sebelum download JSON.",
+      });
+      return;
+    }
+    try {
+      const jsonString = JSON.stringify(pkRecord, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      a.href = url;
+      a.download = `pkb-wolfbrain-v10-${ts}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("JSON file di-download");
+    } catch {
+      toast.error("Gagal download JSON");
+    }
+  };
+
+  const handleReExtract = () => {
+    if (isExtracting) return;
+    if (!currentInput.trim() && !imageBase64) {
+      toast.error("Tidak ada input untuk di-extract ulang");
+      return;
+    }
+    handleExtract();
+  };
+
   const handleCommitPromo = () => {
     if (!extractedPromo) {
       toast.error("Tidak ada promo untuk disimpan");
