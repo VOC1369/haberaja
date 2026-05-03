@@ -714,6 +714,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       toast.error("Tidak ada input untuk di-extract ulang");
       return;
     }
+    // Clear previous result so loader overlay tidak numpuk di atas konten lama
+    setExtractedPromo(null);
+    setPkRecord(null);
+    setPkStatus("idle");
+    setPkFailReason("");
+    setEditHistory([]);
+    setEditInput('');
+    setShowEditHelp(false);
     handleExtract();
   };
 
