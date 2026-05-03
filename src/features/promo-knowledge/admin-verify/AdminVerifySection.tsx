@@ -121,30 +121,22 @@ interface ProviderState {
 }
 
 /**
- * Trigger condition:
- *   - game_domain empty                                 → no card
- *   - eligible_providers filled                         → no card
- *   - eligible empty + blacklist empty  → show "all vs custom" radio
- *   - eligible empty + blacklist filled → show custom mode prefilled (review)
+ * VISUAL-ONLY helper. Reads display-only context for the provider card
+ * (domain label, blacklist prefill). Has ZERO authority over whether the
+ * card is shown — that decision is owned exclusively by gap-reader.
+ *
+ * Do NOT read this function's output to drive show/hide, priority, or
+ * required state. Use `readGapsFromJson(record)` instead.
  */
-function evaluateProviderTrigger(record: PkV10Record): {
-  show: boolean;
+function readProviderVisualContext(record: PkV10Record): {
   domain: string;
   prefilledBlacklist: string[];
   initialMode: ProviderMode;
 } {
   const domain = (record.scope_engine?.game_block?.game_domain ?? "").trim();
-  const whitelist = record.scope_engine?.game_block?.eligible_providers ?? [];
   const blacklist = record.scope_engine?.blacklist_block?.providers ?? [];
-
-  if (!domain) return { show: false, domain, prefilledBlacklist: [], initialMode: "" };
-  if (whitelist.length > 0)
-    return { show: false, domain, prefilledBlacklist: [], initialMode: "" };
-
-  if (blacklist.length > 0) {
-    return { show: true, domain, prefilledBlacklist: blacklist, initialMode: "custom" };
-  }
-  return { show: true, domain, prefilledBlacklist: [], initialMode: "" };
+  const initialMode: ProviderMode = blacklist.length > 0 ? "custom" : "";
+  return { domain, prefilledBlacklist: [...blacklist], initialMode };
 }
 
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
