@@ -53,10 +53,10 @@ import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 import {
-  resolveRecord,
-  commitResolverOutput,
-  type ResolverOutput,
-} from "./question-resolver";
+  normalizeRecord,
+  commitNormalizerOutput,
+  type NormalizerOutput,
+} from "./enum-normalizer";
 import {
   FIELD_REGISTRY,
   FIELD_REGISTRY_INDEX,
@@ -173,48 +173,41 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     });
   }, [triggerKey]);
 
-  const resolverOutput = useMemo<ResolverOutput>(
+  const normalizerOutput = useMemo<NormalizerOutput>(
     () =>
       record
-        ? resolveRecord(record)
-        : { skipPaths: new Set(), pendingEntries: [], pendingValuePatches: [] },
+        ? normalizeRecord(record)
+        : { pendingEntries: [], pendingValuePatches: [] },
     [record],
   );
 
-  // Gate: resolver is single source of decision. If it skipped the provider
-  // path (e.g. game_domain=all → not_applicable), UI MUST NOT render the card
-  // even when the legacy evaluateProviderTrigger says show=true.
-  const providerSkippedByResolver = resolverOutput.skipPaths.has(
-    PROVIDER_WHITELIST_PATH,
-  );
-  const showProviderCard = providerTrigger.show && !providerSkippedByResolver;
+  // Provider card visibility is owned solely by the JSON-driven trigger.
+  // Resolver-based skipPaths override has been retired (see enum-normalizer.ts).
+  const showProviderCard = providerTrigger.show;
 
   // GapQuestion (JSON-driven) joined with FieldRegistryEntry for UI rendering.
-  // Resolver skipPaths still suppress questions to avoid double-asking on
-  // paths the resolver has already normalized.
+  // No resolver overrides — gap-reader is the single source of truth.
   const questions = useMemo<RenderQuestion[]>(() => {
     if (!record) return [];
     const gaps = readGapsFromJson(record);
     const out: RenderQuestion[] = [];
     for (const g of gaps) {
-      if (resolverOutput.skipPaths.has(g.path)) continue;
       const spec = FIELD_REGISTRY_INDEX.get(g.path);
       if (!spec) continue;
       out.push({ ...g, spec });
     }
-    // Blockers first, then confirms, then optional — preserve registry order within tier
     const rank: Record<string, number> = { blocker: 0, confirm: 1, optional: 2 };
     return out.sort((a, b) => rank[a.priority] - rank[b.priority]);
-  }, [record, resolverOutput]);
+  }, [record]);
 
   if (!record) return null;
 
   const answeredCount = Object.values(answers).filter((a) => a && a.choice).length;
   const criticalQuestions = questions.filter((q) => q.priority === "blocker");
   const unansweredCritical = criticalQuestions.filter((q) => !answers[q.spec.path]?.choice);
-  const hasResolverPending =
-    resolverOutput.pendingEntries.length > 0 ||
-    resolverOutput.pendingValuePatches.length > 0;
+  const hasNormalizerPending =
+    normalizerOutput.pendingEntries.length > 0 ||
+    normalizerOutput.pendingValuePatches.length > 0;
   // Provider verify is "answered" when admin picked "all" OR picked "custom" with at least 1 whitelist provider
   const providerAnswered =
     showProviderCard &&
@@ -226,10 +219,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     ((answeredCount > 0 || providerAnswered) &&
       unansweredCritical.length === 0 &&
       !providerPendingRequired) ||
-    (hasResolverPending && !providerPendingRequired);
+    (hasNormalizerPending && !providerPendingRequired);
 
   // Empty state — only when truly nothing to do
-  if (questions.length === 0 && !hasResolverPending && !showProviderCard) {
+  if (questions.length === 0 && !hasNormalizerPending && !showProviderCard) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
@@ -392,7 +385,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     // Atomic commit: apply resolver patches + append _ai_resolver_log
     // (after admin answers so admin choice always wins on shared paths — though
     //  resolver paths are excluded from FIELD_SPECS via skipPaths, so no overlap)
-    commitResolverOutput(draft, resolverOutput, ts);
+    commitNormalizerOutput(draft, normalizerOutput, ts);
 
     draft.updated_at = ts;
     onApply(draft);
