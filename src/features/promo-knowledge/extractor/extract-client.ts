@@ -61,7 +61,7 @@ export async function extractPromoV10(req: ExtractRequest): Promise<ExtractRespo
     record,
     extraction_source: data.extraction_source,
     model: typeof data.model === "string" ? data.model : "",
-    schema_version: typeof data.schema_version === "string" ? data.schema_version : "V.10",
+    schema_version: typeof data.schema_version === "string" ? data.schema_version : "V.10.1",
   };
 }
 
