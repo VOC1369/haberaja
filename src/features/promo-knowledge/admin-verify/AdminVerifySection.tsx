@@ -158,6 +158,24 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     [record],
   );
 
+  // V.10.1 diagnostic — verifies record freshness for Admin Verify gate.
+  // Logs whether geo_restriction is being correctly skipped per _field_status.
+  useMemo(() => {
+    if (!record) return;
+    const geoPath = "scope_engine.geo_block.geo_restriction";
+    // eslint-disable-next-line no-console
+    console.debug("[AdminVerify V.10.1]", {
+      record_id: record.record_id,
+      schema_version: record.meta_engine?.schema_block?.schema_version,
+      promo_name: record.identity_engine?.promo_block?.promo_name,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+      geo_value: record.scope_engine?.geo_block?.geo_restriction,
+      geo_field_status: (record._field_status ?? {})[geoPath],
+      geo_in_gaps: gaps.some((g) => g.path === geoPath),
+    });
+  }, [record, gaps]);
+
   // Provider card visibility = strictly derived from gap-reader output.
   // No direct field inspection. No promo_type branching. No raw_content access.
   const providerGap = useMemo(
