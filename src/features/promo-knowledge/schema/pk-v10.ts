@@ -1462,11 +1462,15 @@ export interface PkV10ProjectionEngine {
     main_reward_percent: number | null;
     main_reward_value: number | null;
     main_reward_unit: string;
-    max_bonus: number | null;
-    min_base: number | null;
+    /** V.10.1 — renamed from legacy `max_bonus`. */
+    max_reward: number | null;
+    /** V.10.1 — renamed from legacy `min_base`. */
+    min_deposit: number | null;
     payout_direction: string; // PkV10PayoutDirection when filled
     turnover_multiplier: number | null;
     turnover_basis: string; // PkV10TurnoverBasis when filled
+    /** V.10.1 — reason the deterministic projector skipped summary synthesis. */
+    _summary_skipped_reason: string;
   };
   claim_summary_block: {
     primary_claim_method: string; // PkV10ClaimMethod when filled
@@ -1479,9 +1483,17 @@ export interface PkV10ProjectionEngine {
   };
   scope_summary_block: {
     game_domain: string; // PkV10GameDomain when filled
-    game_types: string[];
-    game_providers: string[]; // PkV10GameProvider[] when filled
-    game_exclusions: string[];
+    /** V.10.1 — renamed from legacy `game_types`. */
+    game_domains: string[];
+    /** V.10.1 — renamed from legacy `game_providers`. */
+    eligible_providers: string[]; // PkV10GameProvider[] when filled
+    /** V.10.1 — replaces flat `game_exclusions`. */
+    blacklist_summary: {
+      types: string[];
+      providers: string[];
+      games: string[];
+      rules: string[];
+    };
     platform_access: string; // PkV10PlatformAccess when filled
     apk_required: boolean;
     geo_restriction: string; // PkV10GeoRestriction when filled
@@ -1515,7 +1527,8 @@ export interface PkV10MetaEngine {
     html_was_normalized: boolean;
     client_id_source: string | null; // PkV10ClientIdFieldStatus subset
     propagated_fields: string[];
-    ambiguous_blacklists: number;
+    /** V.10.1 — nullable per skeleton. */
+    ambiguous_blacklists: number | null;
     extracted_at: string;
     classification_overridden: boolean;
     classification_override_reason: string;
@@ -1524,10 +1537,19 @@ export interface PkV10MetaEngine {
   schema_block: {
     schema_name: typeof PK_V10_SCHEMA_NAME;
     schema_version: typeof PK_V10_SCHEMA_VERSION;
-    locked_at: typeof PK_V10_LOCKED_AT;
+    /** V.10.1 — renamed from legacy `locked_at`. Date schema baseline was locked. */
+    base_locked_at: typeof PK_V10_BASE_LOCKED_AT;
+    /** V.10.1 — date this minor amendment was released. */
+    released_at: typeof PK_V10_RELEASED_AT;
     created_by: typeof PK_V10_CREATED_BY;
+    /** V.10.1 — schema owner display name. */
+    owner: typeof PK_V10_OWNER;
     status: PkV10SchemaStatus;
     extractor: typeof PK_V10_EXTRACTOR;
+    /** V.10.1 — amendment type for audit log. */
+    amendment_type: typeof PK_V10_AMENDMENT_TYPE;
+    /** V.10.1 — amendment reason for audit log. */
+    amendment_reason: typeof PK_V10_AMENDMENT_REASON;
   };
 }
 
