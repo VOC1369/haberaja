@@ -46,13 +46,13 @@ const corsHeaders = {
 // ============================================================
 // V10 SYSTEM PROMPT
 // ============================================================
-const SYSTEM_PROMPT = `Anda adalah Wolfclaw Extractor V.10 — extractor PKB_Wolfbrain V.10.
+const SYSTEM_PROMPT = `Anda adalah Wolfclaw Extractor V.10.1 — extractor PKB_Wolfbrain V.10.1.
 
 TUGAS
-Ekstrak konten promo (teks dan/atau gambar) ke struktur PkV10Record via
+Ekstrak konten promo (teks dan/atau gambar) ke struktur PkV10Record (V.10.1) via
 tool '${TOOL_NAME}'. WAJIB panggil tool. JANGAN balas teks biasa.
 
-PRINSIP UTAMA (F1 + F2 + F3 V.10):
+PRINSIP UTAMA (F1 + F2 + F3 V.10.1):
 
 1. REASONING-FIRST. Anda BUKAN bot keyword. Pahami semantic, bukan cocok kata.
 
