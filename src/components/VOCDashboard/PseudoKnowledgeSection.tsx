@@ -1514,64 +1514,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             </div>
           )}
 
-          {/* Global Blacklist Panel — sourced from pkRecord.scope_engine.blacklist_block (V1.1) */}
-          {(() => {
-            const gbl: any = (pkRecord as any)?.scope_engine?.blacklist_block;
-            if (!gbl) return null;
-            const providers: string[] = Array.isArray(gbl.providers) ? gbl.providers : [];
-            const games: string[] = Array.isArray(gbl.games) ? gbl.games : [];
-            const types: string[] = Array.isArray(gbl.types) ? gbl.types : [];
-            const rules: string[] = Array.isArray(gbl.rules) ? gbl.rules : [];
-            if (providers.length + games.length + types.length + rules.length === 0) return null;
-            return (
-              <div className="bg-card rounded-lg border border-destructive/30 p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Ban className="w-4 h-4 text-destructive" />
-                  <h4 className="text-sm font-semibold text-destructive">Blacklist Global (Berlaku Semua Varian)</h4>
-                </div>
-                <div className="space-y-3">
-                  {rules.length > 0 && (
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Aturan</span>
-                      <ul className="list-disc list-inside text-xs text-foreground mt-1">
-                        {rules.map((r, i) => <li key={i}>{r}</li>)}
-                      </ul>
-                    </div>
-                  )}
-                  {providers.length > 0 && (
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Providers</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {providers.map((p, i) => (
-                          <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">{p}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {types.length > 0 && (
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Types</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {types.map((t, i) => (
-                          <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">{t}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {games.length > 0 && (
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Games</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {games.map((g, i) => (
-                          <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">{g}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
+          {/* V1.1 global blacklist is rendered inside the matching variant card (see renderSubCategoryCard). */}
 
           {/* Subcategories - Conditional for Referral vs Other */}
           {extractedPromo.subcategories.length > 0 && (
