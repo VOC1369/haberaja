@@ -60,6 +60,17 @@ export interface FieldRegistryEntry {
   multiOptions?: readonly string[];
   placeholder?: string;
   helpText?: string;
+  /**
+   * Optional sibling boolean path that mirrors the "unlimited / no-limit"
+   * semantic of this field. When set, the entry MUST also implement
+   * `writeSibling()` and the AdminVerify commit logic will:
+   *   - mutate sibling via writeSibling()
+   *   - mark _field_status[siblingPath] = "explicit"
+   *   - log to _human_override_log only if value changed
+   */
+  unlimitedSiblingPath?: string;
+  readSibling?: (rec: PkV10Record) => unknown;
+  writeSibling?: (draft: PkV10Record, answer: AdminAnswer) => void;
   read: (rec: PkV10Record) => unknown;
   write: (draft: PkV10Record, answer: AdminAnswer) => void;
 }
@@ -115,6 +126,12 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
     write: (d, a) => {
       d.period_engine.validity_block.valid_until =
         a.choice === "no_expiry" ? (null as never) : ((a.customValue ?? "") as never);
+    },
+    unlimitedSiblingPath: "period_engine.validity_block.valid_until_unlimited",
+    readSibling: (r) => r.period_engine?.validity_block?.valid_until_unlimited,
+    writeSibling: (d, a) => {
+      d.period_engine.validity_block.valid_until_unlimited =
+        a.choice === "no_expiry";
     },
   },
   {
@@ -204,6 +221,11 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
       const raw = a.choice === CUSTOM ? a.customValue : a.choice;
       d.reward_engine.max_reward =
         raw === "" || raw === undefined ? null : Number(raw);
+    },
+    unlimitedSiblingPath: "reward_engine.max_reward_unlimited",
+    readSibling: (r) => r.reward_engine?.max_reward_unlimited,
+    writeSibling: (d, a) => {
+      d.reward_engine.max_reward_unlimited = a.choice === NONE;
     },
   },
   {

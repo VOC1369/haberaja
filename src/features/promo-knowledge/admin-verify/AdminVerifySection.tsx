@@ -324,6 +324,43 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       };
       if (a.note && a.note.trim()) entry.admin_note = a.note.trim();
       log.push(entry);
+
+      // ── Semantic-pair sibling commit (e.g. *_unlimited boolean) ──
+      // When a registry entry declares `unlimitedSiblingPath`, mirror the
+      // admin's intent into the sibling boolean and mark its status explicit.
+      // Log only if the sibling value actually changed (avoid duplicate spam).
+      if (
+        q.spec.unlimitedSiblingPath &&
+        q.spec.readSibling &&
+        q.spec.writeSibling
+      ) {
+        const siblingPath = q.spec.unlimitedSiblingPath;
+        const prevSibling = q.spec.readSibling(draft);
+        const prevSibConfRaw = draft.ai_confidence[siblingPath];
+        const prevSibConf: number | null =
+          typeof prevSibConfRaw === "number" ? prevSibConfRaw : null;
+        const prevSibStatus: string | null =
+          typeof draft._field_status[siblingPath] === "string"
+            ? (draft._field_status[siblingPath] as string)
+            : null;
+
+        q.spec.writeSibling(draft, a);
+        const newSibling = q.spec.readSibling(draft);
+
+        draft._field_status[siblingPath] = "explicit";
+
+        if (prevSibling !== newSibling) {
+          log.push({
+            field_path: siblingPath,
+            previous_value: prevSibling ?? null,
+            new_value: newSibling ?? null,
+            previous_ai_confidence: prevSibConf,
+            previous_field_status: prevSibStatus,
+            overridden_by: "admin",
+            timestamp: ts,
+          });
+        }
+      }
     }
 
     // ── Provider verify commit ─────────────────────────────────────────
