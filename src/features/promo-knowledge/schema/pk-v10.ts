@@ -1290,43 +1290,77 @@ export interface PkV10LoyaltyEngine {
 }
 
 /**
- * Per-variant subcategory shape — OPT-IN TYPING ONLY.
+ * Per-variant subcategory shape — V.10.1 canonical (31 fields per skeleton).
  *
- * Phase 2, Step 3.1.
+ * Source of truth: PKB_Wolfbrain_V10.1_skeleton.json
+ *   `variant_engine.items_block.subcategories[]`
  *
- * NOT a runtime schema change:
- *  - `PkV10VariantEngine.items_block.subcategories` remains `unknown[]`.
- *  - This interface exists purely so per-variant selectors (Step 3.2) can
- *    narrow individual entries via an explicit cast (e.g.
- *    `subcategories[i] as PkV10Subcategory | undefined`).
- *  - Inert factory, extractor, validator, and UI all stay untouched.
- *
- * Field set is the minimal DIRECT (1:1 mappable) surface identified by the
- * Step 4B audit. All fields optional + nullable: presence is not guaranteed
- * by the V10 contract, and selectors must never invent values.
+ * RULES:
+ *  - All fields optional at the type level (skeleton presence ≠ runtime
+ *    guarantee), but values follow skeleton blank conventions:
+ *      "" = field set, intentionally empty
+ *      null = field not set / unknown
+ *      [] = empty array
+ *      false = explicit boolean default
+ *  - Selectors must read these paths DIRECTLY. No fallback to `reward_engine.*`.
+ *  - The closed shape replaces the V.10 minimal opt-in subset
+ *    (game_category / game_providers / game_exclusions / max_bonus /
+ *     bonus_percentage are GONE — replaced by `game_domain`,
+ *     `eligible_providers`, `blacklist`, `max_reward`,
+ *     `calculation_value`+`calculation_unit`).
  */
+export interface PkV10SubcategoryBlacklist {
+  enabled?: boolean;
+  types?: string[];
+  providers?: string[];
+  games?: string[];
+  rules?: string[];
+  note?: string;
+}
+
 export interface PkV10Subcategory {
   variant_id?: string | null;
   variant_name?: string | null;
-  game_category?: string | null;
-  game_providers?: string[] | null;
-  game_exclusions?: string[] | null;
+  promo_code?: string | null;
+  calculation_basis?: string | null; // PkV10CalculationBasis when filled
+  calculation_method?: string | null; // PkV10CalculationMethod when filled
+  calculation_value?: number | null;
+  calculation_unit?: string | null; // PkV10CalculationUnit when filled
   min_deposit?: number | null;
-  max_bonus?: number | null;
-  bonus_percentage?: number | null;
+  max_reward?: number | null;
+  max_reward_unlimited?: boolean;
+  min_claim?: number | null;
   turnover_multiplier?: number | null;
+  turnover_rule_format?: string | null;
+  game_domain?: string | null; // PkV10GameDomain when filled
+  eligible_providers?: string[];
+  game_names?: string[];
+  blacklist?: PkV10SubcategoryBlacklist;
+  reward_type?: string | null; // PkV10RewardType when filled
+  payout_direction?: string | null; // PkV10PayoutDirection when filled
   currency?: string | null;
-  // Permissive tail — entries may carry additional fields (e.g. PkV10TierDimension).
-  [key: string]: unknown;
+  physical_reward_name?: string | null;
+  physical_reward_quantity?: number | null;
+  cash_reward_amount?: number | null;
+  reward_quantity?: number | null;
+  voucher_kind?: string | null; // PkV10VoucherKind when filled
+  voucher_valid_from?: string | null;
+  voucher_valid_until?: string | null;
+  voucher_valid_unlimited?: boolean;
+  lucky_spin_id?: string | null;
+  lucky_spin_max_per_day?: number | null;
+  product_note?: string | null;
 }
 
 export interface PkV10VariantEngine {
   summary_block: {
     has_subcategories: boolean;
     expected_count: number | null;
+    /** V.10.1 — variant_id of the default selection when has_subcategories=true. */
+    default_variant_id: string;
   };
   items_block: {
-    subcategories: unknown[]; // entries may carry PkV10TierDimension / PkV10Subcategory
+    subcategories: PkV10Subcategory[];
   };
 }
 
