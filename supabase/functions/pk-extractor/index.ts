@@ -1684,7 +1684,7 @@ serve(async (req) => {
 
     // Apply propagated client_id from hint if LLM left it blank — handled
     // post-merge so LLM-supplied value (if any) wins.
-    const merged = mergeIntoInert(inert, llmInput);
+    const merged = mergeIntoInert(inert, v101Scrub.cleaned);
 
     // Stamp authoritative fields AFTER merge (LLM cannot override these).
     const mEngine = merged.meta_engine as AnyObj;
