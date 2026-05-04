@@ -38,11 +38,19 @@
  */
 
 export const PK_V10_SCHEMA_NAME = "PKB_Wolfbrain" as const;
-export const PK_V10_SCHEMA_VERSION = "V.10" as const;
-export const PK_V10_LOCKED_AT = "2026-04-28" as const;
+export const PK_V10_SCHEMA_VERSION = "V.10.1" as const;
+export const PK_V10_BASE_LOCKED_AT = "2026-04-28" as const;
+export const PK_V10_RELEASED_AT = "2026-05-04" as const;
 export const PK_V10_CREATED_BY = "habe_raja" as const;
+export const PK_V10_OWNER =
+  "Habe Raja — Wolfbrain / Promo Knowledge Base" as const;
 export const PK_V10_EXTRACTOR = "wolfclaw@claude-sonnet-4-5" as const;
-export const PK_V10_PROMPT_VERSION = "V.10_2026-04-28" as const;
+export const PK_V10_PROMPT_VERSION = "V.10.1_2026-05-04" as const;
+export const PK_V10_AMENDMENT_TYPE = "minor" as const;
+export const PK_V10_AMENDMENT_REASON =
+  "Naming cleanup, duplicate removal, variant field-level clarification" as const;
+/** @deprecated retained for backward import compatibility — use PK_V10_BASE_LOCKED_AT */
+export const PK_V10_LOCKED_AT = PK_V10_BASE_LOCKED_AT;
 
 // ──────────────────────────────────────────────────────────────────────────
 // ENUM REGISTRIES — 1:1 from WB_F3_Enum_Registry V.10 (locked 2026-04-28)
