@@ -359,7 +359,7 @@ FINAL ASSERTION (before output)
           2) CONFIDENCE
              - Turunkan ai_confidence[path] secara natural (rendah).
              - JANGAN pakai angka tetap; biarkan reasoning yang menentukan.
-          3) AUDIT (WAJIB) — tulis ke ROOT sidecar `_ambiguity_flags[]`:
+          3) AUDIT (WAJIB) — tulis ke ROOT sidecar _ambiguity_flags[]:
              {
                "path": "<field_path>",
                "reason": "Field disebut di sumber tetapi nilainya tidak
