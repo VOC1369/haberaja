@@ -794,7 +794,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     sub: ExtractedPromoSubCategory, 
     idx: number, 
     archetype: RewardArchetype,
-    normalizedSub?: Partial<typeof sub> // ✅ Accept normalized data from mappedPreview
+    normalizedSub?: Partial<typeof sub>, // ✅ Accept normalized data from mappedPreview
+    attachGlobalBlacklist?: boolean // attach V1.1 scope_engine.blacklist_block to this card
   ) => {
     // ✅ Merge: normalized data takes priority over raw extraction
     const displaySub = {
@@ -806,12 +807,25 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       min_calculation: (normalizedSub as any)?.min_calculation ?? (sub as any).min_calculation,
     };
     
-    const hasBlacklist = sub.blacklist?.enabled && (
+    const hasPerVariantBlacklist = sub.blacklist?.enabled && (
       (sub.blacklist.types?.length || 0) > 0 ||
       (sub.blacklist.providers?.length || 0) > 0 || 
       (sub.blacklist.games?.length || 0) > 0 || 
       (sub.blacklist.rules?.length || 0) > 0
     );
+
+    // V1.1 global blacklist payload (only attached to designated card)
+    const gbl: any = attachGlobalBlacklist
+      ? (pkRecord as any)?.scope_engine?.blacklist_block
+      : null;
+    const gblProviders: string[] = Array.isArray(gbl?.providers) ? gbl.providers : [];
+    const gblGames: string[] = Array.isArray(gbl?.games) ? gbl.games : [];
+    const gblTypes: string[] = Array.isArray(gbl?.types) ? gbl.types : [];
+    const gblRules: string[] = Array.isArray(gbl?.rules) ? gbl.rules : [];
+    const hasGlobalBlacklist =
+      gblProviders.length + gblGames.length + gblTypes.length + gblRules.length > 0;
+
+    const hasBlacklist = hasPerVariantBlacklist || hasGlobalBlacklist;
     
     // Only flag critical issues for REQUIRED fields based on archetype
     const hasCriticalIssue = ['calculation_value', 'turnover_rule', 'payout_direction'].some(f => {
