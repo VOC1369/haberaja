@@ -1123,6 +1123,7 @@ function buildExtractorToolSchema(): AnyObj {
             properties: {
               has_subcategories: { type: "boolean" },
               expected_count: { type: ["integer", "null"] },
+              default_variant_id: { type: "string" },
             },
           },
           items_block: {
