@@ -1274,57 +1274,75 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           );
         })()}
 
-        {hasBlacklist && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="bg-destructive/10 rounded-lg p-3">
-              <span className="text-destructive text-xs font-medium flex items-center gap-1 mb-2">
-                <Ban className="w-3 h-3" />
-                Blacklist:
-              </span>
-              {(sub.blacklist.rules?.length || 0) > 0 && (
-                <ul className="list-disc list-inside text-xs text-foreground">
-                  {sub.blacklist.rules.map((rule, i) => <li key={i}>{rule}</li>)}
-                </ul>
-              )}
-              {(sub.blacklist.providers?.length || 0) > 0 && (
-                <div className="mt-2">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Providers</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {sub.blacklist.providers.map((p, i) => (
-                      <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
-                        {p}
-                      </Badge>
-                    ))}
+        {hasBlacklist && (() => {
+          const rules = [
+            ...((sub.blacklist?.rules as string[] | undefined) || []),
+            ...gblRules,
+          ];
+          const providers = [
+            ...((sub.blacklist?.providers as string[] | undefined) || []),
+            ...gblProviders,
+          ];
+          const types = [
+            ...((sub.blacklist?.types as string[] | undefined) || []),
+            ...gblTypes,
+          ];
+          const games = [
+            ...((sub.blacklist?.games as string[] | undefined) || []),
+            ...gblGames,
+          ];
+          return (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="bg-destructive/10 rounded-lg p-3">
+                <span className="text-destructive text-xs font-medium flex items-center gap-1 mb-2">
+                  <Ban className="w-3 h-3" />
+                  Blacklist:
+                </span>
+                {rules.length > 0 && (
+                  <ul className="list-disc list-inside text-xs text-foreground">
+                    {rules.map((rule, i) => <li key={i}>{rule}</li>)}
+                  </ul>
+                )}
+                {providers.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Providers</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {providers.map((p, i) => (
+                        <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
+                          {p}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              {(sub.blacklist.types?.length || 0) > 0 && (
-                <div className="mt-2">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Types</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {sub.blacklist.types.map((t, i) => (
-                      <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
-                        {t}
-                      </Badge>
-                    ))}
+                )}
+                {types.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Types</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {types.map((t, i) => (
+                        <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              {(sub.blacklist.games?.length || 0) > 0 && (
-                <div className="mt-2">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Games</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {sub.blacklist.games.map((game, i) => (
-                      <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
-                        {game}
-                      </Badge>
-                    ))}
+                )}
+                {games.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Games</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {games.map((game, i) => (
+                        <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
+                          {game}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     );
   };
