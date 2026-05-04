@@ -1496,6 +1496,155 @@ function toAnthropicImage(img: string): AnyObj | null {
 }
 
 // ============================================================
+// V.10.1 SCRUB — drop legacy fields & projection_engine before merge
+// ============================================================
+type ScrubStats = {
+  dropped_paths: string[];
+  projection_engine_dropped: boolean;
+  legacy_field_status_dropped: number;
+};
+
+function scrubV101LegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: ScrubStats } {
+  const cleaned: AnyObj = JSON.parse(JSON.stringify(input ?? {}));
+  const stats: ScrubStats = {
+    dropped_paths: [],
+    projection_engine_dropped: false,
+    legacy_field_status_dropped: 0,
+  };
+
+  // 1) projection_engine — extractor must NOT write this.
+  if (cleaned.projection_engine !== undefined) {
+    delete cleaned.projection_engine;
+    stats.projection_engine_dropped = true;
+    stats.dropped_paths.push("projection_engine");
+  }
+
+  // 2) Legacy V.10 reward_engine fields
+  const reward = cleaned.reward_engine as AnyObj | undefined;
+  if (reward && typeof reward === "object") {
+    for (const k of ["max_bonus", "bonus_percentage", "payout_threshold"]) {
+      if (k in reward) {
+        delete reward[k];
+        stats.dropped_paths.push(`reward_engine.${k}`);
+      }
+    }
+    const req = reward.requirement_block as AnyObj | undefined;
+    if (req && typeof req === "object" && "min_base" in req) {
+      delete req.min_base;
+      stats.dropped_paths.push("reward_engine.requirement_block.min_base");
+    }
+  }
+
+  // 3) Legacy scope_engine.game_block fields
+  const scope = cleaned.scope_engine as AnyObj | undefined;
+  const gameBlock = scope?.game_block as AnyObj | undefined;
+  if (gameBlock && typeof gameBlock === "object") {
+    for (const k of ["game_category", "game_providers", "game_exclusions"]) {
+      if (k in gameBlock) {
+        delete gameBlock[k];
+        stats.dropped_paths.push(`scope_engine.game_block.${k}`);
+      }
+    }
+  }
+
+  // 4) Legacy period_engine.validity_block.valid_from_unlimited
+  const period = cleaned.period_engine as AnyObj | undefined;
+  const validity = period?.validity_block as AnyObj | undefined;
+  if (validity && typeof validity === "object" && "valid_from_unlimited" in validity) {
+    delete validity.valid_from_unlimited;
+    stats.dropped_paths.push("period_engine.validity_block.valid_from_unlimited");
+  }
+
+  // 5) Strip subcategories[].confidence
+  const variant = cleaned.variant_engine as AnyObj | undefined;
+  const items = variant?.items_block as AnyObj | undefined;
+  const subs = Array.isArray(items?.subcategories) ? (items!.subcategories as AnyObj[]) : null;
+  if (subs) {
+    for (const s of subs) {
+      if (s && typeof s === "object" && "confidence" in s) {
+        delete (s as AnyObj).confidence;
+        stats.dropped_paths.push("variant_engine.items_block.subcategories[].confidence");
+      }
+    }
+  }
+
+  // 6) Strip _field_status entries pointing to projection_engine.* or legacy paths
+  const fs = cleaned._field_status as Record<string, unknown> | undefined;
+  if (fs && typeof fs === "object") {
+    const legacyPaths = new Set([
+      "reward_engine.max_bonus",
+      "reward_engine.bonus_percentage",
+      "reward_engine.payout_threshold",
+      "reward_engine.requirement_block.min_base",
+      "scope_engine.game_block.game_category",
+      "scope_engine.game_block.game_providers",
+      "scope_engine.game_block.game_exclusions",
+      "period_engine.validity_block.valid_from_unlimited",
+    ]);
+    for (const key of Object.keys(fs)) {
+      if (key.startsWith("projection_engine") || legacyPaths.has(key)) {
+        delete fs[key];
+        stats.legacy_field_status_dropped++;
+      }
+    }
+  }
+
+  return { cleaned, stats };
+}
+
+// ============================================================
+// V.10.1 SINGLE vs MULTI ENFORCEMENT (post-merge)
+// ============================================================
+type VariantEnforceResult = {
+  promo_mode: string;
+  subcategories_cleared: boolean;
+  has_subcategories_set: boolean | null;
+  expected_count_set: number | null;
+};
+
+function enforceSingleVsMulti(record: AnyObj): VariantEnforceResult {
+  const result: VariantEnforceResult = {
+    promo_mode: "",
+    subcategories_cleared: false,
+    has_subcategories_set: null,
+    expected_count_set: null,
+  };
+  const idEngine = record.identity_engine as AnyObj | undefined;
+  const promoBlock = idEngine?.promo_block as AnyObj | undefined;
+  const promoMode = typeof promoBlock?.promo_mode === "string" ? promoBlock.promo_mode : "";
+  result.promo_mode = promoMode;
+
+  const variant = record.variant_engine as AnyObj | undefined;
+  if (!variant || typeof variant !== "object") return result;
+  const summary = variant.summary_block as AnyObj | undefined;
+  const items = variant.items_block as AnyObj | undefined;
+  const subs = Array.isArray(items?.subcategories) ? (items!.subcategories as AnyObj[]) : [];
+
+  if (promoMode === "single") {
+    if (subs.length > 0) {
+      (items as AnyObj).subcategories = [];
+      result.subcategories_cleared = true;
+    }
+    if (summary && typeof summary === "object") {
+      summary.has_subcategories = false;
+      result.has_subcategories_set = false;
+      if (summary.expected_count == null) {
+        summary.expected_count = 1;
+        result.expected_count_set = 1;
+      }
+    }
+  } else if (promoMode === "multi") {
+    if (summary && typeof summary === "object") {
+      summary.has_subcategories = true;
+      result.has_subcategories_set = true;
+      summary.expected_count = subs.length;
+      result.expected_count_set = subs.length;
+    }
+  }
+  return result;
+}
+
+// ============================================================
 // HANDLER
 // ============================================================
 serve(async (req) => {
