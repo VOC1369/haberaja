@@ -1645,6 +1645,7 @@ export function createInertPkV10Record(
       client_block: {
         client_id: "",
         client_id_field_status: "",
+        client_id_confidence: "",
         client_name: "",
       },
       promo_block: {
@@ -1669,8 +1670,9 @@ export function createInertPkV10Record(
       },
       meta_block: {
         quality_flags: [],
-        evidence_count: 0,
+        evidence_count: null,
         override: false,
+        override_detail: null,
         prompt_version: PK_V10_PROMPT_VERSION,
         latency_ms: null,
       },
