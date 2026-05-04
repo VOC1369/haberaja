@@ -183,19 +183,29 @@ function subVariantName(rec: PkV10Record, i: number): string | null {
   return s(subAt(rec, i)?.variant_name);
 }
 
-/** sub.game_category */
-function subGameCategory(rec: PkV10Record, i: number): string | null {
-  return s(subAt(rec, i)?.game_category);
+/** sub.promo_code (V.10.1) */
+function subPromoCode(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.promo_code);
 }
 
-/** sub.game_providers */
-function subGameProviders(rec: PkV10Record, i: number): string[] {
-  return arr(subAt(rec, i)?.game_providers);
+/** sub.calculation_basis (V.10.1) */
+function subCalculationBasis(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.calculation_basis);
 }
 
-/** sub.game_exclusions */
-function subGameExclusions(rec: PkV10Record, i: number): string[] {
-  return arr(subAt(rec, i)?.game_exclusions);
+/** sub.calculation_method (V.10.1) */
+function subCalculationMethod(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.calculation_method);
+}
+
+/** sub.calculation_value (V.10.1) */
+function subCalculationValue(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.calculation_value);
+}
+
+/** sub.calculation_unit (V.10.1) */
+function subCalculationUnit(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.calculation_unit);
 }
 
 /** sub.min_deposit */
@@ -203,14 +213,19 @@ function subMinDeposit(rec: PkV10Record, i: number): number | null {
   return n(subAt(rec, i)?.min_deposit);
 }
 
-/** sub.max_bonus */
-function subMaxBonus(rec: PkV10Record, i: number): number | null {
-  return n(subAt(rec, i)?.max_bonus);
+/** sub.max_reward (V.10.1 — replaces legacy `max_bonus`) */
+function subMaxReward(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.max_reward);
 }
 
-/** sub.bonus_percentage */
-function subBonusPercentage(rec: PkV10Record, i: number): number | null {
-  return n(subAt(rec, i)?.bonus_percentage);
+/** sub.max_reward_unlimited (V.10.1 sibling) */
+function subMaxRewardUnlimited(rec: PkV10Record, i: number): boolean {
+  return subAt(rec, i)?.max_reward_unlimited === true;
+}
+
+/** sub.min_claim (V.10.1) */
+function subMinClaim(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.min_claim);
 }
 
 /** sub.turnover_multiplier — number only, no string parsing */
@@ -218,9 +233,131 @@ function subTurnoverMultiplier(rec: PkV10Record, i: number): number | null {
   return n(subAt(rec, i)?.turnover_multiplier);
 }
 
+/** sub.turnover_rule_format (V.10.1) */
+function subTurnoverRuleFormat(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.turnover_rule_format);
+}
+
+/** sub.game_domain (V.10.1 — replaces legacy `game_category`) */
+function subGameDomain(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.game_domain);
+}
+
+/** sub.eligible_providers (V.10.1 — replaces legacy `game_providers`) */
+function subEligibleProviders(rec: PkV10Record, i: number): string[] {
+  return arr(subAt(rec, i)?.eligible_providers);
+}
+
+/** sub.game_names (V.10.1) */
+function subGameNames(rec: PkV10Record, i: number): string[] {
+  return arr(subAt(rec, i)?.game_names);
+}
+
+/**
+ * sub.blacklist (V.10.1 — replaces flat `game_exclusions`).
+ * Returns full nested shape; missing → all-empty defaults.
+ */
+function subBlacklist(rec: PkV10Record, i: number): {
+  enabled: boolean;
+  types: string[];
+  providers: string[];
+  games: string[];
+  rules: string[];
+  note: string | null;
+} {
+  const blk = subAt(rec, i)?.blacklist;
+  return {
+    enabled: blk?.enabled === true,
+    types: arr(blk?.types),
+    providers: arr(blk?.providers),
+    games: arr(blk?.games),
+    rules: arr(blk?.rules),
+    note: s(blk?.note ?? null),
+  };
+}
+
+/** sub.reward_type (V.10.1) */
+function subRewardType(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.reward_type);
+}
+
+/** sub.payout_direction (V.10.1) */
+function subPayoutDirection(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.payout_direction);
+}
+
 /** sub.currency */
 function subCurrency(rec: PkV10Record, i: number): string | null {
   return s(subAt(rec, i)?.currency);
+}
+
+/** sub.physical_reward_name (V.10.1) */
+function subPhysicalRewardName(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.physical_reward_name);
+}
+
+/** sub.physical_reward_quantity (V.10.1) */
+function subPhysicalRewardQuantity(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.physical_reward_quantity);
+}
+
+/** sub.cash_reward_amount (V.10.1) */
+function subCashRewardAmount(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.cash_reward_amount);
+}
+
+/** sub.reward_quantity (V.10.1) */
+function subRewardQuantity(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.reward_quantity);
+}
+
+/** sub.voucher_kind (V.10.1) */
+function subVoucherKind(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.voucher_kind);
+}
+
+/** sub.voucher_valid_from (V.10.1) */
+function subVoucherValidFrom(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.voucher_valid_from);
+}
+
+/** sub.voucher_valid_until (V.10.1) */
+function subVoucherValidUntil(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.voucher_valid_until);
+}
+
+/** sub.voucher_valid_unlimited (V.10.1 sibling) */
+function subVoucherValidUnlimited(rec: PkV10Record, i: number): boolean {
+  return subAt(rec, i)?.voucher_valid_unlimited === true;
+}
+
+/** sub.lucky_spin_id (V.10.1) */
+function subLuckySpinId(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.lucky_spin_id);
+}
+
+/** sub.lucky_spin_max_per_day (V.10.1) */
+function subLuckySpinMaxPerDay(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.lucky_spin_max_per_day);
+}
+
+/** sub.product_note (V.10.1) */
+function subProductNote(rec: PkV10Record, i: number): string | null {
+  return s(subAt(rec, i)?.product_note);
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V.10.1 header-level selectors
+// ──────────────────────────────────────────────────────────────────────────
+
+/** Default variant id — `variant_engine.summary_block.default_variant_id` */
+function defaultVariantId(rec: PkV10Record): string | null {
+  return s(rec?.variant_engine?.summary_block?.default_variant_id);
+}
+
+/** Client id confidence — `identity_engine.client_block.client_id_confidence` */
+function clientIdConfidence(rec: PkV10Record): string | null {
+  return s(rec?.identity_engine?.client_block?.client_id_confidence);
 }
 
 // ──────────────────────────────────────────────────────────────────────────
