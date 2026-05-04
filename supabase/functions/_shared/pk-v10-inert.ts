@@ -225,7 +225,7 @@ export function createInertPkV10Record(
 
     projection_engine: {
       _description:
-        "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
+        "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly. Naming follows V.10.1 canonical. Not source of truth.",
       summary_block: {
         promo_summary: "",
         main_trigger: "",
@@ -233,11 +233,12 @@ export function createInertPkV10Record(
         main_reward_percent: null,
         main_reward_value: null,
         main_reward_unit: "",
-        max_bonus: null,
-        min_base: null,
+        max_reward: null,
+        min_deposit: null,
         payout_direction: "",
         turnover_multiplier: null,
         turnover_basis: "",
+        _summary_skipped_reason: "",
       },
       claim_summary_block: {
         primary_claim_method: "",
@@ -250,9 +251,9 @@ export function createInertPkV10Record(
       },
       scope_summary_block: {
         game_domain: "",
-        game_types: [],
-        game_providers: [],
-        game_exclusions: [],
+        game_domains: [],
+        eligible_providers: [],
+        blacklist_summary: { types: [], providers: [], games: [], rules: [] },
         platform_access: "",
         apk_required: false,
         geo_restriction: "",
@@ -282,7 +283,7 @@ export function createInertPkV10Record(
         html_was_normalized: false,
         client_id_source: null,
         propagated_fields: [],
-        ambiguous_blacklists: 0,
+        ambiguous_blacklists: null,
         extracted_at: now,
         classification_overridden: false,
         classification_override_reason: "",
@@ -291,10 +292,14 @@ export function createInertPkV10Record(
       schema_block: {
         schema_name: PK_V10_SCHEMA_NAME,
         schema_version: PK_V10_SCHEMA_VERSION,
-        locked_at: PK_V10_LOCKED_AT,
+        base_locked_at: PK_V10_BASE_LOCKED_AT,
+        released_at: PK_V10_RELEASED_AT,
         created_by: PK_V10_CREATED_BY,
+        owner: PK_V10_OWNER,
         status: "locked",
         extractor: PK_V10_EXTRACTOR,
+        amendment_type: PK_V10_AMENDMENT_TYPE,
+        amendment_reason: PK_V10_AMENDMENT_REASON,
       },
     },
 
