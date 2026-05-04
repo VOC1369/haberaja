@@ -1191,6 +1191,8 @@ export interface PkV10ProofEngine {
 export interface PkV10PaymentEngine {
   deposit_block: {
     deposit_method: string; // PkV10DepositMethod when filled
+    /** V.10.1 — providers offering the deposit_method. */
+    deposit_method_providers: string[];
     deposit_rate: number | null;
   };
   method_whitelist_block: {
@@ -1207,6 +1209,8 @@ export interface PkV10ScopeEngine {
   game_block: {
     game_domain: string; // PkV10GameDomain when filled
     markets: string[];
+    /** V.10.1 — markets the promo actually applies to. */
+    applicable_markets: string[];
     eligible_providers: string[]; // PkV10GameProvider[] when filled
   };
   platform_block: {
