@@ -794,7 +794,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     sub: ExtractedPromoSubCategory, 
     idx: number, 
     archetype: RewardArchetype,
-    normalizedSub?: Partial<typeof sub> // ✅ Accept normalized data from mappedPreview
+    normalizedSub?: Partial<typeof sub>, // ✅ Accept normalized data from mappedPreview
+    attachGlobalBlacklist?: boolean // attach V1.1 scope_engine.blacklist_block to this card
   ) => {
     // ✅ Merge: normalized data takes priority over raw extraction
     const displaySub = {
@@ -806,12 +807,25 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       min_calculation: (normalizedSub as any)?.min_calculation ?? (sub as any).min_calculation,
     };
     
-    const hasBlacklist = sub.blacklist?.enabled && (
+    const hasPerVariantBlacklist = sub.blacklist?.enabled && (
       (sub.blacklist.types?.length || 0) > 0 ||
       (sub.blacklist.providers?.length || 0) > 0 || 
       (sub.blacklist.games?.length || 0) > 0 || 
       (sub.blacklist.rules?.length || 0) > 0
     );
+
+    // V1.1 global blacklist payload (only attached to designated card)
+    const gbl: any = attachGlobalBlacklist
+      ? (pkRecord as any)?.scope_engine?.blacklist_block
+      : null;
+    const gblProviders: string[] = Array.isArray(gbl?.providers) ? gbl.providers : [];
+    const gblGames: string[] = Array.isArray(gbl?.games) ? gbl.games : [];
+    const gblTypes: string[] = Array.isArray(gbl?.types) ? gbl.types : [];
+    const gblRules: string[] = Array.isArray(gbl?.rules) ? gbl.rules : [];
+    const hasGlobalBlacklist =
+      gblProviders.length + gblGames.length + gblTypes.length + gblRules.length > 0;
+
+    const hasBlacklist = hasPerVariantBlacklist || hasGlobalBlacklist;
     
     // Only flag critical issues for REQUIRED fields based on archetype
     const hasCriticalIssue = ['calculation_value', 'turnover_rule', 'payout_direction'].some(f => {
@@ -1260,57 +1274,75 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           );
         })()}
 
-        {hasBlacklist && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <div className="bg-destructive/10 rounded-lg p-3">
-              <span className="text-destructive text-xs font-medium flex items-center gap-1 mb-2">
-                <Ban className="w-3 h-3" />
-                Blacklist:
-              </span>
-              {(sub.blacklist.rules?.length || 0) > 0 && (
-                <ul className="list-disc list-inside text-xs text-foreground">
-                  {sub.blacklist.rules.map((rule, i) => <li key={i}>{rule}</li>)}
-                </ul>
-              )}
-              {(sub.blacklist.providers?.length || 0) > 0 && (
-                <div className="mt-2">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Providers</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {sub.blacklist.providers.map((p, i) => (
-                      <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
-                        {p}
-                      </Badge>
-                    ))}
+        {hasBlacklist && (() => {
+          const rules = [
+            ...((sub.blacklist?.rules as string[] | undefined) || []),
+            ...gblRules,
+          ];
+          const providers = [
+            ...((sub.blacklist?.providers as string[] | undefined) || []),
+            ...gblProviders,
+          ];
+          const types = [
+            ...((sub.blacklist?.types as string[] | undefined) || []),
+            ...gblTypes,
+          ];
+          const games = [
+            ...((sub.blacklist?.games as string[] | undefined) || []),
+            ...gblGames,
+          ];
+          return (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="bg-destructive/10 rounded-lg p-3">
+                <span className="text-destructive text-xs font-medium flex items-center gap-1 mb-2">
+                  <Ban className="w-3 h-3" />
+                  Blacklist:
+                </span>
+                {rules.length > 0 && (
+                  <ul className="list-disc list-inside text-xs text-foreground">
+                    {rules.map((rule, i) => <li key={i}>{rule}</li>)}
+                  </ul>
+                )}
+                {providers.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Providers</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {providers.map((p, i) => (
+                        <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
+                          {p}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              {(sub.blacklist.types?.length || 0) > 0 && (
-                <div className="mt-2">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Types</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {sub.blacklist.types.map((t, i) => (
-                      <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
-                        {t}
-                      </Badge>
-                    ))}
+                )}
+                {types.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Types</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {types.map((t, i) => (
+                        <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-              {(sub.blacklist.games?.length || 0) > 0 && (
-                <div className="mt-2">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Games</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {sub.blacklist.games.map((game, i) => (
-                      <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
-                        {game}
-                      </Badge>
-                    ))}
+                )}
+                {games.length > 0 && (
+                  <div className="mt-2">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Games</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {games.map((game, i) => (
+                        <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">
+                          {game}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     );
   };
@@ -1482,64 +1514,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             </div>
           )}
 
-          {/* Global Blacklist Panel — sourced from pkRecord.scope_engine.blacklist_block (V1.1) */}
-          {(() => {
-            const gbl: any = (pkRecord as any)?.scope_engine?.blacklist_block;
-            if (!gbl) return null;
-            const providers: string[] = Array.isArray(gbl.providers) ? gbl.providers : [];
-            const games: string[] = Array.isArray(gbl.games) ? gbl.games : [];
-            const types: string[] = Array.isArray(gbl.types) ? gbl.types : [];
-            const rules: string[] = Array.isArray(gbl.rules) ? gbl.rules : [];
-            if (providers.length + games.length + types.length + rules.length === 0) return null;
-            return (
-              <div className="bg-card rounded-lg border border-destructive/30 p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Ban className="w-4 h-4 text-destructive" />
-                  <h4 className="text-sm font-semibold text-destructive">Blacklist Global (Berlaku Semua Varian)</h4>
-                </div>
-                <div className="space-y-3">
-                  {rules.length > 0 && (
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Aturan</span>
-                      <ul className="list-disc list-inside text-xs text-foreground mt-1">
-                        {rules.map((r, i) => <li key={i}>{r}</li>)}
-                      </ul>
-                    </div>
-                  )}
-                  {providers.length > 0 && (
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Providers</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {providers.map((p, i) => (
-                          <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">{p}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {types.length > 0 && (
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Types</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {types.map((t, i) => (
-                          <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">{t}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {games.length > 0 && (
-                    <div>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Games</span>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {games.map((g, i) => (
-                          <Badge key={i} variant="outline" className="text-xs bg-destructive/20 text-destructive">{g}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
+          {/* V1.1 global blacklist is rendered inside the matching variant card (see renderSubCategoryCard). */}
 
           {/* Subcategories - Conditional for Referral vs Other */}
           {extractedPromo.subcategories.length > 0 && (
@@ -1617,17 +1592,33 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   </h4>
                 )}
                 <div className="space-y-4">
-                  {[...extractedPromo.subcategories]
-                    .sort((a, b) => {
-                      const valueA = Number(a.calculation_value) || 0;
-                      const valueB = Number(b.calculation_value) || 0;
-                      return valueA - valueB; // ascending (smallest first)
-                    })
-                    .map((sub, idx) => {
-                    const archetype = detectRewardArchetype(extractedPromo);
-                    // ✅ Pass normalized subcategory data from mappedPreview (cast to any for compatibility)
-                    return renderSubCategoryCard(sub, idx, archetype, mappedPreview?.subcategories?.[idx] as any);
-                  })}
+                  {(() => {
+                    const sortedSubs = [...extractedPromo.subcategories]
+                      .sort((a, b) => {
+                        const valueA = Number(a.calculation_value) || 0;
+                        const valueB = Number(b.calculation_value) || 0;
+                        return valueA - valueB; // ascending (smallest first)
+                      });
+
+                    // Pick attach target for V1.1 global blacklist:
+                    // first variant whose game_types contains "slot",
+                    // else first variant in the list.
+                    const slotIdx = sortedSubs.findIndex(s =>
+                      (s.game_types || []).some(t => /slot/i.test(String(t)))
+                    );
+                    const attachIdx = slotIdx >= 0 ? slotIdx : 0;
+
+                    return sortedSubs.map((sub, idx) => {
+                      const archetype = detectRewardArchetype(extractedPromo);
+                      return renderSubCategoryCard(
+                        sub,
+                        idx,
+                        archetype,
+                        mappedPreview?.subcategories?.[idx] as any,
+                        idx === attachIdx,
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )
