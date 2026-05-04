@@ -1592,17 +1592,33 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   </h4>
                 )}
                 <div className="space-y-4">
-                  {[...extractedPromo.subcategories]
-                    .sort((a, b) => {
-                      const valueA = Number(a.calculation_value) || 0;
-                      const valueB = Number(b.calculation_value) || 0;
-                      return valueA - valueB; // ascending (smallest first)
-                    })
-                    .map((sub, idx) => {
-                    const archetype = detectRewardArchetype(extractedPromo);
-                    // ✅ Pass normalized subcategory data from mappedPreview (cast to any for compatibility)
-                    return renderSubCategoryCard(sub, idx, archetype, mappedPreview?.subcategories?.[idx] as any);
-                  })}
+                  {(() => {
+                    const sortedSubs = [...extractedPromo.subcategories]
+                      .sort((a, b) => {
+                        const valueA = Number(a.calculation_value) || 0;
+                        const valueB = Number(b.calculation_value) || 0;
+                        return valueA - valueB; // ascending (smallest first)
+                      });
+
+                    // Pick attach target for V1.1 global blacklist:
+                    // first variant whose game_types contains "slot",
+                    // else first variant in the list.
+                    const slotIdx = sortedSubs.findIndex(s =>
+                      (s.game_types || []).some(t => /slot/i.test(String(t)))
+                    );
+                    const attachIdx = slotIdx >= 0 ? slotIdx : 0;
+
+                    return sortedSubs.map((sub, idx) => {
+                      const archetype = detectRewardArchetype(extractedPromo);
+                      return renderSubCategoryCard(
+                        sub,
+                        idx,
+                        archetype,
+                        mappedPreview?.subcategories?.[idx] as any,
+                        idx === attachIdx,
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )
