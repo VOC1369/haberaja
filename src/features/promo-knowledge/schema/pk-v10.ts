@@ -1597,6 +1597,12 @@ export interface PkV10Record {
 
   ai_confidence: Record<string, number>;
   _field_status: Record<string, PkV10FieldStatus | string>;
+  /** V.10.1 — root log: per-field propagation provenance map. */
+  _propagation_stats: Record<string, unknown>;
+  /** V.10.1 — root log: append-only human override entries. */
+  _human_override_log: unknown[];
+  /** V.10.1 — root log: append-only AI resolver entries. */
+  _ai_resolver_log: unknown[];
 }
 
 // ──────────────────────────────────────────────────────────────────────────
