@@ -686,8 +686,71 @@ M. MECHANICS DATA SHAPE DOCTRINE (Step 5D — Step 6.1 prompt-only).
           null, valid_until_unlimited ↔ valid_until null, identity_block
           hanya bila reward_type=physical).
 
+================================================================
+V.10.1 HARD RULES (HEADER vs VARIANT, FORBIDDEN FIELDS, PROJECTION)
+================================================================
+
+V10.1-R1. SINGLE vs MULTI (HEADER vs VARIANT — KERAS).
+   Tentukan promo_mode lebih dulu (single | multi).
+
+   - promo_mode = "single":
+     * reward_engine = source of truth untuk nilai reward/calculation/payout.
+     * variant_engine.summary_block.has_subcategories = false
+     * variant_engine.summary_block.expected_count = 1 (atau null)
+     * variant_engine.items_block.subcategories = []  ← WAJIB kosong.
+     DILARANG bikin satu varian dummy hanya untuk merefleksikan reward_engine.
+
+   - promo_mode = "multi":
+     * variant_engine.items_block.subcategories[] = source of truth per-varian.
+     * variant_engine.summary_block.has_subcategories = true
+     * variant_engine.summary_block.expected_count = jumlah varian sebenarnya.
+     * reward_engine HANYA untuk nilai shared/global yang BENAR-BENAR sama
+       di SEMUA varian. Kalau berbeda antar varian → reward_engine field itu
+       kosong + _field_status="not_applicable" di level global.
+     * reward_engine TIDAK BOLEH override data per-varian.
+     * Setiap subcategory WAJIB punya variant_id unik (mis. "v_1", "v_2", ...)
+       dan variant_name verbatim dari sumber.
+
+V10.1-R2. LEGACY FIELDS DILARANG (V.10.1 schema).
+   JANGAN PERNAH menulis path/key berikut di output (sudah dihapus dari schema):
+     - reward_engine.max_bonus           (gunakan reward_engine.max_reward)
+     - reward_engine.bonus_percentage    (gunakan calculation_value+calculation_unit)
+     - scope_engine.game_block.game_category   (gunakan game_domain)
+     - scope_engine.game_block.game_providers  (gunakan eligible_providers)
+     - scope_engine.game_block.game_exclusions (gunakan blacklist_block)
+     - reward_engine.requirement_block.min_base (gunakan min_deposit)
+     - reward_engine.payout_threshold
+     - subcategories[].confidence
+     - period_engine.validity_block.valid_from_unlimited
+   Field-field tersebut akan di-strip server. Tetap JANGAN dikirim — itu noise.
+
+V10.1-R3. PROJECTION ENGINE — DERIVED ONLY.
+   Extractor TIDAK BOLEH menulis projection_engine sama sekali.
+   - JANGAN isi projection_engine.summary_block.* dengan apa pun.
+   - JANGAN isi projection_engine.blacklist_summary.*
+   - JANGAN tulis _field_status untuk path projection_engine.*
+   Server akan menurunkan projection_engine post-extraction dari
+   reward_engine + variant_engine + scope_engine.
+   Setiap key projection_engine yang dikirim LLM akan di-drop.
+
+V10.1-R4. SUBCATEGORY SHAPE (ringkas — detail di tool schema).
+   Field per subcategory mengikuti skeleton V.10.1:
+     variant_id, variant_name, promo_code,
+     calculation_basis, calculation_method, calculation_value, calculation_unit,
+     min_deposit, max_reward, max_reward_unlimited, min_claim,
+     turnover_multiplier, turnover_rule_format,
+     game_domain, eligible_providers, game_names,
+     blacklist {enabled, types[], providers[], games[], rules[], note},
+     reward_type, payout_direction, currency,
+     physical_reward_name, physical_reward_quantity,
+     cash_reward_amount, reward_quantity,
+     voucher_kind, voucher_valid_from, voucher_valid_until, voucher_valid_unlimited,
+     lucky_spin_id, lucky_spin_max_per_day,
+     product_note.
+   Tidak boleh ada key di luar daftar ini.
+
 OUTPUT
-Panggil tool '${TOOL_NAME}' dengan input PkV10Record (boleh partial — server
+Panggil tool '${TOOL_NAME}' dengan input PkV10Record V.10.1 (boleh partial — server
 akan merge ke inert full-shape). JANGAN balas teks. JANGAN mark-down.`;
 
 // ============================================================
