@@ -1789,7 +1789,7 @@ serve(async (req) => {
     // GAP #1 — attach propagation stats as observability metadata
     (merged as AnyObj)._propagation_stats = propStats;
 
-    console.log("[pk-extractor V10] OK", {
+    console.log("[pk-extractor V10.1] OK", {
       model: modelUsed,
       stop_reason: stopReason,
       extraction_source,
@@ -1798,6 +1798,8 @@ serve(async (req) => {
       ai_confidence_keys: Object.keys(aiConfidence).length,
       field_status_keys: Object.keys(propagated).length,
       propagation_stats: propStats,
+      v101_scrub: v101Scrub.stats,
+      variant_enforce: variantEnforce,
       schema_version: ((merged.meta_engine as AnyObj).schema_block as AnyObj).schema_version,
     });
 
@@ -1810,7 +1812,7 @@ serve(async (req) => {
         usage: aiData?.usage ?? null,
         latency_ms: latencyMs,
         stop_reason: stopReason,
-        schema_version: "V.10",
+        schema_version: "V.10.1",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
