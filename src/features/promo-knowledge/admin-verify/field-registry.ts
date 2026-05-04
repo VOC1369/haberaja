@@ -60,6 +60,17 @@ export interface FieldRegistryEntry {
   multiOptions?: readonly string[];
   placeholder?: string;
   helpText?: string;
+  /**
+   * Optional sibling boolean path that mirrors the "unlimited / no-limit"
+   * semantic of this field. When set, the entry MUST also implement
+   * `writeSibling()` and the AdminVerify commit logic will:
+   *   - mutate sibling via writeSibling()
+   *   - mark _field_status[siblingPath] = "explicit"
+   *   - log to _human_override_log only if value changed
+   */
+  unlimitedSiblingPath?: string;
+  readSibling?: (rec: PkV10Record) => unknown;
+  writeSibling?: (draft: PkV10Record, answer: AdminAnswer) => void;
   read: (rec: PkV10Record) => unknown;
   write: (draft: PkV10Record, answer: AdminAnswer) => void;
 }
