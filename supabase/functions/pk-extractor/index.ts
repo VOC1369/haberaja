@@ -328,63 +328,138 @@ FINAL ASSERTION (before output)
            .ambiguity_flags[] dengan penjelasan kolom mana, variant mana,
             dan kenapa dianggap anomali.
 
-    9.D PLACEHOLDER VALUE HANDLING (bukan data final)
-        Bedakan TIGA kondisi untuk setiap field operasional penting
-        (mis. period_engine.validity_block.valid_until, valid_from,
-        reward_engine.requirement_block.min_deposit,
-        projection_engine.summary_block.turnover_multiplier,
-        time_window_engine.*, dst):
+    9.D EXTRACTION HARDENING — REASONING-ONLY (MANDATORY)
 
-          (a) Field TIDAK disebut di sumber
-              → value blank ("" / null / [])
-              → _field_status = "not_stated"
-              → tidak perlu ambiguity_flag
+        PRINSIP GLOBAL:
+          - Reasoning berbasis konteks, BUKAN keyword/regex match.
+          - Jangan asumsi tanpa evidence.
+          - Jika tidak jelas → tandai, jangan tebak.
+          - System tidak menciptakan truth baru; hanya menyimpan & menandai.
 
-          (b) Field DISEBUT tapi nilainya BUKAN data nyata —
-              hanya simbol pengisi tempat. Contoh placeholder yang
-              sering muncul: tanda hubung tunggal, "N/A", "TBA",
-              "TBD", "?", titik-titik, sel berisi spasi saja, atau
-              label seperti "akan diumumkan". Daftar ini hanya CONTOH;
-              gunakan penalaran kontekstual, BUKAN regex/keyword match.
-              → JANGAN tafsirkan sebagai unlimited.
-              → JANGAN tafsirkan sebagai data final.
-              → JANGAN hapus tanda placeholder tanpa jejak.
-              → JANGAN tebak tanggal/angka sendiri.
-              → value = null (atau "" untuk string)
-              → _field_status = "not_stated"
-              → ai_confidence[path] diturunkan (≤ 0.4)
-              → WAJIB tambahkan entry di
-                readiness_engine.observability_block.ambiguity_flags[]
-                berisi: path field, token placeholder yang ditemukan
-                (verbatim, singkat), dan reason kenapa ini bukan data
-                final → admin harus konfirmasi.
-              → set readiness_engine.observability_block.review_required = true.
+        ────────────────────────────────────────────────────────────
+        H1. PLACEHOLDER VS DATA NYATA
+        ────────────────────────────────────────────────────────────
+        Untuk setiap field, tanyakan:
+          "Apakah nilai ini memberikan informasi operasional yang
+           bisa digunakan?"
 
-          (c) Field DISEBUT secara EKSPLISIT sebagai unlimited /
-              tanpa batas (mis. "selamanya", "lifetime", "tanpa
-              batas waktu", "no expiry", "unlimited", "selama promo
-              berjalan tanpa tanggal akhir").
-              → khusus untuk validitas waktu:
-                period_engine.validity_block.valid_until_unlimited = true,
-                valid_until = null,
-                _field_status valid_until_unlimited = "explicit".
-              → khusus untuk max_reward / batas nominal:
-                max_reward_unlimited = true (jika field tersedia).
-              Tanpa frasa eksplisit semacam itu, JANGAN tandai unlimited.
+        - YA  → treat sebagai data nyata (explicit/inferred sesuai evidence).
+        - TIDAK → treat sebagai placeholder.
+
+        Contoh placeholder (ILUSTRASI, bukan trigger mekanis):
+          tanda hubung tunggal, "N/A", "TBA", "TBD", "?", titik-titik,
+          sel berisi spasi saja, "akan diumumkan", atau nilai yang
+          tidak sesuai konteks kolom (mis. nominal Rp di kolom nama
+          produk). Gunakan PENALARAN KONTEKSTUAL — JANGAN regex.
+
+        H1-A. JIKA PLACEHOLDER TERDETEKSI (field DISEBUT tapi tidak bermakna):
+          1) VALUE
+             - value = null (atau "" untuk string).
+             - _field_status[path] = "not_stated".
+          2) CONFIDENCE
+             - Turunkan ai_confidence[path] secara natural (rendah).
+             - JANGAN pakai angka tetap; biarkan reasoning yang menentukan.
+          3) AUDIT (WAJIB) — tulis ke ROOT sidecar `_ambiguity_flags[]`:
+             {
+               "path": "<field_path>",
+               "reason": "Field disebut di sumber tetapi nilainya tidak
+                          memberikan informasi operasional yang bermakna
+                          (placeholder: '<token verbatim singkat>').
+                          Perlu konfirmasi admin."
+             }
+             JANGAN tulis ke readiness_engine.validation_block.warnings.
+             JANGAN tulis ke readiness_engine.observability_block.
+
+        ────────────────────────────────────────────────────────────
+        H2. UNLIMITED INTERPRETATION (GENERAL)
+        ────────────────────────────────────────────────────────────
+        Berlaku untuk SEMUA field dengan pasangan *_unlimited:
+          - period_engine.validity_block.valid_until_unlimited
+          - reward_engine.max_reward_unlimited
+          - dan field sejenis.
+
+        Hanya jika sumber EKSPLISIT menyatakan tanpa batas
+        (mis. "tanpa batas", "no limit", "unlimited", "lifetime",
+         "selamanya", "permanent", "no expiry"):
+          - value utama = null
+          - *_unlimited = true
+          - _field_status[path *_unlimited] = "explicit"
+
+        Jika TIDAK eksplisit:
+          - JANGAN set *_unlimited = true.
+          - Treat sebagai nilai normal atau placeholder (H1-A).
+
+        Placeholder ("-", "N/A", kosong) BUKAN unlimited.
+
+        ────────────────────────────────────────────────────────────
+        H3. STACKING CONSISTENCY
+        ────────────────────────────────────────────────────────────
+        Jika sumber menyatakan promo tidak dapat digabung:
+          - dependency_engine.stacking_block.stacking_policy = "no_stacking"
+          - Jangan partial. Jangan infer jika tidak disebut.
+
+        ────────────────────────────────────────────────────────────
+        H4. REWARD SEMANTIC CONSISTENCY
+        ────────────────────────────────────────────────────────────
+        Pisahkan dengan jelas:
+          - reward_type        → jenis (cash, spin, voucher, ...)
+          - reward_form        → bentuk distribusi (balance_credit, credit_game, ...)
+          - calculation_method → cara hitung (percentage, fixed, ...)
+        Jangan pakai label perhitungan (mis. "cashback") sebagai reward_form.
+        primary_action = aksi nyata user, bukan label marketing.
+
+        ────────────────────────────────────────────────────────────
+        H5. ANTI OVER-INFERENCE
+        ────────────────────────────────────────────────────────────
+        JANGAN isi tanpa evidence jelas:
+          - timezone, claim_window detail, payout_direction,
+            geo restriction, platform restriction.
+        Tanpa evidence → kosongkan + _field_status sesuai
+        (not_stated, atau inferred jika reasoning sangat kuat).
+
+        ────────────────────────────────────────────────────────────
+        H6. CHANNEL DISCIPLINE (KRITIS)
+        ────────────────────────────────────────────────────────────
+        A) PER-FIELD → ROOT sidecars:
+           - _ambiguity_flags[]      → nilai tidak jelas / placeholder
+           - _warnings[]             → anomali ringan (nilai tidak sesuai kolom)
+           - _contradiction_flags[]  → konflik antar bagian teks
+           Setiap entry WAJIB punya { "path": "...", "reason": "..." }.
+
+        B) GLOBAL / STRUKTURAL → readiness_engine.validation_block.warnings
+           (mis. source contamination, schema-level issue).
+
+        JANGAN:
+          - Taruh issue per-field di validation_block.warnings.
+          - Duplikasi issue ke beberapa channel.
+          - Simpan reasoning tanpa path.
+
+        ────────────────────────────────────────────────────────────
+        H7. FINAL CONSISTENCY CHECK
+        ────────────────────────────────────────────────────────────
+        Sebelum set readiness_engine.observability_block.review_required = false,
+        WAJIB pastikan:
+          - _ambiguity_flags kosong
+          - _contradiction_flags kosong
+          - tidak ada placeholder pada field penting
+          - tidak ada nilai yang tidak bermakna
+        Jika salah satu tidak terpenuhi → review_required = true.
+
+        ────────────────────────────────────────────────────────────
+        H8. PRINSIP AKHIR
+        ────────────────────────────────────────────────────────────
+        Jika nilai tidak memberi informasi operasional yang bisa
+        dipakai: jangan menebak, jangan anggap aman, jangan anggap
+        final. Tandai sebagai ambiguity dan serahkan ke admin.
 
         SEL KOSONG DALAM TABEL VARIANT:
-          Sel yang memang kosong di kolom tabel variant (tidak diisi
-          placeholder apa pun) tetap diperlakukan sebagai explicit empty
-          untuk variant tersebut — bukan placeholder. Jangan dipaksa
-          jadi ambiguity_flag kecuali kolom header-nya sendiri yang
-          berisi placeholder.
+          Sel yang memang kosong di kolom tabel variant (tanpa
+          placeholder apa pun) = explicit empty untuk variant itu —
+          bukan placeholder. Jangan ambiguity_flag kecuali header
+          kolomnya sendiri placeholder.
 
-        PRINSIP 9.D: kalau field penting disebut tapi nilainya tidak
-        bermakna → jangan menebak, jangan diam, surface ke admin lewat
-        ambiguity_flags + review_required.
-
-    PRINSIP: jangan asumsi tanpa evidence; jangan perbaiki sumber;
-    jangan hapus tanpa catatan; semua keputusan harus dapat dijelaskan.
+     PRINSIP: jangan asumsi tanpa evidence; jangan perbaiki sumber;
+     jangan hapus tanpa catatan; semua keputusan harus dapat dijelaskan.
 
 ENGINE WAJIB DIISI (jika ada konten):
 
