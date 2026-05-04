@@ -1408,6 +1408,59 @@ function mechanicItemShape(): JSONSchema {
   };
 }
 
+// V.10.1 — Subcategory shape (per-variant). Strict: additionalProperties=false.
+// Mirrors PkV10Subcategory in src/features/promo-knowledge/schema/pk-v10.ts.
+function subcategoryShape(): JSONSchema {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      variant_id: { type: ["string", "null"] },
+      variant_name: { type: ["string", "null"] },
+      promo_code: { type: ["string", "null"] },
+      calculation_basis: enumStrNullable("calculation_basis"),
+      calculation_method: enumStrNullable("calculation_method"),
+      calculation_value: { type: ["number", "null"] },
+      calculation_unit: enumStrNullable("calculation_unit"),
+      min_deposit: { type: ["number", "null"] },
+      max_reward: { type: ["number", "null"] },
+      max_reward_unlimited: { type: "boolean" },
+      min_claim: { type: ["number", "null"] },
+      turnover_multiplier: { type: ["number", "null"] },
+      turnover_rule_format: { type: ["string", "null"] },
+      game_domain: enumStrNullable("game_domain"),
+      eligible_providers: { type: "array", items: { type: "string" } },
+      game_names: { type: "array", items: { type: "string" } },
+      blacklist: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          enabled: { type: "boolean" },
+          types: { type: "array", items: { type: "string" } },
+          providers: { type: "array", items: { type: "string" } },
+          games: { type: "array", items: { type: "string" } },
+          rules: { type: "array", items: { type: "string" } },
+          note: { type: "string" },
+        },
+      },
+      reward_type: enumStrNullable("reward_type"),
+      payout_direction: enumStrNullable("payout_direction"),
+      currency: { type: ["string", "null"] },
+      physical_reward_name: { type: ["string", "null"] },
+      physical_reward_quantity: { type: ["number", "null"] },
+      cash_reward_amount: { type: ["number", "null"] },
+      reward_quantity: { type: ["number", "null"] },
+      voucher_kind: enumStrNullable("voucher_kind"),
+      voucher_valid_from: { type: ["string", "null"] },
+      voucher_valid_until: { type: ["string", "null"] },
+      voucher_valid_unlimited: { type: "boolean" },
+      lucky_spin_id: { type: ["string", "null"] },
+      lucky_spin_max_per_day: { type: ["number", "null"] },
+      product_note: { type: ["string", "null"] },
+    },
+  };
+}
+
 // ============================================================
 // HELPERS
 // ============================================================
