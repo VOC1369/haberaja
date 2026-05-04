@@ -127,6 +127,12 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
       d.period_engine.validity_block.valid_until =
         a.choice === "no_expiry" ? (null as never) : ((a.customValue ?? "") as never);
     },
+    unlimitedSiblingPath: "period_engine.validity_block.valid_until_unlimited",
+    readSibling: (r) => r.period_engine?.validity_block?.valid_until_unlimited,
+    writeSibling: (d, a) => {
+      d.period_engine.validity_block.valid_until_unlimited =
+        a.choice === "no_expiry";
+    },
   },
   {
     path: "claim_engine.method_block.claim_method",
