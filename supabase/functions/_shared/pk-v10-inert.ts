@@ -305,6 +305,9 @@ export function createInertPkV10Record(
 
     ai_confidence: {} as Record<string, number>,
     _field_status: {} as Record<string, string>,
+    _propagation_stats: {} as Record<string, unknown>,
+    _human_override_log: [] as unknown[],
+    _ai_resolver_log: [] as unknown[],
   };
 }
 
