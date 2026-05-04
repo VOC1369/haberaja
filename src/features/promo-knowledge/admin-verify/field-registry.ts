@@ -222,6 +222,11 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
       d.reward_engine.max_reward =
         raw === "" || raw === undefined ? null : Number(raw);
     },
+    unlimitedSiblingPath: "reward_engine.max_reward_unlimited",
+    readSibling: (r) => r.reward_engine?.max_reward_unlimited,
+    writeSibling: (d, a) => {
+      d.reward_engine.max_reward_unlimited = a.choice === NONE;
+    },
   },
   {
     path: "scope_engine.geo_block.geo_restriction",
