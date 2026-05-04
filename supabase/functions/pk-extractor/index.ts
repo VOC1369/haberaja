@@ -1928,7 +1928,7 @@ serve(async (req) => {
             demoted++;
           }
           summary._summary_skipped_reason = "record_level_summary_not_applicable_data_in_variant_engine";
-          (propStats as AnyObj).summary_demoted_multi_variant = demoted;
+          (propStats as unknown as AnyObj).summary_demoted_multi_variant = demoted;
         }
       }
     } catch (e) {
