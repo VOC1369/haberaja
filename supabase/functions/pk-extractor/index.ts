@@ -1,7 +1,7 @@
 /**
- * pk-extractor — PKB_WOLFBRAIN V.10 NATIVE EXTRACTOR
+ * pk-extractor — PKB_WOLFBRAIN V.10.1 NATIVE EXTRACTOR
  *
- * V10-only. Zero V.09 fallback. Zero conversion layer.
+ * V10.1-only. Zero V.09 fallback. Zero conversion layer.
  *
  * Input  : { text?: string, images?: string[], client_id_hint?: string }
  * Output : { ok: true, record: PkV10Record, model, extraction_source, ... }
