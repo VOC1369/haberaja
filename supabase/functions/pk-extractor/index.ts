@@ -1,7 +1,7 @@
 /**
- * pk-extractor — PKB_WOLFBRAIN V.10 NATIVE EXTRACTOR
+ * pk-extractor — PKB_WOLFBRAIN V.10.1 NATIVE EXTRACTOR
  *
- * V10-only. Zero V.09 fallback. Zero conversion layer.
+ * V10.1-only. Zero V.09 fallback. Zero conversion layer.
  *
  * Input  : { text?: string, images?: string[], client_id_hint?: string }
  * Output : { ok: true, record: PkV10Record, model, extraction_source, ... }
@@ -46,13 +46,13 @@ const corsHeaders = {
 // ============================================================
 // V10 SYSTEM PROMPT
 // ============================================================
-const SYSTEM_PROMPT = `Anda adalah Wolfclaw Extractor V.10 — extractor PKB_Wolfbrain V.10.
+const SYSTEM_PROMPT = `Anda adalah Wolfclaw Extractor V.10.1 — extractor PKB_Wolfbrain V.10.1.
 
 TUGAS
-Ekstrak konten promo (teks dan/atau gambar) ke struktur PkV10Record via
+Ekstrak konten promo (teks dan/atau gambar) ke struktur PkV10Record (V.10.1) via
 tool '${TOOL_NAME}'. WAJIB panggil tool. JANGAN balas teks biasa.
 
-PRINSIP UTAMA (F1 + F2 + F3 V.10):
+PRINSIP UTAMA (F1 + F2 + F3 V.10.1):
 
 1. REASONING-FIRST. Anda BUKAN bot keyword. Pahami semantic, bukan cocok kata.
 
@@ -686,8 +686,71 @@ M. MECHANICS DATA SHAPE DOCTRINE (Step 5D — Step 6.1 prompt-only).
           null, valid_until_unlimited ↔ valid_until null, identity_block
           hanya bila reward_type=physical).
 
+================================================================
+V.10.1 HARD RULES (HEADER vs VARIANT, FORBIDDEN FIELDS, PROJECTION)
+================================================================
+
+V10.1-R1. SINGLE vs MULTI (HEADER vs VARIANT — KERAS).
+   Tentukan promo_mode lebih dulu (single | multi).
+
+   - promo_mode = "single":
+     * reward_engine = source of truth untuk nilai reward/calculation/payout.
+     * variant_engine.summary_block.has_subcategories = false
+     * variant_engine.summary_block.expected_count = 1 (atau null)
+     * variant_engine.items_block.subcategories = []  ← WAJIB kosong.
+     DILARANG bikin satu varian dummy hanya untuk merefleksikan reward_engine.
+
+   - promo_mode = "multi":
+     * variant_engine.items_block.subcategories[] = source of truth per-varian.
+     * variant_engine.summary_block.has_subcategories = true
+     * variant_engine.summary_block.expected_count = jumlah varian sebenarnya.
+     * reward_engine HANYA untuk nilai shared/global yang BENAR-BENAR sama
+       di SEMUA varian. Kalau berbeda antar varian → reward_engine field itu
+       kosong + _field_status="not_applicable" di level global.
+     * reward_engine TIDAK BOLEH override data per-varian.
+     * Setiap subcategory WAJIB punya variant_id unik (mis. "v_1", "v_2", ...)
+       dan variant_name verbatim dari sumber.
+
+V10.1-R2. LEGACY FIELDS DILARANG (V.10.1 schema).
+   JANGAN PERNAH menulis path/key berikut di output (sudah dihapus dari schema):
+     - reward_engine.max_bonus           (gunakan reward_engine.max_reward)
+     - reward_engine.bonus_percentage    (gunakan calculation_value+calculation_unit)
+     - scope_engine.game_block.game_category   (gunakan game_domain)
+     - scope_engine.game_block.game_providers  (gunakan eligible_providers)
+     - scope_engine.game_block.game_exclusions (gunakan blacklist_block)
+     - reward_engine.requirement_block.min_base (gunakan min_deposit)
+     - reward_engine.payout_threshold
+     - subcategories[].confidence
+     - period_engine.validity_block.valid_from_unlimited
+   Field-field tersebut akan di-strip server. Tetap JANGAN dikirim — itu noise.
+
+V10.1-R3. PROJECTION ENGINE — DERIVED ONLY.
+   Extractor TIDAK BOLEH menulis projection_engine sama sekali.
+   - JANGAN isi projection_engine.summary_block.* dengan apa pun.
+   - JANGAN isi projection_engine.blacklist_summary.*
+   - JANGAN tulis _field_status untuk path projection_engine.*
+   Server akan menurunkan projection_engine post-extraction dari
+   reward_engine + variant_engine + scope_engine.
+   Setiap key projection_engine yang dikirim LLM akan di-drop.
+
+V10.1-R4. SUBCATEGORY SHAPE (ringkas — detail di tool schema).
+   Field per subcategory mengikuti skeleton V.10.1:
+     variant_id, variant_name, promo_code,
+     calculation_basis, calculation_method, calculation_value, calculation_unit,
+     min_deposit, max_reward, max_reward_unlimited, min_claim,
+     turnover_multiplier, turnover_rule_format,
+     game_domain, eligible_providers, game_names,
+     blacklist {enabled, types[], providers[], games[], rules[], note},
+     reward_type, payout_direction, currency,
+     physical_reward_name, physical_reward_quantity,
+     cash_reward_amount, reward_quantity,
+     voucher_kind, voucher_valid_from, voucher_valid_until, voucher_valid_unlimited,
+     lucky_spin_id, lucky_spin_max_per_day,
+     product_note.
+   Tidak boleh ada key di luar daftar ini.
+
 OUTPUT
-Panggil tool '${TOOL_NAME}' dengan input PkV10Record (boleh partial — server
+Panggil tool '${TOOL_NAME}' dengan input PkV10Record V.10.1 (boleh partial — server
 akan merge ke inert full-shape). JANGAN balas teks. JANGAN mark-down.`;
 
 // ============================================================
@@ -1060,12 +1123,13 @@ function buildExtractorToolSchema(): AnyObj {
             properties: {
               has_subcategories: { type: "boolean" },
               expected_count: { type: ["integer", "null"] },
+              default_variant_id: { type: "string" },
             },
           },
           items_block: {
             type: "object", additionalProperties: false,
             properties: {
-              subcategories: { type: "array", items: { type: "object", additionalProperties: true } },
+              subcategories: { type: "array", items: subcategoryShape() },
             },
           },
         },
@@ -1344,6 +1408,59 @@ function mechanicItemShape(): JSONSchema {
   };
 }
 
+// V.10.1 — Subcategory shape (per-variant). Strict: additionalProperties=false.
+// Mirrors PkV10Subcategory in src/features/promo-knowledge/schema/pk-v10.ts.
+function subcategoryShape(): JSONSchema {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      variant_id: { type: ["string", "null"] },
+      variant_name: { type: ["string", "null"] },
+      promo_code: { type: ["string", "null"] },
+      calculation_basis: enumStrNullable("calculation_basis"),
+      calculation_method: enumStrNullable("calculation_method"),
+      calculation_value: { type: ["number", "null"] },
+      calculation_unit: enumStrNullable("calculation_unit"),
+      min_deposit: { type: ["number", "null"] },
+      max_reward: { type: ["number", "null"] },
+      max_reward_unlimited: { type: "boolean" },
+      min_claim: { type: ["number", "null"] },
+      turnover_multiplier: { type: ["number", "null"] },
+      turnover_rule_format: { type: ["string", "null"] },
+      game_domain: enumStrNullable("game_domain"),
+      eligible_providers: { type: "array", items: { type: "string" } },
+      game_names: { type: "array", items: { type: "string" } },
+      blacklist: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          enabled: { type: "boolean" },
+          types: { type: "array", items: { type: "string" } },
+          providers: { type: "array", items: { type: "string" } },
+          games: { type: "array", items: { type: "string" } },
+          rules: { type: "array", items: { type: "string" } },
+          note: { type: "string" },
+        },
+      },
+      reward_type: enumStrNullable("reward_type"),
+      payout_direction: enumStrNullable("payout_direction"),
+      currency: { type: ["string", "null"] },
+      physical_reward_name: { type: ["string", "null"] },
+      physical_reward_quantity: { type: ["number", "null"] },
+      cash_reward_amount: { type: ["number", "null"] },
+      reward_quantity: { type: ["number", "null"] },
+      voucher_kind: enumStrNullable("voucher_kind"),
+      voucher_valid_from: { type: ["string", "null"] },
+      voucher_valid_until: { type: ["string", "null"] },
+      voucher_valid_unlimited: { type: "boolean" },
+      lucky_spin_id: { type: ["string", "null"] },
+      lucky_spin_max_per_day: { type: ["number", "null"] },
+      product_note: { type: ["string", "null"] },
+    },
+  };
+}
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -1376,6 +1493,155 @@ function toAnthropicImage(img: string): AnyObj | null {
     type: "image",
     source: { type: "base64", media_type: "image/png", data: trimmed },
   };
+}
+
+// ============================================================
+// V.10.1 SCRUB — drop legacy fields & projection_engine before merge
+// ============================================================
+type ScrubStats = {
+  dropped_paths: string[];
+  projection_engine_dropped: boolean;
+  legacy_field_status_dropped: number;
+};
+
+function scrubV101LegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: ScrubStats } {
+  const cleaned: AnyObj = JSON.parse(JSON.stringify(input ?? {}));
+  const stats: ScrubStats = {
+    dropped_paths: [],
+    projection_engine_dropped: false,
+    legacy_field_status_dropped: 0,
+  };
+
+  // 1) projection_engine — extractor must NOT write this.
+  if (cleaned.projection_engine !== undefined) {
+    delete cleaned.projection_engine;
+    stats.projection_engine_dropped = true;
+    stats.dropped_paths.push("projection_engine");
+  }
+
+  // 2) Legacy V.10 reward_engine fields
+  const reward = cleaned.reward_engine as AnyObj | undefined;
+  if (reward && typeof reward === "object") {
+    for (const k of ["max_bonus", "bonus_percentage", "payout_threshold"]) {
+      if (k in reward) {
+        delete reward[k];
+        stats.dropped_paths.push(`reward_engine.${k}`);
+      }
+    }
+    const req = reward.requirement_block as AnyObj | undefined;
+    if (req && typeof req === "object" && "min_base" in req) {
+      delete req.min_base;
+      stats.dropped_paths.push("reward_engine.requirement_block.min_base");
+    }
+  }
+
+  // 3) Legacy scope_engine.game_block fields
+  const scope = cleaned.scope_engine as AnyObj | undefined;
+  const gameBlock = scope?.game_block as AnyObj | undefined;
+  if (gameBlock && typeof gameBlock === "object") {
+    for (const k of ["game_category", "game_providers", "game_exclusions"]) {
+      if (k in gameBlock) {
+        delete gameBlock[k];
+        stats.dropped_paths.push(`scope_engine.game_block.${k}`);
+      }
+    }
+  }
+
+  // 4) Legacy period_engine.validity_block.valid_from_unlimited
+  const period = cleaned.period_engine as AnyObj | undefined;
+  const validity = period?.validity_block as AnyObj | undefined;
+  if (validity && typeof validity === "object" && "valid_from_unlimited" in validity) {
+    delete validity.valid_from_unlimited;
+    stats.dropped_paths.push("period_engine.validity_block.valid_from_unlimited");
+  }
+
+  // 5) Strip subcategories[].confidence
+  const variant = cleaned.variant_engine as AnyObj | undefined;
+  const items = variant?.items_block as AnyObj | undefined;
+  const subs = Array.isArray(items?.subcategories) ? (items!.subcategories as AnyObj[]) : null;
+  if (subs) {
+    for (const s of subs) {
+      if (s && typeof s === "object" && "confidence" in s) {
+        delete (s as AnyObj).confidence;
+        stats.dropped_paths.push("variant_engine.items_block.subcategories[].confidence");
+      }
+    }
+  }
+
+  // 6) Strip _field_status entries pointing to projection_engine.* or legacy paths
+  const fs = cleaned._field_status as Record<string, unknown> | undefined;
+  if (fs && typeof fs === "object") {
+    const legacyPaths = new Set([
+      "reward_engine.max_bonus",
+      "reward_engine.bonus_percentage",
+      "reward_engine.payout_threshold",
+      "reward_engine.requirement_block.min_base",
+      "scope_engine.game_block.game_category",
+      "scope_engine.game_block.game_providers",
+      "scope_engine.game_block.game_exclusions",
+      "period_engine.validity_block.valid_from_unlimited",
+    ]);
+    for (const key of Object.keys(fs)) {
+      if (key.startsWith("projection_engine") || legacyPaths.has(key)) {
+        delete fs[key];
+        stats.legacy_field_status_dropped++;
+      }
+    }
+  }
+
+  return { cleaned, stats };
+}
+
+// ============================================================
+// V.10.1 SINGLE vs MULTI ENFORCEMENT (post-merge)
+// ============================================================
+type VariantEnforceResult = {
+  promo_mode: string;
+  subcategories_cleared: boolean;
+  has_subcategories_set: boolean | null;
+  expected_count_set: number | null;
+};
+
+function enforceSingleVsMulti(record: AnyObj): VariantEnforceResult {
+  const result: VariantEnforceResult = {
+    promo_mode: "",
+    subcategories_cleared: false,
+    has_subcategories_set: null,
+    expected_count_set: null,
+  };
+  const idEngine = record.identity_engine as AnyObj | undefined;
+  const promoBlock = idEngine?.promo_block as AnyObj | undefined;
+  const promoMode = typeof promoBlock?.promo_mode === "string" ? promoBlock.promo_mode : "";
+  result.promo_mode = promoMode;
+
+  const variant = record.variant_engine as AnyObj | undefined;
+  if (!variant || typeof variant !== "object") return result;
+  const summary = variant.summary_block as AnyObj | undefined;
+  const items = variant.items_block as AnyObj | undefined;
+  const subs = Array.isArray(items?.subcategories) ? (items!.subcategories as AnyObj[]) : [];
+
+  if (promoMode === "single") {
+    if (subs.length > 0) {
+      (items as AnyObj).subcategories = [];
+      result.subcategories_cleared = true;
+    }
+    if (summary && typeof summary === "object") {
+      summary.has_subcategories = false;
+      result.has_subcategories_set = false;
+      if (summary.expected_count == null) {
+        summary.expected_count = 1;
+        result.expected_count_set = 1;
+      }
+    }
+  } else if (promoMode === "multi") {
+    if (summary && typeof summary === "object") {
+      summary.has_subcategories = true;
+      result.has_subcategories_set = true;
+      summary.expected_count = subs.length;
+      result.expected_count_set = subs.length;
+    }
+  }
+  return result;
 }
 
 // ============================================================
@@ -1539,6 +1805,13 @@ serve(async (req) => {
     }
 
     // ============================================================
+    // V.10.1 SCRUB — strip forbidden legacy fields + projection_engine
+    // from llmInput BEFORE merge. Single-brain rule: extractor never
+    // writes projection_engine, never emits legacy V.10 paths.
+    // ============================================================
+    const v101Scrub = scrubV101LegacyAndProjection(llmInput);
+
+    // ============================================================
     // SERVER MERGE: build full-shape PkV10Record
     // ============================================================
     let extraction_source = "plain_text";
@@ -1560,7 +1833,7 @@ serve(async (req) => {
 
     // Apply propagated client_id from hint if LLM left it blank — handled
     // post-merge so LLM-supplied value (if any) wins.
-    const merged = mergeIntoInert(inert, llmInput);
+    const merged = mergeIntoInert(inert, v101Scrub.cleaned);
 
     // Stamp authoritative fields AFTER merge (LLM cannot override these).
     const mEngine = merged.meta_engine as AnyObj;
@@ -1580,6 +1853,13 @@ serve(async (req) => {
       clientBlock.client_id = clientIdHint;
       clientBlock.client_id_field_status = "propagated";
     }
+
+    // ============================================================
+    // V.10.1 SINGLE vs MULTI ENFORCEMENT (header vs variant)
+    // promo_mode=single → subcategories WAJIB []; multi → has_subcategories=true.
+    // No new decisions: derived from promo_mode chosen by LLM.
+    // ============================================================
+    const variantEnforce = enforceSingleVsMulti(merged);
 
     // ============================================================
     // FIELD STATUS COMPUTATION
@@ -1648,7 +1928,7 @@ serve(async (req) => {
             demoted++;
           }
           summary._summary_skipped_reason = "record_level_summary_not_applicable_data_in_variant_engine";
-          (propStats as AnyObj).summary_demoted_multi_variant = demoted;
+          (propStats as unknown as AnyObj).summary_demoted_multi_variant = demoted;
         }
       }
     } catch (e) {
@@ -1658,7 +1938,7 @@ serve(async (req) => {
     // GAP #1 — attach propagation stats as observability metadata
     (merged as AnyObj)._propagation_stats = propStats;
 
-    console.log("[pk-extractor V10] OK", {
+    console.log("[pk-extractor V10.1] OK", {
       model: modelUsed,
       stop_reason: stopReason,
       extraction_source,
@@ -1667,6 +1947,8 @@ serve(async (req) => {
       ai_confidence_keys: Object.keys(aiConfidence).length,
       field_status_keys: Object.keys(propagated).length,
       propagation_stats: propStats,
+      v101_scrub: v101Scrub.stats,
+      variant_enforce: variantEnforce,
       schema_version: ((merged.meta_engine as AnyObj).schema_block as AnyObj).schema_version,
     });
 
@@ -1679,7 +1961,7 @@ serve(async (req) => {
         usage: aiData?.usage ?? null,
         latency_ms: latencyMs,
         stop_reason: stopReason,
-        schema_version: "V.10",
+        schema_version: "V.10.1",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
