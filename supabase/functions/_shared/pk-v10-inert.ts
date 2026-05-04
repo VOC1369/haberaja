@@ -125,13 +125,13 @@ export function createInertPkV10Record(
     },
 
     payment_engine: {
-      deposit_block: { deposit_method: "", deposit_rate: null },
+      deposit_block: { deposit_method: "", deposit_method_providers: [], deposit_rate: null },
       method_whitelist_block: { methods: [], providers: [] },
       method_blacklist_block: { methods: [], providers: [] },
     },
 
     scope_engine: {
-      game_block: { game_domain: "", markets: [], eligible_providers: [] },
+      game_block: { game_domain: "", markets: [], applicable_markets: [], eligible_providers: [] },
       platform_block: { platform_access: "", apk_required: false },
       geo_block: { geo_restriction: "" },
       blacklist_block: { types: [], providers: [], games: [], rules: [] },
@@ -163,7 +163,7 @@ export function createInertPkV10Record(
     },
 
     variant_engine: {
-      summary_block: { has_subcategories: false, expected_count: null },
+      summary_block: { has_subcategories: false, expected_count: null, default_variant_id: "" },
       items_block: { subcategories: [] },
     },
 
