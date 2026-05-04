@@ -1656,6 +1656,13 @@ serve(async (req) => {
     }
 
     // ============================================================
+    // V.10.1 SCRUB — strip forbidden legacy fields + projection_engine
+    // from llmInput BEFORE merge. Single-brain rule: extractor never
+    // writes projection_engine, never emits legacy V.10 paths.
+    // ============================================================
+    const v101Scrub = scrubV101LegacyAndProjection(llmInput);
+
+    // ============================================================
     // SERVER MERGE: build full-shape PkV10Record
     // ============================================================
     let extraction_source = "plain_text";
