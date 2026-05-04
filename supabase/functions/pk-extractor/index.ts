@@ -1128,7 +1128,7 @@ function buildExtractorToolSchema(): AnyObj {
           items_block: {
             type: "object", additionalProperties: false,
             properties: {
-              subcategories: { type: "array", items: { type: "object", additionalProperties: true } },
+              subcategories: { type: "array", items: subcategoryShape() },
             },
           },
         },
