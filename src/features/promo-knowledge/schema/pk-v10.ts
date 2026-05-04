@@ -38,11 +38,19 @@
  */
 
 export const PK_V10_SCHEMA_NAME = "PKB_Wolfbrain" as const;
-export const PK_V10_SCHEMA_VERSION = "V.10" as const;
-export const PK_V10_LOCKED_AT = "2026-04-28" as const;
+export const PK_V10_SCHEMA_VERSION = "V.10.1" as const;
+export const PK_V10_BASE_LOCKED_AT = "2026-04-28" as const;
+export const PK_V10_RELEASED_AT = "2026-05-04" as const;
 export const PK_V10_CREATED_BY = "habe_raja" as const;
+export const PK_V10_OWNER =
+  "Habe Raja — Wolfbrain / Promo Knowledge Base" as const;
 export const PK_V10_EXTRACTOR = "wolfclaw@claude-sonnet-4-5" as const;
-export const PK_V10_PROMPT_VERSION = "V.10_2026-04-28" as const;
+export const PK_V10_PROMPT_VERSION = "V.10.1_2026-05-04" as const;
+export const PK_V10_AMENDMENT_TYPE = "minor" as const;
+export const PK_V10_AMENDMENT_REASON =
+  "Naming cleanup, duplicate removal, variant field-level clarification" as const;
+/** @deprecated retained for backward import compatibility — use PK_V10_BASE_LOCKED_AT */
+export const PK_V10_LOCKED_AT = PK_V10_BASE_LOCKED_AT;
 
 // ──────────────────────────────────────────────────────────────────────────
 // ENUM REGISTRIES — 1:1 from WB_F3_Enum_Registry V.10 (locked 2026-04-28)
@@ -1046,6 +1054,8 @@ export interface PkV10IdentityEngine {
   client_block: {
     client_id: string;
     client_id_field_status: string; // PkV10ClientIdFieldStatus when filled
+    /** V.10.1 — confidence in client_id resolution. Reuses PkV10ReviewConfidence vocabulary. */
+    client_id_confidence: string;
     client_name: string;
   };
   promo_block: {
@@ -1070,8 +1080,11 @@ export interface PkV10ClassificationEngine {
   };
   meta_block: {
     quality_flags: string[]; // PkV10QualityFlag[] when filled
-    evidence_count: number;
+    /** V.10.1 — nullable per skeleton. */
+    evidence_count: number | null;
     override: boolean;
+    /** V.10.1 — explanation when override=true. */
+    override_detail: string | null;
     prompt_version: string;
     latency_ms: number | null;
   };
@@ -1178,6 +1191,8 @@ export interface PkV10ProofEngine {
 export interface PkV10PaymentEngine {
   deposit_block: {
     deposit_method: string; // PkV10DepositMethod when filled
+    /** V.10.1 — providers offering the deposit_method. */
+    deposit_method_providers: string[];
     deposit_rate: number | null;
   };
   method_whitelist_block: {
@@ -1194,6 +1209,8 @@ export interface PkV10ScopeEngine {
   game_block: {
     game_domain: string; // PkV10GameDomain when filled
     markets: string[];
+    /** V.10.1 — markets the promo actually applies to. */
+    applicable_markets: string[];
     eligible_providers: string[]; // PkV10GameProvider[] when filled
   };
   platform_block: {
@@ -1273,43 +1290,77 @@ export interface PkV10LoyaltyEngine {
 }
 
 /**
- * Per-variant subcategory shape — OPT-IN TYPING ONLY.
+ * Per-variant subcategory shape — V.10.1 canonical (31 fields per skeleton).
  *
- * Phase 2, Step 3.1.
+ * Source of truth: PKB_Wolfbrain_V10.1_skeleton.json
+ *   `variant_engine.items_block.subcategories[]`
  *
- * NOT a runtime schema change:
- *  - `PkV10VariantEngine.items_block.subcategories` remains `unknown[]`.
- *  - This interface exists purely so per-variant selectors (Step 3.2) can
- *    narrow individual entries via an explicit cast (e.g.
- *    `subcategories[i] as PkV10Subcategory | undefined`).
- *  - Inert factory, extractor, validator, and UI all stay untouched.
- *
- * Field set is the minimal DIRECT (1:1 mappable) surface identified by the
- * Step 4B audit. All fields optional + nullable: presence is not guaranteed
- * by the V10 contract, and selectors must never invent values.
+ * RULES:
+ *  - All fields optional at the type level (skeleton presence ≠ runtime
+ *    guarantee), but values follow skeleton blank conventions:
+ *      "" = field set, intentionally empty
+ *      null = field not set / unknown
+ *      [] = empty array
+ *      false = explicit boolean default
+ *  - Selectors must read these paths DIRECTLY. No fallback to `reward_engine.*`.
+ *  - The closed shape replaces the V.10 minimal opt-in subset
+ *    (game_category / game_providers / game_exclusions / max_bonus /
+ *     bonus_percentage are GONE — replaced by `game_domain`,
+ *     `eligible_providers`, `blacklist`, `max_reward`,
+ *     `calculation_value`+`calculation_unit`).
  */
+export interface PkV10SubcategoryBlacklist {
+  enabled?: boolean;
+  types?: string[];
+  providers?: string[];
+  games?: string[];
+  rules?: string[];
+  note?: string;
+}
+
 export interface PkV10Subcategory {
   variant_id?: string | null;
   variant_name?: string | null;
-  game_category?: string | null;
-  game_providers?: string[] | null;
-  game_exclusions?: string[] | null;
+  promo_code?: string | null;
+  calculation_basis?: string | null; // PkV10CalculationBasis when filled
+  calculation_method?: string | null; // PkV10CalculationMethod when filled
+  calculation_value?: number | null;
+  calculation_unit?: string | null; // PkV10CalculationUnit when filled
   min_deposit?: number | null;
-  max_bonus?: number | null;
-  bonus_percentage?: number | null;
+  max_reward?: number | null;
+  max_reward_unlimited?: boolean;
+  min_claim?: number | null;
   turnover_multiplier?: number | null;
+  turnover_rule_format?: string | null;
+  game_domain?: string | null; // PkV10GameDomain when filled
+  eligible_providers?: string[];
+  game_names?: string[];
+  blacklist?: PkV10SubcategoryBlacklist;
+  reward_type?: string | null; // PkV10RewardType when filled
+  payout_direction?: string | null; // PkV10PayoutDirection when filled
   currency?: string | null;
-  // Permissive tail — entries may carry additional fields (e.g. PkV10TierDimension).
-  [key: string]: unknown;
+  physical_reward_name?: string | null;
+  physical_reward_quantity?: number | null;
+  cash_reward_amount?: number | null;
+  reward_quantity?: number | null;
+  voucher_kind?: string | null; // PkV10VoucherKind when filled
+  voucher_valid_from?: string | null;
+  voucher_valid_until?: string | null;
+  voucher_valid_unlimited?: boolean;
+  lucky_spin_id?: string | null;
+  lucky_spin_max_per_day?: number | null;
+  product_note?: string | null;
 }
 
 export interface PkV10VariantEngine {
   summary_block: {
     has_subcategories: boolean;
     expected_count: number | null;
+    /** V.10.1 — variant_id of the default selection when has_subcategories=true. */
+    default_variant_id: string;
   };
   items_block: {
-    subcategories: unknown[]; // entries may carry PkV10TierDimension / PkV10Subcategory
+    subcategories: PkV10Subcategory[];
   };
 }
 
@@ -1411,11 +1462,15 @@ export interface PkV10ProjectionEngine {
     main_reward_percent: number | null;
     main_reward_value: number | null;
     main_reward_unit: string;
-    max_bonus: number | null;
-    min_base: number | null;
+    /** V.10.1 — renamed from legacy `max_bonus`. */
+    max_reward: number | null;
+    /** V.10.1 — renamed from legacy `min_base`. */
+    min_deposit: number | null;
     payout_direction: string; // PkV10PayoutDirection when filled
     turnover_multiplier: number | null;
     turnover_basis: string; // PkV10TurnoverBasis when filled
+    /** V.10.1 — reason the deterministic projector skipped summary synthesis. */
+    _summary_skipped_reason: string;
   };
   claim_summary_block: {
     primary_claim_method: string; // PkV10ClaimMethod when filled
@@ -1428,9 +1483,17 @@ export interface PkV10ProjectionEngine {
   };
   scope_summary_block: {
     game_domain: string; // PkV10GameDomain when filled
-    game_types: string[];
-    game_providers: string[]; // PkV10GameProvider[] when filled
-    game_exclusions: string[];
+    /** V.10.1 — renamed from legacy `game_types`. */
+    game_domains: string[];
+    /** V.10.1 — renamed from legacy `game_providers`. */
+    eligible_providers: string[]; // PkV10GameProvider[] when filled
+    /** V.10.1 — replaces flat `game_exclusions`. */
+    blacklist_summary: {
+      types: string[];
+      providers: string[];
+      games: string[];
+      rules: string[];
+    };
     platform_access: string; // PkV10PlatformAccess when filled
     apk_required: boolean;
     geo_restriction: string; // PkV10GeoRestriction when filled
@@ -1464,7 +1527,8 @@ export interface PkV10MetaEngine {
     html_was_normalized: boolean;
     client_id_source: string | null; // PkV10ClientIdFieldStatus subset
     propagated_fields: string[];
-    ambiguous_blacklists: number;
+    /** V.10.1 — nullable per skeleton. */
+    ambiguous_blacklists: number | null;
     extracted_at: string;
     classification_overridden: boolean;
     classification_override_reason: string;
@@ -1473,10 +1537,19 @@ export interface PkV10MetaEngine {
   schema_block: {
     schema_name: typeof PK_V10_SCHEMA_NAME;
     schema_version: typeof PK_V10_SCHEMA_VERSION;
-    locked_at: typeof PK_V10_LOCKED_AT;
+    /** V.10.1 — renamed from legacy `locked_at`. Date schema baseline was locked. */
+    base_locked_at: typeof PK_V10_BASE_LOCKED_AT;
+    /** V.10.1 — date this minor amendment was released. */
+    released_at: typeof PK_V10_RELEASED_AT;
     created_by: typeof PK_V10_CREATED_BY;
+    /** V.10.1 — schema owner display name. */
+    owner: typeof PK_V10_OWNER;
     status: PkV10SchemaStatus;
     extractor: typeof PK_V10_EXTRACTOR;
+    /** V.10.1 — amendment type for audit log. */
+    amendment_type: typeof PK_V10_AMENDMENT_TYPE;
+    /** V.10.1 — amendment reason for audit log. */
+    amendment_reason: typeof PK_V10_AMENDMENT_REASON;
   };
 }
 
@@ -1524,6 +1597,12 @@ export interface PkV10Record {
 
   ai_confidence: Record<string, number>;
   _field_status: Record<string, PkV10FieldStatus | string>;
+  /** V.10.1 — root log: per-field propagation provenance map. */
+  _propagation_stats: Record<string, unknown>;
+  /** V.10.1 — root log: append-only human override entries. */
+  _human_override_log: unknown[];
+  /** V.10.1 — root log: append-only AI resolver entries. */
+  _ai_resolver_log: unknown[];
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -1566,6 +1645,7 @@ export function createInertPkV10Record(
       client_block: {
         client_id: "",
         client_id_field_status: "",
+        client_id_confidence: "",
         client_name: "",
       },
       promo_block: {
@@ -1590,8 +1670,9 @@ export function createInertPkV10Record(
       },
       meta_block: {
         quality_flags: [],
-        evidence_count: 0,
+        evidence_count: null,
         override: false,
+        override_detail: null,
         prompt_version: PK_V10_PROMPT_VERSION,
         latency_ms: null,
       },
@@ -1652,13 +1733,22 @@ export function createInertPkV10Record(
     },
 
     payment_engine: {
-      deposit_block: { deposit_method: "", deposit_rate: null },
+      deposit_block: {
+        deposit_method: "",
+        deposit_method_providers: [],
+        deposit_rate: null,
+      },
       method_whitelist_block: { methods: [], providers: [] },
       method_blacklist_block: { methods: [], providers: [] },
     },
 
     scope_engine: {
-      game_block: { game_domain: "", markets: [], eligible_providers: [] },
+      game_block: {
+        game_domain: "",
+        markets: [],
+        applicable_markets: [],
+        eligible_providers: [],
+      },
       platform_block: { platform_access: "", apk_required: false },
       geo_block: { geo_restriction: "" },
       blacklist_block: { types: [], providers: [], games: [], rules: [] },
@@ -1694,7 +1784,11 @@ export function createInertPkV10Record(
     },
 
     variant_engine: {
-      summary_block: { has_subcategories: false, expected_count: null },
+      summary_block: {
+        has_subcategories: false,
+        expected_count: null,
+        default_variant_id: "",
+      },
       items_block: { subcategories: [] },
     },
 
@@ -1760,7 +1854,7 @@ export function createInertPkV10Record(
 
     projection_engine: {
       _description:
-        "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
+        "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly. Naming follows V.10.1 canonical. Not source of truth.",
       summary_block: {
         promo_summary: "",
         main_trigger: "",
@@ -1768,11 +1862,12 @@ export function createInertPkV10Record(
         main_reward_percent: null,
         main_reward_value: null,
         main_reward_unit: "",
-        max_bonus: null,
-        min_base: null,
+        max_reward: null,
+        min_deposit: null,
         payout_direction: "",
         turnover_multiplier: null,
         turnover_basis: "",
+        _summary_skipped_reason: "",
       },
       claim_summary_block: {
         primary_claim_method: "",
@@ -1785,9 +1880,14 @@ export function createInertPkV10Record(
       },
       scope_summary_block: {
         game_domain: "",
-        game_types: [],
-        game_providers: [],
-        game_exclusions: [],
+        game_domains: [],
+        eligible_providers: [],
+        blacklist_summary: {
+          types: [],
+          providers: [],
+          games: [],
+          rules: [],
+        },
         platform_access: "",
         apk_required: false,
         geo_restriction: "",
@@ -1819,7 +1919,7 @@ export function createInertPkV10Record(
         html_was_normalized: false,
         client_id_source: null,
         propagated_fields: [],
-        ambiguous_blacklists: 0,
+        ambiguous_blacklists: null,
         extracted_at: now,
         classification_overridden: false,
         classification_override_reason: "",
@@ -1828,14 +1928,21 @@ export function createInertPkV10Record(
       schema_block: {
         schema_name: PK_V10_SCHEMA_NAME,
         schema_version: PK_V10_SCHEMA_VERSION,
-        locked_at: PK_V10_LOCKED_AT,
+        base_locked_at: PK_V10_BASE_LOCKED_AT,
+        released_at: PK_V10_RELEASED_AT,
         created_by: PK_V10_CREATED_BY,
+        owner: PK_V10_OWNER,
         status: "locked",
         extractor: PK_V10_EXTRACTOR,
+        amendment_type: PK_V10_AMENDMENT_TYPE,
+        amendment_reason: PK_V10_AMENDMENT_REASON,
       },
     },
 
     ai_confidence: {},
     _field_status: {},
+    _propagation_stats: {},
+    _human_override_log: [],
+    _ai_resolver_log: [],
   };
 }

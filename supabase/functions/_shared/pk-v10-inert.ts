@@ -14,10 +14,14 @@
 import {
   PK_V10_SCHEMA_NAME,
   PK_V10_SCHEMA_VERSION,
-  PK_V10_LOCKED_AT,
+  PK_V10_BASE_LOCKED_AT,
+  PK_V10_RELEASED_AT,
   PK_V10_CREATED_BY,
+  PK_V10_OWNER,
   PK_V10_EXTRACTOR,
   PK_V10_PROMPT_VERSION,
+  PK_V10_AMENDMENT_TYPE,
+  PK_V10_AMENDMENT_REASON,
 } from "./pk-v10-enums.ts";
 
 export type AnyObj = Record<string, unknown>;
@@ -44,7 +48,7 @@ export function createInertPkV10Record(
     updated_at: now,
 
     identity_engine: {
-      client_block: { client_id: "", client_id_field_status: "", client_name: "" },
+      client_block: { client_id: "", client_id_field_status: "", client_id_confidence: "", client_name: "" },
       promo_block: { promo_name: "", promo_type: "", target_user: "", promo_mode: "" },
     },
 
@@ -62,8 +66,9 @@ export function createInertPkV10Record(
       },
       meta_block: {
         quality_flags: [],
-        evidence_count: 0,
+        evidence_count: null,
         override: false,
+        override_detail: null,
         prompt_version: PK_V10_PROMPT_VERSION,
         latency_ms: null,
       },
@@ -120,13 +125,13 @@ export function createInertPkV10Record(
     },
 
     payment_engine: {
-      deposit_block: { deposit_method: "", deposit_rate: null },
+      deposit_block: { deposit_method: "", deposit_method_providers: [], deposit_rate: null },
       method_whitelist_block: { methods: [], providers: [] },
       method_blacklist_block: { methods: [], providers: [] },
     },
 
     scope_engine: {
-      game_block: { game_domain: "", markets: [], eligible_providers: [] },
+      game_block: { game_domain: "", markets: [], applicable_markets: [], eligible_providers: [] },
       platform_block: { platform_access: "", apk_required: false },
       geo_block: { geo_restriction: "" },
       blacklist_block: { types: [], providers: [], games: [], rules: [] },
@@ -158,7 +163,7 @@ export function createInertPkV10Record(
     },
 
     variant_engine: {
-      summary_block: { has_subcategories: false, expected_count: null },
+      summary_block: { has_subcategories: false, expected_count: null, default_variant_id: "" },
       items_block: { subcategories: [] },
     },
 
@@ -220,7 +225,7 @@ export function createInertPkV10Record(
 
     projection_engine: {
       _description:
-        "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
+        "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly. Naming follows V.10.1 canonical. Not source of truth.",
       summary_block: {
         promo_summary: "",
         main_trigger: "",
@@ -228,11 +233,12 @@ export function createInertPkV10Record(
         main_reward_percent: null,
         main_reward_value: null,
         main_reward_unit: "",
-        max_bonus: null,
-        min_base: null,
+        max_reward: null,
+        min_deposit: null,
         payout_direction: "",
         turnover_multiplier: null,
         turnover_basis: "",
+        _summary_skipped_reason: "",
       },
       claim_summary_block: {
         primary_claim_method: "",
@@ -245,9 +251,9 @@ export function createInertPkV10Record(
       },
       scope_summary_block: {
         game_domain: "",
-        game_types: [],
-        game_providers: [],
-        game_exclusions: [],
+        game_domains: [],
+        eligible_providers: [],
+        blacklist_summary: { types: [], providers: [], games: [], rules: [] },
         platform_access: "",
         apk_required: false,
         geo_restriction: "",
@@ -277,7 +283,7 @@ export function createInertPkV10Record(
         html_was_normalized: false,
         client_id_source: null,
         propagated_fields: [],
-        ambiguous_blacklists: 0,
+        ambiguous_blacklists: null,
         extracted_at: now,
         classification_overridden: false,
         classification_override_reason: "",
@@ -286,15 +292,22 @@ export function createInertPkV10Record(
       schema_block: {
         schema_name: PK_V10_SCHEMA_NAME,
         schema_version: PK_V10_SCHEMA_VERSION,
-        locked_at: PK_V10_LOCKED_AT,
+        base_locked_at: PK_V10_BASE_LOCKED_AT,
+        released_at: PK_V10_RELEASED_AT,
         created_by: PK_V10_CREATED_BY,
+        owner: PK_V10_OWNER,
         status: "locked",
         extractor: PK_V10_EXTRACTOR,
+        amendment_type: PK_V10_AMENDMENT_TYPE,
+        amendment_reason: PK_V10_AMENDMENT_REASON,
       },
     },
 
     ai_confidence: {} as Record<string, number>,
     _field_status: {} as Record<string, string>,
+    _propagation_stats: {} as Record<string, unknown>,
+    _human_override_log: [] as unknown[],
+    _ai_resolver_log: [] as unknown[],
   };
 }
 
@@ -394,7 +407,11 @@ const SYSTEM_EXPLICIT_PATHS = new Set([
   "classification_engine.meta_block.prompt_version",
   "meta_engine.schema_block.schema_name",
   "meta_engine.schema_block.schema_version",
-  "meta_engine.schema_block.locked_at",
+  "meta_engine.schema_block.base_locked_at",
+  "meta_engine.schema_block.released_at",
+  "meta_engine.schema_block.owner",
+  "meta_engine.schema_block.amendment_type",
+  "meta_engine.schema_block.amendment_reason",
   "meta_engine.schema_block.created_by",
   "meta_engine.schema_block.status",
   "meta_engine.schema_block.extractor",
