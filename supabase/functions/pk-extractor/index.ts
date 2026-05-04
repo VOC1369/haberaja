@@ -1717,7 +1717,7 @@ serve(async (req) => {
     // Build proxy request
     const tool = {
       name: TOOL_NAME,
-      description: "Ekstrak konten promo ke PKB_Wolfbrain V.10 (PkV10Record).",
+      description: "Ekstrak konten promo ke PKB_Wolfbrain V.10.1 (PkV10Record). Source of truth: PKB_Wolfbrain_V10.1_skeleton.json. WAJIB isi _field_status[path] untuk SETIAP field operasional (explicit / inferred / propagated / derived / not_stated / not_applicable) — Admin Verify pakai _field_status sebagai authority gate. promo_mode path resmi: identity_engine.promo_block.promo_mode. Multi-mode → variant_engine.items_block.subcategories[] = source of truth, root reward_engine.calculation_value/max_reward = null. projection_engine = derived-only, JANGAN ditulis langsung.",
       input_schema: buildExtractorToolSchema(),
     };
 
