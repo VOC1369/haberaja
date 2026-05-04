@@ -1706,6 +1706,13 @@ serve(async (req) => {
     }
 
     // ============================================================
+    // V.10.1 SINGLE vs MULTI ENFORCEMENT (header vs variant)
+    // promo_mode=single → subcategories WAJIB []; multi → has_subcategories=true.
+    // No new decisions: derived from promo_mode chosen by LLM.
+    // ============================================================
+    const variantEnforce = enforceSingleVsMulti(merged);
+
+    // ============================================================
     // FIELD STATUS COMPUTATION
     // ============================================================
     const aiConfidence = (merged.ai_confidence as Record<string, number>) ?? {};
