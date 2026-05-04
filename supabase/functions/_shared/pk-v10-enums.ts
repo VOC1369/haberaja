@@ -14,11 +14,19 @@
  */
 
 export const PK_V10_SCHEMA_NAME = "PKB_Wolfbrain";
-export const PK_V10_SCHEMA_VERSION = "V.10";
-export const PK_V10_LOCKED_AT = "2026-04-28";
+export const PK_V10_SCHEMA_VERSION = "V.10.1";
+export const PK_V10_BASE_LOCKED_AT = "2026-04-28";
+export const PK_V10_RELEASED_AT = "2026-05-04";
 export const PK_V10_CREATED_BY = "habe_raja";
+export const PK_V10_OWNER =
+  "Habe Raja — Wolfbrain / Promo Knowledge Base";
 export const PK_V10_EXTRACTOR = "wolfclaw@claude-sonnet-4-5";
-export const PK_V10_PROMPT_VERSION = "V.10_2026-04-28";
+export const PK_V10_PROMPT_VERSION = "V.10.1_2026-05-04";
+export const PK_V10_AMENDMENT_TYPE = "minor";
+export const PK_V10_AMENDMENT_REASON =
+  "Naming cleanup, duplicate removal, variant field-level clarification";
+/** @deprecated retained for backward import compatibility — use PK_V10_BASE_LOCKED_AT */
+export const PK_V10_LOCKED_AT = PK_V10_BASE_LOCKED_AT;
 
 // ─── 1.1 Identity Engine ──────────────────────────────────────────────────
 export const PK_V10_PROMO_TYPE = [
