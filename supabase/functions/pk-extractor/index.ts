@@ -1640,6 +1640,16 @@ function enforceSingleVsMulti(record: AnyObj): VariantEnforceResult {
       summary.expected_count = subs.length;
       result.expected_count_set = subs.length;
     }
+    // V.10.1 hardening: pada multi-mode, subcategories[] adalah source of
+    // truth per-varian. Demote root reward numeric fields agar tidak
+    // dianggap shared. Non-numeric (basis/method/unit/reward_type/
+    // payout_direction/currency) dibiarkan — kalau benar shared, valid;
+    // kalau tidak, consumer wajib baca per-varian.
+    const reward = record.reward_engine as AnyObj | undefined;
+    if (reward && typeof reward === "object") {
+      if (reward.calculation_value != null) reward.calculation_value = null;
+      if (reward.max_reward != null) reward.max_reward = null;
+    }
   }
   return result;
 }
