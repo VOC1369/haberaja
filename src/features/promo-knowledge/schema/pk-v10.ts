@@ -1054,6 +1054,8 @@ export interface PkV10IdentityEngine {
   client_block: {
     client_id: string;
     client_id_field_status: string; // PkV10ClientIdFieldStatus when filled
+    /** V.10.1 — confidence in client_id resolution. Reuses PkV10ReviewConfidence vocabulary. */
+    client_id_confidence: string;
     client_name: string;
   };
   promo_block: {
@@ -1078,8 +1080,11 @@ export interface PkV10ClassificationEngine {
   };
   meta_block: {
     quality_flags: string[]; // PkV10QualityFlag[] when filled
-    evidence_count: number;
+    /** V.10.1 — nullable per skeleton. */
+    evidence_count: number | null;
     override: boolean;
+    /** V.10.1 — explanation when override=true. */
+    override_detail: string | null;
     prompt_version: string;
     latency_ms: number | null;
   };
