@@ -95,6 +95,17 @@ export function saveRecord(rec: PkV10Record): PkV10Record {
   }
 
   writeIndex(idx);
+
+  // Phase 0 — UI plumbing only. Notify listeners (PromoKnowledgeSection) to
+  // reload V.10.1 draft list. Does not mutate data, schema, or storage.
+  try {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("pk-v10-storage-updated"));
+    }
+  } catch {
+    /* no-op */
+  }
+
   return stamped;
 }
 

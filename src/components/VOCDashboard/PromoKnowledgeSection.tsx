@@ -54,6 +54,13 @@ import { PromoItem, deletePromoDraft, duplicatePromo, normalizePromoData } from 
 import { promoKB, localDraftKB } from "@/lib/promo-storage";
 import { generateTermsList, formatNumber } from "./PromoFormWizard/Step4Review";
 import { inferRewardType, formatSubcategoryName, getRewardBadgeInfo } from "@/lib/reward-normalization";
+import {
+  listRecords as listV10Records,
+  loadRecord as loadV10Record,
+  deleteRecord as deleteV10Record,
+  type PkIndexEntry as PkV10IndexEntry,
+} from "@/features/promo-knowledge/storage/local-storage";
+import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 
 type ViewMode = "list" | "form" | "upload";
 
@@ -85,6 +92,23 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const [showJsonDialog, setShowJsonDialog] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [isImportingJson, setIsImportingJson] = useState(false);
+
+  // ── Phase 0 — V.10.1 draft list (primary flow) ─────────────────────────
+  const [v10Drafts, setV10Drafts] = useState<PkV10IndexEntry[]>([]);
+  const [v10ViewJson, setV10ViewJson] = useState<{ id: string; name: string; json: string } | null>(null);
+  const [v10DeleteId, setV10DeleteId] = useState<string | null>(null);
+  // Legacy V.09 is quarantined: hidden from main UI by default, code retained
+  // for reference/emergency. Do NOT remove until V.10.1 flow is stable.
+  const [showLegacyV09, setShowLegacyV09] = useState(false);
+
+  const loadV10Drafts = () => {
+    try {
+      setV10Drafts(listV10Records());
+    } catch (err) {
+      console.error('[PromoKnowledgeSection] V.10.1 list failed:', err);
+      setV10Drafts([]);
+    }
+  };
 
   const handleJsonImport = async () => {
     if (!jsonInput.trim()) {
@@ -196,6 +220,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
       setViewMode("list");
       setEditingPromo(undefined);
       loadPromos(); // Reload data saat navigasi dari Pseudo Knowledge
+      loadV10Drafts();
     }
   }, [forceResetKey]);
 
@@ -205,16 +230,23 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
       console.log('[PromoKnowledgeSection] Storage event, reloading promos...');
       loadPromos();
     };
-    
+    const handleV10Event = () => {
+      console.log('[PromoKnowledgeSection] V.10.1 storage event, reloading drafts...');
+      loadV10Drafts();
+    };
+
     window.addEventListener('promo-storage-updated', handleStorageEvent);
-    
+    window.addEventListener('pk-v10-storage-updated', handleV10Event);
+
     return () => {
       window.removeEventListener('promo-storage-updated', handleStorageEvent);
+      window.removeEventListener('pk-v10-storage-updated', handleV10Event);
     };
   }, []);
 
   useEffect(() => {
     loadPromos();
+    loadV10Drafts();
   }, []);
 
   const handleEdit = (promo: PromoItem) => {
@@ -799,11 +831,57 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     );
   }
 
+  // ── Phase 0 — V.10.1 handlers ────────────────────────────────────────────
+  const handleV10ViewJson = (id: string, name: string) => {
+    const rec = loadV10Record(id);
+    if (!rec) {
+      toast.error("Draft V.10.1 tidak ditemukan");
+      return;
+    }
+    setV10ViewJson({ id, name: name || "(untitled)", json: JSON.stringify(rec, null, 2) });
+  };
+
+  const handleV10CopyJson = async (id: string) => {
+    const rec = loadV10Record(id);
+    if (!rec) {
+      toast.error("Draft V.10.1 tidak ditemukan");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(rec, null, 2));
+      toast.success("JSON V.10.1 disalin ke clipboard");
+    } catch {
+      toast.error("Gagal menyalin JSON");
+    }
+  };
+
+  const handleV10DeleteConfirm = () => {
+    if (!v10DeleteId) return;
+    try {
+      deleteV10Record(v10DeleteId);
+      toast.success("Draft V.10.1 dihapus");
+      loadV10Drafts();
+    } catch {
+      toast.error("Gagal menghapus draft V.10.1");
+    } finally {
+      setV10DeleteId(null);
+    }
+  };
+
+  const v10VariantCount = (id: string): number => {
+    try {
+      const rec = loadV10Record(id);
+      return rec?.variant_engine?.items_block?.subcategories?.length ?? 0;
+    } catch {
+      return 0;
+    }
+  };
+
   // List View
   return (
     <div className="page-wrapper">
       <div className="space-y-5">
-      {/* Top Row: Back button left, Action buttons right */}
+      {/* Top Row: Back button left, action buttons right */}
       <div className="flex items-center justify-between">
         <Button
           variant="outline"
@@ -814,42 +892,137 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           Kembali
         </Button>
         <div className="flex gap-2">
-          <Button 
+          <Button
             variant="outline"
-            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-            onClick={handleRegenerateAllSK}
-            disabled={isRegeneratingAll || items.length === 0}
+            className="h-11 px-6 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => setShowLegacyV09((v) => !v)}
+            title="Legacy V.09 promo bank — quarantined, reference only"
           >
-            {isRegeneratingAll ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
+            {showLegacyV09 ? "Hide Legacy V.09" : "Show Legacy V.09"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Title — V.10.1 PRIMARY */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-button-hover">
+            Promo Knowledge Drafts — V.10.1
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Source of truth: <code className="font-mono">pk:rec</code> /{" "}
+            <code className="font-mono">pk:index</code>. Drafts dibuat dari Pseudo Extractor → Gunakan Promo.
+          </p>
+        </div>
+      </div>
+
+      {/* V.10.1 Drafts Table */}
+      <div className="border border-border rounded-lg overflow-hidden">
+        {v10Drafts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="h-16 w-16 rounded-full bg-button-hover/20 flex items-center justify-center mb-4">
+              <Gift className="h-8 w-8 text-button-hover" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Belum ada draft V.10.1
+            </h3>
+            <p className="text-muted-foreground mb-2 max-w-md">
+              Buka <strong>Pseudo Extractor</strong>, jalankan ekstraksi, lalu klik{" "}
+              <strong>Gunakan Promo</strong> untuk membuat draft V.10.1 di sini.
+            </p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted hover:bg-muted">
+                <TableHead className="text-foreground font-semibold w-12 text-center">No</TableHead>
+                <TableHead className="text-foreground font-semibold">Promo Name</TableHead>
+                <TableHead className="text-foreground font-semibold">Schema</TableHead>
+                <TableHead className="text-foreground font-semibold">State</TableHead>
+                <TableHead className="text-foreground font-semibold">Variants</TableHead>
+                <TableHead className="text-foreground font-semibold">Last Updated</TableHead>
+                <TableHead className="text-right text-foreground font-semibold">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {v10Drafts.map((d, idx) => {
+                const variantCount = v10VariantCount(d.record_id);
+                return (
+                  <TableRow key={d.record_id} className="hover:bg-card">
+                    <TableCell className="py-4 text-center text-sm text-muted-foreground font-medium">
+                      {idx + 1}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="font-medium text-foreground">{d.promo_name || "(untitled)"}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{d.record_id.slice(0, 12)}…</div>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Badge className="bg-button-hover/20 text-button-hover border border-button-hover/30">V.10.1</Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Badge className="bg-warning/20 text-warning border border-warning/30">{d.state || "draft"}</Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      {variantCount > 1 ? (
+                        <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                          Multi Variant ({variantCount})
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">{variantCount || "-"}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-4 text-sm text-muted-foreground">
+                      {formatLastUpdated(d.updated_at)}
+                    </TableCell>
+                    <TableCell className="py-4 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleV10ViewJson(d.record_id, d.promo_name)}>
+                            <Eye className="h-4 w-4 mr-2" /> Review JSON
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleV10CopyJson(d.record_id)}>
+                            <Copy className="h-4 w-4 mr-2" /> Copy JSON
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem disabled title="Edit Form Wizard belum tersedia untuk schema V.10.1">
+                            <Pencil className="h-4 w-4 mr-2" /> Edit (V.10 form — coming)
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setV10DeleteId(d.record_id)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete Draft
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      {/* ── LEGACY V.09 — QUARANTINED (reference/emergency only) ───────────── */}
+      {showLegacyV09 && (<>
+      <div className="flex items-center justify-between border-t border-dashed border-border pt-5">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover" onClick={handleRegenerateAllSK} disabled={isRegeneratingAll || items.length === 0}>
+            {isRegeneratingAll ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             {isRegeneratingAll ? 'Regenerating...' : 'Regenerate All S&K'}
           </Button>
-          <Button 
-            variant="outline"
-            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-            onClick={() => setViewMode("upload")}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload CSV
+          <Button variant="outline" className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover" onClick={() => setViewMode("upload")}>
+            <Upload className="h-4 w-4 mr-2" /> Upload CSV
           </Button>
-          <Button 
-            variant="outline"
-            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-            onClick={() => setShowJsonDialog(true)}
-          >
-            <FileJson className="h-4 w-4 mr-2" />
-            Upload JSON
+          <Button variant="outline" className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover" onClick={() => setShowJsonDialog(true)}>
+            <FileJson className="h-4 w-4 mr-2" /> Upload JSON
           </Button>
-          <Button 
-            variant="outline"
-            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-            onClick={handleAddNew}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Promo
+          <Button variant="outline" className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover" onClick={handleAddNew}>
+            <Plus className="h-4 w-4 mr-2" /> Add New Promo
           </Button>
         </div>
       </div>
@@ -1101,6 +1274,8 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           </Table>
         )}
       </div>
+      </>)}
+
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
@@ -1333,6 +1508,53 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* V.10.1 — Review JSON Dialog */}
+      <Dialog open={!!v10ViewJson} onOpenChange={(open) => !open && setV10ViewJson(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-base">Review JSON V.10.1 — {v10ViewJson?.name}</DialogTitle>
+            <DialogDescription className="text-sm">
+              Read-only snapshot dari <code className="font-mono">pk:rec:{v10ViewJson?.id?.slice(0, 12)}…</code>
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 rounded border border-border bg-muted/30">
+            <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-all">
+              {v10ViewJson?.json}
+            </pre>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => v10ViewJson && handleV10CopyJson(v10ViewJson.id)}>
+              <Copy className="h-4 w-4 mr-2" /> Copy JSON
+            </Button>
+            <Button onClick={() => setV10ViewJson(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* V.10.1 — Delete Draft Confirmation */}
+      <AlertDialog open={!!v10DeleteId} onOpenChange={(open) => !open && setV10DeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base">Hapus Draft V.10.1?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              Record akan dihapus dari <code className="font-mono">pk:rec</code> dan{" "}
+              <code className="font-mono">pk:index</code>. V.09 storage tidak terpengaruh.
+              Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-sm">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm"
+              onClick={handleV10DeleteConfirm}
+            >
+              Hapus Draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       </div>
     </div>
   );
