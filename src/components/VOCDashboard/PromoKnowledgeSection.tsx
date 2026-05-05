@@ -93,6 +93,23 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const [jsonInput, setJsonInput] = useState('');
   const [isImportingJson, setIsImportingJson] = useState(false);
 
+  // ── Phase 0 — V.10.1 draft list (primary flow) ─────────────────────────
+  const [v10Drafts, setV10Drafts] = useState<PkV10IndexEntry[]>([]);
+  const [v10ViewJson, setV10ViewJson] = useState<{ id: string; name: string; json: string } | null>(null);
+  const [v10DeleteId, setV10DeleteId] = useState<string | null>(null);
+  // Legacy V.09 is quarantined: hidden from main UI by default, code retained
+  // for reference/emergency. Do NOT remove until V.10.1 flow is stable.
+  const [showLegacyV09, setShowLegacyV09] = useState(false);
+
+  const loadV10Drafts = () => {
+    try {
+      setV10Drafts(listV10Records());
+    } catch (err) {
+      console.error('[PromoKnowledgeSection] V.10.1 list failed:', err);
+      setV10Drafts([]);
+    }
+  };
+
   const handleJsonImport = async () => {
     if (!jsonInput.trim()) {
       toast.error('JSON kosong, silakan paste data JSON');
