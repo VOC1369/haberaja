@@ -327,6 +327,17 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
     writeSibling: (d, a) => {
       d.reward_engine.max_reward_unlimited = a.choice === NONE;
     },
+    isRelevant: (r) => {
+      // Unlimited cap explicitly set → no need to ask.
+      if (r.reward_engine?.max_reward_unlimited === true) return false;
+      // Non-monetary reward types don't carry a numeric cap.
+      const rt = getRewardType(r);
+      if (rt && NON_MONETARY_REWARD_TYPES.has(rt)) return false;
+      // Multi-mode: cap lives per-variant — root max_reward not applicable.
+      const mode = (r.identity_engine?.promo_block?.promo_mode ?? "").toString();
+      if (mode === "multi" && hasVariantMaxReward(r)) return false;
+      return true;
+    },
   },
   {
     path: "scope_engine.geo_block.geo_restriction",
