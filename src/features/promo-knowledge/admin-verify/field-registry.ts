@@ -250,6 +250,17 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
     write: (d, a) => {
       d.taxonomy_engine.logic_block.turnover_basis = a.choice;
     },
+    isRelevant: (r) => {
+      // Skip when promo is downline-referral (no member-side wagering).
+      if (isDownlineReferral(r)) return false;
+      // Relevant if any structured signal of turnover/wagering exists.
+      const tm = (r.taxonomy_engine?.logic_block as Record<string, unknown> | undefined)
+        ?.turnover_multiplier;
+      if (typeof tm === "number" && tm > 0) return true;
+      if (hasVariantTurnover(r)) return true;
+      // Default: assume relevant (backward compatible — admin can still answer).
+      return true;
+    },
   },
   {
     path: "dependency_engine.stacking_block.stacking_policy",
