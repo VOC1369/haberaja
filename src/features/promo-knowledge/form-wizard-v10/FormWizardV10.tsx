@@ -1,19 +1,24 @@
 /**
- * Phase 1 — V.10.1 Form Wizard SKELETON ENTRY.
+ * Phase 2A — V.10.1 Form Wizard ENTRY (binding-enabled, SAFE FIELDS).
  *
- * STRICT SCOPE:
- *   - UI only. No extractor, no prefill, no save, no Supabase, no V.09 bridge.
- *   - All paths follow PkV10Record naming.
- *   - All enum stored values come from F3 (canonical snake_case).
- *   - Variant editor = Phase 4 placeholder.
+ * SCOPE:
+ *   - When `recordId` is provided → prefill from PkV10Record (safe fields).
+ *   - "Simpan ke Draft V.10.1" merges wizard state back into the record and
+ *     persists via local-storage (`saveRecord`). NO Supabase. NO extractor.
+ *     NO V.09 bridge.
+ *   - When no recordId → behaves as Phase 1 skeleton (no save).
+ *   - Skipped fields (admin_fee, loyalty builders, variants, system blocks)
+ *     are documented in `binding.ts`.
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, ChevronLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, Save } from "lucide-react";
 import { initialV10WizardState, STEP_TITLES, type V10WizardState } from "./state";
+import { pkRecordToWizard, mergeWizardIntoPkRecord } from "./binding";
+import { loadRecord, saveRecord } from "../storage/local-storage";
 import { Step1Identity } from "./steps/Step1Identity";
 import { Step2Access } from "./steps/Step2Access";
 import { Step3Trigger } from "./steps/Step3Trigger";
@@ -27,16 +32,53 @@ import { Step9Review } from "./steps/Step9Review";
 export interface FormWizardV10Props {
   onBack?: () => void;
   recordName?: string;
+  recordId?: string;
 }
 
-export function FormWizardV10({ onBack, recordName }: FormWizardV10Props) {
+export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Props) {
   const [state, setState] = useState<V10WizardState>(initialV10WizardState);
   const [step, setStep] = useState(1);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const total = STEP_TITLES.length;
   const progress = useMemo(() => (step / total) * 100, [step, total]);
+  const bindingEnabled = !!recordId;
+
+  // Prefill on mount / recordId change
+  useEffect(() => {
+    if (!recordId) return;
+    const rec = loadRecord(recordId);
+    if (!rec) {
+      setLoadError(`Record ${recordId} tidak ditemukan di pk:rec.`);
+      return;
+    }
+    try {
+      setState(pkRecordToWizard(rec));
+      setLoadError(null);
+    } catch (e) {
+      setLoadError(`Gagal prefill: ${(e as Error).message}`);
+    }
+  }, [recordId]);
 
   const update = <K extends keyof V10WizardState>(key: K, patch: Partial<V10WizardState[K]>) => {
     setState((s) => ({ ...s, [key]: { ...s[key], ...patch } }));
+    if (saveStatus === "saved") setSaveStatus("idle");
+  };
+
+  const handleSave = () => {
+    if (!recordId) return;
+    setSaveStatus("saving");
+    try {
+      const rec = loadRecord(recordId);
+      if (!rec) throw new Error("Record tidak ditemukan saat save.");
+      const merged = mergeWizardIntoPkRecord(rec, state);
+      saveRecord(merged);
+      setSaveStatus("saved");
+    } catch (e) {
+      setLoadError((e as Error).message);
+      setSaveStatus("error");
+    }
   };
 
   const renderStep = () => {
@@ -66,18 +108,27 @@ export function FormWizardV10({ onBack, recordName }: FormWizardV10Props) {
           )}
           <div>
             <h2 className="text-lg font-semibold text-foreground">
-              Form Wizard V.10.1 — Skeleton
+              Form Wizard V.10.1 {bindingEnabled ? "— Phase 2A Binding" : "— Skeleton"}
             </h2>
             <p className="text-xs text-muted-foreground">
-              UI Only · No save · No prefill · No Supabase
+              {bindingEnabled
+                ? "Safe-fields binding · localStorage only · No Supabase · No extractor"
+                : "UI Only · No save · No prefill · No Supabase"}
               {recordName ? ` · Record: ${recordName}` : ""}
+              {recordId ? ` · ID: ${recordId.slice(0, 8)}…` : ""}
             </p>
           </div>
         </div>
         <Badge className="bg-button-hover/20 text-button-hover border border-button-hover/30">
-          Phase 1 Skeleton
+          {bindingEnabled ? "Phase 2A" : "Phase 1 Skeleton"}
         </Badge>
       </div>
+
+      {loadError && (
+        <Card className="p-3 border-error/40 bg-error/10 text-sm text-error">
+          {loadError}
+        </Card>
+      )}
 
       {/* Progress */}
       <Card className="p-4 bg-card border-border">
@@ -125,9 +176,24 @@ export function FormWizardV10({ onBack, recordName }: FormWizardV10Props) {
         >
           <ArrowLeft className="h-4 w-4 mr-1" /> Sebelumnya
         </Button>
-        <span className="text-xs text-muted-foreground">
-          Skeleton — perubahan tidak disimpan
-        </span>
+        <div className="flex items-center gap-2">
+          {bindingEnabled ? (
+            <>
+              <span className="text-xs text-muted-foreground">
+                {saveStatus === "saved" ? "Tersimpan ✓" :
+                 saveStatus === "saving" ? "Menyimpan…" :
+                 saveStatus === "error" ? "Gagal simpan" : "Belum disimpan"}
+              </span>
+              <Button variant="outline" onClick={handleSave} disabled={saveStatus === "saving"}>
+                <Save className="h-4 w-4 mr-1" /> Simpan ke Draft V.10.1
+              </Button>
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              Skeleton — perubahan tidak disimpan
+            </span>
+          )}
+        </div>
         <Button
           disabled={step === total}
           onClick={() => setStep((s) => Math.min(total, s + 1))}
