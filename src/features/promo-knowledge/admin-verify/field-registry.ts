@@ -291,6 +291,14 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
       d.reward_engine.requirement_block.min_deposit =
         raw === "" || raw === undefined ? null : Number(raw);
     },
+    isRelevant: (r) => {
+      // If structured JSON shows a deposit signal, ALWAYS relevant —
+      // even for referral promos that also gate on deposit.
+      if (hasDepositSignal(r)) return true;
+      // Skip downline-referral with no deposit signal.
+      if (isDownlineReferral(r)) return false;
+      return true;
+    },
   },
   {
     path: "reward_engine.max_reward",
