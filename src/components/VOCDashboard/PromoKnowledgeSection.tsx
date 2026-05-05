@@ -220,6 +220,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
       setViewMode("list");
       setEditingPromo(undefined);
       loadPromos(); // Reload data saat navigasi dari Pseudo Knowledge
+      loadV10Drafts();
     }
   }, [forceResetKey]);
 
@@ -229,16 +230,23 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
       console.log('[PromoKnowledgeSection] Storage event, reloading promos...');
       loadPromos();
     };
-    
+    const handleV10Event = () => {
+      console.log('[PromoKnowledgeSection] V.10.1 storage event, reloading drafts...');
+      loadV10Drafts();
+    };
+
     window.addEventListener('promo-storage-updated', handleStorageEvent);
-    
+    window.addEventListener('pk-v10-storage-updated', handleV10Event);
+
     return () => {
       window.removeEventListener('promo-storage-updated', handleStorageEvent);
+      window.removeEventListener('pk-v10-storage-updated', handleV10Event);
     };
   }, []);
 
   useEffect(() => {
     loadPromos();
+    loadV10Drafts();
   }, []);
 
   const handleEdit = (promo: PromoItem) => {
