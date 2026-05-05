@@ -54,6 +54,13 @@ import { PromoItem, deletePromoDraft, duplicatePromo, normalizePromoData } from 
 import { promoKB, localDraftKB } from "@/lib/promo-storage";
 import { generateTermsList, formatNumber } from "./PromoFormWizard/Step4Review";
 import { inferRewardType, formatSubcategoryName, getRewardBadgeInfo } from "@/lib/reward-normalization";
+import {
+  listRecords as listV10Records,
+  loadRecord as loadV10Record,
+  deleteRecord as deleteV10Record,
+  type PkIndexEntry as PkV10IndexEntry,
+} from "@/features/promo-knowledge/storage/local-storage";
+import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 
 type ViewMode = "list" | "form" | "upload";
 
