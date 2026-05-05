@@ -63,7 +63,7 @@ import {
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 import { FormWizardV10 } from "@/features/promo-knowledge/form-wizard-v10/FormWizardV10";
 
-type ViewMode = "list" | "form" | "upload";
+type ViewMode = "list" | "form" | "upload" | "v10-skeleton";
 
 interface PromoKnowledgeSectionProps {
   onBack?: () => void;
