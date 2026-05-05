@@ -61,6 +61,7 @@ import {
   type PkIndexEntry as PkV10IndexEntry,
 } from "@/features/promo-knowledge/storage/local-storage";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
+import { FormWizardV10 } from "@/features/promo-knowledge/form-wizard-v10/FormWizardV10";
 
 type ViewMode = "list" | "form" | "upload";
 
