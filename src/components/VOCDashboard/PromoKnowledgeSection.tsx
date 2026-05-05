@@ -1274,6 +1274,8 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           </Table>
         )}
       </div>
+      </>)}
+
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
