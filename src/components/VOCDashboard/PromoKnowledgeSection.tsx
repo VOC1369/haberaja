@@ -97,6 +97,8 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   // ── Phase 0 — V.10.1 draft list (primary flow) ─────────────────────────
   const [v10Drafts, setV10Drafts] = useState<PkV10IndexEntry[]>([]);
   const [v10ViewJson, setV10ViewJson] = useState<{ id: string; name: string; json: string } | null>(null);
+  const [v10EditId, setV10EditId] = useState<string | null>(null);
+  const [v10EditName, setV10EditName] = useState<string>("");
   const [v10DeleteId, setV10DeleteId] = useState<string | null>(null);
   // Legacy V.09 is quarantined: hidden from main UI by default, code retained
   // for reference/emergency. Do NOT remove until V.10.1 flow is stable.
@@ -835,7 +837,11 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   if (viewMode === "v10-skeleton") {
     return (
       <div className="page-wrapper">
-        <FormWizardV10 onBack={() => setViewMode("list")} />
+        <FormWizardV10
+          onBack={() => { setViewMode("list"); setV10EditId(null); setV10EditName(""); }}
+          recordId={v10EditId ?? undefined}
+          recordName={v10EditName || undefined}
+        />
       </div>
     );
   }
@@ -1006,11 +1012,17 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                             <Copy className="h-4 w-4 mr-2" /> Copy JSON
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem disabled title="Edit Form Wizard belum tersedia untuk schema V.10.1">
-                            <Pencil className="h-4 w-4 mr-2" /> Edit (V.10 form — coming)
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setV10EditId(d.record_id);
+                              setV10EditName(d.promo_name);
+                              setViewMode("v10-skeleton");
+                            }}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" /> Edit (V.10.1 Phase 2A — safe fields)
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setViewMode("v10-skeleton")}>
-                            <FileJson className="h-4 w-4 mr-2" /> Open V.10.1 Form Skeleton
+                          <DropdownMenuItem onClick={() => { setV10EditId(null); setV10EditName(""); setViewMode("v10-skeleton"); }}>
+                            <FileJson className="h-4 w-4 mr-2" /> Open Skeleton (no record)
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => setV10DeleteId(d.record_id)} className="text-destructive focus:text-destructive">
