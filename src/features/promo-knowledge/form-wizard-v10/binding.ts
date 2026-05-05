@@ -387,7 +387,7 @@ export function mergeWizardIntoPkRecord(rec: PkV10Record, w: V10WizardState): Pk
       stacking_block: {
         ...rec.dependency_engine.stacking_block,
         stacking_allowed: w.dependency_engine.stacking_block.stacking_allowed,
-        stacking_policy: w.dependency_engine.stacking_policy,
+        stacking_policy: w.dependency_engine.stacking_block.stacking_policy,
         max_concurrent: toNum(w.dependency_engine.stacking_block.max_concurrent),
       },
       exclusion_block: { ...w.dependency_engine.exclusion_block },
