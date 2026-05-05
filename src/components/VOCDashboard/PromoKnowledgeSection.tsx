@@ -1009,6 +1009,9 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                           <DropdownMenuItem disabled title="Edit Form Wizard belum tersedia untuk schema V.10.1">
                             <Pencil className="h-4 w-4 mr-2" /> Edit (V.10 form — coming)
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setViewMode("v10-skeleton")}>
+                            <FileJson className="h-4 w-4 mr-2" /> Open V.10.1 Form Skeleton
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => setV10DeleteId(d.record_id)} className="text-destructive focus:text-destructive">
                             <Trash2 className="h-4 w-4 mr-2" /> Delete Draft
