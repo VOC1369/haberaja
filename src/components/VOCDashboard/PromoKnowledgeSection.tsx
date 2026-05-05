@@ -881,7 +881,7 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   return (
     <div className="page-wrapper">
       <div className="space-y-5">
-      {/* Top Row: Back button left, Action buttons right */}
+      {/* Top Row: Back button left, action buttons right */}
       <div className="flex items-center justify-between">
         <Button
           variant="outline"
@@ -892,42 +892,137 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           Kembali
         </Button>
         <div className="flex gap-2">
-          <Button 
+          <Button
             variant="outline"
-            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-            onClick={handleRegenerateAllSK}
-            disabled={isRegeneratingAll || items.length === 0}
+            className="h-11 px-6 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+            onClick={() => setShowLegacyV09((v) => !v)}
+            title="Legacy V.09 promo bank — quarantined, reference only"
           >
-            {isRegeneratingAll ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
+            {showLegacyV09 ? "Hide Legacy V.09" : "Show Legacy V.09"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Title — V.10.1 PRIMARY */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-button-hover">
+            Promo Knowledge Drafts — V.10.1
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Source of truth: <code className="font-mono">pk:rec</code> /{" "}
+            <code className="font-mono">pk:index</code>. Drafts dibuat dari Pseudo Extractor → Gunakan Promo.
+          </p>
+        </div>
+      </div>
+
+      {/* V.10.1 Drafts Table */}
+      <div className="border border-border rounded-lg overflow-hidden">
+        {v10Drafts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="h-16 w-16 rounded-full bg-button-hover/20 flex items-center justify-center mb-4">
+              <Gift className="h-8 w-8 text-button-hover" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Belum ada draft V.10.1
+            </h3>
+            <p className="text-muted-foreground mb-2 max-w-md">
+              Buka <strong>Pseudo Extractor</strong>, jalankan ekstraksi, lalu klik{" "}
+              <strong>Gunakan Promo</strong> untuk membuat draft V.10.1 di sini.
+            </p>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted hover:bg-muted">
+                <TableHead className="text-foreground font-semibold w-12 text-center">No</TableHead>
+                <TableHead className="text-foreground font-semibold">Promo Name</TableHead>
+                <TableHead className="text-foreground font-semibold">Schema</TableHead>
+                <TableHead className="text-foreground font-semibold">State</TableHead>
+                <TableHead className="text-foreground font-semibold">Variants</TableHead>
+                <TableHead className="text-foreground font-semibold">Last Updated</TableHead>
+                <TableHead className="text-right text-foreground font-semibold">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {v10Drafts.map((d, idx) => {
+                const variantCount = v10VariantCount(d.record_id);
+                return (
+                  <TableRow key={d.record_id} className="hover:bg-card">
+                    <TableCell className="py-4 text-center text-sm text-muted-foreground font-medium">
+                      {idx + 1}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="font-medium text-foreground">{d.promo_name || "(untitled)"}</div>
+                      <div className="text-xs text-muted-foreground font-mono">{d.record_id.slice(0, 12)}…</div>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Badge className="bg-button-hover/20 text-button-hover border border-button-hover/30">V.10.1</Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <Badge className="bg-warning/20 text-warning border border-warning/30">{d.state || "draft"}</Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      {variantCount > 1 ? (
+                        <Badge className="bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                          Multi Variant ({variantCount})
+                        </Badge>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">{variantCount || "-"}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-4 text-sm text-muted-foreground">
+                      {formatLastUpdated(d.updated_at)}
+                    </TableCell>
+                    <TableCell className="py-4 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleV10ViewJson(d.record_id, d.promo_name)}>
+                            <Eye className="h-4 w-4 mr-2" /> Review JSON
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleV10CopyJson(d.record_id)}>
+                            <Copy className="h-4 w-4 mr-2" /> Copy JSON
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem disabled title="Edit Form Wizard belum tersedia untuk schema V.10.1">
+                            <Pencil className="h-4 w-4 mr-2" /> Edit (V.10 form — coming)
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setV10DeleteId(d.record_id)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete Draft
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      {/* ── LEGACY V.09 — QUARANTINED (reference/emergency only) ───────────── */}
+      {showLegacyV09 && (<>
+      <div className="flex items-center justify-between border-t border-dashed border-border pt-5">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="outline" className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover" onClick={handleRegenerateAllSK} disabled={isRegeneratingAll || items.length === 0}>
+            {isRegeneratingAll ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             {isRegeneratingAll ? 'Regenerating...' : 'Regenerate All S&K'}
           </Button>
-          <Button 
-            variant="outline"
-            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-            onClick={() => setViewMode("upload")}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload CSV
+          <Button variant="outline" className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover" onClick={() => setViewMode("upload")}>
+            <Upload className="h-4 w-4 mr-2" /> Upload CSV
           </Button>
-          <Button 
-            variant="outline"
-            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-            onClick={() => setShowJsonDialog(true)}
-          >
-            <FileJson className="h-4 w-4 mr-2" />
-            Upload JSON
+          <Button variant="outline" className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover" onClick={() => setShowJsonDialog(true)}>
+            <FileJson className="h-4 w-4 mr-2" /> Upload JSON
           </Button>
-          <Button 
-            variant="outline"
-            className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover"
-            onClick={handleAddNew}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Promo
+          <Button variant="outline" className="h-11 px-6 border-border text-foreground hover:bg-button-hover hover:text-button-hover-foreground hover:border-button-hover" onClick={handleAddNew}>
+            <Plus className="h-4 w-4 mr-2" /> Add New Promo
           </Button>
         </div>
       </div>
