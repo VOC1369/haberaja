@@ -1508,6 +1508,53 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* V.10.1 — Review JSON Dialog */}
+      <Dialog open={!!v10ViewJson} onOpenChange={(open) => !open && setV10ViewJson(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-base">Review JSON V.10.1 — {v10ViewJson?.name}</DialogTitle>
+            <DialogDescription className="text-sm">
+              Read-only snapshot dari <code className="font-mono">pk:rec:{v10ViewJson?.id?.slice(0, 12)}…</code>
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 rounded border border-border bg-muted/30">
+            <pre className="p-4 text-xs font-mono whitespace-pre-wrap break-all">
+              {v10ViewJson?.json}
+            </pre>
+          </ScrollArea>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => v10ViewJson && handleV10CopyJson(v10ViewJson.id)}>
+              <Copy className="h-4 w-4 mr-2" /> Copy JSON
+            </Button>
+            <Button onClick={() => setV10ViewJson(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* V.10.1 — Delete Draft Confirmation */}
+      <AlertDialog open={!!v10DeleteId} onOpenChange={(open) => !open && setV10DeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base">Hapus Draft V.10.1?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              Record akan dihapus dari <code className="font-mono">pk:rec</code> dan{" "}
+              <code className="font-mono">pk:index</code>. V.09 storage tidak terpengaruh.
+              Tindakan ini tidak dapat dibatalkan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="text-sm">Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm"
+              onClick={handleV10DeleteConfirm}
+            >
+              Hapus Draft
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       </div>
     </div>
   );
