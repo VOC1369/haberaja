@@ -832,6 +832,14 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     );
   }
 
+  if (viewMode === "v10-skeleton") {
+    return (
+      <div className="page-wrapper">
+        <FormWizardV10 onBack={() => setViewMode("list")} />
+      </div>
+    );
+  }
+
   // ── Phase 0 — V.10.1 handlers ────────────────────────────────────────────
   const handleV10ViewJson = (id: string, name: string) => {
     const rec = loadV10Record(id);
