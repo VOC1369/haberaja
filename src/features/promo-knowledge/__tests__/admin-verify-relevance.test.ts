@@ -4,6 +4,16 @@
  * Locks behavior of gap-reader + field-registry isRelevant() for the
  * not_stated/missing branch. Authority gate (explicit/inferred/etc.)
  * remains tested by existing fixtures; here we focus on relevance.
+ *
+ * NOTE on fixtures:
+ *   - Baseline fixtures under __tests__/baseline/ are still legacy
+ *     V.06 / V.09 shape (no schema_version, no _field_status,
+ *     no variant_engine, no max_reward_unlimited).
+ *   - These tests intentionally do NOT load those fixtures. Instead
+ *     they build minimal V.10.1 preconditions in-memory via
+ *     createInertPkV10Record() + targeted field/status writes.
+ *   - This avoids dragging fixture migration into the relevance-gate
+ *     scope; baseline upgrade is tracked as a separate task.
  */
 
 import { describe, expect, it } from "vitest";
