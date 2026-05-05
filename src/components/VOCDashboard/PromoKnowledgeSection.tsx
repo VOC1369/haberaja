@@ -837,7 +837,11 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   if (viewMode === "v10-skeleton") {
     return (
       <div className="page-wrapper">
-        <FormWizardV10 onBack={() => setViewMode("list")} />
+        <FormWizardV10
+          onBack={() => { setViewMode("list"); setV10EditId(null); setV10EditName(""); }}
+          recordId={v10EditId ?? undefined}
+          recordName={v10EditName || undefined}
+        />
       </div>
     );
   }
