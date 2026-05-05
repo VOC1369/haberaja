@@ -831,6 +831,52 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     );
   }
 
+  // ── Phase 0 — V.10.1 handlers ────────────────────────────────────────────
+  const handleV10ViewJson = (id: string, name: string) => {
+    const rec = loadV10Record(id);
+    if (!rec) {
+      toast.error("Draft V.10.1 tidak ditemukan");
+      return;
+    }
+    setV10ViewJson({ id, name: name || "(untitled)", json: JSON.stringify(rec, null, 2) });
+  };
+
+  const handleV10CopyJson = async (id: string) => {
+    const rec = loadV10Record(id);
+    if (!rec) {
+      toast.error("Draft V.10.1 tidak ditemukan");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(rec, null, 2));
+      toast.success("JSON V.10.1 disalin ke clipboard");
+    } catch {
+      toast.error("Gagal menyalin JSON");
+    }
+  };
+
+  const handleV10DeleteConfirm = () => {
+    if (!v10DeleteId) return;
+    try {
+      deleteV10Record(v10DeleteId);
+      toast.success("Draft V.10.1 dihapus");
+      loadV10Drafts();
+    } catch {
+      toast.error("Gagal menghapus draft V.10.1");
+    } finally {
+      setV10DeleteId(null);
+    }
+  };
+
+  const v10VariantCount = (id: string): number => {
+    try {
+      const rec = loadV10Record(id);
+      return rec?.variant_engine?.items_block?.subcategories?.length ?? 0;
+    } catch {
+      return 0;
+    }
+  };
+
   // List View
   return (
     <div className="page-wrapper">
