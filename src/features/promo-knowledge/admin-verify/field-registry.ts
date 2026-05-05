@@ -73,7 +73,88 @@ export interface FieldRegistryEntry {
   writeSibling?: (draft: PkV10Record, answer: AdminAnswer) => void;
   read: (rec: PkV10Record) => unknown;
   write: (draft: PkV10Record, answer: AdminAnswer) => void;
+  /**
+   * Optional relevance gate. Used ONLY by gap-reader for the
+   * not_stated / missing branch (authority gate still wins for
+   * explicit / inferred / propagated / derived).
+   *
+   * Contract:
+   *   - Pure function over structured JSON (NO raw_content, NO regex,
+   *     NO keyword scan).
+   *   - Return false  → field is operationally not applicable for this
+   *                     promo → gap-reader will SKIP the question.
+   *   - Return true   → field is relevant → gap-reader behaves as before.
+   *   - Field without isRelevant → treated as relevant (backward compatible).
+   */
+  isRelevant?: (rec: PkV10Record) => boolean;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Relevance helpers — structured-JSON only (no raw_content, no regex)
+// ─────────────────────────────────────────────────────────────────────────
+
+const REFERRAL_PROMO_TYPES = new Set(["referral", "affiliate"]);
+const DOWNLINE_BASES = new Set(["downline_winlose", "downline_commission"]);
+const DOWNLINE_TRIGGERS = new Set(["downline_activity", "referral_signup"]);
+const DEPOSIT_TRIGGERS = new Set(["first_deposit", "deposit"]);
+const DEPOSIT_BASES = new Set(["deposit", "deposit_plus_bonus"]);
+const NON_MONETARY_REWARD_TYPES = new Set([
+  "physical",
+  "voucher",
+  "merchandise",
+  "item",
+  "lucky_spin",
+  "chance",
+]);
+
+const getPromoType = (r: PkV10Record): string =>
+  (r.identity_engine?.promo_block?.promo_type ?? "").toString();
+const getCalcBasis = (r: PkV10Record): string =>
+  (r.reward_engine?.calculation_basis ?? "").toString();
+const getTriggerEvent = (r: PkV10Record): string =>
+  (r.trigger_engine?.primary_trigger_block?.trigger_event ?? "").toString();
+const getRewardType = (r: PkV10Record): string =>
+  (r.reward_engine?.reward_type ?? "").toString();
+
+/** True if structured JSON shows this is a downline/commission referral. */
+const isDownlineReferral = (r: PkV10Record): boolean => {
+  const pt = getPromoType(r);
+  const cb = getCalcBasis(r);
+  const te = getTriggerEvent(r);
+  return (
+    REFERRAL_PROMO_TYPES.has(pt) &&
+    (DOWNLINE_BASES.has(cb) || DOWNLINE_TRIGGERS.has(te))
+  );
+};
+
+/** True if structured JSON shows deposit-driven trigger/basis. */
+const hasDepositSignal = (r: PkV10Record): boolean => {
+  return (
+    DEPOSIT_TRIGGERS.has(getTriggerEvent(r)) ||
+    DEPOSIT_BASES.has(getCalcBasis(r))
+  );
+};
+
+/** True if any subcategory shows a turnover_multiplier. */
+const hasVariantTurnover = (r: PkV10Record): boolean => {
+  const subs = (r.variant_engine?.items_block?.subcategories ?? []) as Array<
+    Record<string, unknown>
+  >;
+  return subs.some((s) => {
+    const tm = s?.turnover_multiplier;
+    return typeof tm === "number" && tm > 0;
+  });
+};
+
+/** True if any subcategory carries an explicit max_reward cap. */
+const hasVariantMaxReward = (r: PkV10Record): boolean => {
+  const subs = (r.variant_engine?.items_block?.subcategories ?? []) as Array<
+    Record<string, unknown>
+  >;
+  return subs.some(
+    (s) => typeof s?.max_reward === "number" && (s.max_reward as number) > 0,
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────
 // Label map + helpers (UI-only, no decision logic)
@@ -169,6 +250,17 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
     write: (d, a) => {
       d.taxonomy_engine.logic_block.turnover_basis = a.choice;
     },
+    isRelevant: (r) => {
+      // Skip when promo is downline-referral (no member-side wagering).
+      if (isDownlineReferral(r)) return false;
+      // Relevant if any structured signal of turnover/wagering exists.
+      const tm = (r.taxonomy_engine?.logic_block as Record<string, unknown> | undefined)
+        ?.turnover_multiplier;
+      if (typeof tm === "number" && tm > 0) return true;
+      if (hasVariantTurnover(r)) return true;
+      // Default: assume relevant (backward compatible — admin can still answer).
+      return true;
+    },
   },
   {
     path: "dependency_engine.stacking_block.stacking_policy",
@@ -199,6 +291,14 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
       d.reward_engine.requirement_block.min_deposit =
         raw === "" || raw === undefined ? null : Number(raw);
     },
+    isRelevant: (r) => {
+      // If structured JSON shows a deposit signal, ALWAYS relevant —
+      // even for referral promos that also gate on deposit.
+      if (hasDepositSignal(r)) return true;
+      // Skip downline-referral with no deposit signal.
+      if (isDownlineReferral(r)) return false;
+      return true;
+    },
   },
   {
     path: "reward_engine.max_reward",
@@ -226,6 +326,17 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
     readSibling: (r) => r.reward_engine?.max_reward_unlimited,
     writeSibling: (d, a) => {
       d.reward_engine.max_reward_unlimited = a.choice === NONE;
+    },
+    isRelevant: (r) => {
+      // Unlimited cap explicitly set → no need to ask.
+      if (r.reward_engine?.max_reward_unlimited === true) return false;
+      // Non-monetary reward types don't carry a numeric cap.
+      const rt = getRewardType(r);
+      if (rt && NON_MONETARY_REWARD_TYPES.has(rt)) return false;
+      // Multi-mode: cap lives per-variant — root max_reward not applicable.
+      const mode = (r.identity_engine?.promo_block?.promo_mode ?? "").toString();
+      if (mode === "multi" && hasVariantMaxReward(r)) return false;
+      return true;
     },
   },
   {

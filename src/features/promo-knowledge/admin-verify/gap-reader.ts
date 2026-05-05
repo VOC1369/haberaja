@@ -189,8 +189,17 @@ export function readGapsFromJson(record: PkV10Record): GapQuestion[] {
       }
 
       case "not_stated":
-      default:
-        // not_stated OR missing status → ask
+      default: {
+        // RELEVANCE GATE — only on not_stated/missing branch.
+        // Authority gate (explicit/inferred/derived/propagated) above is
+        // unaffected. Field without isRelevant → treated as relevant.
+        if (typeof entry.isRelevant === "function") {
+          try {
+            if (entry.isRelevant(record) === false) continue;
+          } catch {
+            // Fail-open: if relevance check throws, fall through to ask.
+          }
+        }
         out.push({
           path,
           action: "ask",
@@ -204,6 +213,7 @@ export function readGapsFromJson(record: PkV10Record): GapQuestion[] {
           source: "field_status",
         });
         continue;
+      }
     }
   }
 
