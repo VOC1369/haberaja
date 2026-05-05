@@ -61,8 +61,9 @@ import {
   type PkIndexEntry as PkV10IndexEntry,
 } from "@/features/promo-knowledge/storage/local-storage";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
+import { FormWizardV10 } from "@/features/promo-knowledge/form-wizard-v10/FormWizardV10";
 
-type ViewMode = "list" | "form" | "upload";
+type ViewMode = "list" | "form" | "upload" | "v10-skeleton";
 
 interface PromoKnowledgeSectionProps {
   onBack?: () => void;
@@ -831,6 +832,14 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     );
   }
 
+  if (viewMode === "v10-skeleton") {
+    return (
+      <div className="page-wrapper">
+        <FormWizardV10 onBack={() => setViewMode("list")} />
+      </div>
+    );
+  }
+
   // ── Phase 0 — V.10.1 handlers ────────────────────────────────────────────
   const handleV10ViewJson = (id: string, name: string) => {
     const rec = loadV10Record(id);
@@ -892,6 +901,14 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
           Kembali
         </Button>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="h-11 px-6 border-button-hover/40 text-button-hover hover:bg-button-hover hover:text-button-hover-foreground"
+            onClick={() => setViewMode("v10-skeleton")}
+            title="Phase 1 — UI skeleton only, no save"
+          >
+            Open V.10.1 Form Skeleton
+          </Button>
           <Button
             variant="outline"
             className="h-11 px-6 border-border text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -991,6 +1008,9 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
                           <DropdownMenuSeparator />
                           <DropdownMenuItem disabled title="Edit Form Wizard belum tersedia untuk schema V.10.1">
                             <Pencil className="h-4 w-4 mr-2" /> Edit (V.10 form — coming)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setViewMode("v10-skeleton")}>
+                            <FileJson className="h-4 w-4 mr-2" /> Open V.10.1 Form Skeleton
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => setV10DeleteId(d.record_id)} className="text-destructive focus:text-destructive">
