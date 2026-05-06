@@ -290,7 +290,7 @@ export function applyFormWizardGovernance(
   for (const path of SAFE_PATHS) {
     const prev = getByPath(original, path);
     const next = getByPath(merged, path);
-    if (jsonEqual(prev, next)) continue;
+    if (semanticEqual(path, prev, next)) continue;
 
     const prevStatusRaw = fieldStatus[path];
     const prevStatus = typeof prevStatusRaw === "string" ? prevStatusRaw : null;
