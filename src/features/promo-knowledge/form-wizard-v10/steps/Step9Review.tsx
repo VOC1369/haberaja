@@ -1,8 +1,37 @@
 import { Section, TextAreaField, MultiTagField } from "../primitives";
+import { Button } from "@/components/ui/button";
+import { Copy } from "lucide-react";
+import { toast } from "@/lib/notify";
+import { loadRecord } from "../../storage/local-storage";
 import type { StepProps } from "./_types";
 
-export function Step9Review({ state, update }: StepProps) {
+interface Step9Props extends StepProps {
+  recordId?: string;
+}
+
+export function Step9Review({ state, update, recordId }: Step9Props) {
   const tm = state.terms_engine;
+
+  const handleCopyFinal = async () => {
+    if (!recordId) {
+      toast.error("Tidak ada recordId", {
+        description: "Buka wizard via draft V.10.1 yang sudah tersimpan.",
+      });
+      return;
+    }
+    const rec = loadRecord(recordId);
+    if (!rec) {
+      toast.error("Record tidak ditemukan di pk:rec");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(rec, null, 2));
+      toast.success("Final JSON V.10.1 disalin");
+    } catch (e) {
+      toast.error("Gagal menyalin JSON", { description: (e as Error).message });
+    }
+  };
+
   return (
     <>
       <Section title="Syarat & Ketentuan">
@@ -17,12 +46,31 @@ export function Step9Review({ state, update }: StepProps) {
           onChange={(v) => update("terms_engine", { requirements_block: { special_requirements: v } })} />
       </Section>
 
-      <Section title="Preview JSON / Projection (read-only)">
+      <Section title="Local Wizard Preview (read-only)">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs text-muted-foreground">
+            Snapshot state wizard di browser ini — bukan record final tersimpan.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCopyFinal}
+            disabled={!recordId}
+            title={recordId ? "Salin full PkV10Record dari pk:rec" : "Butuh recordId"}
+          >
+            <Copy className="h-4 w-4 mr-1" /> Copy Final JSON V.10.1
+          </Button>
+        </div>
         <pre className="text-[11px] bg-secondary/30 border border-border rounded-lg p-3 overflow-auto max-h-96 font-mono text-muted-foreground">
 {JSON.stringify(state, null, 2)}
         </pre>
         <p className="text-xs text-muted-foreground">
-          Phase 1 — preview lokal saja. Tidak ada save ke pk:rec, tidak ada Supabase, tidak ada bridge ke V.09.
+          <strong>Local Wizard Preview</strong> ≠ <strong>Final Saved PkV10Record</strong>.
+          Tombol <em>Copy Final JSON V.10.1</em> menyalin record lengkap (termasuk{" "}
+          <code>record_id</code>, <code>meta_engine</code>, <code>variant_engine</code>,{" "}
+          <code>_field_status</code>, <code>ai_confidence</code>) dari pk:rec via{" "}
+          <code>loadRecord(recordId)</code>.
         </p>
       </Section>
 
