@@ -74,7 +74,10 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
       const rec = loadRecord(recordId);
       if (!rec) throw new Error("Record tidak ditemukan saat save.");
       const merged = mergeWizardIntoPkRecord(rec, state);
-      saveRecord(merged);
+      const { record: governed, entries } = applyFormWizardGovernance(rec, merged);
+      saveRecord(governed);
+      // eslint-disable-next-line no-console
+      console.info(`[FormWizardV10][Phase 2B] override entries: ${entries.length}`, entries);
       setSaveStatus("saved");
     } catch (e) {
       setLoadError((e as Error).message);
