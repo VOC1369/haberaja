@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight, ChevronLeft, Save } from "lucide-react";
 import { initialV10WizardState, STEP_TITLES, type V10WizardState } from "./state";
 import { pkRecordToWizard, mergeWizardIntoPkRecord } from "./binding";
+import { applyFormWizardGovernance } from "./governance";
 import { loadRecord, saveRecord } from "../storage/local-storage";
 import { Step1Identity } from "./steps/Step1Identity";
 import { Step2Access } from "./steps/Step2Access";
@@ -73,7 +74,10 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
       const rec = loadRecord(recordId);
       if (!rec) throw new Error("Record tidak ditemukan saat save.");
       const merged = mergeWizardIntoPkRecord(rec, state);
-      saveRecord(merged);
+      const { record: governed, entries } = applyFormWizardGovernance(rec, merged);
+      saveRecord(governed);
+      // eslint-disable-next-line no-console
+      console.info(`[FormWizardV10][Phase 2B] override entries: ${entries.length}`, entries);
       setSaveStatus("saved");
     } catch (e) {
       setLoadError((e as Error).message);
