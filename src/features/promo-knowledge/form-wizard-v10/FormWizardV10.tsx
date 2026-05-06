@@ -18,6 +18,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight, ChevronLeft, Save } from "lucide-react";
 import { initialV10WizardState, STEP_TITLES, type V10WizardState } from "./state";
 import { pkRecordToWizard, mergeWizardIntoPkRecord } from "./binding";
+import { applyFormWizardGovernance } from "./governance";
 import { loadRecord, saveRecord } from "../storage/local-storage";
 import { Step1Identity } from "./steps/Step1Identity";
 import { Step2Access } from "./steps/Step2Access";
