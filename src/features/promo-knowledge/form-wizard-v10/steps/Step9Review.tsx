@@ -80,6 +80,29 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
           <code>meta_engine.schema_block</code> — akan dirender read-only di Phase 2 setelah prefill aktif.
         </p>
       </Section>
+
+      <Section title="Summary & Export">
+        <p className="text-xs text-muted-foreground">
+          Salin JSON final V.10.1 untuk validasi, debugging, atau handoff ke konsumen lain
+          (Livechat / API / MCP). Sumber: <code>loadRecord(recordId)</code> dari{" "}
+          <code>pk:rec</code> — bukan local wizard state.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            onClick={handleCopyFinal}
+            disabled={!recordId}
+            title={recordId ? "Salin full PkV10Record dari pk:rec" : "Butuh recordId — simpan draft terlebih dulu"}
+          >
+            <Copy className="h-4 w-4 mr-2" /> Copy Final JSON V.10.1
+          </Button>
+          {!recordId && (
+            <span className="text-xs text-warning">
+              Belum ada recordId. Simpan draft terlebih dulu agar tombol aktif.
+            </span>
+          )}
+        </div>
+      </Section>
     </>
   );
 }
