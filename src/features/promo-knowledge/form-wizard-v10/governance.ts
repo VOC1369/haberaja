@@ -138,8 +138,103 @@ function getByPath(obj: unknown, path: string): unknown {
   }, obj);
 }
 
-/** Deep-equality for JSON-shaped values (good enough for safe scalar/array fields). */
-function jsonEqual(a: unknown, b: unknown): boolean {
+/**
+ * Numeric-safe paths — paths whose canonical meaning is purely numeric.
+ * On these paths only, a number and its string form (e.g. 1 vs "1") are
+ * treated as semantically equal so type-only coercion does NOT pollute the
+ * human override audit log.
+ *
+ * IMPORTANT: this list must NEVER include identifiers, codes, enums,
+ * provider/brand names, URLs, phone numbers, bank accounts, usernames,
+ * or any field where leading zeros may carry meaning.
+ */
+const NUMERIC_SAFE_PATHS: ReadonlySet<string> = new Set([
+  "reward_engine.max_reward",
+  "reward_engine.calculation_value",
+  "reward_engine.requirement_block.min_deposit",
+  "period_engine.validity_block.validity_duration_value",
+  "payment_engine.deposit_block.deposit_rate",
+  "dependency_engine.stacking_block.max_concurrent",
+]);
+
+/**
+ * Numeric condition fields inside
+ * trigger_engine.trigger_rule_block.conditions[].value.
+ * Only when condition.field matches one of these is `value` treated as
+ * numeric for semantic equality.
+ */
+const NUMERIC_CONDITION_FIELDS: ReadonlySet<string> = new Set([
+  "deposit_count",
+  "deposit_amount",
+  "turnover_amount",
+  "loss_amount",
+  "claim_count",
+  "max_claim",
+  "min_deposit",
+  "max_reward",
+]);
+
+const TRIGGER_CONDITIONS_PATH =
+  "trigger_engine.trigger_rule_block.conditions";
+
+/** Coerce numeric-looking string to number; otherwise undefined. */
+function toNumberLoose(v: unknown): number | undefined {
+  if (typeof v === "number") return Number.isFinite(v) ? v : undefined;
+  if (typeof v === "string" && v.trim() !== "" && !isNaN(Number(v))) {
+    return Number(v);
+  }
+  return undefined;
+}
+
+/** Numeric semantic equality — for known numeric scalar paths only. */
+function numericScalarEqual(a: unknown, b: unknown): boolean {
+  const na = toNumberLoose(a);
+  const nb = toNumberLoose(b);
+  if (na === undefined || nb === undefined) return false;
+  return na === nb;
+}
+
+/**
+ * Trigger-conditions semantic equality. Equal iff arrays have same length
+ * and each pair of conditions matches on `field`/`operator` and `value`
+ * (numeric-coerced only when condition.field is a known numeric field).
+ * For any non-numeric condition.field, value comparison falls back to
+ * strict JSON equality — no global coercion.
+ */
+function triggerConditionsEqual(a: unknown, b: unknown): boolean {
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const ca = a[i] as Record<string, unknown> | null;
+    const cb = b[i] as Record<string, unknown> | null;
+    if (!ca || !cb || typeof ca !== "object" || typeof cb !== "object") {
+      if (!jsonEqualStrict(ca, cb)) return false;
+      continue;
+    }
+    // Compare every key strictly except `value`.
+    const keys = new Set([...Object.keys(ca), ...Object.keys(cb)]);
+    keys.delete("value");
+    for (const k of keys) {
+      if (!jsonEqualStrict(ca[k], cb[k])) return false;
+    }
+    const fieldName =
+      typeof ca.field === "string" ? ca.field :
+      typeof cb.field === "string" ? cb.field : "";
+    const isNumericField = NUMERIC_CONDITION_FIELDS.has(fieldName);
+    if (isNumericField) {
+      if (!numericScalarEqual(ca.value, cb.value) &&
+          !jsonEqualStrict(ca.value, cb.value)) {
+        return false;
+      }
+    } else {
+      if (!jsonEqualStrict(ca.value, cb.value)) return false;
+    }
+  }
+  return true;
+}
+
+/** Strict deep-equality for JSON-shaped values. No coercion. */
+function jsonEqualStrict(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (a === null || b === null) return a === b;
   if (typeof a !== typeof b) return false;
@@ -149,6 +244,22 @@ function jsonEqual(a: unknown, b: unknown): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Path-aware semantic equality. Strict by default; loosens ONLY for
+ * whitelisted numeric scalar paths and for trigger conditions array.
+ * Never globally coerces strings to numbers.
+ */
+function semanticEqual(path: string, a: unknown, b: unknown): boolean {
+  if (jsonEqualStrict(a, b)) return true;
+  if (NUMERIC_SAFE_PATHS.has(path)) {
+    return numericScalarEqual(a, b);
+  }
+  if (path === TRIGGER_CONDITIONS_PATH) {
+    return triggerConditionsEqual(a, b);
+  }
+  return false;
 }
 
 /**
@@ -179,7 +290,7 @@ export function applyFormWizardGovernance(
   for (const path of SAFE_PATHS) {
     const prev = getByPath(original, path);
     const next = getByPath(merged, path);
-    if (jsonEqual(prev, next)) continue;
+    if (semanticEqual(path, prev, next)) continue;
 
     const prevStatusRaw = fieldStatus[path];
     const prevStatus = typeof prevStatusRaw === "string" ? prevStatusRaw : null;
