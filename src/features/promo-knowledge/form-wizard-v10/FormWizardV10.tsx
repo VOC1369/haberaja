@@ -41,6 +41,7 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
   const [step, setStep] = useState(1);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [publishBridge, setPublishBridge] = useState<Step9PublishBridge | null>(null);
 
   const total = STEP_TITLES.length;
   const progress = useMemo(() => (step / total) * 100, [step, total]);
