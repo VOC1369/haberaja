@@ -434,16 +434,16 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
               <div className="flex-1 space-y-3">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-semibold text-foreground">
-                    {publishGate.ok ? "Ready to publish" : "Publish blocked"}
+                    {publishGate.ok ? "Promo siap dipublish" : "Promo belum bisa dipublish"}
                   </span>
                   {publishedFlag === true && (
                     <Badge className="bg-success/15 text-success border-0">
-                      Published
+                      Sudah dipublish
                     </Badge>
                   )}
                   {publishedFlag === false && (
                     <Badge className="bg-muted text-muted-foreground border-0">
-                      Not published
+                      Belum dipublish
                     </Badge>
                   )}
                   {lastPublishedAt && (
@@ -453,16 +453,69 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
                   )}
                 </div>
 
-                {!publishGate.ok && publishGate.reasons.length > 0 && (
-                  <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
-                    {publishGate.reasons.map((b, i) => (
-                      <li key={i} className="font-mono">{b}</li>
-                    ))}
-                  </ul>
+                {!publishGate.ok && (
+                  <p className="text-xs text-muted-foreground">
+                    {blockerDisplay.subtitle}
+                  </p>
+                )}
+
+                {!publishGate.ok && blockerDisplay.reasons.length > 0 && (
+                  <div>
+                    <div className="text-xs font-semibold text-foreground mb-1">
+                      Yang perlu dicek
+                    </div>
+                    <ul className="text-xs text-foreground list-disc pl-5 space-y-1">
+                      {blockerDisplay.reasons.map((b, i) => (
+                        <li key={i}>{b}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {!publishGate.ok && blockerDisplay.contradictions.length > 0 && (
+                  <div>
+                    <div className="text-xs font-semibold text-destructive mb-1">
+                      Aturan yang bertentangan
+                    </div>
+                    <ul className="text-xs text-foreground list-disc pl-5 space-y-1">
+                      {blockerDisplay.contradictions.map((c, i) => (
+                        <li key={i}>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {!publishGate.ok && blockerDisplay.nextSteps.length > 0 && (
+                  <div>
+                    <div className="text-xs font-semibold text-foreground mb-1">
+                      Langkah berikutnya
+                    </div>
+                    <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                      {blockerDisplay.nextSteps.map((s, i) => (
+                        <li key={i}>{s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {!publishGate.ok && blockerDisplay.technicalReasons.length > 0 && (
+                  <Collapsible>
+                    <CollapsibleTrigger className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 group">
+                      <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                      Detail teknis
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <ul className="mt-1 text-[11px] text-muted-foreground list-disc pl-5 space-y-0.5 font-mono break-all">
+                        {blockerDisplay.technicalReasons.map((b, i) => (
+                          <li key={i}>{b}</li>
+                        ))}
+                      </ul>
+                    </CollapsibleContent>
+                  </Collapsible>
                 )}
 
                 {publishError && (
-                  <div className="text-xs text-destructive font-mono">
+                  <div className="text-xs text-destructive">
                     {publishError}
                   </div>
                 )}
