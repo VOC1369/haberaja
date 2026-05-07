@@ -148,6 +148,11 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
     [liveRec],
   );
 
+  const blockerDisplay = useMemo(
+    () => buildPublishBlockerDisplay(liveRec, publishGate),
+    [liveRec, publishGate],
+  );
+
   const handlePublish = async () => {
     if (!liveRec) return;
     const gate = canPublish(liveRec);
