@@ -293,6 +293,77 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
             </div>
           </Section>
 
+          {/* ── Supabase Publish ─────────────────────────────────────── */}
+          <Section title="Supabase Publish">
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2 text-xs">
+                <SummaryRow k="table" v="promo_knowledge" mono />
+                <SummaryRow k="source" v="pk:rec / loadRecord(recordId)" mono />
+                <SummaryRow k="gate" v={publishGate.ok ? "ready" : "blocked"} />
+                <SummaryRow k="is_published" v={String(isPublished)} />
+              </div>
+
+              {!publishGate.ok && publishGate.reasons.length > 0 && (
+                <div className="rounded-lg border border-warning/40 bg-warning/10 p-3">
+                  <div className="text-xs font-semibold text-warning mb-1">
+                    Publish blocked — alasan:
+                  </div>
+                  <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                    {publishGate.reasons.map((r, i) => (
+                      <li key={i} className="font-mono">{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {publishError && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive font-mono">
+                  {publishError}
+                </div>
+              )}
+
+              {isPublished && publishedAt && (
+                <div className="rounded-lg border border-success/40 bg-success/10 p-3 text-xs text-success">
+                  Published to Supabase · <span className="font-mono">{publishedAt}</span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  onClick={handlePublish}
+                  disabled={!recordId || !publishGate.ok || publishing}
+                >
+                  {publishing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CloudUpload className="h-4 w-4 mr-2" />
+                  )}
+                  Publish to Supabase
+                </Button>
+                {isPublished && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleUnpublish}
+                    disabled={!recordId || unpublishing}
+                  >
+                    {unpublishing ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CloudOff className="h-4 w-4 mr-2" />
+                    )}
+                    Unpublish
+                  </Button>
+                )}
+              </div>
+
+              <p className="text-[11px] text-muted-foreground">
+                <code>record_json</code> tetap full PkV10Record. Metadata columns hanya untuk filter/list/search.
+              </p>
+            </div>
+          </Section>
+
           {/* ── Identity Summary ──────────────────────────────────────── */}
           <Section title="Identity Summary">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 text-sm">
