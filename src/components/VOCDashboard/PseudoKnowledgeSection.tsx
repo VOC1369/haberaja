@@ -771,10 +771,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       }
 
       const saved = savePkRecord(pkRecord);
-      const promoName =
-        saved.identity_engine?.promo_block?.promo_name || "Promo Tanpa Nama";
-      toast.success("Promo (V.10) disimpan sebagai draft!", {
-        description: `"${promoName}" — record_id: ${saved.record_id}`,
+      toast.success("Promo anda berhasil disimpan sebagai Draft.", {
+        description: "Anda bisa melakukan edit dan verifikasi di option edit.",
       });
       handleRestart();
       if (onNavigateToPromo) onNavigateToPromo();
