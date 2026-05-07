@@ -28,10 +28,19 @@ import {
   History,
   Layers,
   RefreshCw,
+  UploadCloud,
+  Loader2,
+  CloudOff,
 } from "lucide-react";
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
 import { loadFinalPkRecordForCopy } from "../copy-final-json";
+import {
+  canPublish,
+  publishRecord,
+  unpublishRecord,
+} from "../../storage/supabase-publish";
+import { supabase } from "@/integrations/supabase/client";
 import type {
   PkV10Record,
   PkV10Subcategory,
@@ -85,6 +94,98 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
     return () => window.removeEventListener("pk-v10-storage-updated", handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordId]);
+
+  // ── Phase 3C — Publish state ───────────────────────────────────────────
+  const [publishing, setPublishing] = useState(false);
+  const [unpublishing, setUnpublishing] = useState(false);
+  const [publishedFlag, setPublishedFlag] = useState<boolean | null>(null);
+  const [lastPublishedAt, setLastPublishedAt] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  const refreshPublishStatus = async () => {
+    if (!recordId) return;
+    const { data, error } = await supabase
+      .from("promo_knowledge")
+      .select("is_published, published_at")
+      .eq("record_id", recordId)
+      .maybeSingle();
+    if (error) return;
+    if (data) {
+      setPublishedFlag(Boolean(data.is_published));
+      setLastPublishedAt((data.published_at as string | null) ?? null);
+    } else {
+      setPublishedFlag(false);
+      setLastPublishedAt(null);
+    }
+  };
+
+  useEffect(() => {
+    refreshPublishStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordId]);
+
+  const publishGate = useMemo(
+    () =>
+      liveRec
+        ? canPublish(liveRec)
+        : { ok: false, reasons: ["no record loaded"] as string[] },
+    [liveRec],
+  );
+
+  const handlePublish = async () => {
+    if (!liveRec) return;
+    const gate = canPublish(liveRec);
+    if (!gate.ok) {
+      setPublishError(gate.reasons.join("; "));
+      toast.error("Publish blocked", { description: gate.reasons[0] });
+      return;
+    }
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const publishedBy = userData?.user?.email ?? userData?.user?.id ?? undefined;
+      const result = await publishRecord(liveRec, publishedBy);
+      if (!result.ok) {
+        const msg = result.error ?? (result.reasons ?? []).join("; ") ?? "publish failed";
+        setPublishError(msg);
+        toast.error("Publish gagal", { description: msg });
+      } else {
+        toast.success("Record dipublish ke Supabase");
+        await refreshPublishStatus();
+        refreshLive();
+      }
+    } catch (e) {
+      const msg = (e as Error).message;
+      setPublishError(msg);
+      toast.error("Publish error", { description: msg });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!recordId) return;
+    setUnpublishing(true);
+    setPublishError(null);
+    try {
+      const result = await unpublishRecord(recordId);
+      if (!result.ok) {
+        const msg = result.error ?? "unpublish failed";
+        setPublishError(msg);
+        toast.error("Unpublish gagal", { description: msg });
+      } else {
+        toast.success("Record di-unpublish");
+        await refreshPublishStatus();
+      }
+    } catch (e) {
+      const msg = (e as Error).message;
+      setPublishError(msg);
+      toast.error("Unpublish error", { description: msg });
+    } finally {
+      setUnpublishing(false);
+    }
+  };
 
   // ── Copy Final JSON — always full PkV10Record from pk:rec ──────────────
   const handleCopyFinal = async () => {
@@ -224,6 +325,103 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
                 )}
                 <p className="text-[11px] text-muted-foreground">
                   Gate ini hanya UI-level guard. Tidak ada Supabase write, tidak mengubah state record.
+                </p>
+              </div>
+            </div>
+          </Section>
+
+          {/* ── Phase 3C — Publish to Supabase ──────────────────────────── */}
+          <Section title="Publish to Supabase">
+            <div
+              className={`flex items-start gap-3 rounded-lg border p-4 ${
+                publishGate.ok
+                  ? "border-success/40 bg-success/10"
+                  : "border-warning/40 bg-warning/10"
+              }`}
+            >
+              {publishGate.ok ? (
+                <UploadCloud className="h-5 w-5 text-success mt-0.5 shrink-0" />
+              ) : (
+                <ShieldAlert className="h-5 w-5 text-warning mt-0.5 shrink-0" />
+              )}
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-foreground">
+                    {publishGate.ok ? "Ready to publish" : "Publish blocked"}
+                  </span>
+                  {publishedFlag === true && (
+                    <Badge className="bg-success/15 text-success border-0">
+                      Published
+                    </Badge>
+                  )}
+                  {publishedFlag === false && (
+                    <Badge className="bg-muted text-muted-foreground border-0">
+                      Not published
+                    </Badge>
+                  )}
+                  {lastPublishedAt && (
+                    <span className="text-[11px] text-muted-foreground font-mono">
+                      last: {lastPublishedAt}
+                    </span>
+                  )}
+                </div>
+
+                {!publishGate.ok && publishGate.reasons.length > 0 && (
+                  <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                    {publishGate.reasons.map((b, i) => (
+                      <li key={i} className="font-mono">{b}</li>
+                    ))}
+                  </ul>
+                )}
+
+                {publishError && (
+                  <div className="text-xs text-destructive font-mono">
+                    {publishError}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    onClick={handlePublish}
+                    disabled={!liveRec || !publishGate.ok || publishing}
+                  >
+                    {publishing ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <UploadCloud className="h-4 w-4 mr-2" />
+                    )}
+                    Publish to Supabase
+                  </Button>
+                  {publishedFlag === true && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleUnpublish}
+                      disabled={unpublishing || !recordId}
+                    >
+                      {unpublishing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <CloudOff className="h-4 w-4 mr-2" />
+                      )}
+                      Unpublish
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={refreshPublishStatus}
+                    disabled={!recordId}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1" /> Refresh status
+                  </Button>
+                </div>
+
+                <p className="text-[11px] text-muted-foreground">
+                  record_json tetap full PkV10Record. Metadata columns hanya untuk
+                  filter/list/search/status.
                 </p>
               </div>
             </div>
