@@ -288,8 +288,8 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
 
           {/* ── Variant Summary ───────────────────────────────────────── */}
           <Section title="Variant Summary">
-            <div className="space-y-2 text-sm">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
                 <SummaryRow
                   k="has_subcategories"
                   v={String(summary.variant.summary_block?.has_subcategories)}
