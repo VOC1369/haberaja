@@ -37,16 +37,18 @@ export function Step8Dependency({ state, update }: StepProps) {
         <PlaceholderBuilder label="Kondisi Pembatalan"
           path="invalidation_engine.void_conditions_block"
           note="Builder void conditions — Phase 2." />
-        <SelectField label="Tindakan Jika Melanggar"
-          path="invalidation_engine.penalty_block.void_action"
-          value={iv.penalty_block.void_action}
-          onChange={(v) => update("invalidation_engine", { penalty_block: { ...iv.penalty_block, void_action: v } })}
-          options={L_VOID_ACTION} />
-        <SelectField label="Jenis Hukuman"
-          path="invalidation_engine.penalty_block.penalty_type"
-          value={iv.penalty_block.penalty_type}
-          onChange={(v) => update("invalidation_engine", { penalty_block: { ...iv.penalty_block, penalty_type: v } })}
-          options={L_PENALTY_TYPE} />
+        <FieldGrid>
+          <SelectField label="Tindakan Jika Melanggar"
+            path="invalidation_engine.penalty_block.void_action"
+            value={iv.penalty_block.void_action}
+            onChange={(v) => update("invalidation_engine", { penalty_block: { ...iv.penalty_block, void_action: v } })}
+            options={L_VOID_ACTION} />
+          <SelectField label="Jenis Hukuman"
+            path="invalidation_engine.penalty_block.penalty_type"
+            value={iv.penalty_block.penalty_type}
+            onChange={(v) => update("invalidation_engine", { penalty_block: { ...iv.penalty_block, penalty_type: v } })}
+            options={L_PENALTY_TYPE} />
+        </FieldGrid>
         <SelectField label="Lingkup Hukuman"
           path="invalidation_engine.penalty_block.penalty_scope"
           value={iv.penalty_block.penalty_scope}
