@@ -15,7 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, ChevronLeft, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, Save, UploadCloud, Loader2 } from "lucide-react";
 import { initialV10WizardState, STEP_TITLES, type V10WizardState } from "./state";
 import { pkRecordToWizard, mergeWizardIntoPkRecord } from "./binding";
 import { applyFormWizardGovernance } from "./governance";
@@ -28,7 +28,7 @@ import { Step5Payment } from "./steps/Step5Payment";
 import { Step6Claim } from "./steps/Step6Claim";
 import { Step7Loyalty } from "./steps/Step7Loyalty";
 import { Step8Dependency } from "./steps/Step8Dependency";
-import { Step9Review } from "./steps/Step9Review";
+import { Step9Review, type Step9PublishBridge } from "./steps/Step9Review";
 
 export interface FormWizardV10Props {
   onBack?: () => void;
