@@ -644,7 +644,7 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
 
       {/* Local wizard preview kept for debug parity, clearly labelled non-truth */}
       <Section title="Local Wizard Preview (debug, NOT source of truth)">
-        <pre className="text-[11px] bg-secondary/30 border border-border rounded-lg p-3 overflow-auto max-h-72 font-mono text-muted-foreground">
+        <pre className="text-[11px] bg-secondary/30 border border-border rounded-lg p-3 overflow-auto max-h-72 max-w-full font-mono text-muted-foreground whitespace-pre-wrap break-words">
 {JSON.stringify(state, null, 2)}
         </pre>
         <p className="text-[11px] text-muted-foreground">
