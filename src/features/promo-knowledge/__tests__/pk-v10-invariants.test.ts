@@ -91,8 +91,8 @@ function buildValidFixture(): PkV10Record {
     variant_engine: {
       items_block: {
         subcategories: [
-          { variant_id: "v1", variant_label: "A" },
-          { variant_id: "v2", variant_label: "B" },
+          { variant_id: "v1", variant_name: "A" },
+          { variant_id: "v2", variant_name: "B" },
         ],
       },
       summary_block: { expected_count: 2 },
@@ -140,7 +140,7 @@ describe("PR-13 — PkV10Record minimum invariant", () => {
     const rec = buildValidFixture();
     rec.variant_engine!.summary_block!.expected_count = 2;
     rec.variant_engine!.items_block!.subcategories = [
-      { variant_id: "v1", variant_label: "A" },
+      { variant_id: "v1", variant_name: "A" },
     ];
     const r = validateMinimumPkV10InvariantForTest(rec);
     expect(r.ok).toBe(false);
