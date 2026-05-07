@@ -101,8 +101,19 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
     }
   };
 
+  const isFinalStep = step === total;
+  const publishDisabled =
+    !publishBridge?.hasRecord || !publishBridge?.canPublish || !!publishBridge?.publishing;
+  const publishLabel = publishBridge?.publishing
+    ? "Publishing..."
+    : publishBridge && publishBridge.hasRecord && !publishBridge.canPublish
+    ? "Publish blocked"
+    : publishBridge?.published
+    ? "Re-publish to Supabase"
+    : "Publish to Supabase";
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 w-full max-w-full min-w-0 pb-24">
       {/* Header */}
       <Card className="p-4 bg-card border-border shadow-sm">
         <div className="flex items-center justify-between gap-3 flex-wrap">
