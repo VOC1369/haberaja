@@ -26,6 +26,7 @@ import { subCategories } from "./SubCategoryTabs";
 import { ticketSubCategories } from "./TicketSubCategories";
 import { knowledgeBaseSubCategories } from "./KnowledgeBaseSubCategories";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface MainSection {
   key: string;
@@ -57,8 +58,13 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
-  const handleLogout = () => {
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("[Logout] signOut failed:", err);
+    }
+    navigate("/", { replace: true });
   };
 
   const handleAccountClick = () => {
