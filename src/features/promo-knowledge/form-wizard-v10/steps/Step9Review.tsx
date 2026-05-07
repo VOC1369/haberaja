@@ -93,6 +93,27 @@ const formatVal = (v: unknown): string => {
 
 export function Step9Review({ state, update, recordId, onPublishBridge }: Step9Props) {
   const tm = state.terms_engine;
+  const skEditorRef = useRef<HTMLDivElement | null>(null);
+  const skTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const focusSkEditor = () => {
+    skEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => {
+      const ta = skEditorRef.current?.querySelector("textarea");
+      if (ta instanceof HTMLTextAreaElement) {
+        ta.focus();
+        skTextAreaRef.current = ta;
+      }
+    }, 350);
+  };
+
+  const handleBlockerAction = (target: string) => {
+    if (target === "sk_editor") return focusSkEditor();
+    if (target === "contradictions" || target === "review_list" || target === "variants") {
+      const el = document.getElementById(`step9-${target}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   // ── Live read from pk:rec (Phase 2C — single source of truth) ──────────
   const [liveRec, setLiveRec] = useState<PkV10Record | null>(() =>
