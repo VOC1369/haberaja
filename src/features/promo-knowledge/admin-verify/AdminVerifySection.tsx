@@ -144,6 +144,7 @@ function readProviderVisualContext(record: PkV10Record): {
 }
 
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
+  const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
   const [issueAnswers, setIssueAnswers] = useState<Record<string, string>>({});
   const [savedIssueAnswers, setSavedIssueAnswers] = useState<Record<string, string>>({});
 
