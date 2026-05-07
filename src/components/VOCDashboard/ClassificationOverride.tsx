@@ -102,17 +102,17 @@ export function ClassificationOverride({
 
   const getCategoryBadgeStyle = (cat: ProgramCategory) => {
     switch (cat) {
-      case 'A': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
-      case 'B': return 'bg-amber-500/20 text-amber-400 border-amber-500/40';
-      case 'C': return 'bg-slate-500/20 text-slate-400 border-slate-500/40';
+      case 'A': return 'bg-emerald-500/20 text-emerald-400 border-0';
+      case 'B': return 'bg-amber-500/20 text-amber-400 border-0';
+      case 'C': return 'bg-slate-500/20 text-slate-400 border-0';
     }
   };
 
   const getConfidenceStyle = (conf: ClassificationConfidence) => {
     switch (conf) {
-      case 'high': return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
-      case 'medium': return 'bg-amber-500/20 text-amber-400 border-amber-500/40';
-      case 'low': return 'bg-destructive/20 text-destructive border-destructive/40';
+      case 'high': return 'bg-emerald-500/20 text-emerald-400 border-0';
+      case 'medium': return 'bg-amber-500/20 text-amber-400 border-0';
+      case 'low': return 'bg-destructive/20 text-destructive border-0';
     }
   };
 
@@ -137,14 +137,14 @@ export function ClassificationOverride({
             {categoryName}
           </Badge>
           {rewardMode && (
-            <Badge variant="outline" className="bg-purple-500/20 text-purple-400 border-purple-500/40">
+            <Badge variant="outline" className="bg-purple-500/20 text-purple-400 border-0">
               {rewardMode === 'formula' ? 'Dinamis' : 
                rewardMode === 'fixed' ? 'Fixed' : 
                rewardMode === 'tier' ? 'Tier' : 'Multi'}
             </Badge>
           )}
           {promoSubType && (
-            <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-button-hover/40">
+            <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-0">
               {promoSubType}
             </Badge>
           )}
