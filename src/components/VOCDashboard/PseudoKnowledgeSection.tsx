@@ -278,11 +278,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         editHistory,
         inputMode,
         lastInput: currentInput,
-        imagePreview
+        imagePreview,
+        // Persist V.10 record sekalian — biar refresh tidak menghilangkan
+        // pkRecord. Null kalau extractor masih jalan / gagal.
+        pkRecord: pkRecord ?? null,
       });
     }
     setHasUnsavedData(!!extractedPromo);
-  }, [extractedPromo, editHistory, inputMode, currentInput, imagePreview]);
+  }, [extractedPromo, editHistory, inputMode, currentInput, imagePreview, pkRecord]);
 
   // ============================================
   // BROWSER CLOSE WARNING
