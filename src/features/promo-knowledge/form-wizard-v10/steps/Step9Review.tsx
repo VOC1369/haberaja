@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
+import { loadFinalPkRecordForCopy } from "../copy-final-json";
 import type {
   PkV10Record,
   PkV10Subcategory,
@@ -93,7 +94,7 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
       });
       return;
     }
-    const rec = loadRecord(recordId);
+    const rec = loadFinalPkRecordForCopy(recordId);
     if (!rec) {
       toast.error("Record tidak ditemukan di pk:rec");
       return;
