@@ -101,32 +101,34 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {onBack && (
-            <Button variant="ghost" size="sm" onClick={onBack}>
-              <ChevronLeft className="h-4 w-4 mr-1" /> Kembali
-            </Button>
-          )}
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              Form Wizard V.10.1 {bindingEnabled ? "— Phase 2A Binding" : "— Skeleton"}
-            </h2>
-            <p className="text-xs text-muted-foreground">
-              {bindingEnabled
-                ? "Safe-fields binding · localStorage only · No Supabase · No extractor"
-                : "UI Only · No save · No prefill · No Supabase"}
-              {recordName ? ` · Record: ${recordName}` : ""}
-              {recordId ? ` · ID: ${recordId.slice(0, 8)}…` : ""}
-            </p>
+      <Card className="p-4 bg-card border-border shadow-sm">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            {onBack && (
+              <Button variant="ghost" size="sm" onClick={onBack}>
+                <ChevronLeft className="h-4 w-4 mr-1" /> Kembali
+              </Button>
+            )}
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold text-foreground tracking-tight truncate">
+                Form Wizard V.10.1 {bindingEnabled ? "— Phase 2A Binding" : "— Skeleton"}
+              </h2>
+              <p className="text-xs text-muted-foreground truncate">
+                {bindingEnabled
+                  ? "Safe-fields binding · localStorage only · No Supabase · No extractor"
+                  : "UI Only · No save · No prefill · No Supabase"}
+                {recordName ? ` · Record: ${recordName}` : ""}
+                {recordId ? ` · ID: ${recordId.slice(0, 8)}…` : ""}
+              </p>
+            </div>
           </div>
+          <Badge className="bg-button-hover/15 text-button-hover border-0">
+            {bindingEnabled ? "Phase 2A" : "Phase 1 Skeleton"}
+          </Badge>
         </div>
-        <Badge className="bg-button-hover/20 text-button-hover border border-button-hover/30">
-          {bindingEnabled ? "Phase 2A" : "Phase 1 Skeleton"}
-        </Badge>
-      </div>
+      </Card>
 
       {loadError && (
         <Card className="p-3 border-error/40 bg-error/10 text-sm text-error">
@@ -135,15 +137,15 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
       )}
 
       {/* Progress */}
-      <Card className="p-4 bg-card border-border">
+      <Card className="p-4 bg-card border-border shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-foreground">
-            Step {step} / {total} — {STEP_TITLES[step - 1]}
+            Step {step} / {total} — <span className="text-button-hover">{STEP_TITLES[step - 1]}</span>
           </span>
           <span className="text-xs text-muted-foreground">{Math.round(progress)}%</span>
         </div>
         <Progress value={progress} />
-        <div className="flex flex-wrap gap-1 mt-3">
+        <div className="flex flex-wrap gap-1.5 mt-3">
           {STEP_TITLES.map((title, idx) => {
             const n = idx + 1;
             const active = n === step;
@@ -153,12 +155,12 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
                 key={n}
                 type="button"
                 onClick={() => setStep(n)}
-                className={`text-xs px-2 py-1 rounded-full border transition-colors ${
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
                   active
                     ? "bg-button-hover text-button-hover-foreground border-button-hover"
                     : done
-                    ? "border-button-hover/40 text-button-hover"
-                    : "border-border text-muted-foreground"
+                    ? "border-button-hover/40 text-button-hover hover:bg-button-hover/10"
+                    : "border-border text-muted-foreground hover:border-button-hover/40"
                 }`}
               >
                 {n}. {title}
@@ -169,10 +171,10 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
       </Card>
 
       {/* Step body */}
-      <div className="space-y-4">{renderStep()}</div>
+      <div className="space-y-5">{renderStep()}</div>
 
       {/* Bottom nav */}
-      <Card className="p-4 bg-card border-border flex items-center justify-between">
+      <Card className="p-4 bg-card border-border shadow-sm flex items-center justify-between gap-3 flex-wrap sticky bottom-2 z-10 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <Button
           variant="outline"
           disabled={step === 1}
@@ -188,7 +190,7 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
                  saveStatus === "saving" ? "Menyimpan…" :
                  saveStatus === "error" ? "Gagal simpan" : "Belum disimpan"}
               </span>
-              <Button variant="outline" onClick={handleSave} disabled={saveStatus === "saving"}>
+              <Button variant="golden" onClick={handleSave} disabled={saveStatus === "saving"}>
                 <Save className="h-4 w-4 mr-1" /> Simpan ke Draft V.10.1
               </Button>
             </>
