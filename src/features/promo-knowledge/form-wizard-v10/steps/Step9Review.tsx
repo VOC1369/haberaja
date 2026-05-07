@@ -95,6 +95,98 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recordId]);
 
+  // ── Phase 3C — Publish state ───────────────────────────────────────────
+  const [publishing, setPublishing] = useState(false);
+  const [unpublishing, setUnpublishing] = useState(false);
+  const [publishedFlag, setPublishedFlag] = useState<boolean | null>(null);
+  const [lastPublishedAt, setLastPublishedAt] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  const refreshPublishStatus = async () => {
+    if (!recordId) return;
+    const { data, error } = await supabase
+      .from("promo_knowledge")
+      .select("is_published, published_at")
+      .eq("record_id", recordId)
+      .maybeSingle();
+    if (error) return;
+    if (data) {
+      setPublishedFlag(Boolean(data.is_published));
+      setLastPublishedAt((data.published_at as string | null) ?? null);
+    } else {
+      setPublishedFlag(false);
+      setLastPublishedAt(null);
+    }
+  };
+
+  useEffect(() => {
+    refreshPublishStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordId]);
+
+  const publishGate = useMemo(
+    () =>
+      liveRec
+        ? canPublish(liveRec)
+        : { ok: false, reasons: ["no record loaded"] as string[] },
+    [liveRec],
+  );
+
+  const handlePublish = async () => {
+    if (!liveRec) return;
+    const gate = canPublish(liveRec);
+    if (!gate.ok) {
+      setPublishError(gate.reasons.join("; "));
+      toast.error("Publish blocked", { description: gate.reasons[0] });
+      return;
+    }
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const publishedBy = userData?.user?.email ?? userData?.user?.id ?? undefined;
+      const result = await publishRecord(liveRec, publishedBy);
+      if (!result.ok) {
+        const msg = result.error ?? (result.reasons ?? []).join("; ") ?? "publish failed";
+        setPublishError(msg);
+        toast.error("Publish gagal", { description: msg });
+      } else {
+        toast.success("Record dipublish ke Supabase");
+        await refreshPublishStatus();
+        refreshLive();
+      }
+    } catch (e) {
+      const msg = (e as Error).message;
+      setPublishError(msg);
+      toast.error("Publish error", { description: msg });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!recordId) return;
+    setUnpublishing(true);
+    setPublishError(null);
+    try {
+      const result = await unpublishRecord(recordId);
+      if (!result.ok) {
+        const msg = result.error ?? "unpublish failed";
+        setPublishError(msg);
+        toast.error("Unpublish gagal", { description: msg });
+      } else {
+        toast.success("Record di-unpublish");
+        await refreshPublishStatus();
+      }
+    } catch (e) {
+      const msg = (e as Error).message;
+      setPublishError(msg);
+      toast.error("Unpublish error", { description: msg });
+    } finally {
+      setUnpublishing(false);
+    }
+  };
+
   // ── Copy Final JSON — always full PkV10Record from pk:rec ──────────────
   const handleCopyFinal = async () => {
     if (!recordId) {
