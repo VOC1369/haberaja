@@ -779,10 +779,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const proceedWithCommit = async () => {
     try {
       if (!pkRecord) {
-        toast.error("Wolfbrain V.10 belum siap", {
-          description:
-            "Data final belum berhasil dibuat. Silakan tunggu proses extractor selesai atau jalankan ulang extract.",
-        });
+        if (pkStatus === "loading") {
+          toast.info("Pseudo Engine masih memproses", {
+            description: "Tunggu badge ✅ siap, lalu coba lagi.",
+          });
+          return;
+        }
+        setJsonMissingAction("Gunakan Promo");
+        setShowJsonMissingDialog(true);
         return;
       }
 
