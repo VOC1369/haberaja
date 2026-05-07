@@ -32,6 +32,13 @@ import {
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
 import { loadFinalPkRecordForCopy } from "../copy-final-json";
+import {
+  canPublish,
+  publishRecord,
+  unpublishRecord,
+} from "../../storage/supabase-publish";
+import { supabase } from "@/integrations/supabase/client";
+import { CloudUpload, CloudOff, Loader2 } from "lucide-react";
 import type {
   PkV10Record,
   PkV10Subcategory,
@@ -71,6 +78,63 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
   const [liveRec, setLiveRec] = useState<PkV10Record | null>(() =>
     recordId ? loadRecord(recordId) : null,
   );
+
+  // ── Publish state ──────────────────────────────────────────────────────
+  const [publishing, setPublishing] = useState(false);
+  const [unpublishing, setUnpublishing] = useState(false);
+  const [publishedAt, setPublishedAt] = useState<string | null>(null);
+  const [isPublished, setIsPublished] = useState<boolean>(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  const publishGate = useMemo(() => (liveRec ? canPublish(liveRec) : { ok: false, reasons: ["no record loaded"] }), [liveRec]);
+
+  const handlePublish = async () => {
+    if (!recordId) return;
+    const rec = loadFinalPkRecordForCopy(recordId);
+    if (!rec) {
+      toast.error("Record tidak ditemukan di pk:rec");
+      return;
+    }
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const publishedBy = userData?.user?.email ?? "manual-ui-publish";
+      const result = await publishRecord(rec, publishedBy);
+      if (!result.ok) {
+        const msg = result.error ?? (result.reasons?.join("; ") ?? "Publish gagal");
+        setPublishError(msg);
+        toast.error("Publish gagal", { description: msg });
+      } else {
+        const row = result.data as { published_at?: string; is_published?: boolean } | undefined;
+        setPublishedAt(row?.published_at ?? new Date().toISOString());
+        setIsPublished(row?.is_published ?? true);
+        toast.success("Published to Supabase", { description: "promo_knowledge.record_json updated" });
+      }
+    } catch (e) {
+      const msg = (e as Error).message;
+      setPublishError(msg);
+      toast.error("Publish error", { description: msg });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!recordId) return;
+    setUnpublishing(true);
+    try {
+      const result = await unpublishRecord(recordId);
+      if (!result.ok) {
+        toast.error("Unpublish gagal", { description: result.error });
+      } else {
+        setIsPublished(false);
+        toast.success("Unpublished");
+      }
+    } finally {
+      setUnpublishing(false);
+    }
+  };
 
   const refreshLive = () => {
     if (!recordId) return;
@@ -226,6 +290,77 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
                   Gate ini hanya UI-level guard. Tidak ada Supabase write, tidak mengubah state record.
                 </p>
               </div>
+            </div>
+          </Section>
+
+          {/* ── Supabase Publish ─────────────────────────────────────── */}
+          <Section title="Supabase Publish">
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-2 text-xs">
+                <SummaryRow k="table" v="promo_knowledge" mono />
+                <SummaryRow k="source" v="pk:rec / loadRecord(recordId)" mono />
+                <SummaryRow k="gate" v={publishGate.ok ? "ready" : "blocked"} />
+                <SummaryRow k="is_published" v={String(isPublished)} />
+              </div>
+
+              {!publishGate.ok && publishGate.reasons.length > 0 && (
+                <div className="rounded-lg border border-warning/40 bg-warning/10 p-3">
+                  <div className="text-xs font-semibold text-warning mb-1">
+                    Publish blocked — alasan:
+                  </div>
+                  <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                    {publishGate.reasons.map((r, i) => (
+                      <li key={i} className="font-mono">{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {publishError && (
+                <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive font-mono">
+                  {publishError}
+                </div>
+              )}
+
+              {isPublished && publishedAt && (
+                <div className="rounded-lg border border-success/40 bg-success/10 p-3 text-xs text-success">
+                  Published to Supabase · <span className="font-mono">{publishedAt}</span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  onClick={handlePublish}
+                  disabled={!recordId || !publishGate.ok || publishing}
+                >
+                  {publishing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CloudUpload className="h-4 w-4 mr-2" />
+                  )}
+                  Publish to Supabase
+                </Button>
+                {isPublished && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleUnpublish}
+                    disabled={!recordId || unpublishing}
+                  >
+                    {unpublishing ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CloudOff className="h-4 w-4 mr-2" />
+                    )}
+                    Unpublish
+                  </Button>
+                )}
+              </div>
+
+              <p className="text-[11px] text-muted-foreground">
+                <code>record_json</code> tetap full PkV10Record. Metadata columns hanya untuk filter/list/search.
+              </p>
             </div>
           </Section>
 
