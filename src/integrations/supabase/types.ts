@@ -77,6 +77,69 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_knowledge: {
+        Row: {
+          client_id: string
+          client_name: string | null
+          created_at: string
+          id: string
+          is_published: boolean
+          promo_mode: string | null
+          promo_name: string
+          promo_type: string | null
+          published_at: string | null
+          published_by: string | null
+          record_id: string
+          record_json: Json
+          review_required: boolean
+          schema_name: string
+          schema_version: string
+          state: string | null
+          updated_at: string
+          validation_status: string | null
+        }
+        Insert: {
+          client_id: string
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          promo_mode?: string | null
+          promo_name: string
+          promo_type?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          record_id: string
+          record_json: Json
+          review_required?: boolean
+          schema_name: string
+          schema_version: string
+          state?: string | null
+          updated_at?: string
+          validation_status?: string | null
+        }
+        Update: {
+          client_id?: string
+          client_name?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          promo_mode?: string | null
+          promo_name?: string
+          promo_type?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          record_id?: string
+          record_json?: Json
+          review_required?: boolean
+          schema_name?: string
+          schema_version?: string
+          state?: string | null
+          updated_at?: string
+          validation_status?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
