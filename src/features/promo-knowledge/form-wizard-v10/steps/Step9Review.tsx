@@ -13,7 +13,7 @@
  *
  * NEVER mutates pkRecord. Display-only derivations stay in component scope.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Section, TextAreaField, MultiTagField } from "../primitives";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
