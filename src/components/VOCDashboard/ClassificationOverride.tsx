@@ -137,14 +137,14 @@ export function ClassificationOverride({
             {categoryName}
           </Badge>
           {rewardMode && (
-            <Badge variant="outline" className="bg-purple-500/20 text-purple-400 border-purple-500/40">
+            <Badge variant="outline" className="bg-purple-500/20 text-purple-400 border-0">
               {rewardMode === 'formula' ? 'Dinamis' : 
                rewardMode === 'fixed' ? 'Fixed' : 
                rewardMode === 'tier' ? 'Tier' : 'Multi'}
             </Badge>
           )}
           {promoSubType && (
-            <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-button-hover/40">
+            <Badge variant="outline" className="bg-button-hover/20 text-button-hover border-0">
               {promoSubType}
             </Badge>
           )}
