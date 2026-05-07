@@ -31,6 +31,8 @@ import {
   UploadCloud,
   Loader2,
   CloudOff,
+  Wrench,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
