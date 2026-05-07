@@ -36,21 +36,23 @@ export function Step3Trigger({ state, update }: StepProps) {
       </Section>
 
       <Section title="Periode Berlaku">
-        <TextField
-          label="Tanggal Mulai Berlaku"
-          path="period_engine.validity_block.valid_from"
-          type="date"
-          value={pe.validity_block.valid_from}
-          onChange={(v) => update("period_engine", { validity_block: { ...pe.validity_block, valid_from: v } })}
-        />
-        <TextField
-          label="Tanggal Berakhir"
-          path="period_engine.validity_block.valid_until"
-          type="date"
-          disabled={unlimited}
-          value={pe.validity_block.valid_until}
-          onChange={(v) => update("period_engine", { validity_block: { ...pe.validity_block, valid_until: v } })}
-        />
+        <FieldGrid>
+          <TextField
+            label="Tanggal Mulai Berlaku"
+            path="period_engine.validity_block.valid_from"
+            type="date"
+            value={pe.validity_block.valid_from}
+            onChange={(v) => update("period_engine", { validity_block: { ...pe.validity_block, valid_from: v } })}
+          />
+          <TextField
+            label="Tanggal Berakhir"
+            path="period_engine.validity_block.valid_until"
+            type="date"
+            disabled={unlimited}
+            value={pe.validity_block.valid_until}
+            onChange={(v) => update("period_engine", { validity_block: { ...pe.validity_block, valid_until: v } })}
+          />
+        </FieldGrid>
         <ToggleField
           label="Tanpa Batas Waktu"
           path="period_engine.validity_block.valid_until_unlimited"
