@@ -1,4 +1,4 @@
-import { Section, SelectField, RadioCardField, TextField, ToggleField, PlaceholderBuilder, MultiTagField } from "../primitives";
+import { Section, SelectField, RadioCardField, TextField, ToggleField, PlaceholderBuilder, MultiTagField, FieldGrid } from "../primitives";
 import { L_TRIGGER_EVENT, L_LOGIC, L_VALIDITY_MODE, L_DURATION_UNIT, L_CLAIM_FREQUENCY, L_DAY, L_RESET_FREQ } from "../labels";
 import type { StepProps } from "./_types";
 
