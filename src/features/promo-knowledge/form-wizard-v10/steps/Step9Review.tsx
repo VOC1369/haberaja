@@ -82,7 +82,7 @@ const formatVal = (v: unknown): string => {
   }
 };
 
-export function Step9Review({ state, update, recordId }: Step9Props) {
+export function Step9Review({ state, update, recordId, onPublishBridge }: Step9Props) {
   const tm = state.terms_engine;
 
   // ── Live read from pk:rec (Phase 2C — single source of truth) ──────────
