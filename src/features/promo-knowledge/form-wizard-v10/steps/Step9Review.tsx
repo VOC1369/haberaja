@@ -330,6 +330,103 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
             </div>
           </Section>
 
+          {/* ── Phase 3C — Publish to Supabase ──────────────────────────── */}
+          <Section title="Publish to Supabase">
+            <div
+              className={`flex items-start gap-3 rounded-lg border p-4 ${
+                publishGate.ok
+                  ? "border-success/40 bg-success/10"
+                  : "border-warning/40 bg-warning/10"
+              }`}
+            >
+              {publishGate.ok ? (
+                <UploadCloud className="h-5 w-5 text-success mt-0.5 shrink-0" />
+              ) : (
+                <ShieldAlert className="h-5 w-5 text-warning mt-0.5 shrink-0" />
+              )}
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-foreground">
+                    {publishGate.ok ? "Ready to publish" : "Publish blocked"}
+                  </span>
+                  {publishedFlag === true && (
+                    <Badge className="bg-success/15 text-success border-0">
+                      Published
+                    </Badge>
+                  )}
+                  {publishedFlag === false && (
+                    <Badge className="bg-muted text-muted-foreground border-0">
+                      Not published
+                    </Badge>
+                  )}
+                  {lastPublishedAt && (
+                    <span className="text-[11px] text-muted-foreground font-mono">
+                      last: {lastPublishedAt}
+                    </span>
+                  )}
+                </div>
+
+                {!publishGate.ok && publishGate.reasons.length > 0 && (
+                  <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                    {publishGate.reasons.map((b, i) => (
+                      <li key={i} className="font-mono">{b}</li>
+                    ))}
+                  </ul>
+                )}
+
+                {publishError && (
+                  <div className="text-xs text-destructive font-mono">
+                    {publishError}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    onClick={handlePublish}
+                    disabled={!liveRec || !publishGate.ok || publishing}
+                  >
+                    {publishing ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <UploadCloud className="h-4 w-4 mr-2" />
+                    )}
+                    Publish to Supabase
+                  </Button>
+                  {publishedFlag === true && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleUnpublish}
+                      disabled={unpublishing || !recordId}
+                    >
+                      {unpublishing ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <CloudOff className="h-4 w-4 mr-2" />
+                      )}
+                      Unpublish
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={refreshPublishStatus}
+                    disabled={!recordId}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1" /> Refresh status
+                  </Button>
+                </div>
+
+                <p className="text-[11px] text-muted-foreground">
+                  record_json tetap full PkV10Record. Metadata columns hanya untuk
+                  filter/list/search/status.
+                </p>
+              </div>
+            </div>
+          </Section>
+
           {/* ── Identity Summary ──────────────────────────────────────── */}
           <Section title="Identity Summary">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 text-sm">
