@@ -1,4 +1,4 @@
-import { Section, SelectField, ToggleField, MultiTagField, TextField, TextAreaField, PlaceholderBuilder } from "../primitives";
+import { Section, SelectField, ToggleField, MultiTagField, TextField, TextAreaField, PlaceholderBuilder, FieldGrid } from "../primitives";
 import {
   L_CLAIM_METHOD, L_CHANNEL, L_PROOF_TYPE, L_PROOF_DEST, L_SOCIAL_PLATFORM,
 } from "../labels";
