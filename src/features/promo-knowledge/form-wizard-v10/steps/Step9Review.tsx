@@ -1,17 +1,91 @@
+/**
+ * Phase 2C — Step 9 Review & Final Gate.
+ *
+ * READ-ONLY review layer. Source of truth = PkV10Record loaded via
+ * `loadRecord(recordId)` from pk:rec. NO mappedPreview / extractedPromo /
+ * PromoFormData / V.09 anywhere.
+ *
+ * Capabilities:
+ *  - Identity / Validation / Warnings / Variants / Audit summary
+ *  - projection_engine labelled derived-only
+ *  - Final Readiness Gate (UI-only — no Supabase, no publish)
+ *  - Copy Final JSON V.10.1 = full canonical PkV10Record
+ *
+ * NEVER mutates pkRecord. Display-only derivations stay in component scope.
+ */
+import { useEffect, useMemo, useState } from "react";
 import { Section, TextAreaField, MultiTagField } from "../primitives";
 import { Button } from "@/components/ui/button";
-import { Copy } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Copy,
+  ShieldCheck,
+  ShieldAlert,
+  AlertTriangle,
+  Info,
+  CheckCircle2,
+  XCircle,
+  History,
+  Layers,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
+import type {
+  PkV10Record,
+  PkV10Subcategory,
+} from "../../schema/pk-v10";
 import type { StepProps } from "./_types";
 
 interface Step9Props extends StepProps {
   recordId?: string;
 }
 
+interface OverrideEntry {
+  field_path?: string;
+  previous_value?: unknown;
+  new_value?: unknown;
+  previous_field_status?: string | null;
+  previous_ai_confidence?: number | null;
+  overridden_by?: string;
+  timestamp?: string;
+  source?: string;
+}
+
+const formatVal = (v: unknown): string => {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "string") return v === "" ? "—" : v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+};
+
 export function Step9Review({ state, update, recordId }: Step9Props) {
   const tm = state.terms_engine;
 
+  // ── Live read from pk:rec (Phase 2C — single source of truth) ──────────
+  const [liveRec, setLiveRec] = useState<PkV10Record | null>(() =>
+    recordId ? loadRecord(recordId) : null,
+  );
+
+  const refreshLive = () => {
+    if (!recordId) return;
+    setLiveRec(loadRecord(recordId));
+  };
+
+  useEffect(() => {
+    refreshLive();
+    if (typeof window === "undefined") return;
+    const handler = () => refreshLive();
+    window.addEventListener("pk-v10-storage-updated", handler);
+    return () => window.removeEventListener("pk-v10-storage-updated", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordId]);
+
+  // ── Copy Final JSON — always full PkV10Record from pk:rec ──────────────
   const handleCopyFinal = async () => {
     if (!recordId) {
       toast.error("Tidak ada recordId", {
@@ -32,8 +106,64 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
     }
   };
 
+  // ── Display-only derivations (NEVER written back) ──────────────────────
+  const summary = useMemo(() => {
+    if (!liveRec) return null;
+    const id = liveRec.identity_engine ?? ({} as PkV10Record["identity_engine"]);
+    const readiness = liveRec.readiness_engine ?? ({} as PkV10Record["readiness_engine"]);
+    const risk = liveRec.risk_engine ?? ({} as PkV10Record["risk_engine"]);
+    const variant = liveRec.variant_engine ?? ({} as PkV10Record["variant_engine"]);
+    const subcategories: PkV10Subcategory[] =
+      Array.isArray(variant.items_block?.subcategories)
+        ? variant.items_block!.subcategories
+        : [];
+    const log: OverrideEntry[] = Array.isArray(
+      (liveRec as unknown as { _human_override_log?: unknown[] })._human_override_log,
+    )
+      ? ((liveRec as unknown as { _human_override_log: OverrideEntry[] })._human_override_log)
+      : [];
+
+    const warnings = readiness.validation_block?.warnings ?? [];
+    const ambiguity = readiness.observability_block?.ambiguity_flags ?? [];
+    const contradictions = readiness.observability_block?.contradiction_flags ?? [];
+    const reviewRequired = readiness.observability_block?.review_required === true;
+    const status = readiness.validation_block?.status ?? "";
+    const readyToCommit = readiness.commit_block?.ready_to_commit === true;
+    const structurallyComplete =
+      readiness.validation_block?.is_structurally_complete === true;
+
+    const blockers: string[] = [];
+    if (status === "needs_review") blockers.push("validation_block.status = needs_review");
+    if (reviewRequired) blockers.push("observability_block.review_required = true");
+    if (!readyToCommit) blockers.push("commit_block.ready_to_commit = false");
+    if (contradictions.length > 0)
+      blockers.push(`${contradictions.length} contradiction flag(s)`);
+
+    const ready = blockers.length === 0;
+
+    return {
+      id,
+      readiness,
+      risk,
+      variant,
+      subcategories,
+      log,
+      warnings,
+      ambiguity,
+      contradictions,
+      reviewRequired,
+      status,
+      readyToCommit,
+      structurallyComplete,
+      blockers,
+      ready,
+    };
+  }, [liveRec]);
+
+  // ── Render ─────────────────────────────────────────────────────────────
   return (
     <>
+      {/* Terms editor — last editable inputs */}
       <Section title="Syarat & Ketentuan">
         <TextAreaField label="Syarat & Ketentuan"
           path="terms_engine.conditions_block.terms_conditions"
@@ -46,63 +176,307 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
           onChange={(v) => update("terms_engine", { requirements_block: { special_requirements: v } })} />
       </Section>
 
-      <Section title="Local Wizard Preview (read-only)">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs text-muted-foreground">
-            Snapshot state wizard di browser ini — bukan record final tersimpan.
+      {!recordId && (
+        <Section title="Review">
+          <p className="text-sm text-muted-foreground">
+            Belum ada <code>recordId</code>. Simpan draft V.10.1 dulu agar Review &amp; Copy JSON aktif.
           </p>
+        </Section>
+      )}
+
+      {recordId && !liveRec && (
+        <Section title="Review">
+          <p className="text-sm text-warning">
+            Record <code>{recordId}</code> tidak ditemukan di <code>pk:rec</code>.
+          </p>
+        </Section>
+      )}
+
+      {liveRec && summary && (
+        <>
+          {/* ── Final Readiness Gate ──────────────────────────────────── */}
+          <Section title="Final Readiness Gate">
+            <div className="flex items-start gap-3">
+              {summary.ready ? (
+                <ShieldCheck className="h-5 w-5 text-success mt-0.5 shrink-0" />
+              ) : (
+                <ShieldAlert className="h-5 w-5 text-warning mt-0.5 shrink-0" />
+              )}
+              <div className="flex-1 space-y-2">
+                <div className="font-semibold text-foreground">
+                  {summary.ready
+                    ? "Siap untuk tahap publish berikutnya."
+                    : "Belum siap publish — review masih diperlukan."}
+                </div>
+                {!summary.ready && summary.blockers.length > 0 && (
+                  <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
+                    {summary.blockers.map((b, i) => (
+                      <li key={i} className="font-mono">{b}</li>
+                    ))}
+                  </ul>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  Gate ini hanya UI-level guard. Tidak ada Supabase write, tidak mengubah state record.
+                </p>
+              </div>
+            </div>
+          </Section>
+
+          {/* ── Identity Summary ──────────────────────────────────────── */}
+          <Section title="Identity Summary">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <SummaryRow k="record_id" v={liveRec.record_id} mono />
+              <SummaryRow k="updated_at" v={liveRec.updated_at} mono />
+              <SummaryRow k="client_id" v={summary.id.client_block?.client_id} />
+              <SummaryRow k="client_name" v={summary.id.client_block?.client_name} />
+              <SummaryRow k="promo_name" v={summary.id.promo_block?.promo_name} />
+              <SummaryRow k="promo_type" v={summary.id.promo_block?.promo_type} />
+              <SummaryRow k="target_user" v={summary.id.promo_block?.target_user} />
+              <SummaryRow k="promo_mode" v={summary.id.promo_block?.promo_mode} />
+            </div>
+          </Section>
+
+          {/* ── Validation Summary ────────────────────────────────────── */}
+          <Section title="Validation Summary">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <SummaryRow k="status" v={summary.status} />
+              <SummaryRow
+                k="is_structurally_complete"
+                v={String(summary.structurallyComplete)}
+              />
+              <SummaryRow k="ready_to_commit" v={String(summary.readyToCommit)} />
+              <SummaryRow k="review_required" v={String(summary.reviewRequired)} />
+            </div>
+          </Section>
+
+          {/* ── Warnings / Risk ───────────────────────────────────────── */}
+          <Section title="Warnings, Ambiguity & Contradictions">
+            <div className="space-y-3">
+              <FlagBlock
+                icon={<AlertTriangle className="h-4 w-4" />}
+                label="Warnings"
+                items={summary.warnings}
+                tone="warning"
+              />
+              <FlagBlock
+                icon={<Info className="h-4 w-4" />}
+                label="Ambiguity Flags"
+                items={summary.ambiguity}
+                tone="info"
+              />
+              <FlagBlock
+                icon={<XCircle className="h-4 w-4" />}
+                label="Contradiction Flags"
+                items={summary.contradictions}
+                tone="error"
+              />
+              <div className="text-sm">
+                <span className="text-muted-foreground">promo_risk_level:</span>{" "}
+                <span className="font-mono text-foreground">
+                  {formatVal(summary.risk.level_block?.promo_risk_level)}
+                </span>
+              </div>
+            </div>
+          </Section>
+
+          {/* ── Variant Summary ───────────────────────────────────────── */}
+          <Section title="Variant Summary">
+            <div className="space-y-2 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <SummaryRow
+                  k="has_subcategories"
+                  v={String(summary.variant.summary_block?.has_subcategories)}
+                />
+                <SummaryRow
+                  k="expected_count"
+                  v={formatVal(summary.variant.summary_block?.expected_count)}
+                />
+                <SummaryRow
+                  k="actual_count"
+                  v={String(summary.subcategories.length)}
+                />
+                <SummaryRow
+                  k="default_variant_id"
+                  v={summary.variant.summary_block?.default_variant_id}
+                />
+              </div>
+              {summary.subcategories.length > 0 && (
+                <div className="pt-2">
+                  <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5">
+                    <Layers className="h-3 w-3" /> Variants (read-only)
+                  </div>
+                  <ul className="space-y-1">
+                    {summary.subcategories.map((sub, idx) => {
+                      const s = sub as unknown as Record<string, unknown>;
+                      const name = (s.variant_name ?? s.name ?? `variant-${idx}`) as string;
+                      const vid = (s.variant_id ?? "") as string;
+                      return (
+                        <li
+                          key={vid || idx}
+                          className="text-xs flex items-center gap-2 px-2 py-1 rounded bg-muted/40"
+                        >
+                          <span className="font-mono text-muted-foreground">
+                            {vid || `(no-id-${idx})`}
+                          </span>
+                          <span className="text-foreground">{name}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </Section>
+
+          {/* ── Human Override Log ────────────────────────────────────── */}
+          <Section title="Human Override Log (audit)">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <History className="h-3 w-3" />
+              {summary.log.length} entry — read-only audit trail.
+            </div>
+            {summary.log.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Belum ada perubahan manual.</p>
+            ) : (
+              <ul className="space-y-2 max-h-72 overflow-auto">
+                {summary.log.map((e, i) => (
+                  <li
+                    key={i}
+                    className="text-xs border border-border rounded p-2 bg-muted/30 space-y-1 font-mono"
+                  >
+                    <div className="text-foreground font-semibold">{e.field_path ?? "(no path)"}</div>
+                    <div>
+                      <span className="text-muted-foreground">prev:</span> {formatVal(e.previous_value)}
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">next:</span> {formatVal(e.new_value)}
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 text-[10px] text-muted-foreground">
+                      <span>by: {e.overridden_by ?? "—"}</span>
+                      <span>at: {e.timestamp ?? "—"}</span>
+                      <span>src: {e.source ?? "—"}</span>
+                      <span>prev_status: {formatVal(e.previous_field_status)}</span>
+                      <span>prev_conf: {formatVal(e.previous_ai_confidence)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+
+          {/* ── Projection Engine label ───────────────────────────────── */}
+          <Section title="Projection Engine">
+            <div className="flex items-start gap-2 text-xs">
+              <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-muted-foreground">
+                <strong className="text-foreground">Projection Engine</strong> adalah{" "}
+                <em>derived-only preview</em>. Ini bukan source of truth. Canonical
+                truth tetap PkV10Record engines (identity, taxonomy, mechanics,
+                reward, dst). Projection kosong tidak dianggap error — banyak record
+                multi-variant memang menyimpan data utama di <code>variant_engine</code>.
+              </p>
+            </div>
+          </Section>
+        </>
+      )}
+
+      {/* ── Copy Final JSON ─────────────────────────────────────────── */}
+      <Section title="Copy Final JSON V.10.1">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           <Button
             type="button"
-            variant="outline"
-            size="sm"
             onClick={handleCopyFinal}
             disabled={!recordId}
-            title={recordId ? "Salin full PkV10Record dari pk:rec" : "Butuh recordId"}
-          >
-            <Copy className="h-4 w-4 mr-1" /> Copy Final JSON V.10.1
-          </Button>
-        </div>
-        <pre className="text-[11px] bg-secondary/30 border border-border rounded-lg p-3 overflow-auto max-h-96 font-mono text-muted-foreground">
-{JSON.stringify(state, null, 2)}
-        </pre>
-        <p className="text-xs text-muted-foreground">
-          <strong>Local Wizard Preview</strong> ≠ <strong>Final Saved PkV10Record</strong>.
-          Tombol <em>Copy Final JSON V.10.1</em> menyalin record lengkap (termasuk{" "}
-          <code>record_id</code>, <code>meta_engine</code>, <code>variant_engine</code>,{" "}
-          <code>_field_status</code>, <code>ai_confidence</code>) dari pk:rec via{" "}
-          <code>loadRecord(recordId)</code>.
-        </p>
-      </Section>
-
-      <Section title="Debug Metadata">
-        <p className="text-xs text-muted-foreground">
-          <code>_field_status</code>, <code>ai_confidence</code>, <code>readiness_engine</code>,{" "}
-          <code>meta_engine.schema_block</code> — akan dirender read-only di Phase 2 setelah prefill aktif.
-        </p>
-      </Section>
-
-      <Section title="Summary & Export">
-        <p className="text-xs text-muted-foreground">
-          Salin JSON final V.10.1 untuk validasi, debugging, atau handoff ke konsumen lain
-          (Livechat / API / MCP). Sumber: <code>loadRecord(recordId)</code> dari{" "}
-          <code>pk:rec</code> — bukan local wizard state.
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            onClick={handleCopyFinal}
-            disabled={!recordId}
-            title={recordId ? "Salin full PkV10Record dari pk:rec" : "Butuh recordId — simpan draft terlebih dulu"}
+            title={
+              recordId
+                ? "Salin full PkV10Record dari pk:rec"
+                : "Butuh recordId — simpan draft terlebih dulu"
+            }
           >
             <Copy className="h-4 w-4 mr-2" /> Copy Final JSON V.10.1
           </Button>
+          {recordId && (
+            <Button type="button" variant="outline" size="sm" onClick={refreshLive}>
+              <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+            </Button>
+          )}
           {!recordId && (
-            <span className="text-xs text-warning">
-              Belum ada recordId. Simpan draft terlebih dulu agar tombol aktif.
-            </span>
+            <Badge className="bg-warning/15 text-warning border-0">
+              Belum ada recordId
+            </Badge>
           )}
         </div>
+        <p className="text-xs text-muted-foreground">
+          Sumber: <code>loadRecord(recordId)</code> dari <code>pk:rec</code> — full
+          canonical PkV10Record termasuk <code>meta_engine.source_block.raw_content</code>,{" "}
+          <code>variant_engine</code>, <code>ai_confidence</code>,{" "}
+          <code>_field_status</code>, dan <code>_human_override_log</code>. Bukan dari
+          form state, bukan dari mappedPreview, bukan dari extractedPromo, bukan dari V.09.
+        </p>
+      </Section>
+
+      {/* Local wizard preview kept for debug parity, clearly labelled non-truth */}
+      <Section title="Local Wizard Preview (debug, NOT source of truth)">
+        <pre className="text-[11px] bg-secondary/30 border border-border rounded-lg p-3 overflow-auto max-h-72 font-mono text-muted-foreground">
+{JSON.stringify(state, null, 2)}
+        </pre>
+        <p className="text-[11px] text-muted-foreground">
+          Snapshot wizard state di browser. Bukan record final tersimpan. Untuk
+          canonical JSON gunakan tombol <em>Copy Final JSON V.10.1</em> di atas.
+        </p>
       </Section>
     </>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Inline UI helpers (display-only, never mutate)
+// ──────────────────────────────────────────────────────────────────────────
+
+function SummaryRow({ k, v, mono }: { k: string; v: unknown; mono?: boolean }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{k}</span>
+      <span className={mono ? "font-mono text-xs text-foreground break-all" : "text-foreground"}>
+        {formatVal(v)}
+      </span>
+    </div>
+  );
+}
+
+function FlagBlock({
+  icon,
+  label,
+  items,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  items: string[];
+  tone: "warning" | "info" | "error";
+}) {
+  const toneCls =
+    tone === "error"
+      ? "text-destructive"
+      : tone === "warning"
+      ? "text-warning"
+      : "text-muted-foreground";
+  return (
+    <div>
+      <div className={`flex items-center gap-1.5 text-xs font-semibold ${toneCls}`}>
+        {icon}
+        {label} ({items.length})
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+          <CheckCircle2 className="h-3 w-3 text-success" /> kosong
+        </p>
+      ) : (
+        <ul className="mt-1 space-y-0.5 text-xs text-foreground list-disc pl-5">
+          {items.map((it, i) => (
+            <li key={i} className="font-mono">{it}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
