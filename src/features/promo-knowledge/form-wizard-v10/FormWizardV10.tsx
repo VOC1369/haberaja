@@ -213,24 +213,34 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
           )}
         </div>
         {isFinalStep ? (
-          <Button
-            onClick={() => publishBridge?.handlePublish()}
-            disabled={publishDisabled}
-            title={
-              !publishBridge?.hasRecord
-                ? "Butuh record V.10.1 — simpan draft dulu"
-                : !publishBridge?.canPublish
-                ? "Publish blocked — lihat alasan di kartu Publish to Supabase"
-                : "Publish full PkV10Record ke promo_knowledge"
-            }
-          >
-            {publishBridge?.publishing ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            ) : (
-              <UploadCloud className="h-4 w-4 mr-1" />
+          <div className="flex items-center gap-2 flex-wrap">
+            {publishBridge && !publishBridge.canPublish && publishBridge.hasRecord && (
+              <span className="text-xs text-muted-foreground">
+                Masih ada review yang harus diselesaikan.
+              </span>
             )}
-            {publishLabel}
-          </Button>
+            {publishBridge?.published === true && (
+              <span className="text-xs text-success">Sudah dipublish</span>
+            )}
+            <Button
+              onClick={() => publishBridge?.handlePublish()}
+              disabled={publishDisabled}
+              title={
+                !publishBridge?.hasRecord
+                  ? "Butuh record V.10.1 — simpan draft dulu"
+                  : !publishBridge?.canPublish
+                  ? "Publish blocked — lihat alasan di kartu Publish to Supabase"
+                  : "Publish full PkV10Record ke promo_knowledge"
+              }
+            >
+              {publishBridge?.publishing ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <UploadCloud className="h-4 w-4 mr-1" />
+              )}
+              {publishLabel}
+            </Button>
+          </div>
         ) : (
           <Button
             disabled={step === total}
