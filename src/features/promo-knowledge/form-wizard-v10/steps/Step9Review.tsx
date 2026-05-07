@@ -32,6 +32,12 @@ import {
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
 import { loadFinalPkRecordForCopy } from "../copy-final-json";
+import {
+  canPublish,
+  publishRecord,
+  unpublishRecord,
+} from "../../storage/supabase-publish";
+import { supabase } from "@/integrations/supabase/client";
 import type {
   PkV10Record,
   PkV10Subcategory,
