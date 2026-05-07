@@ -35,7 +35,11 @@
  */
 
 import { useMemo, useState } from "react";
-import { ShieldCheck, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, CheckCircle2, Sparkles, AlertTriangle, HelpCircle, GitCompareArrows } from "lucide-react";
+import {
+  buildIssueQuestions,
+  type AdminVerifyIssueQuestion,
+} from "./extractor-issue-adapter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
