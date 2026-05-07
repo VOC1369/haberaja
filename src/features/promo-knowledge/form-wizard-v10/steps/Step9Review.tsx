@@ -47,8 +47,17 @@ import type {
 } from "../../schema/pk-v10";
 import type { StepProps } from "./_types";
 
+export interface Step9PublishBridge {
+  canPublish: boolean;
+  publishing: boolean;
+  published: boolean | null;
+  hasRecord: boolean;
+  handlePublish: () => void;
+}
+
 interface Step9Props extends StepProps {
   recordId?: string;
+  onPublishBridge?: (bridge: Step9PublishBridge) => void;
 }
 
 interface OverrideEntry {
