@@ -7,25 +7,27 @@ export function Step2Access({ state, update }: StepProps) {
   return (
     <>
       <Section title="Platform & Wilayah">
-        <SelectField
-          label="Platform Akses"
-          path="scope_engine.platform_block.platform_access"
-          value={sc.platform_block.platform_access}
-          onChange={(v) => update("scope_engine", { platform_block: { ...sc.platform_block, platform_access: v } })}
-          options={L_PLATFORM_ACCESS}
-        />
+        <FieldGrid>
+          <SelectField
+            label="Platform Akses"
+            path="scope_engine.platform_block.platform_access"
+            value={sc.platform_block.platform_access}
+            onChange={(v) => update("scope_engine", { platform_block: { ...sc.platform_block, platform_access: v } })}
+            options={L_PLATFORM_ACCESS}
+          />
+          <SelectField
+            label="Wilayah"
+            path="scope_engine.geo_block.geo_restriction"
+            value={sc.geo_block.geo_restriction}
+            onChange={(v) => update("scope_engine", { geo_block: { geo_restriction: v } })}
+            options={L_GEO}
+          />
+        </FieldGrid>
         <ToggleField
           label="Wajib APK?"
           path="scope_engine.platform_block.apk_required"
           value={sc.platform_block.apk_required}
           onChange={(v) => update("scope_engine", { platform_block: { ...sc.platform_block, apk_required: v } })}
-        />
-        <SelectField
-          label="Wilayah"
-          path="scope_engine.geo_block.geo_restriction"
-          value={sc.geo_block.geo_restriction}
-          onChange={(v) => update("scope_engine", { geo_block: { geo_restriction: v } })}
-          options={L_GEO}
         />
       </Section>
 
