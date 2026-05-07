@@ -673,14 +673,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // STEP 2 hard rule — only V.10 (Pseudo Engine V.1.1) is allowed.
     // No silent V.09 wrapper fallback.
     if (!pkRecord) {
-      toast.error("Belum ada record V.1.1", {
-        description:
-          pkStatus === "loading"
-            ? "Pseudo Engine extractor masih jalan. Tunggu badge ✅ siap."
-            : pkStatus === "failed"
-              ? `Pseudo Engine extractor gagal${pkFailReason ? ` (${pkFailReason})` : ""}. Tidak ada V.1.1 untuk dicopy.`
-              : "Jalankan ekstraksi dulu sebelum copy JSON.",
-      });
+      if (pkStatus === "loading") {
+        toast.info("Pseudo Engine masih memproses", {
+          description: "Tunggu badge ✅ siap, lalu coba lagi.",
+        });
+        return;
+      }
+      setJsonMissingAction("Copy JSON");
+      setShowJsonMissingDialog(true);
       return;
     }
 
