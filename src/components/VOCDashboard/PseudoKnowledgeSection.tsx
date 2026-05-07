@@ -2372,6 +2372,39 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         </div>
       )}
 
+      {/* JSON Missing Dialog — muncul saat pkRecord kosong tapi user
+          klik aksi yang butuh JSON final. Tidak mengubah flow apa pun:
+          Ya = jalankan ulang handleReExtract, Tidak = tutup. */}
+      <AlertDialog open={showJsonMissingDialog} onOpenChange={setShowJsonMissingDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              JSON anda belum tersedia
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {jsonMissingAction
+                ? `"${jsonMissingAction}" butuh JSON V.10 final, tapi belum ada di sesi ini. `
+                : "JSON V.10 final belum ada di sesi ini. "}
+              Apakah anda ingin extract ulang?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowJsonMissingDialog(false)}>
+              Tidak
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowJsonMissingDialog(false);
+                handleReExtract();
+              }}
+            >
+              Ya, extract ulang
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Leave Warning Dialog */}
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
         <AlertDialogContent>
