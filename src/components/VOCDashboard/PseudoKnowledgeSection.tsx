@@ -696,14 +696,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
   const handleDownloadJSON = () => {
     if (!pkRecord) {
-      toast.error("Belum ada record V.1.1", {
-        description:
-          pkStatus === "loading"
-            ? "Pseudo Engine extractor masih jalan. Tunggu badge ✅ siap."
-            : pkStatus === "failed"
-              ? `Pseudo Engine extractor gagal${pkFailReason ? ` (${pkFailReason})` : ""}.`
-              : "Jalankan ekstraksi dulu sebelum download JSON.",
-      });
+      if (pkStatus === "loading") {
+        toast.info("Pseudo Engine masih memproses", {
+          description: "Tunggu badge ✅ siap, lalu coba lagi.",
+        });
+        return;
+      }
+      setJsonMissingAction("Download JSON");
+      setShowJsonMissingDialog(true);
       return;
     }
     try {
