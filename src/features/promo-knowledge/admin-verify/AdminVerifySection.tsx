@@ -914,3 +914,154 @@ function TagInput({
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// PR-19A — EXTRACTOR ISSUE SECTION
+// Renders extractor warnings / ambiguity / contradictions as read/answer
+// cards. Local UI state only. NEVER mutates the record. NEVER calls LLM.
+// Live LLM resolver + JSON patch preview land in PR-19B.
+// ─────────────────────────────────────────────────────────────────────────
+
+const SEVERITY_META: Record<
+  AdminVerifyIssueQuestion["severity"],
+  { label: string; variant: "warning" | "destructive" | "pending"; Icon: typeof AlertTriangle }
+> = {
+  warning: { label: "Peringatan", variant: "warning", Icon: AlertTriangle },
+  ambiguity: { label: "Ambigu", variant: "pending", Icon: HelpCircle },
+  contradiction: { label: "Kontradiksi", variant: "destructive", Icon: GitCompareArrows },
+};
+
+function ExtractorIssueSection({
+  issues,
+  drafts,
+  saved,
+  onDraftChange,
+  onSave,
+}: {
+  issues: AdminVerifyIssueQuestion[];
+  drafts: Record<string, string>;
+  saved: Record<string, string>;
+  onDraftChange: (taskId: string, value: string) => void;
+  onSave: (taskId: string) => void;
+}) {
+  return (
+    <div className="space-y-4 pt-2 border-t border-border">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
+          <Sparkles className="h-5 w-5 text-warning" />
+        </div>
+        <div className="flex-1">
+          <h4 className="text-base font-semibold text-foreground">
+            Review dari hasil extractor
+          </h4>
+          <p className="text-sm text-muted-foreground">
+            {issues.length} hal yang perlu dikonfirmasi admin sebelum publish.
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
+        <p className="text-xs text-muted-foreground">
+          Jawaban Anda akan diproses oleh resolver LLM pada tahap berikutnya
+          untuk membuat preview perubahan JSON. Saat ini jawaban hanya disimpan
+          sementara di sesi ini dan belum mengubah data promo.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {issues.map((q) => (
+          <ExtractorIssueCard
+            key={q.task_id}
+            question={q}
+            draft={drafts[q.task_id] ?? ""}
+            savedValue={saved[q.task_id]}
+            onDraftChange={(v) => onDraftChange(q.task_id, v)}
+            onSave={() => onSave(q.task_id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ExtractorIssueCard({
+  question,
+  draft,
+  savedValue,
+  onDraftChange,
+  onSave,
+}: {
+  question: AdminVerifyIssueQuestion;
+  draft: string;
+  savedValue: string | undefined;
+  onDraftChange: (v: string) => void;
+  onSave: () => void;
+}) {
+  const meta = SEVERITY_META[question.severity];
+  const Icon = meta.Icon;
+  const isSaved = typeof savedValue === "string" && savedValue.trim().length > 0;
+  const isDirty = draft !== (savedValue ?? "");
+  const canSave = draft.trim().length > 0 && isDirty;
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <Icon className="h-4 w-4 text-muted-foreground mt-1 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h5 className="text-sm font-medium text-foreground">
+              {question.issue_summary}
+            </h5>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant={meta.variant} size="sm">
+            {meta.label}
+          </Badge>
+          <Badge variant="outline" size="sm">
+            <Sparkles className="h-3 w-3" />
+            Perlu LLM
+          </Badge>
+          {isSaved && !isDirty && (
+            <Badge variant="success" size="sm">
+              <CheckCircle2 className="h-3 w-3" />
+              Tersimpan
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Sumber dari extractor
+        </Label>
+        <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
+          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+            {question.source_text}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-sm font-medium text-foreground">
+          {question.admin_question}
+        </Label>
+        <Textarea
+          value={draft}
+          onChange={(e) => onDraftChange(e.target.value)}
+          placeholder="Tulis jawaban Anda dengan kalimat sendiri…"
+          className="min-h-[88px]"
+        />
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          Jawaban tidak mengubah JSON. Resolver LLM akan membuat preview pada PR berikutnya.
+        </p>
+        <Button size="sm" variant="outline" onClick={onSave} disabled={!canSave}>
+          Simpan jawaban sementara
+        </Button>
+      </div>
+    </div>
+  );
+}
