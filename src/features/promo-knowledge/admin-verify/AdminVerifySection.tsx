@@ -523,6 +523,24 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         ))}
       </div>
 
+      {/* PR-19A — Extractor issue questions section. Read/answer only; no JSON mutation. */}
+      {issueQuestions.length > 0 && (
+        <ExtractorIssueSection
+          issues={issueQuestions}
+          drafts={issueAnswers}
+          saved={savedIssueAnswers}
+          onDraftChange={(taskId, value) =>
+            setIssueAnswers((prev) => ({ ...prev, [taskId]: value }))
+          }
+          onSave={(taskId) =>
+            setSavedIssueAnswers((prev) => ({
+              ...prev,
+              [taskId]: issueAnswers[taskId] ?? "",
+            }))
+          }
+        />
+      )}
+
       {/* Footer */}
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
         <div className="text-sm text-muted-foreground">
