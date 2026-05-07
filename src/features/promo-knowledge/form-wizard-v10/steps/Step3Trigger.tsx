@@ -1,4 +1,4 @@
-import { Section, SelectField, RadioCardField, TextField, ToggleField, PlaceholderBuilder, MultiTagField } from "../primitives";
+import { Section, SelectField, RadioCardField, TextField, ToggleField, PlaceholderBuilder, MultiTagField, FieldGrid } from "../primitives";
 import { L_TRIGGER_EVENT, L_LOGIC, L_VALIDITY_MODE, L_DURATION_UNIT, L_CLAIM_FREQUENCY, L_DAY, L_RESET_FREQ } from "../labels";
 import type { StepProps } from "./_types";
 
@@ -12,43 +12,47 @@ export function Step3Trigger({ state, update }: StepProps) {
   return (
     <>
       <Section title="Trigger">
-        <SelectField
-          label="Event Pemicu"
-          path="trigger_engine.primary_trigger_block.trigger_event"
-          value={tr.primary_trigger_block.trigger_event}
-          onChange={(v) => update("trigger_engine", { primary_trigger_block: { trigger_event: v } })}
-          options={L_TRIGGER_EVENT}
-        />
+        <FieldGrid>
+          <SelectField
+            label="Event Pemicu"
+            path="trigger_engine.primary_trigger_block.trigger_event"
+            value={tr.primary_trigger_block.trigger_event}
+            onChange={(v) => update("trigger_engine", { primary_trigger_block: { trigger_event: v } })}
+            options={L_TRIGGER_EVENT}
+          />
+          <RadioCardField
+            label="Logika Kondisi"
+            path="trigger_engine.trigger_rule_block.logic_operator"
+            value={tr.trigger_rule_block.logic_operator}
+            onChange={(v) => update("trigger_engine", { trigger_rule_block: { ...tr.trigger_rule_block, logic_operator: v } })}
+            options={L_LOGIC}
+          />
+        </FieldGrid>
         <PlaceholderBuilder
           label="Kondisi Tambahan (field/operator/value)"
           path="trigger_engine.trigger_rule_block.conditions"
           note="Builder kondisi multi-row akan dibuat di Phase 2. Saat ini placeholder."
         />
-        <RadioCardField
-          label="Logika Kondisi"
-          path="trigger_engine.trigger_rule_block.logic_operator"
-          value={tr.trigger_rule_block.logic_operator}
-          onChange={(v) => update("trigger_engine", { trigger_rule_block: { ...tr.trigger_rule_block, logic_operator: v } })}
-          options={L_LOGIC}
-        />
       </Section>
 
       <Section title="Periode Berlaku">
-        <TextField
-          label="Tanggal Mulai Berlaku"
-          path="period_engine.validity_block.valid_from"
-          type="date"
-          value={pe.validity_block.valid_from}
-          onChange={(v) => update("period_engine", { validity_block: { ...pe.validity_block, valid_from: v } })}
-        />
-        <TextField
-          label="Tanggal Berakhir"
-          path="period_engine.validity_block.valid_until"
-          type="date"
-          disabled={unlimited}
-          value={pe.validity_block.valid_until}
-          onChange={(v) => update("period_engine", { validity_block: { ...pe.validity_block, valid_until: v } })}
-        />
+        <FieldGrid>
+          <TextField
+            label="Tanggal Mulai Berlaku"
+            path="period_engine.validity_block.valid_from"
+            type="date"
+            value={pe.validity_block.valid_from}
+            onChange={(v) => update("period_engine", { validity_block: { ...pe.validity_block, valid_from: v } })}
+          />
+          <TextField
+            label="Tanggal Berakhir"
+            path="period_engine.validity_block.valid_until"
+            type="date"
+            disabled={unlimited}
+            value={pe.validity_block.valid_until}
+            onChange={(v) => update("period_engine", { validity_block: { ...pe.validity_block, valid_until: v } })}
+          />
+        </FieldGrid>
         <ToggleField
           label="Tanpa Batas Waktu"
           path="period_engine.validity_block.valid_until_unlimited"
@@ -83,20 +87,22 @@ export function Step3Trigger({ state, update }: StepProps) {
       </Section>
 
       <Section title="Distribusi">
-        <SelectField
-          label="Frekuensi Klaim"
-          path="period_engine.distribution_block.claim_frequency"
-          value={pe.distribution_block.claim_frequency}
-          onChange={(v) => update("period_engine", { distribution_block: { ...pe.distribution_block, claim_frequency: v } })}
-          options={L_CLAIM_FREQUENCY}
-        />
-        <SelectField
-          label="Hari Pembagian Reward"
-          path="period_engine.distribution_block.distribution_day"
-          value={pe.distribution_block.distribution_day}
-          onChange={(v) => update("period_engine", { distribution_block: { ...pe.distribution_block, distribution_day: v } })}
-          options={L_DAY}
-        />
+        <FieldGrid>
+          <SelectField
+            label="Frekuensi Klaim"
+            path="period_engine.distribution_block.claim_frequency"
+            value={pe.distribution_block.claim_frequency}
+            onChange={(v) => update("period_engine", { distribution_block: { ...pe.distribution_block, claim_frequency: v } })}
+            options={L_CLAIM_FREQUENCY}
+          />
+          <SelectField
+            label="Hari Pembagian Reward"
+            path="period_engine.distribution_block.distribution_day"
+            value={pe.distribution_block.distribution_day}
+            onChange={(v) => update("period_engine", { distribution_block: { ...pe.distribution_block, distribution_day: v } })}
+            options={L_DAY}
+          />
+        </FieldGrid>
       </Section>
 
       <Section title="Jam Distribusi">

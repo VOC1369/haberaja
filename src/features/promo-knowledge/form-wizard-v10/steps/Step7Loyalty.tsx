@@ -1,4 +1,4 @@
-import { Section, SelectField, TextField, PlaceholderBuilder } from "../primitives";
+import { Section, SelectField, TextField, PlaceholderBuilder, FieldGrid } from "../primitives";
 import { L_POINT_NAME } from "../labels";
 import type { StepProps } from "./_types";
 
@@ -7,15 +7,17 @@ export function Step7Loyalty({ state, update }: StepProps) {
   return (
     <>
       <Section title="Mekanisme Loyalitas">
-        <SelectField label="Nama Poin" path="loyalty_engine.mechanism_block.point_name"
-          value={lo.mechanism_block.point_name}
-          onChange={(v) => update("loyalty_engine", { mechanism_block: { ...lo.mechanism_block, point_name: v } })}
-          options={L_POINT_NAME} />
-        <TextField label="Mode Loyalitas"
-          path="loyalty_engine.mechanism_block.loyalty_mode"
-          value={lo.mechanism_block.loyalty_mode}
-          onChange={(v) => update("loyalty_engine", { mechanism_block: { ...lo.mechanism_block, loyalty_mode: v } })}
-          placeholder="cth: cumulative / reset_per_period (F3 enum)" />
+        <FieldGrid>
+          <SelectField label="Nama Poin" path="loyalty_engine.mechanism_block.point_name"
+            value={lo.mechanism_block.point_name}
+            onChange={(v) => update("loyalty_engine", { mechanism_block: { ...lo.mechanism_block, point_name: v } })}
+            options={L_POINT_NAME} />
+          <TextField label="Mode Loyalitas"
+            path="loyalty_engine.mechanism_block.loyalty_mode"
+            value={lo.mechanism_block.loyalty_mode}
+            onChange={(v) => update("loyalty_engine", { mechanism_block: { ...lo.mechanism_block, loyalty_mode: v } })}
+            placeholder="cth: cumulative / reset_per_period (F3 enum)" />
+        </FieldGrid>
         <TextField label="Aturan Earn Poin"
           path="loyalty_engine.mechanism_block.earning_rule"
           value={lo.mechanism_block.earning_rule}

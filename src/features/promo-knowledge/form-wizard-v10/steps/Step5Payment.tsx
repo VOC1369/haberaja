@@ -1,4 +1,4 @@
-import { Section, SelectField, TextField, MultiTagField } from "../primitives";
+import { Section, SelectField, TextField, MultiTagField, FieldGrid } from "../primitives";
 import { L_DEPOSIT_METHOD } from "../labels";
 import type { StepProps } from "./_types";
 
@@ -7,15 +7,17 @@ export function Step5Payment({ state, update }: StepProps) {
   return (
     <>
       <Section title="Deposit">
-        <SelectField label="Metode Deposit"
-          path="payment_engine.deposit_block.deposit_method"
-          value={pm.deposit_block.deposit_method}
-          onChange={(v) => update("payment_engine", { deposit_block: { ...pm.deposit_block, deposit_method: v } })}
-          options={L_DEPOSIT_METHOD} />
-        <TextField label="Rate Deposit"
-          path="payment_engine.deposit_block.deposit_rate" type="number"
-          value={pm.deposit_block.deposit_rate}
-          onChange={(v) => update("payment_engine", { deposit_block: { ...pm.deposit_block, deposit_rate: v } })} />
+        <FieldGrid>
+          <SelectField label="Metode Deposit"
+            path="payment_engine.deposit_block.deposit_method"
+            value={pm.deposit_block.deposit_method}
+            onChange={(v) => update("payment_engine", { deposit_block: { ...pm.deposit_block, deposit_method: v } })}
+            options={L_DEPOSIT_METHOD} />
+          <TextField label="Rate Deposit"
+            path="payment_engine.deposit_block.deposit_rate" type="number"
+            value={pm.deposit_block.deposit_rate}
+            onChange={(v) => update("payment_engine", { deposit_block: { ...pm.deposit_block, deposit_rate: v } })} />
+        </FieldGrid>
         <MultiTagField label="Provider Deposit"
           path="payment_engine.deposit_block.deposit_method_providers"
           value={pm.deposit_block.deposit_method_providers}
