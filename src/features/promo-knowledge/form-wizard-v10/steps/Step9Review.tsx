@@ -562,19 +562,22 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
           </Section>
 
           {/* ── Validation Summary ────────────────────────────────────── */}
-          <Section title="Validation Summary">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 text-sm">
-              <SummaryRow k="status" v={summary.status} />
-              <SummaryRow
-                k="is_structurally_complete"
-                v={String(summary.structurallyComplete)}
-              />
-              <SummaryRow k="ready_to_commit" v={String(summary.readyToCommit)} />
-              <SummaryRow k="review_required" v={String(summary.reviewRequired)} />
-            </div>
-          </Section>
+          <div id="step9-review_list">
+            <Section title="Validation Summary">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 text-sm">
+                <SummaryRow k="status" v={summary.status} />
+                <SummaryRow
+                  k="is_structurally_complete"
+                  v={String(summary.structurallyComplete)}
+                />
+                <SummaryRow k="ready_to_commit" v={String(summary.readyToCommit)} />
+                <SummaryRow k="review_required" v={String(summary.reviewRequired)} />
+              </div>
+            </Section>
+          </div>
 
           {/* ── Warnings / Risk ───────────────────────────────────────── */}
+          <div id="step9-contradictions">
           <Section title="Warnings, Ambiguity & Contradictions">
             <div className="space-y-3">
               <FlagBlock
