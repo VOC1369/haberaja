@@ -157,8 +157,11 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
     if (!liveRec) return;
     const gate = canPublish(liveRec);
     if (!gate.ok) {
-      setPublishError(gate.reasons.join("; "));
-      toast.error("Publish blocked", { description: gate.reasons[0] });
+      const display = buildPublishBlockerDisplay(liveRec, gate);
+      setPublishError(display.reasons.join(" · "));
+      toast.error("Promo belum bisa dipublish", {
+        description: display.reasons[0] ?? "Selesaikan review terlebih dahulu.",
+      });
       return;
     }
     setPublishing(true);
