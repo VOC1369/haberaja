@@ -1,4 +1,4 @@
-import { Section, ToggleField, SelectField, TextField, MultiTagField, PlaceholderBuilder } from "../primitives";
+import { Section, ToggleField, SelectField, TextField, MultiTagField, PlaceholderBuilder, FieldGrid } from "../primitives";
 import { L_STACKING, L_VOID_ACTION, L_PENALTY_TYPE, L_PENALTY_SCOPE } from "../labels";
 import type { StepProps } from "./_types";
 
