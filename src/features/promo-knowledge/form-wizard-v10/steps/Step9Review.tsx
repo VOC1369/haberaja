@@ -13,7 +13,7 @@
  *
  * NEVER mutates pkRecord. Display-only derivations stay in component scope.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Section, TextAreaField, MultiTagField } from "../primitives";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,8 +31,6 @@ import {
   UploadCloud,
   Loader2,
   CloudOff,
-  Wrench,
-  ArrowRight,
 } from "lucide-react";
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
@@ -93,27 +91,6 @@ const formatVal = (v: unknown): string => {
 
 export function Step9Review({ state, update, recordId, onPublishBridge }: Step9Props) {
   const tm = state.terms_engine;
-  const skEditorRef = useRef<HTMLDivElement | null>(null);
-  const skTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  const focusSkEditor = () => {
-    skEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(() => {
-      const ta = skEditorRef.current?.querySelector("textarea");
-      if (ta instanceof HTMLTextAreaElement) {
-        ta.focus();
-        skTextAreaRef.current = ta;
-      }
-    }, 350);
-  };
-
-  const handleBlockerAction = (target: string) => {
-    if (target === "sk_editor") return focusSkEditor();
-    if (target === "contradictions" || target === "review_list" || target === "variants") {
-      const el = document.getElementById(`step9-${target}`);
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
 
   // ── Live read from pk:rec (Phase 2C — single source of truth) ──────────
   const [liveRec, setLiveRec] = useState<PkV10Record | null>(() =>
@@ -181,9 +158,10 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
     const gate = canPublish(liveRec);
     if (!gate.ok) {
       const display = buildPublishBlockerDisplay(liveRec, gate);
-      setPublishError(display.reasons.join(" · "));
+      const msg = display.shortSummary;
+      setPublishError(msg);
       toast.error("Promo belum bisa dipublish", {
-        description: display.reasons[0] ?? "Selesaikan review terlebih dahulu.",
+        description: "Selesaikan review item di Admin Verify terlebih dahulu.",
       });
       return;
     }
@@ -327,30 +305,17 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
   return (
     <>
       {/* Terms editor — last editable inputs */}
-      <div ref={skEditorRef}>
-        <Section title="Syarat & Ketentuan">
-          {blockerDisplay.actions.some((a) => a.id === "sk_game_type_conflict") && (
-            <div className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-foreground">
-              <div className="font-semibold text-destructive mb-1 flex items-center gap-1.5">
-                <AlertTriangle className="h-3.5 w-3.5" /> Periksa kalimat tentang bonus khusus SLOT
-              </div>
-              <p className="text-muted-foreground">
-                Kalimat ini konflik dengan varian Casino / Sports / Slot pada tabel paket.
-                Perbaiki S&K agar konsisten, atau koreksi tabel varian jika S&K yang benar.
-              </p>
-            </div>
-          )}
-          <TextAreaField label="Syarat & Ketentuan"
-            path="terms_engine.conditions_block.terms_conditions"
-            rows={6}
-            value={tm.conditions_block.terms_conditions}
-            onChange={(v) => update("terms_engine", { conditions_block: { terms_conditions: v } })} />
-          <MultiTagField label="Persyaratan Khusus"
-            path="terms_engine.requirements_block.special_requirements"
-            value={tm.requirements_block.special_requirements}
-            onChange={(v) => update("terms_engine", { requirements_block: { special_requirements: v } })} />
-        </Section>
-      </div>
+      <Section title="Syarat & Ketentuan">
+        <TextAreaField label="Syarat & Ketentuan"
+          path="terms_engine.conditions_block.terms_conditions"
+          rows={6}
+          value={tm.conditions_block.terms_conditions}
+          onChange={(v) => update("terms_engine", { conditions_block: { terms_conditions: v } })} />
+        <MultiTagField label="Persyaratan Khusus"
+          path="terms_engine.requirements_block.special_requirements"
+          value={tm.requirements_block.special_requirements}
+          onChange={(v) => update("terms_engine", { requirements_block: { special_requirements: v } })} />
+      </Section>
 
       {!recordId && (
         <Section title="Review">
@@ -472,58 +437,22 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
             </div>
           </Section>
 
-          {/* ── Yang harus diperbaiki sebelum publish (actionable) ────── */}
-          {!publishGate.ok && blockerDisplay.actions.length > 0 && (
-            <Section title="Yang harus diperbaiki sebelum publish">
-              <div className="space-y-3">
-                {blockerDisplay.actions.map((action) => {
-                  const toneCls =
-                    action.tone === "error"
-                      ? "border-destructive/40 bg-destructive/10"
-                      : action.tone === "warning"
-                      ? "border-warning/40 bg-warning/10"
-                      : "border-border bg-muted/30";
-                  return (
-                    <div
-                      key={action.id}
-                      className={`rounded-lg border p-3 ${toneCls}`}
-                    >
-                      <div className="flex items-start gap-2">
-                        <Wrench className="h-4 w-4 mt-0.5 shrink-0 text-foreground" />
-                        <div className="flex-1 space-y-1.5">
-                          <div className="text-sm font-semibold text-foreground">
-                            {action.title}
-                          </div>
-                          <p className="text-xs text-foreground/90">{action.description}</p>
-                          {action.highlight && (
-                            <div className="text-[11px] font-mono text-muted-foreground bg-background/50 border border-border rounded px-2 py-1 break-words">
-                              {action.highlight}
-                            </div>
-                          )}
-                          {action.suggestion && (
-                            <p className="text-xs text-muted-foreground">
-                              <span className="font-semibold text-foreground">Saran: </span>
-                              {action.suggestion}
-                            </p>
-                          )}
-                          {action.actionLabel && (
-                            <div>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="golden"
-                                onClick={() => handleBlockerAction(action.actionTarget)}
-                              >
-                                {action.actionLabel}
-                                <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+          {/* ── Final safety gate pointer (Step9 is NOT a resolver) ───── */}
+          {!publishGate.ok && (
+            <Section title="Selesaikan review di Admin Verify">
+              <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 space-y-2">
+                <p className="text-sm text-foreground">
+                  Masih ada review item yang belum selesai. Step 9 hanya gerbang
+                  publish terakhir — perbaikan dilakukan di tahap{" "}
+                  <strong>Admin Verify</strong>.
+                </p>
+                {blockerDisplay.totalIssueCount > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {blockerDisplay.warnings.length} warning ·{" "}
+                    {blockerDisplay.ambiguity.length} ambiguity ·{" "}
+                    {blockerDisplay.contradictions.length} contradiction
+                  </p>
+                )}
                 {blockerDisplay.technicalReasons.length > 0 && (
                   <Collapsible>
                     <CollapsibleTrigger className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 group">
@@ -540,7 +469,6 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
                   </Collapsible>
                 )}
                 <p className="text-[11px] text-muted-foreground">
-                  Tombol di sini hanya membuka editor terkait. Tidak ada perubahan data otomatis.
                   Publish tetap terkunci sampai semua review selesai.
                 </p>
               </div>
