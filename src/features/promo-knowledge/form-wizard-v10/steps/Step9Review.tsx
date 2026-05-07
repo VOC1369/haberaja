@@ -657,6 +657,7 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
               )}
             </div>
           </Section>
+          </div>
 
           {/* ── Human Override Log ────────────────────────────────────── */}
           <Section title="Human Override Log (audit)">
