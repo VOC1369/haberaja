@@ -14,7 +14,7 @@ import {
   Send, Sparkles, Loader2, FileText, ExternalLink, CheckCircle2, 
   AlertTriangle, Copy, XCircle, AlertCircle, ChevronDown,
   X, RotateCcw, Terminal, HelpCircle, Paperclip, Lightbulb, Ban, Info,
-  Plus, ArrowUp, RefreshCw, FileJson, Download
+  Plus, ArrowUp, RefreshCw, FileJson, Download, Globe, Calendar, Trophy
 } from "lucide-react";
 import {
   DropdownMenu,
