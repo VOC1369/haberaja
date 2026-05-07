@@ -327,17 +327,30 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
   return (
     <>
       {/* Terms editor — last editable inputs */}
-      <Section title="Syarat & Ketentuan">
-        <TextAreaField label="Syarat & Ketentuan"
-          path="terms_engine.conditions_block.terms_conditions"
-          rows={6}
-          value={tm.conditions_block.terms_conditions}
-          onChange={(v) => update("terms_engine", { conditions_block: { terms_conditions: v } })} />
-        <MultiTagField label="Persyaratan Khusus"
-          path="terms_engine.requirements_block.special_requirements"
-          value={tm.requirements_block.special_requirements}
-          onChange={(v) => update("terms_engine", { requirements_block: { special_requirements: v } })} />
-      </Section>
+      <div ref={skEditorRef}>
+        <Section title="Syarat & Ketentuan">
+          {blockerDisplay.actions.some((a) => a.id === "sk_game_type_conflict") && (
+            <div className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-foreground">
+              <div className="font-semibold text-destructive mb-1 flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" /> Periksa kalimat tentang bonus khusus SLOT
+              </div>
+              <p className="text-muted-foreground">
+                Kalimat ini konflik dengan varian Casino / Sports / Slot pada tabel paket.
+                Perbaiki S&K agar konsisten, atau koreksi tabel varian jika S&K yang benar.
+              </p>
+            </div>
+          )}
+          <TextAreaField label="Syarat & Ketentuan"
+            path="terms_engine.conditions_block.terms_conditions"
+            rows={6}
+            value={tm.conditions_block.terms_conditions}
+            onChange={(v) => update("terms_engine", { conditions_block: { terms_conditions: v } })} />
+          <MultiTagField label="Persyaratan Khusus"
+            path="terms_engine.requirements_block.special_requirements"
+            value={tm.requirements_block.special_requirements}
+            onChange={(v) => update("terms_engine", { requirements_block: { special_requirements: v } })} />
+        </Section>
+      </div>
 
       {!recordId && (
         <Section title="Review">
