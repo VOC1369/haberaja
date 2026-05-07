@@ -28,6 +28,9 @@ import {
   History,
   Layers,
   RefreshCw,
+  UploadCloud,
+  Loader2,
+  CloudOff,
 } from "lucide-react";
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
