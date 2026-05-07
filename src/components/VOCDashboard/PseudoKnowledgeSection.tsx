@@ -202,6 +202,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
+  // "JSON belum tersedia" prompt — muncul saat pkRecord kosong tapi user
+  // klik aksi yang butuh JSON final (Copy JSON, Json File, Gunakan Promo).
+  // Bukan flow change — cuma ganti toast.error jadi dialog yes/no.
+  const [showJsonMissingDialog, setShowJsonMissingDialog] = useState(false);
+  const [jsonMissingAction, setJsonMissingAction] = useState<string>("");
+
   
   const scrollBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
