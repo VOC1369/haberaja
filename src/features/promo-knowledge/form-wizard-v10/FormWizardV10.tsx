@@ -15,7 +15,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, ArrowRight, ChevronLeft, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronLeft, Save, UploadCloud, Loader2 } from "lucide-react";
 import { initialV10WizardState, STEP_TITLES, type V10WizardState } from "./state";
 import { pkRecordToWizard, mergeWizardIntoPkRecord } from "./binding";
 import { applyFormWizardGovernance } from "./governance";
@@ -28,7 +28,7 @@ import { Step5Payment } from "./steps/Step5Payment";
 import { Step6Claim } from "./steps/Step6Claim";
 import { Step7Loyalty } from "./steps/Step7Loyalty";
 import { Step8Dependency } from "./steps/Step8Dependency";
-import { Step9Review } from "./steps/Step9Review";
+import { Step9Review, type Step9PublishBridge } from "./steps/Step9Review";
 
 export interface FormWizardV10Props {
   onBack?: () => void;
@@ -41,6 +41,7 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
   const [step, setStep] = useState(1);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [publishBridge, setPublishBridge] = useState<Step9PublishBridge | null>(null);
 
   const total = STEP_TITLES.length;
   const progress = useMemo(() => (step / total) * 100, [step, total]);
@@ -95,13 +96,24 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
       case 6: return <Step6Claim state={state} update={update} />;
       case 7: return <Step7Loyalty state={state} update={update} />;
       case 8: return <Step8Dependency state={state} update={update} />;
-      case 9: return <Step9Review state={state} update={update} recordId={recordId} />;
+      case 9: return <Step9Review state={state} update={update} recordId={recordId} onPublishBridge={setPublishBridge} />;
       default: return null;
     }
   };
 
+  const isFinalStep = step === total;
+  const publishDisabled =
+    !publishBridge?.hasRecord || !publishBridge?.canPublish || !!publishBridge?.publishing;
+  const publishLabel = publishBridge?.publishing
+    ? "Publishing..."
+    : publishBridge && publishBridge.hasRecord && !publishBridge.canPublish
+    ? "Publish blocked"
+    : publishBridge?.published
+    ? "Re-publish to Supabase"
+    : "Publish to Supabase";
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 w-full max-w-full min-w-0 pb-24">
       {/* Header */}
       <Card className="p-4 bg-card border-border shadow-sm">
         <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -171,10 +183,10 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
       </Card>
 
       {/* Step body */}
-      <div className="space-y-5">{renderStep()}</div>
+      <div className="space-y-5 w-full max-w-full min-w-0">{renderStep()}</div>
 
       {/* Bottom nav */}
-      <Card className="p-4 bg-card border-border shadow-sm flex items-center justify-between gap-3 flex-wrap sticky bottom-2 z-10 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+      <Card className="p-4 bg-card border-border shadow-sm flex items-center justify-between gap-3 flex-wrap sticky bottom-2 z-10 backdrop-blur supports-[backdrop-filter]:bg-card/80 max-w-full min-w-0">
         <Button
           variant="outline"
           disabled={step === 1}
@@ -182,7 +194,7 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
         >
           <ArrowLeft className="h-4 w-4 mr-1" /> Sebelumnya
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {bindingEnabled ? (
             <>
               <span className="text-xs text-muted-foreground">
@@ -200,12 +212,33 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
             </span>
           )}
         </div>
-        <Button
-          disabled={step === total}
-          onClick={() => setStep((s) => Math.min(total, s + 1))}
-        >
-          Selanjutnya <ArrowRight className="h-4 w-4 ml-1" />
-        </Button>
+        {isFinalStep ? (
+          <Button
+            onClick={() => publishBridge?.handlePublish()}
+            disabled={publishDisabled}
+            title={
+              !publishBridge?.hasRecord
+                ? "Butuh record V.10.1 — simpan draft dulu"
+                : !publishBridge?.canPublish
+                ? "Publish blocked — lihat alasan di kartu Publish to Supabase"
+                : "Publish full PkV10Record ke promo_knowledge"
+            }
+          >
+            {publishBridge?.publishing ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <UploadCloud className="h-4 w-4 mr-1" />
+            )}
+            {publishLabel}
+          </Button>
+        ) : (
+          <Button
+            disabled={step === total}
+            onClick={() => setStep((s) => Math.min(total, s + 1))}
+          >
+            Selanjutnya <ArrowRight className="h-4 w-4 ml-1" />
+          </Button>
+        )}
       </Card>
     </div>
   );

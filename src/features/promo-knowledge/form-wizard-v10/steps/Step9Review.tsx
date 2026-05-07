@@ -47,8 +47,17 @@ import type {
 } from "../../schema/pk-v10";
 import type { StepProps } from "./_types";
 
+export interface Step9PublishBridge {
+  canPublish: boolean;
+  publishing: boolean;
+  published: boolean | null;
+  hasRecord: boolean;
+  handlePublish: () => void;
+}
+
 interface Step9Props extends StepProps {
   recordId?: string;
+  onPublishBridge?: (bridge: Step9PublishBridge) => void;
 }
 
 interface OverrideEntry {
@@ -73,7 +82,7 @@ const formatVal = (v: unknown): string => {
   }
 };
 
-export function Step9Review({ state, update, recordId }: Step9Props) {
+export function Step9Review({ state, update, recordId, onPublishBridge }: Step9Props) {
   const tm = state.terms_engine;
 
   // ── Live read from pk:rec (Phase 2C — single source of truth) ──────────
@@ -187,7 +196,21 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
     }
   };
 
-  // ── Copy Final JSON — always full PkV10Record from pk:rec ──────────────
+  // Push publish bridge to parent (FormWizardV10) so the bottom bar can
+  // render the primary publish action without duplicating logic.
+  useEffect(() => {
+    if (!onPublishBridge) return;
+    onPublishBridge({
+      canPublish: publishGate.ok,
+      publishing,
+      published: publishedFlag,
+      hasRecord: !!liveRec,
+      handlePublish,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publishGate.ok, publishing, publishedFlag, liveRec]);
+
+
   const handleCopyFinal = async () => {
     if (!recordId) {
       toast.error("Tidak ada recordId", {
@@ -621,7 +644,7 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
 
       {/* Local wizard preview kept for debug parity, clearly labelled non-truth */}
       <Section title="Local Wizard Preview (debug, NOT source of truth)">
-        <pre className="text-[11px] bg-secondary/30 border border-border rounded-lg p-3 overflow-auto max-h-72 font-mono text-muted-foreground">
+        <pre className="text-[11px] bg-secondary/30 border border-border rounded-lg p-3 overflow-auto max-h-72 max-w-full font-mono text-muted-foreground whitespace-pre-wrap break-words">
 {JSON.stringify(state, null, 2)}
         </pre>
         <p className="text-[11px] text-muted-foreground">
