@@ -12,24 +12,26 @@ export function Step3Trigger({ state, update }: StepProps) {
   return (
     <>
       <Section title="Trigger">
-        <SelectField
-          label="Event Pemicu"
-          path="trigger_engine.primary_trigger_block.trigger_event"
-          value={tr.primary_trigger_block.trigger_event}
-          onChange={(v) => update("trigger_engine", { primary_trigger_block: { trigger_event: v } })}
-          options={L_TRIGGER_EVENT}
-        />
+        <FieldGrid>
+          <SelectField
+            label="Event Pemicu"
+            path="trigger_engine.primary_trigger_block.trigger_event"
+            value={tr.primary_trigger_block.trigger_event}
+            onChange={(v) => update("trigger_engine", { primary_trigger_block: { trigger_event: v } })}
+            options={L_TRIGGER_EVENT}
+          />
+          <RadioCardField
+            label="Logika Kondisi"
+            path="trigger_engine.trigger_rule_block.logic_operator"
+            value={tr.trigger_rule_block.logic_operator}
+            onChange={(v) => update("trigger_engine", { trigger_rule_block: { ...tr.trigger_rule_block, logic_operator: v } })}
+            options={L_LOGIC}
+          />
+        </FieldGrid>
         <PlaceholderBuilder
           label="Kondisi Tambahan (field/operator/value)"
           path="trigger_engine.trigger_rule_block.conditions"
           note="Builder kondisi multi-row akan dibuat di Phase 2. Saat ini placeholder."
-        />
-        <RadioCardField
-          label="Logika Kondisi"
-          path="trigger_engine.trigger_rule_block.logic_operator"
-          value={tr.trigger_rule_block.logic_operator}
-          onChange={(v) => update("trigger_engine", { trigger_rule_block: { ...tr.trigger_rule_block, logic_operator: v } })}
-          options={L_LOGIC}
         />
       </Section>
 
