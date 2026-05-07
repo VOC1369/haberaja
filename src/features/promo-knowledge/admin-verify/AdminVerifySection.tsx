@@ -268,7 +268,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     (hasNormalizerPending && !providerPendingRequired);
 
   // Empty state — only when truly nothing to do
-  if (questions.length === 0 && !hasNormalizerPending && !showProviderCard) {
+  if (questions.length === 0 && !hasNormalizerPending && !showProviderCard && issueQuestions.length === 0) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
