@@ -13,7 +13,7 @@
  *
  * NEVER mutates pkRecord. Display-only derivations stay in component scope.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Section, TextAreaField, MultiTagField } from "../primitives";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,8 @@ import {
   UploadCloud,
   Loader2,
   CloudOff,
+  Wrench,
+  ArrowRight,
 } from "lucide-react";
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
@@ -91,6 +93,27 @@ const formatVal = (v: unknown): string => {
 
 export function Step9Review({ state, update, recordId, onPublishBridge }: Step9Props) {
   const tm = state.terms_engine;
+  const skEditorRef = useRef<HTMLDivElement | null>(null);
+  const skTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const focusSkEditor = () => {
+    skEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => {
+      const ta = skEditorRef.current?.querySelector("textarea");
+      if (ta instanceof HTMLTextAreaElement) {
+        ta.focus();
+        skTextAreaRef.current = ta;
+      }
+    }, 350);
+  };
+
+  const handleBlockerAction = (target: string) => {
+    if (target === "sk_editor") return focusSkEditor();
+    if (target === "contradictions" || target === "review_list" || target === "variants") {
+      const el = document.getElementById(`step9-${target}`);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   // ── Live read from pk:rec (Phase 2C — single source of truth) ──────────
   const [liveRec, setLiveRec] = useState<PkV10Record | null>(() =>
@@ -304,17 +327,30 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
   return (
     <>
       {/* Terms editor — last editable inputs */}
-      <Section title="Syarat & Ketentuan">
-        <TextAreaField label="Syarat & Ketentuan"
-          path="terms_engine.conditions_block.terms_conditions"
-          rows={6}
-          value={tm.conditions_block.terms_conditions}
-          onChange={(v) => update("terms_engine", { conditions_block: { terms_conditions: v } })} />
-        <MultiTagField label="Persyaratan Khusus"
-          path="terms_engine.requirements_block.special_requirements"
-          value={tm.requirements_block.special_requirements}
-          onChange={(v) => update("terms_engine", { requirements_block: { special_requirements: v } })} />
-      </Section>
+      <div ref={skEditorRef}>
+        <Section title="Syarat & Ketentuan">
+          {blockerDisplay.actions.some((a) => a.id === "sk_game_type_conflict") && (
+            <div className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-foreground">
+              <div className="font-semibold text-destructive mb-1 flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" /> Periksa kalimat tentang bonus khusus SLOT
+              </div>
+              <p className="text-muted-foreground">
+                Kalimat ini konflik dengan varian Casino / Sports / Slot pada tabel paket.
+                Perbaiki S&K agar konsisten, atau koreksi tabel varian jika S&K yang benar.
+              </p>
+            </div>
+          )}
+          <TextAreaField label="Syarat & Ketentuan"
+            path="terms_engine.conditions_block.terms_conditions"
+            rows={6}
+            value={tm.conditions_block.terms_conditions}
+            onChange={(v) => update("terms_engine", { conditions_block: { terms_conditions: v } })} />
+          <MultiTagField label="Persyaratan Khusus"
+            path="terms_engine.requirements_block.special_requirements"
+            value={tm.requirements_block.special_requirements}
+            onChange={(v) => update("terms_engine", { requirements_block: { special_requirements: v } })} />
+        </Section>
+      </div>
 
       {!recordId && (
         <Section title="Review">
@@ -334,10 +370,10 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
 
       {liveRec && summary && (
         <>
-          {/* ── Final Readiness Gate ──────────────────────────────────── */}
+          {/* ── Final Readiness Gate (compact summary only) ───────────── */}
           <Section title="Final Readiness Gate">
             <div
-              className={`flex items-start gap-3 rounded-lg border p-4 ${
+              className={`flex items-start gap-3 rounded-lg border p-3 ${
                 summary.ready
                   ? "border-success/40 bg-success/10"
                   : "border-warning/40 bg-warning/10"
@@ -348,79 +384,21 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
               ) : (
                 <ShieldAlert className="h-5 w-5 text-warning mt-0.5 shrink-0" />
               )}
-              <div className="flex-1 space-y-3">
-                <div className="font-semibold text-foreground">
-                  {summary.ready
-                    ? "Promo siap dipublish"
-                    : "Promo belum bisa dipublish"}
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-foreground">
+                  {summary.ready ? "Promo siap dipublish" : "Promo belum bisa dipublish"}
                 </div>
-                {!summary.ready && (
-                  <p className="text-xs text-muted-foreground">
-                    Masih ada hal yang perlu dicek sebelum promo ini aman dipublish.
-                  </p>
-                )}
-                {!summary.ready && blockerDisplay.reasons.length > 0 && (
-                  <div>
-                    <div className="text-xs font-semibold text-foreground mb-1">
-                      Yang perlu dicek
-                    </div>
-                    <ul className="text-xs text-foreground list-disc pl-5 space-y-1">
-                      {blockerDisplay.reasons.map((b, i) => (
-                        <li key={i}>{b}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {!summary.ready && blockerDisplay.contradictions.length > 0 && (
-                  <div>
-                    <div className="text-xs font-semibold text-destructive mb-1">
-                      Aturan yang bertentangan
-                    </div>
-                    <ul className="text-xs text-foreground list-disc pl-5 space-y-1">
-                      {blockerDisplay.contradictions.map((c, i) => (
-                        <li key={i}>{c}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {!summary.ready && blockerDisplay.nextSteps.length > 0 && (
-                  <div>
-                    <div className="text-xs font-semibold text-foreground mb-1">
-                      Langkah berikutnya
-                    </div>
-                    <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
-                      {blockerDisplay.nextSteps.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {!summary.ready && blockerDisplay.technicalReasons.length > 0 && (
-                  <Collapsible>
-                    <CollapsibleTrigger className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 group">
-                      <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
-                      Detail teknis
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <ul className="mt-1 text-[11px] text-muted-foreground list-disc pl-5 space-y-0.5 font-mono">
-                        {blockerDisplay.technicalReasons.map((b, i) => (
-                          <li key={i}>{b}</li>
-                        ))}
-                      </ul>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
-                <p className="text-[11px] text-muted-foreground">
-                  Gate ini hanya UI-level guard. Tidak ada Supabase write, tidak mengubah state record.
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {blockerDisplay.shortSummary}
                 </p>
               </div>
             </div>
           </Section>
 
-          {/* ── Phase 3C — Publish to Supabase ──────────────────────────── */}
+          {/* ── Phase 3C — Publish to Supabase (status + action only) ─── */}
           <Section title="Publish to Supabase">
             <div
-              className={`flex items-start gap-3 rounded-lg border p-4 ${
+              className={`flex items-start gap-3 rounded-lg border p-3 ${
                 publishGate.ok
                   ? "border-success/40 bg-success/10"
                   : "border-warning/40 bg-warning/10"
@@ -431,20 +409,12 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
               ) : (
                 <ShieldAlert className="h-5 w-5 text-warning mt-0.5 shrink-0" />
               )}
-              <div className="flex-1 space-y-3">
+              <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-foreground">
-                    {publishGate.ok ? "Promo siap dipublish" : "Promo belum bisa dipublish"}
-                  </span>
-                  {publishedFlag === true && (
-                    <Badge className="bg-success/15 text-success border-0">
-                      Sudah dipublish
-                    </Badge>
-                  )}
-                  {publishedFlag === false && (
-                    <Badge className="bg-muted text-muted-foreground border-0">
-                      Belum dipublish
-                    </Badge>
+                  {publishedFlag === true ? (
+                    <Badge className="bg-success/15 text-success border-0">Sudah dipublish</Badge>
+                  ) : (
+                    <Badge className="bg-muted text-muted-foreground border-0">Belum dipublish</Badge>
                   )}
                   {lastPublishedAt && (
                     <span className="text-[11px] text-muted-foreground font-mono">
@@ -452,74 +422,14 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
                     </span>
                   )}
                 </div>
-
                 {!publishGate.ok && (
                   <p className="text-xs text-muted-foreground">
-                    {blockerDisplay.subtitle}
+                    Selesaikan review dulu di kartu “Yang harus diperbaiki sebelum publish”.
                   </p>
                 )}
-
-                {!publishGate.ok && blockerDisplay.reasons.length > 0 && (
-                  <div>
-                    <div className="text-xs font-semibold text-foreground mb-1">
-                      Yang perlu dicek
-                    </div>
-                    <ul className="text-xs text-foreground list-disc pl-5 space-y-1">
-                      {blockerDisplay.reasons.map((b, i) => (
-                        <li key={i}>{b}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {!publishGate.ok && blockerDisplay.contradictions.length > 0 && (
-                  <div>
-                    <div className="text-xs font-semibold text-destructive mb-1">
-                      Aturan yang bertentangan
-                    </div>
-                    <ul className="text-xs text-foreground list-disc pl-5 space-y-1">
-                      {blockerDisplay.contradictions.map((c, i) => (
-                        <li key={i}>{c}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {!publishGate.ok && blockerDisplay.nextSteps.length > 0 && (
-                  <div>
-                    <div className="text-xs font-semibold text-foreground mb-1">
-                      Langkah berikutnya
-                    </div>
-                    <ul className="text-xs text-muted-foreground list-disc pl-5 space-y-1">
-                      {blockerDisplay.nextSteps.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {!publishGate.ok && blockerDisplay.technicalReasons.length > 0 && (
-                  <Collapsible>
-                    <CollapsibleTrigger className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 group">
-                      <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
-                      Detail teknis
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <ul className="mt-1 text-[11px] text-muted-foreground list-disc pl-5 space-y-0.5 font-mono break-all">
-                        {blockerDisplay.technicalReasons.map((b, i) => (
-                          <li key={i}>{b}</li>
-                        ))}
-                      </ul>
-                    </CollapsibleContent>
-                  </Collapsible>
-                )}
-
                 {publishError && (
-                  <div className="text-xs text-destructive">
-                    {publishError}
-                  </div>
+                  <div className="text-xs text-destructive">{publishError}</div>
                 )}
-
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
@@ -558,16 +468,86 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
                     <RefreshCw className="h-4 w-4 mr-1" /> Refresh status
                   </Button>
                 </div>
-
-                <p className="text-[11px] text-muted-foreground">
-                  record_json tetap full PkV10Record. Metadata columns hanya untuk
-                  filter/list/search/status.
-                </p>
               </div>
             </div>
           </Section>
 
-          {/* ── Identity Summary ──────────────────────────────────────── */}
+          {/* ── Yang harus diperbaiki sebelum publish (actionable) ────── */}
+          {!publishGate.ok && blockerDisplay.actions.length > 0 && (
+            <Section title="Yang harus diperbaiki sebelum publish">
+              <div className="space-y-3">
+                {blockerDisplay.actions.map((action) => {
+                  const toneCls =
+                    action.tone === "error"
+                      ? "border-destructive/40 bg-destructive/10"
+                      : action.tone === "warning"
+                      ? "border-warning/40 bg-warning/10"
+                      : "border-border bg-muted/30";
+                  return (
+                    <div
+                      key={action.id}
+                      className={`rounded-lg border p-3 ${toneCls}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <Wrench className="h-4 w-4 mt-0.5 shrink-0 text-foreground" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="text-sm font-semibold text-foreground">
+                            {action.title}
+                          </div>
+                          <p className="text-xs text-foreground/90">{action.description}</p>
+                          {action.highlight && (
+                            <div className="text-[11px] font-mono text-muted-foreground bg-background/50 border border-border rounded px-2 py-1 break-words">
+                              {action.highlight}
+                            </div>
+                          )}
+                          {action.suggestion && (
+                            <p className="text-xs text-muted-foreground">
+                              <span className="font-semibold text-foreground">Saran: </span>
+                              {action.suggestion}
+                            </p>
+                          )}
+                          {action.actionLabel && (
+                            <div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="golden"
+                                onClick={() => handleBlockerAction(action.actionTarget)}
+                              >
+                                {action.actionLabel}
+                                <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {blockerDisplay.technicalReasons.length > 0 && (
+                  <Collapsible>
+                    <CollapsibleTrigger className="text-[11px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1 group">
+                      <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
+                      Detail teknis
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <ul className="mt-1 text-[11px] text-muted-foreground list-disc pl-5 space-y-0.5 font-mono break-all">
+                        {blockerDisplay.technicalReasons.map((b, i) => (
+                          <li key={i}>{b}</li>
+                        ))}
+                      </ul>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  Tombol di sini hanya membuka editor terkait. Tidak ada perubahan data otomatis.
+                  Publish tetap terkunci sampai semua review selesai.
+                </p>
+              </div>
+            </Section>
+          )}
+
+
           <Section title="Identity Summary">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 text-sm">
               <SummaryRow k="record_id" v={liveRec.record_id} mono />
@@ -582,19 +562,22 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
           </Section>
 
           {/* ── Validation Summary ────────────────────────────────────── */}
-          <Section title="Validation Summary">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 text-sm">
-              <SummaryRow k="status" v={summary.status} />
-              <SummaryRow
-                k="is_structurally_complete"
-                v={String(summary.structurallyComplete)}
-              />
-              <SummaryRow k="ready_to_commit" v={String(summary.readyToCommit)} />
-              <SummaryRow k="review_required" v={String(summary.reviewRequired)} />
-            </div>
-          </Section>
+          <div id="step9-review_list">
+            <Section title="Validation Summary">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 text-sm">
+                <SummaryRow k="status" v={summary.status} />
+                <SummaryRow
+                  k="is_structurally_complete"
+                  v={String(summary.structurallyComplete)}
+                />
+                <SummaryRow k="ready_to_commit" v={String(summary.readyToCommit)} />
+                <SummaryRow k="review_required" v={String(summary.reviewRequired)} />
+              </div>
+            </Section>
+          </div>
 
           {/* ── Warnings / Risk ───────────────────────────────────────── */}
+          <div id="step9-contradictions">
           <Section title="Warnings, Ambiguity & Contradictions">
             <div className="space-y-3">
               <FlagBlock
@@ -623,8 +606,10 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
               </div>
             </div>
           </Section>
+          </div>
 
           {/* ── Variant Summary ───────────────────────────────────────── */}
+          <div id="step9-variants">
           <Section title="Variant Summary">
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
@@ -672,6 +657,7 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
               )}
             </div>
           </Section>
+          </div>
 
           {/* ── Human Override Log ────────────────────────────────────── */}
           <Section title="Human Override Log (audit)">
