@@ -247,8 +247,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       setImagePreview(saved.imagePreview || null);
       
       // Toast info saja (auto-dismiss 3 detik) - tekankan sifat temporary
-      toast.info("Sesi ekstraksi aktif dipulihkan (sementara)", {
-        description: saved.extractedPromo.promo_name || "Draft promo",
+      toast.info("Data Dipulihkan", {
         duration: 3000
       });
     }
