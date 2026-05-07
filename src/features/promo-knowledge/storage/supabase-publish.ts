@@ -181,7 +181,7 @@ export async function publishRecord(
   const row = {
     ...meta,
     is_published: true,
-    record_json: rec as unknown as Record<string, unknown>,
+    record_json: rec as unknown as import("@/integrations/supabase/types").Json,
     published_at: nowIso,
     published_by: publishedBy ?? null,
   };
