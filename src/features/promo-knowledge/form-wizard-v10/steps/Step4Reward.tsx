@@ -31,32 +31,36 @@ export function Step4Reward({ state, update }: StepProps) {
             options={L_TIER_ARCHETYPE}
           />
         )}
-        <SelectField
-          label="Tipe Reward"
-          path="reward_engine.reward_type"
-          value={rw.reward_type}
-          onChange={(v) => update("reward_engine", { reward_type: v })}
-          options={L_REWARD_TYPE}
-        />
-        {isVoucher && (
+        <FieldGrid>
           <SelectField
-            label="Jenis Voucher"
-            path="reward_engine.voucher_kind"
-            value={rw.voucher_kind}
-            onChange={(v) => update("reward_engine", { voucher_kind: v })}
-            options={L_VOUCHER_KIND}
+            label="Tipe Reward"
+            path="reward_engine.reward_type"
+            value={rw.reward_type}
+            onChange={(v) => update("reward_engine", { reward_type: v })}
+            options={L_REWARD_TYPE}
           />
-        )}
+          {isVoucher && (
+            <SelectField
+              label="Jenis Voucher"
+              path="reward_engine.voucher_kind"
+              value={rw.voucher_kind}
+              onChange={(v) => update("reward_engine", { voucher_kind: v })}
+              options={L_VOUCHER_KIND}
+            />
+          )}
+        </FieldGrid>
       </Section>
 
       <Section title="Reward Cap">
-        <TextField label="Mata Uang" path="reward_engine.currency"
-          value={rw.currency}
-          onChange={(v) => update("reward_engine", { currency: v })} />
-        <TextField label="Maksimal Reward" path="reward_engine.max_reward" type="number"
-          disabled={unlimited}
-          value={rw.max_reward}
-          onChange={(v) => update("reward_engine", { max_reward: v })} />
+        <FieldGrid>
+          <TextField label="Mata Uang" path="reward_engine.currency"
+            value={rw.currency}
+            onChange={(v) => update("reward_engine", { currency: v })} />
+          <TextField label="Maksimal Reward" path="reward_engine.max_reward" type="number"
+            disabled={unlimited}
+            value={rw.max_reward}
+            onChange={(v) => update("reward_engine", { max_reward: v })} />
+        </FieldGrid>
         <ToggleField
           label="Maksimal Reward Tanpa Batas?"
           path="reward_engine.max_reward_unlimited"
@@ -73,15 +77,17 @@ export function Step4Reward({ state, update }: StepProps) {
       </Section>
 
       <Section title="Perhitungan">
-        <SelectField label="Basis Perhitungan" path="reward_engine.calculation_basis"
-          value={rw.calculation_basis}
-          onChange={(v) => update("reward_engine", { calculation_basis: v })}
-          options={L_CALC_BASIS} />
-        <SelectField label="Metode Perhitungan" path="reward_engine.calculation_method"
-          value={rw.calculation_method}
-          onChange={(v) => update("reward_engine", { calculation_method: v })}
-          options={L_CALC_METHOD} />
-        <div className="grid grid-cols-2 gap-3">
+        <FieldGrid>
+          <SelectField label="Basis Perhitungan" path="reward_engine.calculation_basis"
+            value={rw.calculation_basis}
+            onChange={(v) => update("reward_engine", { calculation_basis: v })}
+            options={L_CALC_BASIS} />
+          <SelectField label="Metode Perhitungan" path="reward_engine.calculation_method"
+            value={rw.calculation_method}
+            onChange={(v) => update("reward_engine", { calculation_method: v })}
+            options={L_CALC_METHOD} />
+        </FieldGrid>
+        <FieldGrid>
           <TextField label="Nilai" path="reward_engine.calculation_value" type="number"
             value={rw.calculation_value}
             onChange={(v) => update("reward_engine", { calculation_value: v })} />
@@ -89,14 +95,16 @@ export function Step4Reward({ state, update }: StepProps) {
             value={rw.calculation_unit}
             onChange={(v) => update("reward_engine", { calculation_unit: v })}
             options={L_CALC_UNIT} />
-        </div>
-        <TextField label="Minimal Deposit" path="reward_engine.requirement_block.min_deposit" type="number"
-          value={rw.requirement_block.min_deposit}
-          onChange={(v) => update("reward_engine", { requirement_block: { min_deposit: v } })} />
-        <SelectField label="Basis Turnover" path="taxonomy_engine.logic_block.turnover_basis"
-          value={tx.logic_block.turnover_basis}
-          onChange={(v) => update("taxonomy_engine", { logic_block: { ...tx.logic_block, turnover_basis: v } })}
-          options={L_TURNOVER_BASIS} />
+        </FieldGrid>
+        <FieldGrid>
+          <TextField label="Minimal Deposit" path="reward_engine.requirement_block.min_deposit" type="number"
+            value={rw.requirement_block.min_deposit}
+            onChange={(v) => update("reward_engine", { requirement_block: { min_deposit: v } })} />
+          <SelectField label="Basis Turnover" path="taxonomy_engine.logic_block.turnover_basis"
+            value={tx.logic_block.turnover_basis}
+            onChange={(v) => update("taxonomy_engine", { logic_block: { ...tx.logic_block, turnover_basis: v } })}
+            options={L_TURNOVER_BASIS} />
+        </FieldGrid>
         <TextAreaField label="Formula Perhitungan (read-only display)"
           path="taxonomy_engine.logic_block.conversion_formula"
           value={tx.logic_block.conversion_formula}
