@@ -83,13 +83,14 @@ export const L_TRIGGER_EVENT: Record<string, string> = {
   loss_incurred: "Mengalami Kerugian",
   game_event: "Event di Game",
   downline_activity: "Aktivitas Downline",
-  app_install: "Install Aplikasi",
   birthday_date: "Tanggal Ulang Tahun",
   level_up_achieved: "Level Up Tercapai",
   rank_position: "Posisi Ranking",
   parlay_outcome: "Hasil Parlay",
   random_draw: "Random Draw",
   referral_signup: "Pendaftaran Referral",
+  apk_download: "Download APK",
+  lottery_result_match: "Hasil Lottery Cocok",
 };
 
 export const L_LOGIC: Record<string, string> = {
@@ -141,7 +142,7 @@ export const L_TIER_ARCHETYPE: Record<string, string> = {
   parlay_team_count: "Jumlah Tim Parlay",
   stake_amount: "Nilai Stake",
   history_deposit_threshold: "History Deposit",
-  point_store: "Point Store",
+  point_redemption: "Penukaran Poin",
   referral_tier: "Tier Referral",
   exchange_catalog: "Katalog Penukaran",
 };
