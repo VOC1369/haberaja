@@ -167,6 +167,7 @@ export function AccountSection(_props: AccountSectionProps) {
     setProfile(clean);
     setEditing(false);
     setErrors({});
+    window.dispatchEvent(new CustomEvent("voc:profile-updated"));
     toast.success("Profil tersimpan");
   };
 

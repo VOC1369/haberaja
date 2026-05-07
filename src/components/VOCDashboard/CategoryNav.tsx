@@ -62,6 +62,25 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
   const [authEmail, setAuthEmail] = useState<string>("");
   const [authName, setAuthName] = useState<string>("");
 
+  const readLocalName = (userId: string): string => {
+    try {
+      const raw = localStorage.getItem("voc_account_profile:" + userId);
+      if (!raw) return "";
+      const parsed = JSON.parse(raw);
+      return typeof parsed?.fullName === "string" ? parsed.fullName : "";
+    } catch {
+      return "";
+    }
+  };
+
+  const resolveName = (userId: string, meta: Record<string, unknown>, email: string): string => {
+    const local = userId ? readLocalName(userId) : "";
+    if (local) return local;
+    if (typeof meta.full_name === "string" && meta.full_name) return meta.full_name;
+    if (typeof meta.name === "string" && meta.name) return meta.name;
+    return email ? email.split("@")[0] : "";
+  };
+
   useEffect(() => {
     let mounted = true;
     supabase.auth.getUser().then(({ data }) => {
@@ -69,27 +88,43 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
       const u = data.user;
       const email = u?.email ?? "";
       const meta = (u?.user_metadata ?? {}) as Record<string, unknown>;
-      const name =
-        (typeof meta.full_name === "string" && meta.full_name) ||
-        (typeof meta.name === "string" && meta.name) ||
-        (email ? email.split("@")[0] : "");
       setAuthEmail(email);
-      setAuthName(name);
+      setAuthName(resolveName(u?.id ?? "", meta, email));
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       const u = session?.user;
       const email = u?.email ?? "";
       const meta = (u?.user_metadata ?? {}) as Record<string, unknown>;
-      const name =
-        (typeof meta.full_name === "string" && meta.full_name) ||
-        (typeof meta.name === "string" && meta.name) ||
-        (email ? email.split("@")[0] : "");
       setAuthEmail(email);
-      setAuthName(name);
+      setAuthName(resolveName(u?.id ?? "", meta, email));
     });
+
+    // Listen for profile saves from AccountSection (same tab + cross-tab)
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || !e.key.startsWith("voc_account_profile:")) return;
+      supabase.auth.getUser().then(({ data }) => {
+        const u = data.user;
+        const email = u?.email ?? "";
+        const meta = (u?.user_metadata ?? {}) as Record<string, unknown>;
+        setAuthName(resolveName(u?.id ?? "", meta, email));
+      });
+    };
+    const onProfileUpdated = () => {
+      supabase.auth.getUser().then(({ data }) => {
+        const u = data.user;
+        const email = u?.email ?? "";
+        const meta = (u?.user_metadata ?? {}) as Record<string, unknown>;
+        setAuthName(resolveName(u?.id ?? "", meta, email));
+      });
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("voc:profile-updated", onProfileUpdated);
+
     return () => {
       mounted = false;
       sub.subscription.unsubscribe();
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("voc:profile-updated", onProfileUpdated);
     };
   }, []);
 
