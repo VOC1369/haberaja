@@ -1,4 +1,4 @@
-import { Section, RadioCardField, SelectField, TextField, ToggleField, TextAreaField, PlaceholderBuilder } from "../primitives";
+import { Section, RadioCardField, SelectField, TextField, ToggleField, TextAreaField, PlaceholderBuilder, FieldGrid } from "../primitives";
 import {
   L_TAXONOMY_MODE, L_TIER_ARCHETYPE, L_REWARD_TYPE, L_VOUCHER_KIND,
   L_PAYOUT_DIR, L_CALC_BASIS, L_CALC_METHOD, L_CALC_UNIT, L_TURNOVER_BASIS,
