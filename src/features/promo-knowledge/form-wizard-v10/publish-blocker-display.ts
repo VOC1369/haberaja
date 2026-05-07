@@ -3,20 +3,43 @@
  *
  * PURE / READ-ONLY. Never mutates record. Never bypasses canPublish.
  * Translates technical canPublish reasons + readiness flags into
- * admin-friendly Indonesian copy for iGaming admins.
+ * admin-friendly Indonesian copy + actionable items for iGaming admins.
  */
 import type { PkV10Record } from "../schema/pk-v10";
+
+export type BlockerActionTarget =
+  | "sk_editor"
+  | "review_list"
+  | "contradictions"
+  | "variants"
+  | "none";
+
+export interface BlockerActionItem {
+  id: string;
+  title: string;
+  description: string;
+  suggestion?: string;
+  actionLabel?: string;
+  actionTarget: BlockerActionTarget;
+  tone: "warning" | "error" | "info";
+  /** Optional excerpt of the offending item (e.g. the S&K sentence). */
+  highlight?: string;
+}
 
 export interface PublishBlockerDisplay {
   blocked: boolean;
   title: string;
   subtitle: string;
-  reasons: string[];        // human-readable bullets ("Yang perlu dicek")
-  nextSteps: string[];      // actionable guidance ("Langkah berikutnya")
-  technicalReasons: string[]; // raw canPublish reasons (for collapsible)
+  /** Compact one-liner used by Final Readiness Gate. */
+  shortSummary: string;
+  reasons: string[];           // human-readable bullets
+  nextSteps: string[];
+  technicalReasons: string[];
   contradictions: string[];
   warnings: string[];
   ambiguity: string[];
+  /** Deduped, ordered actionable items for the "Yang harus diperbaiki" card. */
+  actions: BlockerActionItem[];
 }
 
 const REASON_MAP: Array<{ match: RegExp; human: string }> = [
@@ -42,6 +65,27 @@ const humanizeReason = (raw: string): string => {
   return raw;
 };
 
+/** Detect "S&K vs game-type" contradictions (slot/casino/sports). */
+function detectSkGameTypeConflict(contradictions: string[]): string | null {
+  for (const c of contradictions) {
+    const lower = c.toLowerCase();
+    const mentionsSk = /(s&k|s\.k|syarat|terms|t&c)/i.test(c);
+    const mentionsSlot = /slot/i.test(lower);
+    const mentionsOther = /(casino|sport|sportsbook|live\s*casino)/i.test(lower);
+    if ((mentionsSk && mentionsSlot) || (mentionsSlot && mentionsOther)) {
+      return c;
+    }
+  }
+  return null;
+}
+
+function detectProductAmbiguity(ambiguity: string[]): string | null {
+  for (const a of ambiguity) {
+    if (/(produk|product|rp\s*50\.?000|paket)/i.test(a)) return a;
+  }
+  return null;
+}
+
 export function buildPublishBlockerDisplay(
   rec: PkV10Record | null,
   publishGate: { ok: boolean; reasons: string[] },
@@ -62,9 +106,7 @@ export function buildPublishBlockerDisplay(
   const reasons = Array.from(humanReasons);
 
   const nextSteps: string[] = [];
-  if (publishGate.ok) {
-    // not blocked
-  } else {
+  if (!publishGate.ok) {
     if (warnings.length > 0 || ambiguity.length > 0 || contradictions.length > 0) {
       nextSteps.push("Buka bagian Warnings / Ambiguity / Contradictions di bawah.");
     }
@@ -85,17 +127,96 @@ export function buildPublishBlockerDisplay(
     }
   }
 
+  // ── Build actionable items (deduped, ordered) ──────────────────────────
+  const actions: BlockerActionItem[] = [];
+  const skConflict = detectSkGameTypeConflict(contradictions);
+  if (skConflict) {
+    actions.push({
+      id: "sk_game_type_conflict",
+      title: "S&K tidak konsisten dengan tabel paket",
+      description:
+        "S&K menyebut bonus khusus SLOT, tetapi tabel paket promo mencakup Casino, Sports, dan Slot.",
+      suggestion:
+        "Perbaiki kalimat S&K agar sesuai dengan tabel paket, atau koreksi tabel varian jika S&K yang benar.",
+      actionLabel: "Perbaiki S&K",
+      actionTarget: "sk_editor",
+      tone: "error",
+      highlight: skConflict,
+    });
+  }
+
+  // Generic remaining contradictions (excluding the S&K-specific one above)
+  const otherContradictions = contradictions.filter((c) => c !== skConflict);
+  if (otherContradictions.length > 0) {
+    actions.push({
+      id: "contradictions_generic",
+      title: "Ada aturan yang saling bertentangan",
+      description: `Ditemukan ${otherContradictions.length} konflik antar field. Periksa dan tentukan sumber yang benar.`,
+      actionLabel: "Lihat konflik",
+      actionTarget: "contradictions",
+      tone: "error",
+    });
+  }
+
+  if (technical.some((r) => /review_required is true/.test(r))) {
+    actions.push({
+      id: "review_required",
+      title: "Promo masih perlu review manual",
+      description:
+        "Setelah memperbaiki S&K, simpan draft lalu jalankan review ulang / tandai review selesai.",
+      actionLabel: "Lihat daftar review",
+      actionTarget: "review_list",
+      tone: "warning",
+    });
+  }
+
+  if (technical.some((r) => /ready_to_commit is false/.test(r))) {
+    actions.push({
+      id: "ready_to_commit",
+      title: "Promo belum ditandai siap publish",
+      description:
+        "Setelah semua item review selesai, tandai promo siap publish (ready_to_commit).",
+      actionLabel: "Selesaikan semua item review",
+      actionTarget: "review_list",
+      tone: "warning",
+    });
+  }
+
+  const productAmb = detectProductAmbiguity(ambiguity);
+  if (productAmb) {
+    actions.push({
+      id: "ambiguity_product",
+      title: "Ada data produk yang mencurigakan",
+      description:
+        "Editor varian penuh belum tersedia. Untuk saat ini gunakan review manual untuk memverifikasi data paket.",
+      actionLabel: "Periksa varian paket",
+      actionTarget: "variants",
+      tone: "warning",
+      highlight: productAmb,
+    });
+  }
+
+  // Compact short summary used by Final Readiness Gate
+  const itemCount = actions.length || reasons.length;
+  const shortSummary = publishGate.ok
+    ? "Semua gate lulus."
+    : itemCount > 0
+    ? `Masih ada ${itemCount} hal yang perlu dicek sebelum publish.`
+    : "Masih ada review yang perlu diselesaikan sebelum publish.";
+
   return {
     blocked: !publishGate.ok,
     title: publishGate.ok ? "Promo siap dipublish" : "Promo belum bisa dipublish",
     subtitle: publishGate.ok
       ? "Semua gate lulus. Klik Publish untuk kirim ke Supabase."
       : "Selesaikan review berikut sebelum publish ke Supabase.",
+    shortSummary,
     reasons,
     nextSteps,
     technicalReasons: technical,
     contradictions,
     warnings,
     ambiguity,
+    actions,
   };
 }
