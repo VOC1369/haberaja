@@ -1389,8 +1389,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             <div className="flex gap-2 mt-2 flex-wrap">
               {/* Client/Website Badge */}
               {headerClientId && (
-                <Badge variant="outline" className="bg-cyan-500/20 text-cyan-400 border-cyan-500/40">
-                  🌐 {headerClientId}
+                <Badge variant="outline" className="bg-cyan-500/20 text-cyan-400 border-0 gap-1.5">
+                  <Globe className="h-3 w-3" />
+                  {headerClientId}
                 </Badge>
               )}
               {/* Step 9 — Periode Promo (period_engine.validity_block) */}
@@ -1401,8 +1402,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   ? "Tidak Terbatas"
                   : validUntil ?? "-";
                 return (
-                  <Badge variant="outline" className="bg-muted text-foreground border-border">
-                    📅 Periode Promo: {display}
+                  <Badge variant="outline" className="bg-muted text-foreground border-0 gap-1.5">
+                    <Calendar className="h-3 w-3" />
+                    Periode Promo: {display}
                   </Badge>
                 );
               })()}
@@ -1416,8 +1418,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     ? maxR.toLocaleString("id-ID")
                     : "-";
                 return (
-                  <Badge variant="outline" className="bg-muted text-foreground border-border">
-                    🏆 Max Total Reward: {display}
+                  <Badge variant="outline" className="bg-muted text-foreground border-0 gap-1.5">
+                    <Trophy className="h-3 w-3" />
+                    Max Total Reward: {display}
                   </Badge>
                 );
               })()}
