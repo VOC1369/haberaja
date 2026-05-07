@@ -202,6 +202,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
+  // "JSON belum tersedia" prompt — muncul saat pkRecord kosong tapi user
+  // klik aksi yang butuh JSON final (Copy JSON, Json File, Gunakan Promo).
+  // Bukan flow change — cuma ganti toast.error jadi dialog yes/no.
+  const [showJsonMissingDialog, setShowJsonMissingDialog] = useState(false);
+  const [jsonMissingAction, setJsonMissingAction] = useState<string>("");
+
   
   const scrollBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -245,7 +251,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       setInputMode(saved.inputMode || 'url');
       setCurrentInput(saved.lastInput || '');
       setImagePreview(saved.imagePreview || null);
-      
+
+      // Restore V.10 PkV10Record snapshot kalau ada — supaya Copy JSON /
+      // Gunakan Promo tetap bisa dipakai setelah refresh, tanpa re-extract.
+      const savedPk = (saved as { pkRecord?: PkV10Record | null }).pkRecord;
+      if (savedPk && typeof savedPk === "object") {
+        setPkRecord(savedPk as PkV10Record);
+        setPkStatus("ready");
+      }
+
       // Toast info saja (auto-dismiss 3 detik) - tekankan sifat temporary
       toast.info("Data Dipulihkan", {
         duration: 3000
@@ -264,11 +278,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         editHistory,
         inputMode,
         lastInput: currentInput,
-        imagePreview
+        imagePreview,
+        // Persist V.10 record sekalian — biar refresh tidak menghilangkan
+        // pkRecord. Null kalau extractor masih jalan / gagal.
+        pkRecord: pkRecord ?? null,
       });
     }
     setHasUnsavedData(!!extractedPromo);
-  }, [extractedPromo, editHistory, inputMode, currentInput, imagePreview]);
+  }, [extractedPromo, editHistory, inputMode, currentInput, imagePreview, pkRecord]);
 
   // ============================================
   // BROWSER CLOSE WARNING
@@ -656,14 +673,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // STEP 2 hard rule — only V.10 (Pseudo Engine V.1.1) is allowed.
     // No silent V.09 wrapper fallback.
     if (!pkRecord) {
-      toast.error("Belum ada record V.1.1", {
-        description:
-          pkStatus === "loading"
-            ? "Pseudo Engine extractor masih jalan. Tunggu badge ✅ siap."
-            : pkStatus === "failed"
-              ? `Pseudo Engine extractor gagal${pkFailReason ? ` (${pkFailReason})` : ""}. Tidak ada V.1.1 untuk dicopy.`
-              : "Jalankan ekstraksi dulu sebelum copy JSON.",
-      });
+      if (pkStatus === "loading") {
+        toast.info("Pseudo Engine masih memproses", {
+          description: "Tunggu badge ✅ siap, lalu coba lagi.",
+        });
+        return;
+      }
+      setJsonMissingAction("Copy JSON");
+      setShowJsonMissingDialog(true);
       return;
     }
 
@@ -679,14 +696,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
   const handleDownloadJSON = () => {
     if (!pkRecord) {
-      toast.error("Belum ada record V.1.1", {
-        description:
-          pkStatus === "loading"
-            ? "Pseudo Engine extractor masih jalan. Tunggu badge ✅ siap."
-            : pkStatus === "failed"
-              ? `Pseudo Engine extractor gagal${pkFailReason ? ` (${pkFailReason})` : ""}.`
-              : "Jalankan ekstraksi dulu sebelum download JSON.",
-      });
+      if (pkStatus === "loading") {
+        toast.info("Pseudo Engine masih memproses", {
+          description: "Tunggu badge ✅ siap, lalu coba lagi.",
+        });
+        return;
+      }
+      setJsonMissingAction("Download JSON");
+      setShowJsonMissingDialog(true);
       return;
     }
     try {
@@ -762,10 +779,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const proceedWithCommit = async () => {
     try {
       if (!pkRecord) {
-        toast.error("Wolfbrain V.10 belum siap", {
-          description:
-            "Data final belum berhasil dibuat. Silakan tunggu proses extractor selesai atau jalankan ulang extract.",
-        });
+        if (pkStatus === "loading") {
+          toast.info("Pseudo Engine masih memproses", {
+            description: "Tunggu badge ✅ siap, lalu coba lagi.",
+          });
+          return;
+        }
+        setJsonMissingAction("Gunakan Promo");
+        setShowJsonMissingDialog(true);
         return;
       }
 
@@ -2350,6 +2371,39 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           </div>
         </div>
       )}
+
+      {/* JSON Missing Dialog — muncul saat pkRecord kosong tapi user
+          klik aksi yang butuh JSON final. Tidak mengubah flow apa pun:
+          Ya = jalankan ulang handleReExtract, Tidak = tutup. */}
+      <AlertDialog open={showJsonMissingDialog} onOpenChange={setShowJsonMissingDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              JSON anda belum tersedia
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {jsonMissingAction
+                ? `"${jsonMissingAction}" butuh JSON V.10 final, tapi belum ada di sesi ini. `
+                : "JSON V.10 final belum ada di sesi ini. "}
+              Apakah anda ingin extract ulang?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowJsonMissingDialog(false)}>
+              Tidak
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setShowJsonMissingDialog(false);
+                handleReExtract();
+              }}
+            >
+              Ya, extract ulang
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Leave Warning Dialog */}
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>

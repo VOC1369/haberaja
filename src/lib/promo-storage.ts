@@ -1416,6 +1416,9 @@ export interface ExtractorSession {
   lastInput: string;
   imagePreview: string | null;
   timestamp: number;
+  // V.10 PkV10Record snapshot — restored bareng extractedPromo agar
+  // Copy JSON / Gunakan Promo tetap available setelah refresh halaman.
+  pkRecord?: unknown | null;
 }
 
 export const extractorSession = {
