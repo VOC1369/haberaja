@@ -186,7 +186,6 @@ export async function publishRecord(
     published_by: publishedBy ?? null,
   };
 
-  // @ts-expect-error — types.ts not yet regenerated for promo_knowledge
   const { data, error } = await supabase
     .from("promo_knowledge")
     .upsert(row, { onConflict: "record_id" })
@@ -207,7 +206,6 @@ export async function unpublishRecord(
     return { ok: false, error: "recordId missing" };
   }
 
-  // @ts-expect-error — types.ts not yet regenerated for promo_knowledge
   const { data, error } = await supabase
     .from("promo_knowledge")
     .update({ is_published: false })
