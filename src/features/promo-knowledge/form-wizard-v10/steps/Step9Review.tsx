@@ -35,6 +35,13 @@ import {
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
 import { loadFinalPkRecordForCopy } from "../copy-final-json";
+import { buildPublishBlockerDisplay } from "../publish-blocker-display";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import {
   canPublish,
   publishRecord,
