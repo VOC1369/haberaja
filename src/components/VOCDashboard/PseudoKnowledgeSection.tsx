@@ -251,7 +251,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       setInputMode(saved.inputMode || 'url');
       setCurrentInput(saved.lastInput || '');
       setImagePreview(saved.imagePreview || null);
-      
+
+      // Restore V.10 PkV10Record snapshot kalau ada — supaya Copy JSON /
+      // Gunakan Promo tetap bisa dipakai setelah refresh, tanpa re-extract.
+      const savedPk = (saved as { pkRecord?: PkV10Record | null }).pkRecord;
+      if (savedPk && typeof savedPk === "object") {
+        setPkRecord(savedPk as PkV10Record);
+        setPkStatus("ready");
+      }
+
       // Toast info saja (auto-dismiss 3 detik) - tekankan sifat temporary
       toast.info("Data Dipulihkan", {
         duration: 3000
