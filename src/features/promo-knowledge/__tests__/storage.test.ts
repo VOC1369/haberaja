@@ -43,7 +43,7 @@ describe("PKB_Wolfbrain V.10 Storage — dumb upsert", () => {
     const rec = createDraftRecord();
     const saved = saveRecord(rec);
     expect(saved.meta_engine.schema_block.schema_name).toBe("PKB_Wolfbrain");
-    expect(saved.meta_engine.schema_block.schema_version).toBe("V.10");
+    expect(saved.meta_engine.schema_block.schema_version).toBe("V.10.1");
   });
 
   it("bumps updated_at on save", async () => {
