@@ -606,8 +606,10 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
               </div>
             </div>
           </Section>
+          </div>
 
           {/* ── Variant Summary ───────────────────────────────────────── */}
+          <div id="step9-variants">
           <Section title="Variant Summary">
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4">
