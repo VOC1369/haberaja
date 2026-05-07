@@ -96,7 +96,7 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
       case 6: return <Step6Claim state={state} update={update} />;
       case 7: return <Step7Loyalty state={state} update={update} />;
       case 8: return <Step8Dependency state={state} update={update} />;
-      case 9: return <Step9Review state={state} update={update} recordId={recordId} />;
+      case 9: return <Step9Review state={state} update={update} recordId={recordId} onPublishBridge={setPublishBridge} />;
       default: return null;
     }
   };
