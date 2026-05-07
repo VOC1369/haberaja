@@ -230,9 +230,9 @@ export function AccountSection(_props: AccountSectionProps) {
                 {displayName}
               </span>
               {isSuperAdmin ? (
-                <Badge className="border-0 bg-button-hover text-button-hover-foreground gap-1">
+                <Badge className="border-0 bg-button-hover/15 text-button-hover gap-1 hover:bg-button-hover/15">
                   <Crown className="h-3 w-3" />
-                  Super Admin
+                  The Creator
                 </Badge>
               ) : null}
             </div>
