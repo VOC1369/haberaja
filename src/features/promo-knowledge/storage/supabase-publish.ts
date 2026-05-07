@@ -188,7 +188,7 @@ export async function publishRecord(
 
   const { data, error } = await supabase
     .from("promo_knowledge")
-    .upsert(row, { onConflict: "record_id" })
+    .upsert([row], { onConflict: "record_id" })
     .select()
     .single();
 
