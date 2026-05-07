@@ -183,10 +183,10 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
       </Card>
 
       {/* Step body */}
-      <div className="space-y-5">{renderStep()}</div>
+      <div className="space-y-5 w-full max-w-full min-w-0">{renderStep()}</div>
 
       {/* Bottom nav */}
-      <Card className="p-4 bg-card border-border shadow-sm flex items-center justify-between gap-3 flex-wrap sticky bottom-2 z-10 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+      <Card className="p-4 bg-card border-border shadow-sm flex items-center justify-between gap-3 flex-wrap sticky bottom-2 z-10 backdrop-blur supports-[backdrop-filter]:bg-card/80 max-w-full min-w-0">
         <Button
           variant="outline"
           disabled={step === 1}
@@ -194,7 +194,7 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
         >
           <ArrowLeft className="h-4 w-4 mr-1" /> Sebelumnya
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {bindingEnabled ? (
             <>
               <span className="text-xs text-muted-foreground">
@@ -212,12 +212,33 @@ export function FormWizardV10({ onBack, recordName, recordId }: FormWizardV10Pro
             </span>
           )}
         </div>
-        <Button
-          disabled={step === total}
-          onClick={() => setStep((s) => Math.min(total, s + 1))}
-        >
-          Selanjutnya <ArrowRight className="h-4 w-4 ml-1" />
-        </Button>
+        {isFinalStep ? (
+          <Button
+            onClick={() => publishBridge?.handlePublish()}
+            disabled={publishDisabled}
+            title={
+              !publishBridge?.hasRecord
+                ? "Butuh record V.10.1 — simpan draft dulu"
+                : !publishBridge?.canPublish
+                ? "Publish blocked — lihat alasan di kartu Publish to Supabase"
+                : "Publish full PkV10Record ke promo_knowledge"
+            }
+          >
+            {publishBridge?.publishing ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <UploadCloud className="h-4 w-4 mr-1" />
+            )}
+            {publishLabel}
+          </Button>
+        ) : (
+          <Button
+            disabled={step === total}
+            onClick={() => setStep((s) => Math.min(total, s + 1))}
+          >
+            Selanjutnya <ArrowRight className="h-4 w-4 ml-1" />
+          </Button>
+        )}
       </Card>
     </div>
   );
