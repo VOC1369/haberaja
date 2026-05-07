@@ -158,8 +158,13 @@ export function AccountSection(_props: AccountSectionProps) {
       toast.error("Sesi tidak ditemukan", { description: "Silakan login ulang." });
       return;
     }
-    writeLocal(userId, result.data);
-    setProfile(result.data);
+    const clean: LocalProfile = {
+      fullName: result.data.fullName ?? "",
+      whatsapp: result.data.whatsapp ?? "",
+      position: result.data.position ?? "",
+    };
+    writeLocal(userId, clean);
+    setProfile(clean);
     setEditing(false);
     setErrors({});
     toast.success("Profil tersimpan");
