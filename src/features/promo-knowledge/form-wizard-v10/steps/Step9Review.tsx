@@ -196,7 +196,21 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
     }
   };
 
-  // ── Copy Final JSON — always full PkV10Record from pk:rec ──────────────
+  // Push publish bridge to parent (FormWizardV10) so the bottom bar can
+  // render the primary publish action without duplicating logic.
+  useEffect(() => {
+    if (!onPublishBridge) return;
+    onPublishBridge({
+      canPublish: publishGate.ok,
+      publishing,
+      published: publishedFlag,
+      hasRecord: !!liveRec,
+      handlePublish,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publishGate.ok, publishing, publishedFlag, liveRec]);
+
+
   const handleCopyFinal = async () => {
     if (!recordId) {
       toast.error("Tidak ada recordId", {
