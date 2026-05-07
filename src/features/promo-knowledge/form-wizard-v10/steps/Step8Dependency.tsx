@@ -12,15 +12,17 @@ export function Step8Dependency({ state, update }: StepProps) {
           path="dependency_engine.stacking_block.stacking_allowed"
           value={dp.stacking_block.stacking_allowed}
           onChange={(v) => update("dependency_engine", { stacking_block: { ...dp.stacking_block, stacking_allowed: v } })} />
-        <SelectField label="Aturan Penggabungan"
-          path="dependency_engine.stacking_block.stacking_policy"
-          value={dp.stacking_block.stacking_policy}
-          onChange={(v) => update("dependency_engine", { stacking_block: { ...dp.stacking_block, stacking_policy: v } })}
-          options={L_STACKING} />
-        <TextField label="Maksimal Promo Bersamaan" type="number"
-          path="dependency_engine.stacking_block.max_concurrent"
-          value={dp.stacking_block.max_concurrent}
-          onChange={(v) => update("dependency_engine", { stacking_block: { ...dp.stacking_block, max_concurrent: v } })} />
+        <FieldGrid>
+          <SelectField label="Aturan Penggabungan"
+            path="dependency_engine.stacking_block.stacking_policy"
+            value={dp.stacking_block.stacking_policy}
+            onChange={(v) => update("dependency_engine", { stacking_block: { ...dp.stacking_block, stacking_policy: v } })}
+            options={L_STACKING} />
+          <TextField label="Maksimal Promo Bersamaan" type="number"
+            path="dependency_engine.stacking_block.max_concurrent"
+            value={dp.stacking_block.max_concurrent}
+            onChange={(v) => update("dependency_engine", { stacking_block: { ...dp.stacking_block, max_concurrent: v } })} />
+        </FieldGrid>
         <MultiTagField label="Tidak Bisa Digabung dengan"
           path="dependency_engine.exclusion_block.mutually_exclusive_with"
           value={dp.exclusion_block.mutually_exclusive_with}
