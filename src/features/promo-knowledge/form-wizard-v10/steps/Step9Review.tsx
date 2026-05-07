@@ -79,6 +79,63 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
     recordId ? loadRecord(recordId) : null,
   );
 
+  // ── Publish state ──────────────────────────────────────────────────────
+  const [publishing, setPublishing] = useState(false);
+  const [unpublishing, setUnpublishing] = useState(false);
+  const [publishedAt, setPublishedAt] = useState<string | null>(null);
+  const [isPublished, setIsPublished] = useState<boolean>(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
+  const publishGate = useMemo(() => (liveRec ? canPublish(liveRec) : { ok: false, reasons: ["no record loaded"] }), [liveRec]);
+
+  const handlePublish = async () => {
+    if (!recordId) return;
+    const rec = loadFinalPkRecordForCopy(recordId);
+    if (!rec) {
+      toast.error("Record tidak ditemukan di pk:rec");
+      return;
+    }
+    setPublishing(true);
+    setPublishError(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const publishedBy = userData?.user?.email ?? "manual-ui-publish";
+      const result = await publishRecord(rec, publishedBy);
+      if (!result.ok) {
+        const msg = result.error ?? (result.reasons?.join("; ") ?? "Publish gagal");
+        setPublishError(msg);
+        toast.error("Publish gagal", { description: msg });
+      } else {
+        const row = result.data as { published_at?: string; is_published?: boolean } | undefined;
+        setPublishedAt(row?.published_at ?? new Date().toISOString());
+        setIsPublished(row?.is_published ?? true);
+        toast.success("Published to Supabase", { description: "promo_knowledge.record_json updated" });
+      }
+    } catch (e) {
+      const msg = (e as Error).message;
+      setPublishError(msg);
+      toast.error("Publish error", { description: msg });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!recordId) return;
+    setUnpublishing(true);
+    try {
+      const result = await unpublishRecord(recordId);
+      if (!result.ok) {
+        toast.error("Unpublish gagal", { description: result.error });
+      } else {
+        setIsPublished(false);
+        toast.success("Unpublished");
+      }
+    } finally {
+      setUnpublishing(false);
+    }
+  };
+
   const refreshLive = () => {
     if (!recordId) return;
     setLiveRec(loadRecord(recordId));
