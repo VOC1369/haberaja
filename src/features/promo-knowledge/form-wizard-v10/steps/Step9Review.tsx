@@ -31,8 +31,6 @@ import {
   UploadCloud,
   Loader2,
   CloudOff,
-  Wrench,
-  ArrowRight,
 } from "lucide-react";
 import { toast } from "@/lib/notify";
 import { loadRecord } from "../../storage/local-storage";
@@ -93,27 +91,6 @@ const formatVal = (v: unknown): string => {
 
 export function Step9Review({ state, update, recordId, onPublishBridge }: Step9Props) {
   const tm = state.terms_engine;
-  const skEditorRef = useRef<HTMLDivElement | null>(null);
-  const skTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  const focusSkEditor = () => {
-    skEditorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(() => {
-      const ta = skEditorRef.current?.querySelector("textarea");
-      if (ta instanceof HTMLTextAreaElement) {
-        ta.focus();
-        skTextAreaRef.current = ta;
-      }
-    }, 350);
-  };
-
-  const handleBlockerAction = (target: string) => {
-    if (target === "sk_editor") return focusSkEditor();
-    if (target === "contradictions" || target === "review_list" || target === "variants") {
-      const el = document.getElementById(`step9-${target}`);
-      el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
 
   // ── Live read from pk:rec (Phase 2C — single source of truth) ──────────
   const [liveRec, setLiveRec] = useState<PkV10Record | null>(() =>
@@ -181,9 +158,10 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
     const gate = canPublish(liveRec);
     if (!gate.ok) {
       const display = buildPublishBlockerDisplay(liveRec, gate);
-      setPublishError(display.reasons.join(" · "));
+      const msg = display.shortSummary;
+      setPublishError(msg);
       toast.error("Promo belum bisa dipublish", {
-        description: display.reasons[0] ?? "Selesaikan review terlebih dahulu.",
+        description: "Selesaikan review item di Admin Verify terlebih dahulu.",
       });
       return;
     }
