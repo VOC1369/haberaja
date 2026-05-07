@@ -10,13 +10,15 @@ export function Step6Claim({ state, update }: StepProps) {
   return (
     <>
       <Section title="Klaim">
-        <SelectField label="Cara Klaim" path="claim_engine.method_block.claim_method"
-          value={cl.method_block.claim_method}
-          onChange={(v) => update("claim_engine", { method_block: { ...cl.method_block, claim_method: v } })}
-          options={L_CLAIM_METHOD} />
-        <ToggleField label="Reward Langsung Masuk?" path="claim_engine.method_block.auto_credit"
-          value={cl.method_block.auto_credit}
-          onChange={(v) => update("claim_engine", { method_block: { ...cl.method_block, auto_credit: v } })} />
+        <FieldGrid>
+          <SelectField label="Cara Klaim" path="claim_engine.method_block.claim_method"
+            value={cl.method_block.claim_method}
+            onChange={(v) => update("claim_engine", { method_block: { ...cl.method_block, claim_method: v } })}
+            options={L_CLAIM_METHOD} />
+          <ToggleField label="Reward Langsung Masuk?" path="claim_engine.method_block.auto_credit"
+            value={cl.method_block.auto_credit}
+            onChange={(v) => update("claim_engine", { method_block: { ...cl.method_block, auto_credit: v } })} />
+        </FieldGrid>
         <MultiTagField label="Saluran Klaim" path="claim_engine.channels_block.channels"
           value={cl.channels_block.channels}
           onChange={(v) => update("claim_engine", { channels_block: { channels: v } })}
