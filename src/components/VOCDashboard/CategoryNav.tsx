@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { Database, BookOpen, Settings, Shield, LogOut, LucideIcon, HelpCircle, ChevronDown, Ticket, MessageCircle, Bug } from "lucide-react";
 import { IS_DEV_MODE } from "@/lib/config/dev-mode";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import predictoLogo from "@/assets/predicto-logo.svg";
 import {
   Sidebar,
@@ -57,6 +58,47 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
   const navigate = useNavigate();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+
+  const [authEmail, setAuthEmail] = useState<string>("");
+  const [authName, setAuthName] = useState<string>("");
+
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!mounted) return;
+      const u = data.user;
+      const email = u?.email ?? "";
+      const meta = (u?.user_metadata ?? {}) as Record<string, unknown>;
+      const name =
+        (typeof meta.full_name === "string" && meta.full_name) ||
+        (typeof meta.name === "string" && meta.name) ||
+        (email ? email.split("@")[0] : "");
+      setAuthEmail(email);
+      setAuthName(name);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      const u = session?.user;
+      const email = u?.email ?? "";
+      const meta = (u?.user_metadata ?? {}) as Record<string, unknown>;
+      const name =
+        (typeof meta.full_name === "string" && meta.full_name) ||
+        (typeof meta.name === "string" && meta.name) ||
+        (email ? email.split("@")[0] : "");
+      setAuthEmail(email);
+      setAuthName(name);
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const initials = (authName || authEmail || "U")
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase() ?? "")
+    .join("") || "U";
 
   const handleLogout = async () => {
     try {
@@ -439,11 +481,11 @@ export function CategoryNav({ activeSection, onSectionChange, activeCategory, on
             >
               <Avatar className="h-8 w-8 shrink-0">
                 <AvatarImage src="" />
-                <AvatarFallback className="text-xs bg-button-hover text-button-hover-foreground font-semibold">EG</AvatarFallback>
+                <AvatarFallback className="text-xs bg-button-hover text-button-hover-foreground font-semibold">{initials}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium truncate text-button-hover group-hover/menu-button:text-button-hover-foreground group-data-[active=true]/menu-button:text-button-hover-foreground">Emilia Greene</span>
-                <span className="text-xs truncate text-muted-foreground group-hover/menu-button:text-button-hover-foreground/70 group-data-[active=true]/menu-button:text-button-hover-foreground/70">emilia.greene@example.com</span>
+                <span className="text-sm font-medium truncate text-button-hover group-hover/menu-button:text-button-hover-foreground group-data-[active=true]/menu-button:text-button-hover-foreground">{authName || "User"}</span>
+                <span className="text-xs truncate text-muted-foreground group-hover/menu-button:text-button-hover-foreground/70 group-data-[active=true]/menu-button:text-button-hover-foreground/70">{authEmail || "—"}</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
