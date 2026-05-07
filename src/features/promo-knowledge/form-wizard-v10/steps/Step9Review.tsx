@@ -197,7 +197,13 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
         <>
           {/* ── Final Readiness Gate ──────────────────────────────────── */}
           <Section title="Final Readiness Gate">
-            <div className="flex items-start gap-3">
+            <div
+              className={`flex items-start gap-3 rounded-lg border p-4 ${
+                summary.ready
+                  ? "border-success/40 bg-success/10"
+                  : "border-warning/40 bg-warning/10"
+              }`}
+            >
               {summary.ready ? (
                 <ShieldCheck className="h-5 w-5 text-success mt-0.5 shrink-0" />
               ) : (
@@ -225,7 +231,7 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
 
           {/* ── Identity Summary ──────────────────────────────────────── */}
           <Section title="Identity Summary">
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 text-sm">
               <SummaryRow k="record_id" v={liveRec.record_id} mono />
               <SummaryRow k="updated_at" v={liveRec.updated_at} mono />
               <SummaryRow k="client_id" v={summary.id.client_block?.client_id} />
@@ -239,7 +245,7 @@ export function Step9Review({ state, update, recordId }: Step9Props) {
 
           {/* ── Validation Summary ────────────────────────────────────── */}
           <Section title="Validation Summary">
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 text-sm">
               <SummaryRow k="status" v={summary.status} />
               <SummaryRow
                 k="is_structurally_complete"
