@@ -87,20 +87,22 @@ export function Step3Trigger({ state, update }: StepProps) {
       </Section>
 
       <Section title="Distribusi">
-        <SelectField
-          label="Frekuensi Klaim"
-          path="period_engine.distribution_block.claim_frequency"
-          value={pe.distribution_block.claim_frequency}
-          onChange={(v) => update("period_engine", { distribution_block: { ...pe.distribution_block, claim_frequency: v } })}
-          options={L_CLAIM_FREQUENCY}
-        />
-        <SelectField
-          label="Hari Pembagian Reward"
-          path="period_engine.distribution_block.distribution_day"
-          value={pe.distribution_block.distribution_day}
-          onChange={(v) => update("period_engine", { distribution_block: { ...pe.distribution_block, distribution_day: v } })}
-          options={L_DAY}
-        />
+        <FieldGrid>
+          <SelectField
+            label="Frekuensi Klaim"
+            path="period_engine.distribution_block.claim_frequency"
+            value={pe.distribution_block.claim_frequency}
+            onChange={(v) => update("period_engine", { distribution_block: { ...pe.distribution_block, claim_frequency: v } })}
+            options={L_CLAIM_FREQUENCY}
+          />
+          <SelectField
+            label="Hari Pembagian Reward"
+            path="period_engine.distribution_block.distribution_day"
+            value={pe.distribution_block.distribution_day}
+            onChange={(v) => update("period_engine", { distribution_block: { ...pe.distribution_block, distribution_day: v } })}
+            options={L_DAY}
+          />
+        </FieldGrid>
       </Section>
 
       <Section title="Jam Distribusi">
