@@ -41,6 +41,10 @@ import {
   type AdminVerifyIssueQuestion,
 } from "./extractor-issue-adapter";
 import { buildF3ComplianceQuestions } from "./f3-compliance-adapter";
+import {
+  mockedAdminAnswerToPatchPreview,
+  type ResolveAdminAnswerResult,
+} from "./admin-answer-patch-preview";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
