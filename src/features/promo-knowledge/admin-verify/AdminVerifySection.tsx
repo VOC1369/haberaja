@@ -540,12 +540,15 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         ))}
       </div>
 
-      {/* PR-19A — Extractor issue questions section. Read/answer only; no JSON mutation. */}
+      {/* PR-19A/19B — Extractor issue questions + preview-only patch flow. No JSON mutation. */}
       {issueQuestions.length > 0 && (
         <ExtractorIssueSection
+          record={record}
           issues={issueQuestions}
           drafts={issueAnswers}
           saved={savedIssueAnswers}
+          previews={issuePreviews}
+          loading={issuePreviewLoading}
           onDraftChange={(taskId, value) =>
             setIssueAnswers((prev) => ({ ...prev, [taskId]: value }))
           }
@@ -555,6 +558,22 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
               [taskId]: issueAnswers[taskId] ?? "",
             }))
           }
+          onGeneratePreview={async (q) => {
+            setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: true }));
+            try {
+              const result = await mockedAdminAnswerToPatchPreview({
+                record,
+                reviewTask: q,
+                adminAnswer: {
+                  task_id: q.task_id,
+                  answer_text: issueAnswers[q.task_id] ?? "",
+                },
+              });
+              setIssuePreviews((prev) => ({ ...prev, [q.task_id]: result }));
+            } finally {
+              setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: false }));
+            }
+          }}
         />
       )}
 
