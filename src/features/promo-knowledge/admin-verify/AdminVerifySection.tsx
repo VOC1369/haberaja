@@ -41,10 +41,8 @@ import {
   type AdminVerifyIssueQuestion,
 } from "./extractor-issue-adapter";
 import { buildF3ComplianceQuestions } from "./f3-compliance-adapter";
-import {
-  mockedAdminAnswerToPatchPreview,
-  type ResolveAdminAnswerResult,
-} from "./admin-answer-patch-preview";
+import { resolveAdminAnswerToPatchPreview } from "./admin-answer-llm-resolver";
+import type { ResolveAdminAnswerResult } from "./extractor-issue-adapter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -154,6 +152,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   const [savedIssueAnswers, setSavedIssueAnswers] = useState<Record<string, string>>({});
   const [issuePreviews, setIssuePreviews] = useState<Record<string, ResolveAdminAnswerResult>>({});
   const [issuePreviewLoading, setIssuePreviewLoading] = useState<Record<string, boolean>>({});
+  const [issuePreviewErrors, setIssuePreviewErrors] = useState<Record<string, string>>({});
 
   // PR-19A — Extractor issue questions (warnings/ambiguity/contradictions).
   // Local UI state ONLY. Never mutates the record. Live LLM resolver lands in PR-19B.
@@ -549,6 +548,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
           saved={savedIssueAnswers}
           previews={issuePreviews}
           loading={issuePreviewLoading}
+          errors={issuePreviewErrors}
           onDraftChange={(taskId, value) =>
             setIssueAnswers((prev) => ({ ...prev, [taskId]: value }))
           }
@@ -560,16 +560,38 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
           }
           onGeneratePreview={async (q) => {
             setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: true }));
+            setIssuePreviewErrors((e) => {
+              const next = { ...e };
+              delete next[q.task_id];
+              return next;
+            });
             try {
-              const result = await mockedAdminAnswerToPatchPreview({
+              // PR-19C: live LLM resolver via ai-proxy (type=intent).
+              // Hard error on failure — NO silent fallback to mock.
+              const result = await resolveAdminAnswerToPatchPreview({
                 record,
                 reviewTask: q,
                 adminAnswer: {
                   task_id: q.task_id,
                   answer_text: issueAnswers[q.task_id] ?? "",
                 },
+                rawContentReadonly:
+                  record.meta_engine?.source_block?.raw_content ?? null,
+                allowedTargetPaths: q.affected_paths,
               });
               setIssuePreviews((prev) => ({ ...prev, [q.task_id]: result }));
+            } catch (err) {
+              const msg =
+                err instanceof Error
+                  ? err.message
+                  : "Resolver LLM gagal. Coba lagi.";
+              setIssuePreviewErrors((e) => ({ ...e, [q.task_id]: msg }));
+              // Keep previous preview cleared so admin sees error, not stale data.
+              setIssuePreviews((prev) => {
+                const next = { ...prev };
+                delete next[q.task_id];
+                return next;
+              });
             } finally {
               setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: false }));
             }
