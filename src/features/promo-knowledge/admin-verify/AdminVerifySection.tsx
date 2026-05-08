@@ -968,17 +968,25 @@ const SEVERITY_META: Record<
 };
 
 function ExtractorIssueSection({
+  record,
   issues,
   drafts,
   saved,
+  previews,
+  loading,
   onDraftChange,
   onSave,
+  onGeneratePreview,
 }: {
+  record: PkV10Record;
   issues: AdminVerifyIssueQuestion[];
   drafts: Record<string, string>;
   saved: Record<string, string>;
+  previews: Record<string, ResolveAdminAnswerResult>;
+  loading: Record<string, boolean>;
   onDraftChange: (taskId: string, value: string) => void;
   onSave: (taskId: string) => void;
+  onGeneratePreview: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
 }) {
   return (
     <div className="space-y-4 pt-2 border-t border-border">
@@ -998,9 +1006,8 @@ function ExtractorIssueSection({
 
       <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          Jawaban Anda akan diproses oleh resolver LLM pada tahap berikutnya
-          untuk membuat preview perubahan JSON. Saat ini jawaban hanya disimpan
-          sementara di sesi ini dan belum mengubah data promo.
+          Jawaban Anda akan diubah menjadi preview perubahan JSON. JSON tidak
+          akan berubah sampai Anda menekan Confirm pada PR berikutnya.
         </p>
       </div>
 
@@ -1011,8 +1018,11 @@ function ExtractorIssueSection({
             question={q}
             draft={drafts[q.task_id] ?? ""}
             savedValue={saved[q.task_id]}
+            preview={previews[q.task_id]}
+            isLoading={!!loading[q.task_id]}
             onDraftChange={(v) => onDraftChange(q.task_id, v)}
             onSave={() => onSave(q.task_id)}
+            onGeneratePreview={() => onGeneratePreview(q)}
           />
         ))}
       </div>
@@ -1024,14 +1034,20 @@ function ExtractorIssueCard({
   question,
   draft,
   savedValue,
+  preview,
+  isLoading,
   onDraftChange,
   onSave,
+  onGeneratePreview,
 }: {
   question: AdminVerifyIssueQuestion;
   draft: string;
   savedValue: string | undefined;
+  preview: ResolveAdminAnswerResult | undefined;
+  isLoading: boolean;
   onDraftChange: (v: string) => void;
   onSave: () => void;
+  onGeneratePreview: () => void;
 }) {
   const meta = SEVERITY_META[question.severity];
   const Icon = meta.Icon;
