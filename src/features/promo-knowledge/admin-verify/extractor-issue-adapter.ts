@@ -94,7 +94,7 @@ export interface JsonPatchPreview {
 export interface ResolveAdminAnswerResult {
   intent_summary: string;
   confidence: "high" | "medium" | "low";
-  needs_confirmation: true;
+  needs_confirmation: boolean;
   proposed_patches: JsonPatchPreview[];
   unresolved_questions?: string[];
   /** True when resolver cannot turn the answer into a confident patch. */
