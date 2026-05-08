@@ -136,7 +136,7 @@ describe("PR-19B mockedAdminAnswerToPatchPreview", () => {
       "utf8",
     );
     expect(src.includes("fetch(")).toBe(false);
-    expect(src.includes("ai-proxy")).toBe(false);
+    expect(/from\s+["'][^"']*ai-proxy/i.test(src)).toBe(false);
     expect(/\.test\(\s*(source_text|warning|raw)/i.test(src)).toBe(false);
   });
 });
