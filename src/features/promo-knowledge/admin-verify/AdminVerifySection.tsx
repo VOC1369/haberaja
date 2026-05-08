@@ -41,6 +41,10 @@ import {
   type AdminVerifyIssueQuestion,
 } from "./extractor-issue-adapter";
 import { buildF3ComplianceQuestions } from "./f3-compliance-adapter";
+import {
+  mockedAdminAnswerToPatchPreview,
+  type ResolveAdminAnswerResult,
+} from "./admin-answer-patch-preview";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -148,6 +152,8 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
   const [issueAnswers, setIssueAnswers] = useState<Record<string, string>>({});
   const [savedIssueAnswers, setSavedIssueAnswers] = useState<Record<string, string>>({});
+  const [issuePreviews, setIssuePreviews] = useState<Record<string, ResolveAdminAnswerResult>>({});
+  const [issuePreviewLoading, setIssuePreviewLoading] = useState<Record<string, boolean>>({});
 
   // PR-19A — Extractor issue questions (warnings/ambiguity/contradictions).
   // Local UI state ONLY. Never mutates the record. Live LLM resolver lands in PR-19B.
@@ -534,12 +540,15 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         ))}
       </div>
 
-      {/* PR-19A — Extractor issue questions section. Read/answer only; no JSON mutation. */}
+      {/* PR-19A/19B — Extractor issue questions + preview-only patch flow. No JSON mutation. */}
       {issueQuestions.length > 0 && (
         <ExtractorIssueSection
+          record={record}
           issues={issueQuestions}
           drafts={issueAnswers}
           saved={savedIssueAnswers}
+          previews={issuePreviews}
+          loading={issuePreviewLoading}
           onDraftChange={(taskId, value) =>
             setIssueAnswers((prev) => ({ ...prev, [taskId]: value }))
           }
@@ -549,6 +558,22 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
               [taskId]: issueAnswers[taskId] ?? "",
             }))
           }
+          onGeneratePreview={async (q) => {
+            setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: true }));
+            try {
+              const result = await mockedAdminAnswerToPatchPreview({
+                record,
+                reviewTask: q,
+                adminAnswer: {
+                  task_id: q.task_id,
+                  answer_text: issueAnswers[q.task_id] ?? "",
+                },
+              });
+              setIssuePreviews((prev) => ({ ...prev, [q.task_id]: result }));
+            } finally {
+              setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: false }));
+            }
+          }}
         />
       )}
 
@@ -943,17 +968,25 @@ const SEVERITY_META: Record<
 };
 
 function ExtractorIssueSection({
+  record,
   issues,
   drafts,
   saved,
+  previews,
+  loading,
   onDraftChange,
   onSave,
+  onGeneratePreview,
 }: {
+  record: PkV10Record;
   issues: AdminVerifyIssueQuestion[];
   drafts: Record<string, string>;
   saved: Record<string, string>;
+  previews: Record<string, ResolveAdminAnswerResult>;
+  loading: Record<string, boolean>;
   onDraftChange: (taskId: string, value: string) => void;
   onSave: (taskId: string) => void;
+  onGeneratePreview: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
 }) {
   return (
     <div className="space-y-4 pt-2 border-t border-border">
@@ -973,9 +1006,8 @@ function ExtractorIssueSection({
 
       <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          Jawaban Anda akan diproses oleh resolver LLM pada tahap berikutnya
-          untuk membuat preview perubahan JSON. Saat ini jawaban hanya disimpan
-          sementara di sesi ini dan belum mengubah data promo.
+          Jawaban Anda akan diubah menjadi preview perubahan JSON. JSON tidak
+          akan berubah sampai Anda menekan Confirm pada PR berikutnya.
         </p>
       </div>
 
@@ -986,8 +1018,11 @@ function ExtractorIssueSection({
             question={q}
             draft={drafts[q.task_id] ?? ""}
             savedValue={saved[q.task_id]}
+            preview={previews[q.task_id]}
+            isLoading={!!loading[q.task_id]}
             onDraftChange={(v) => onDraftChange(q.task_id, v)}
             onSave={() => onSave(q.task_id)}
+            onGeneratePreview={() => onGeneratePreview(q)}
           />
         ))}
       </div>
@@ -999,14 +1034,20 @@ function ExtractorIssueCard({
   question,
   draft,
   savedValue,
+  preview,
+  isLoading,
   onDraftChange,
   onSave,
+  onGeneratePreview,
 }: {
   question: AdminVerifyIssueQuestion;
   draft: string;
   savedValue: string | undefined;
+  preview: ResolveAdminAnswerResult | undefined;
+  isLoading: boolean;
   onDraftChange: (v: string) => void;
   onSave: () => void;
+  onGeneratePreview: () => void;
 }) {
   const meta = SEVERITY_META[question.severity];
   const Icon = meta.Icon;
@@ -1065,14 +1106,98 @@ function ExtractorIssueCard({
         />
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-muted-foreground">
-          Jawaban tidak mengubah JSON. Resolver LLM akan membuat preview pada PR berikutnya.
+          Jawaban dan preview tidak mengubah JSON. Confirm & Save akan aktif di PR berikutnya.
         </p>
-        <Button size="sm" variant="outline" onClick={onSave} disabled={!canSave}>
-          Simpan jawaban sementara
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={onSave} disabled={!canSave}>
+            Simpan jawaban sementara
+          </Button>
+          <Button
+            size="sm"
+            variant="golden"
+            onClick={onGeneratePreview}
+            disabled={draft.trim().length === 0 || isLoading}
+          >
+            {isLoading ? "Memproses…" : "Buat preview perubahan"}
+          </Button>
+        </div>
       </div>
+
+      {preview && (
+        <div className="rounded-lg border border-border bg-background/50 p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h6 className="text-sm font-semibold text-foreground">
+              Sistem memahami jawaban Anda seperti ini
+            </h6>
+            <Badge
+              variant={
+                preview.confidence === "high"
+                  ? "success"
+                  : preview.confidence === "medium"
+                    ? "warning"
+                    : "pending"
+              }
+              size="sm"
+            >
+              Confidence: {preview.confidence}
+            </Badge>
+          </div>
+          <p className="text-sm text-foreground">{preview.intent_summary}</p>
+
+          {preview.needs_clarification && (
+            <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
+              <p className="text-xs text-warning-foreground">
+                Jawaban masih belum cukup jelas. Mohon jelaskan lebih spesifik
+                (sebutkan satu nilai enum yang valid).
+              </p>
+            </div>
+          )}
+
+          {preview.proposed_patches.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Preview perubahan ({preview.proposed_patches.length})
+              </Label>
+              {preview.proposed_patches.map((p, idx) => (
+                <div
+                  key={`${p.target_path}-${idx}`}
+                  className="rounded-md border border-border bg-card px-3 py-2 space-y-1"
+                >
+                  <p className="text-xs font-mono text-muted-foreground break-all">
+                    {p.target_path}
+                  </p>
+                  <div className="flex items-center gap-2 text-sm flex-wrap">
+                    <span className="text-destructive line-through break-all">
+                      {String(p.old_value_preview ?? "—")}
+                    </span>
+                    <span className="text-muted-foreground">→</span>
+                    <span className="text-success font-medium break-all">
+                      {String(p.new_value_preview ?? "—")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{p.reason}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {preview.unresolved_questions && preview.unresolved_questions.length > 0 && (
+            <ul className="list-disc pl-5 text-xs text-muted-foreground space-y-1">
+              {preview.unresolved_questions.map((u, i) => (
+                <li key={i}>{u}</li>
+              ))}
+            </ul>
+          )}
+
+          <div className="flex items-center justify-end pt-1">
+            <Button size="sm" variant="outline" disabled>
+              Confirm & Save (aktif di PR berikutnya)
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
