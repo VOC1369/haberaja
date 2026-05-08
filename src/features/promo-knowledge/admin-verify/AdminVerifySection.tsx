@@ -41,10 +41,8 @@ import {
   type AdminVerifyIssueQuestion,
 } from "./extractor-issue-adapter";
 import { buildF3ComplianceQuestions } from "./f3-compliance-adapter";
-import {
-  mockedAdminAnswerToPatchPreview,
-  type ResolveAdminAnswerResult,
-} from "./admin-answer-patch-preview";
+import { resolveAdminAnswerToPatchPreview } from "./admin-answer-llm-resolver";
+import type { ResolveAdminAnswerResult } from "./extractor-issue-adapter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -154,6 +152,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   const [savedIssueAnswers, setSavedIssueAnswers] = useState<Record<string, string>>({});
   const [issuePreviews, setIssuePreviews] = useState<Record<string, ResolveAdminAnswerResult>>({});
   const [issuePreviewLoading, setIssuePreviewLoading] = useState<Record<string, boolean>>({});
+  const [issuePreviewErrors, setIssuePreviewErrors] = useState<Record<string, string>>({});
 
   // PR-19A — Extractor issue questions (warnings/ambiguity/contradictions).
   // Local UI state ONLY. Never mutates the record. Live LLM resolver lands in PR-19B.
@@ -549,6 +548,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
           saved={savedIssueAnswers}
           previews={issuePreviews}
           loading={issuePreviewLoading}
+          errors={issuePreviewErrors}
           onDraftChange={(taskId, value) =>
             setIssueAnswers((prev) => ({ ...prev, [taskId]: value }))
           }
@@ -560,16 +560,38 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
           }
           onGeneratePreview={async (q) => {
             setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: true }));
+            setIssuePreviewErrors((e) => {
+              const next = { ...e };
+              delete next[q.task_id];
+              return next;
+            });
             try {
-              const result = await mockedAdminAnswerToPatchPreview({
+              // PR-19C: live LLM resolver via ai-proxy (type=intent).
+              // Hard error on failure — NO silent fallback to mock.
+              const result = await resolveAdminAnswerToPatchPreview({
                 record,
                 reviewTask: q,
                 adminAnswer: {
                   task_id: q.task_id,
                   answer_text: issueAnswers[q.task_id] ?? "",
                 },
+                rawContentReadonly:
+                  record.meta_engine?.source_block?.raw_content ?? null,
+                allowedTargetPaths: q.affected_paths,
               });
               setIssuePreviews((prev) => ({ ...prev, [q.task_id]: result }));
+            } catch (err) {
+              const msg =
+                err instanceof Error
+                  ? err.message
+                  : "Resolver LLM gagal. Coba lagi.";
+              setIssuePreviewErrors((e) => ({ ...e, [q.task_id]: msg }));
+              // Keep previous preview cleared so admin sees error, not stale data.
+              setIssuePreviews((prev) => {
+                const next = { ...prev };
+                delete next[q.task_id];
+                return next;
+              });
             } finally {
               setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: false }));
             }
@@ -974,6 +996,7 @@ function ExtractorIssueSection({
   saved,
   previews,
   loading,
+  errors,
   onDraftChange,
   onSave,
   onGeneratePreview,
@@ -984,6 +1007,7 @@ function ExtractorIssueSection({
   saved: Record<string, string>;
   previews: Record<string, ResolveAdminAnswerResult>;
   loading: Record<string, boolean>;
+  errors: Record<string, string>;
   onDraftChange: (taskId: string, value: string) => void;
   onSave: (taskId: string) => void;
   onGeneratePreview: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
@@ -1006,8 +1030,9 @@ function ExtractorIssueSection({
 
       <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          Jawaban Anda akan diubah menjadi preview perubahan JSON. JSON tidak
-          akan berubah sampai Anda menekan Confirm pada PR berikutnya.
+          Preview dihasilkan oleh resolver LLM. Jawaban Anda hanya menjadi
+          preview perubahan JSON — JSON tidak berubah sampai Confirm & Save
+          aktif di PR berikutnya.
         </p>
       </div>
 
@@ -1020,6 +1045,7 @@ function ExtractorIssueSection({
             savedValue={saved[q.task_id]}
             preview={previews[q.task_id]}
             isLoading={!!loading[q.task_id]}
+            errorMessage={errors[q.task_id]}
             onDraftChange={(v) => onDraftChange(q.task_id, v)}
             onSave={() => onSave(q.task_id)}
             onGeneratePreview={() => onGeneratePreview(q)}
@@ -1036,6 +1062,7 @@ function ExtractorIssueCard({
   savedValue,
   preview,
   isLoading,
+  errorMessage,
   onDraftChange,
   onSave,
   onGeneratePreview,
@@ -1045,6 +1072,7 @@ function ExtractorIssueCard({
   savedValue: string | undefined;
   preview: ResolveAdminAnswerResult | undefined;
   isLoading: boolean;
+  errorMessage?: string;
   onDraftChange: (v: string) => void;
   onSave: () => void;
   onGeneratePreview: () => void;
@@ -1120,17 +1148,39 @@ function ExtractorIssueCard({
             onClick={onGeneratePreview}
             disabled={draft.trim().length === 0 || isLoading}
           >
-            {isLoading ? "Memproses…" : "Buat preview perubahan"}
+            {isLoading
+              ? "Memproses…"
+              : errorMessage
+                ? "Coba lagi"
+                : "Buat preview perubahan"}
           </Button>
         </div>
       </div>
 
-      {preview && (
+      {errorMessage && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 space-y-1">
+          <p className="text-sm font-medium text-destructive">
+            Resolver LLM gagal
+          </p>
+          <p className="text-xs text-destructive/90 break-words">{errorMessage}</p>
+          <p className="text-xs text-muted-foreground">
+            JSON tidak berubah. Jawaban Anda tetap tersimpan di kolom di atas.
+          </p>
+        </div>
+      )}
+
+      {preview && !errorMessage && (
         <div className="rounded-lg border border-border bg-background/50 p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <h6 className="text-sm font-semibold text-foreground">
-              Sistem memahami jawaban Anda seperti ini
-            </h6>
+            <div className="flex items-center gap-2 min-w-0">
+              <h6 className="text-sm font-semibold text-foreground">
+                Sistem memahami jawaban Anda seperti ini
+              </h6>
+              <Badge variant="outline" size="sm">
+                <Sparkles className="h-3 w-3" />
+                Resolver LLM
+              </Badge>
+            </div>
             <Badge
               variant={
                 preview.confidence === "high"
