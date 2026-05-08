@@ -996,6 +996,7 @@ function ExtractorIssueSection({
   saved,
   previews,
   loading,
+  errors,
   onDraftChange,
   onSave,
   onGeneratePreview,
@@ -1006,6 +1007,7 @@ function ExtractorIssueSection({
   saved: Record<string, string>;
   previews: Record<string, ResolveAdminAnswerResult>;
   loading: Record<string, boolean>;
+  errors: Record<string, string>;
   onDraftChange: (taskId: string, value: string) => void;
   onSave: (taskId: string) => void;
   onGeneratePreview: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
@@ -1028,8 +1030,9 @@ function ExtractorIssueSection({
 
       <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          Jawaban Anda akan diubah menjadi preview perubahan JSON. JSON tidak
-          akan berubah sampai Anda menekan Confirm pada PR berikutnya.
+          Preview dihasilkan oleh resolver LLM. Jawaban Anda hanya menjadi
+          preview perubahan JSON — JSON tidak berubah sampai Confirm & Save
+          aktif di PR berikutnya.
         </p>
       </div>
 
@@ -1042,6 +1045,7 @@ function ExtractorIssueSection({
             savedValue={saved[q.task_id]}
             preview={previews[q.task_id]}
             isLoading={!!loading[q.task_id]}
+            errorMessage={errors[q.task_id]}
             onDraftChange={(v) => onDraftChange(q.task_id, v)}
             onSave={() => onSave(q.task_id)}
             onGeneratePreview={() => onGeneratePreview(q)}
