@@ -152,6 +152,8 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
   const [issueAnswers, setIssueAnswers] = useState<Record<string, string>>({});
   const [savedIssueAnswers, setSavedIssueAnswers] = useState<Record<string, string>>({});
+  const [issuePreviews, setIssuePreviews] = useState<Record<string, ResolveAdminAnswerResult>>({});
+  const [issuePreviewLoading, setIssuePreviewLoading] = useState<Record<string, boolean>>({});
 
   // PR-19A — Extractor issue questions (warnings/ambiguity/contradictions).
   // Local UI state ONLY. Never mutates the record. Live LLM resolver lands in PR-19B.
