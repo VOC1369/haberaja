@@ -1148,17 +1148,39 @@ function ExtractorIssueCard({
             onClick={onGeneratePreview}
             disabled={draft.trim().length === 0 || isLoading}
           >
-            {isLoading ? "Memproses…" : "Buat preview perubahan"}
+            {isLoading
+              ? "Memproses…"
+              : errorMessage
+                ? "Coba lagi"
+                : "Buat preview perubahan"}
           </Button>
         </div>
       </div>
 
-      {preview && (
+      {errorMessage && (
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 space-y-1">
+          <p className="text-sm font-medium text-destructive">
+            Resolver LLM gagal
+          </p>
+          <p className="text-xs text-destructive/90 break-words">{errorMessage}</p>
+          <p className="text-xs text-muted-foreground">
+            JSON tidak berubah. Jawaban Anda tetap tersimpan di kolom di atas.
+          </p>
+        </div>
+      )}
+
+      {preview && !errorMessage && (
         <div className="rounded-lg border border-border bg-background/50 p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <h6 className="text-sm font-semibold text-foreground">
-              Sistem memahami jawaban Anda seperti ini
-            </h6>
+            <div className="flex items-center gap-2 min-w-0">
+              <h6 className="text-sm font-semibold text-foreground">
+                Sistem memahami jawaban Anda seperti ini
+              </h6>
+              <Badge variant="outline" size="sm">
+                <Sparkles className="h-3 w-3" />
+                Resolver LLM
+              </Badge>
+            </div>
             <Badge
               variant={
                 preview.confidence === "high"
