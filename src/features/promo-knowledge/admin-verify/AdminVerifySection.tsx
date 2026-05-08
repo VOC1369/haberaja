@@ -40,6 +40,7 @@ import {
   buildIssueQuestions,
   type AdminVerifyIssueQuestion,
 } from "./extractor-issue-adapter";
+import { buildF3ComplianceQuestions } from "./f3-compliance-adapter";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
