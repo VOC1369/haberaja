@@ -974,20 +974,151 @@ function TagInput({
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// PR-19A — EXTRACTOR ISSUE SECTION
-// Renders extractor warnings / ambiguity / contradictions as read/answer
-// cards. Local UI state only. NEVER mutates the record. NEVER calls LLM.
-// Live LLM resolver + JSON patch preview land in PR-19B.
+// EXTRACTOR ISSUE SECTION — Humanized presentation
+// Same backend contract (extractor-issue-adapter + f3-compliance-adapter +
+// admin-answer-llm-resolver). Only copy + interaction model changed:
+//   - friendly titles & badges (no raw enum jargon in body)
+//   - radio-first input when options are known per affected_paths[0]
+//   - optional textarea ("Penjelasan tambahan")
+//   - all internal terms (path/severity/source_text/allowed enum) hidden
+//     under a collapsible "Lihat detail teknis"
+// No schema, no resolver, no extractor changes.
 // ─────────────────────────────────────────────────────────────────────────
 
-const SEVERITY_META: Record<
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+
+interface HumanOption {
+  /** Canonical value passed to the LLM resolver (matches F3 enums). */
+  value: string;
+  /** Admin-facing label (Bahasa Indonesia, no jargon). */
+  label: string;
+  /** Optional short helper sentence under the label. */
+  helper?: string;
+}
+
+interface HumanizedIssue {
+  title: string;
+  description: string;
+  mainQuestion: string;
+  options: HumanOption[] | null;
+  badge: { label: string; variant: "warning" | "destructive" | "pending" };
+}
+
+const SEVERITY_HUMAN: Record<
   AdminVerifyIssueQuestion["severity"],
-  { label: string; variant: "warning" | "destructive" | "pending"; Icon: typeof AlertTriangle }
+  { label: string; variant: "warning" | "destructive" | "pending" }
 > = {
-  warning: { label: "Peringatan", variant: "warning", Icon: AlertTriangle },
-  ambiguity: { label: "Ambigu", variant: "pending", Icon: HelpCircle },
-  contradiction: { label: "Kontradiksi", variant: "destructive", Icon: GitCompareArrows },
+  warning: { label: "Perlu Dicek", variant: "warning" },
+  ambiguity: { label: "Belum Jelas", variant: "pending" },
+  contradiction: { label: "Tidak Konsisten", variant: "destructive" },
 };
+
+const RULE_TYPE_OPTIONS: HumanOption[] = [
+  { value: "simple", label: "Sederhana", helper: "Satu syarat sederhana." },
+  { value: "compound", label: "Bertingkat", helper: "Beberapa syarat digabung." },
+  { value: "sequential", label: "Berurutan", helper: "Harus dipenuhi berurutan." },
+  { value: "conditional", label: "Bersyarat", helper: "Tergantung kondisi tertentu." },
+  { value: "threshold", label: "Batas Minimal", helper: "Aktif setelah ambang tertentu." },
+  { value: "recurring", label: "Berulang", helper: "Berlaku berulang kali." },
+];
+
+const TURNOVER_FORMAT_OPTIONS: HumanOption[] = [
+  { value: "multiplier", label: "Kelipatan turnover", helper: "Contoh: 5x deposit + bonus." },
+  { value: "min_rupiah", label: "Minimal nominal turnover", helper: "Contoh: minimal Rp 500.000." },
+];
+
+const STATE_OPTIONS: HumanOption[] = [
+  { value: "draft", label: "Masih draft" },
+  { value: "ready", label: "Siap publish" },
+  { value: "published", label: "Sudah publish" },
+  { value: "rejected", label: "Ditolak" },
+];
+
+const VALIDATION_STATUS_OPTIONS: HumanOption[] = [
+  { value: "draft", label: "Masih draft" },
+  { value: "ready", label: "Siap" },
+  { value: "needs_review", label: "Perlu ditinjau ulang" },
+  { value: "rejected", label: "Ditolak" },
+];
+
+const CURRENCY_OPTIONS: HumanOption[] = [
+  { value: "IDR", label: "Rupiah (IDR)" },
+  { value: "KHR", label: "Riel Kamboja (KHR)" },
+  { value: "PHP", label: "Peso Filipina (PHP)" },
+  { value: "MYR", label: "Ringgit Malaysia (MYR)" },
+];
+
+function humanizeIssue(question: AdminVerifyIssueQuestion): HumanizedIssue {
+  const badge = SEVERITY_HUMAN[question.severity];
+  const path = question.affected_paths[0] ?? "";
+
+  if (path === "trigger_engine.trigger_rule_block.rule_type") {
+    return {
+      title: "Jenis aturan promo belum jelas",
+      description:
+        "Sistem tidak yakin jenis aturan trigger promo ini. Mohon konfirmasi agar promo tersimpan dengan benar.",
+      mainQuestion: "Mana jenis aturan yang paling sesuai untuk promo ini?",
+      options: RULE_TYPE_OPTIONS,
+      badge,
+    };
+  }
+  if (path.endsWith(".turnover_rule_format") || path.includes(".turnover_rule_format")) {
+    return {
+      title: "Format turnover belum sesuai",
+      description:
+        "Format aturan turnover untuk varian ini belum dikenali. Pilih format yang seharusnya dipakai.",
+      mainQuestion: "Format turnover mana yang seharusnya dipakai?",
+      options: TURNOVER_FORMAT_OPTIONS,
+      badge,
+    };
+  }
+  if (path === "readiness_engine.state_block.state") {
+    return {
+      title: "Status promo belum sesuai",
+      description: "Status promo saat ini tidak dikenali sistem.",
+      mainQuestion: "Status promo yang benar?",
+      options: STATE_OPTIONS,
+      badge,
+    };
+  }
+  if (path === "readiness_engine.validation_block.status") {
+    return {
+      title: "Status validasi belum sesuai",
+      description: "Status validasi promo saat ini tidak dikenali sistem.",
+      mainQuestion: "Status validasi yang benar?",
+      options: VALIDATION_STATUS_OPTIONS,
+      badge,
+    };
+  }
+  if (path === "reward_engine.currency") {
+    return {
+      title: "Mata uang promo perlu dicek",
+      description:
+        "Mata uang biasanya berupa kode 3 huruf (mis. IDR). Mohon konfirmasi mata uang yang benar.",
+      mainQuestion: "Mata uang mana yang benar untuk promo ini?",
+      options: CURRENCY_OPTIONS,
+      badge,
+    };
+  }
+
+  // Generic fallback for raw extractor warnings/ambiguity/contradictions
+  // (no structured affected_paths). Use free-text only.
+  const fallbackTitle =
+    question.severity === "contradiction"
+      ? "Ada informasi promo yang tidak konsisten"
+      : question.severity === "ambiguity"
+        ? "Ada bagian promo yang belum jelas"
+        : "Ada catatan promo yang perlu dicek";
+  return {
+    title: fallbackTitle,
+    description:
+      "Sistem menemukan data yang belum cukup jelas untuk dipublikasikan. Mohon konfirmasi singkat dari Anda.",
+    mainQuestion: "Apa penjelasan yang benar untuk bagian ini?",
+    options: null,
+    badge,
+  };
+}
 
 function ExtractorIssueSection({
   record,
@@ -1020,19 +1151,18 @@ function ExtractorIssueSection({
         </div>
         <div className="flex-1">
           <h4 className="text-base font-semibold text-foreground">
-            Review dari hasil extractor
+            Konfirmasi sebelum publish
           </h4>
           <p className="text-sm text-muted-foreground">
-            {issues.length} hal yang perlu dikonfirmasi admin sebelum publish.
+            Ada {issues.length} hal yang perlu Anda konfirmasi sebelum promo dipublikasikan.
           </p>
         </div>
       </div>
 
       <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
         <p className="text-xs text-muted-foreground">
-          Preview dihasilkan oleh resolver LLM. Jawaban Anda hanya menjadi
-          preview perubahan JSON — JSON tidak berubah sampai Confirm & Save
-          aktif di PR berikutnya.
+          Jawaban Anda hanya menjadi saran perubahan. Data promo tidak akan
+          berubah sebelum Anda menyetujuinya.
         </p>
       </div>
 
@@ -1077,30 +1207,50 @@ function ExtractorIssueCard({
   onSave: () => void;
   onGeneratePreview: () => void;
 }) {
-  const meta = SEVERITY_META[question.severity];
-  const Icon = meta.Icon;
+  const human = useMemo(() => humanizeIssue(question), [question]);
+  const [selectedOption, setSelectedOption] = useState<string>("");
+  const [extraNote, setExtraNote] = useState<string>("");
+  const [techOpen, setTechOpen] = useState(false);
+
+  // Combine structured selection + optional note into the natural-language
+  // answer that the LLM resolver consumes. For free-text fallback, the note
+  // is the answer itself.
+  const composeDraft = (opt: string, note: string): string => {
+    if (human.options) {
+      if (!opt) return note.trim();
+      const lbl = human.options.find((o) => o.value === opt)?.label ?? opt;
+      const base = `${lbl} (${opt})`;
+      return note.trim() ? `${base}. Catatan: ${note.trim()}` : base;
+    }
+    return note.trim();
+  };
+
+  const handleOptionChange = (v: string) => {
+    setSelectedOption(v);
+    onDraftChange(composeDraft(v, extraNote));
+  };
+  const handleNoteChange = (v: string) => {
+    setExtraNote(v);
+    onDraftChange(composeDraft(selectedOption, v));
+  };
+
   const isSaved = typeof savedValue === "string" && savedValue.trim().length > 0;
   const isDirty = draft !== (savedValue ?? "");
   const canSave = draft.trim().length > 0 && isDirty;
+  const canPreview = draft.trim().length > 0 && !isLoading;
 
   return (
     <div className="bg-card border border-border rounded-xl p-6 space-y-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <Icon className="h-4 w-4 text-muted-foreground mt-1 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <h5 className="text-sm font-medium text-foreground">
-              {question.issue_summary}
-            </h5>
-          </div>
+        <div className="flex-1 min-w-0 space-y-1">
+          <h5 className="text-base font-semibold text-foreground">
+            {human.title}
+          </h5>
+          <p className="text-sm text-muted-foreground">{human.description}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Badge variant={meta.variant} size="sm">
-            {meta.label}
-          </Badge>
-          <Badge variant="outline" size="sm">
-            <Sparkles className="h-3 w-3" />
-            Perlu LLM
+          <Badge variant={human.badge.variant} size="sm">
+            {human.badge.label}
           </Badge>
           {isSaved && !isDirty && (
             <Badge variant="success" size="sm">
@@ -1111,32 +1261,84 @@ function ExtractorIssueCard({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Sumber dari extractor
-        </Label>
-        <div className="rounded-lg border border-border bg-background/50 px-4 py-3">
-          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-            {question.source_text}
-          </p>
-        </div>
-      </div>
+      {human.options ? (
+        <div className="space-y-3">
+          <Label className="text-sm font-medium text-foreground">
+            {human.mainQuestion}
+          </Label>
+          <RadioGroup value={selectedOption} onValueChange={handleOptionChange} className="gap-2">
+            {human.options.map((opt) => (
+              <div
+                key={opt.value}
+                className="flex items-start gap-3 rounded-lg border border-border bg-background/50 px-4 py-3 hover:border-button-hover transition-colors"
+              >
+                <RadioGroupItem value={opt.value} id={`${question.task_id}-${opt.value}`} className="mt-0.5" />
+                <Label
+                  htmlFor={`${question.task_id}-${opt.value}`}
+                  className="flex-1 cursor-pointer space-y-0.5"
+                >
+                  <div className="text-sm font-medium text-foreground">{opt.label}</div>
+                  {opt.helper && (
+                    <div className="text-xs text-muted-foreground font-normal">{opt.helper}</div>
+                  )}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
 
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-foreground">
-          {question.admin_question}
-        </Label>
-        <Textarea
-          value={draft}
-          onChange={(e) => onDraftChange(e.target.value)}
-          placeholder="Tulis jawaban Anda dengan kalimat sendiri…"
-          className="min-h-[88px]"
-        />
-      </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">
+              Penjelasan tambahan (opsional)
+            </Label>
+            <Textarea
+              value={extraNote}
+              onChange={(e) => handleNoteChange(e.target.value)}
+              placeholder="Tambahkan konteks bila perlu…"
+              className="min-h-[64px]"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-foreground">
+            {human.mainQuestion}
+          </Label>
+          <Textarea
+            value={extraNote}
+            onChange={(e) => handleNoteChange(e.target.value)}
+            placeholder="Tulis penjelasan singkat dengan kalimat Anda sendiri…"
+            className="min-h-[88px]"
+          />
+        </div>
+      )}
+
+      <Collapsible open={techOpen} onOpenChange={setTechOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronDown
+              className={`h-3 w-3 transition-transform ${techOpen ? "rotate-180" : ""}`}
+            />
+            {techOpen ? "Sembunyikan detail teknis" : "Lihat detail teknis"}
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="mt-2 rounded-lg border border-border bg-background/50 px-4 py-3 space-y-1">
+            <p className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all">
+              {question.source_text}
+            </p>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+              severity: {question.severity}
+            </p>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-xs text-muted-foreground">
-          Jawaban dan preview tidak mengubah JSON. Confirm & Save akan aktif di PR berikutnya.
+          Data promo tidak berubah sebelum Anda menyetujui saran perubahan.
         </p>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={onSave} disabled={!canSave}>
@@ -1146,13 +1348,13 @@ function ExtractorIssueCard({
             size="sm"
             variant="golden"
             onClick={onGeneratePreview}
-            disabled={draft.trim().length === 0 || isLoading}
+            disabled={!canPreview}
           >
             {isLoading
-              ? "Memproses…"
+              ? "Menyiapkan saran…"
               : errorMessage
                 ? "Coba lagi"
-                : "Buat preview perubahan"}
+                : "Lihat saran perubahan"}
           </Button>
         </div>
       </div>
@@ -1160,11 +1362,11 @@ function ExtractorIssueCard({
       {errorMessage && (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 space-y-1">
           <p className="text-sm font-medium text-destructive">
-            Resolver LLM gagal
+            Sistem belum bisa menyiapkan saran perubahan
           </p>
           <p className="text-xs text-destructive/90 break-words">{errorMessage}</p>
           <p className="text-xs text-muted-foreground">
-            JSON tidak berubah. Jawaban Anda tetap tersimpan di kolom di atas.
+            Data promo tidak berubah. Jawaban Anda tetap tersimpan.
           </p>
         </div>
       )}
@@ -1172,15 +1374,9 @@ function ExtractorIssueCard({
       {preview && !errorMessage && (
         <div className="rounded-lg border border-border bg-background/50 p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <h6 className="text-sm font-semibold text-foreground">
-                Sistem memahami jawaban Anda seperti ini
-              </h6>
-              <Badge variant="outline" size="sm">
-                <Sparkles className="h-3 w-3" />
-                Resolver LLM
-              </Badge>
-            </div>
+            <h6 className="text-sm font-semibold text-foreground">
+              Tinjau saran perubahan di bawah ini
+            </h6>
             <Badge
               variant={
                 preview.confidence === "high"
@@ -1191,7 +1387,11 @@ function ExtractorIssueCard({
               }
               size="sm"
             >
-              Confidence: {preview.confidence}
+              {preview.confidence === "high"
+                ? "Sistem yakin"
+                : preview.confidence === "medium"
+                  ? "Cukup yakin"
+                  : "Belum yakin"}
             </Badge>
           </div>
           <p className="text-sm text-foreground">{preview.intent_summary}</p>
@@ -1199,8 +1399,8 @@ function ExtractorIssueCard({
           {preview.needs_clarification && (
             <div className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2">
               <p className="text-xs text-warning-foreground">
-                Jawaban masih belum cukup jelas. Mohon jelaskan lebih spesifik
-                (sebutkan satu nilai enum yang valid).
+                Jawaban masih belum cukup jelas. Mohon pilih salah satu opsi
+                atau jelaskan lebih spesifik.
               </p>
             </div>
           )}
@@ -1208,16 +1408,13 @@ function ExtractorIssueCard({
           {preview.proposed_patches.length > 0 && (
             <div className="space-y-2">
               <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Preview perubahan ({preview.proposed_patches.length})
+                Saran perubahan ({preview.proposed_patches.length})
               </Label>
               {preview.proposed_patches.map((p, idx) => (
                 <div
                   key={`${p.target_path}-${idx}`}
                   className="rounded-md border border-border bg-card px-3 py-2 space-y-1"
                 >
-                  <p className="text-xs font-mono text-muted-foreground break-all">
-                    {p.target_path}
-                  </p>
                   <div className="flex items-center gap-2 text-sm flex-wrap">
                     <span className="text-destructive line-through break-all">
                       {String(p.old_value_preview ?? "—")}
@@ -1228,6 +1425,12 @@ function ExtractorIssueCard({
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">{p.reason}</p>
+                  <details className="text-[10px] text-muted-foreground/70">
+                    <summary className="cursor-pointer hover:text-muted-foreground">
+                      Lihat detail teknis
+                    </summary>
+                    <p className="font-mono break-all pt-1">{p.target_path}</p>
+                  </details>
                 </div>
               ))}
             </div>
@@ -1243,7 +1446,7 @@ function ExtractorIssueCard({
 
           <div className="flex items-center justify-end pt-1">
             <Button size="sm" variant="outline" disabled>
-              Confirm & Save (aktif di PR berikutnya)
+              Setujui & Simpan (akan aktif segera)
             </Button>
           </div>
         </div>
