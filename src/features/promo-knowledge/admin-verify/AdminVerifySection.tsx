@@ -151,10 +151,20 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
 
   // PR-19A — Extractor issue questions (warnings/ambiguity/contradictions).
   // Local UI state ONLY. Never mutates the record. Live LLM resolver lands in PR-19B.
-  const issueQuestions = useMemo<AdminVerifyIssueQuestion[]>(
-    () => (record ? buildIssueQuestions(record) : []),
-    [record],
-  );
+  const issueQuestions = useMemo<AdminVerifyIssueQuestion[]>(() => {
+    if (!record) return [];
+    const merged = [
+      ...buildIssueQuestions(record),
+      ...buildF3ComplianceQuestions(record),
+    ];
+    // Dedupe by task_id (deterministic ids prevent collisions across adapters).
+    const seen = new Set<string>();
+    return merged.filter((q) => {
+      if (seen.has(q.task_id)) return false;
+      seen.add(q.task_id);
+      return true;
+    });
+  }, [record]);
 
 
 
