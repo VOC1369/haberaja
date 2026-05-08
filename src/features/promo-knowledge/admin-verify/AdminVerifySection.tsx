@@ -1062,6 +1062,7 @@ function ExtractorIssueCard({
   savedValue,
   preview,
   isLoading,
+  errorMessage,
   onDraftChange,
   onSave,
   onGeneratePreview,
@@ -1071,6 +1072,7 @@ function ExtractorIssueCard({
   savedValue: string | undefined;
   preview: ResolveAdminAnswerResult | undefined;
   isLoading: boolean;
+  errorMessage?: string;
   onDraftChange: (v: string) => void;
   onSave: () => void;
   onGeneratePreview: () => void;
