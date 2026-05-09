@@ -1015,12 +1015,36 @@ const SEVERITY_HUMAN: Record<
 };
 
 const RULE_TYPE_OPTIONS: HumanOption[] = [
-  { value: "simple", label: "Sederhana", helper: "Satu syarat sederhana." },
-  { value: "compound", label: "Bertingkat", helper: "Beberapa syarat digabung." },
-  { value: "sequential", label: "Berurutan", helper: "Harus dipenuhi berurutan." },
-  { value: "conditional", label: "Bersyarat", helper: "Tergantung kondisi tertentu." },
-  { value: "threshold", label: "Batas Minimal", helper: "Aktif setelah ambang tertentu." },
-  { value: "recurring", label: "Berulang", helper: "Berlaku berulang kali." },
+  {
+    value: "conditional",
+    label: "Hanya untuk member baru setelah deposit pertama",
+    helper: "Contoh: member baru + deposit pertama.",
+  },
+  {
+    value: "threshold",
+    label: "Berlaku setelah member mencapai batas tertentu",
+    helper: "Contoh: minimal deposit, minimal turnover, atau batas nominal tertentu.",
+  },
+  {
+    value: "compound",
+    label: "Berlaku jika beberapa syarat digabung",
+    helper: "Contoh: member baru + deposit pertama + pilih paket.",
+  },
+  {
+    value: "sequential",
+    label: "Syarat harus dipenuhi berurutan",
+    helper: "Contoh: daftar → deposit → klaim.",
+  },
+  {
+    value: "recurring",
+    label: "Berlaku berulang",
+    helper: "Contoh: bisa diklaim harian/mingguan/bulanan.",
+  },
+  {
+    value: "manual",
+    label: "Lainnya, saya jelaskan manual",
+    helper: "Gunakan jika opsi di atas tidak cocok.",
+  },
 ];
 
 const TURNOVER_FORMAT_OPTIONS: HumanOption[] = [
@@ -1055,10 +1079,10 @@ function humanizeIssue(question: AdminVerifyIssueQuestion): HumanizedIssue {
 
   if (path === "trigger_engine.trigger_rule_block.rule_type") {
     return {
-      title: "Jenis aturan promo belum jelas",
+      title: "Cara promo ini aktif perlu dikonfirmasi",
       description:
-        "Sistem tidak yakin jenis aturan trigger promo ini. Mohon konfirmasi agar promo tersimpan dengan benar.",
-      mainQuestion: "Mana jenis aturan yang paling sesuai untuk promo ini?",
+        "Sistem perlu memastikan kondisi apa yang membuat promo ini bisa diklaim.",
+      mainQuestion: "Promo ini bisa diklaim dalam kondisi apa?",
       options: RULE_TYPE_OPTIONS,
       badge,
     };
