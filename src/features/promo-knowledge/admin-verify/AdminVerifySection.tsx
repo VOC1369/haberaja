@@ -560,9 +560,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
           previews={issuePreviews}
           loading={issuePreviewLoading}
           errors={issuePreviewErrors}
-          onDraftChange={(taskId, value) =>
-            setIssueAnswers((prev) => ({ ...prev, [taskId]: value }))
-          }
+          onDraftChange={(taskId, value, meta) => {
+            setIssueAnswers((prev) => ({ ...prev, [taskId]: value }));
+            setIssueAnswerMeta((prev) => ({ ...prev, [taskId]: meta ?? {} }));
+          }}
           onSave={(taskId) =>
             setSavedIssueAnswers((prev) => ({
               ...prev,
@@ -578,13 +579,17 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
             });
             try {
               // PR-19C: live LLM resolver via ai-proxy (type=intent).
-              // Hard error on failure — NO silent fallback to mock.
+              // PR-22: pass selected_internal_hint + selected_label alongside
+              // answer_text. Backward-compatible — resolver may ignore them.
+              const meta = issueAnswerMeta[q.task_id] ?? {};
               const result = await resolveAdminAnswerToPatchPreview({
                 record,
                 reviewTask: q,
                 adminAnswer: {
                   task_id: q.task_id,
                   answer_text: issueAnswers[q.task_id] ?? "",
+                  selected_internal_hint: meta.hint,
+                  selected_label: meta.label,
                 },
                 rawContentReadonly:
                   record.meta_engine?.source_block?.raw_content ?? null,
