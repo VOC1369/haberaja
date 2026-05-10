@@ -43,6 +43,9 @@ import {
 import { buildF3ComplianceQuestions } from "./f3-compliance-adapter";
 import { resolveAdminAnswerToPatchPreview } from "./admin-answer-llm-resolver";
 import type { ResolveAdminAnswerResult } from "./extractor-issue-adapter";
+import { applyAdminPatchPreviewToPkRecord } from "./admin-patch-apply";
+import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";
+import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -153,6 +156,9 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   const [issuePreviews, setIssuePreviews] = useState<Record<string, ResolveAdminAnswerResult>>({});
   const [issuePreviewLoading, setIssuePreviewLoading] = useState<Record<string, boolean>>({});
   const [issuePreviewErrors, setIssuePreviewErrors] = useState<Record<string, string>>({});
+  const [issueApplyLoading, setIssueApplyLoading] = useState<Record<string, boolean>>({});
+  const [issueApplyErrors, setIssueApplyErrors] = useState<Record<string, string>>({});
+  const [issueApplied, setIssueApplied] = useState<Record<string, boolean>>({});
 
   // PR-19A — Extractor issue questions (warnings/ambiguity/contradictions).
   // Local UI state ONLY. Never mutates the record. Live LLM resolver lands in PR-19B.
@@ -594,6 +600,49 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
               });
             } finally {
               setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: false }));
+            }
+          }}
+          applyLoading={issueApplyLoading}
+          applyErrors={issueApplyErrors}
+          applied={issueApplied}
+          onConfirmApply={async (q) => {
+            const preview = issuePreviews[q.task_id];
+            if (!preview || preview.proposed_patches.length === 0) return;
+            setIssueApplyLoading((p) => ({ ...p, [q.task_id]: true }));
+            setIssueApplyErrors((e) => {
+              const next = { ...e };
+              delete next[q.task_id];
+              return next;
+            });
+            try {
+              const result = applyAdminPatchPreviewToPkRecord({
+                record,
+                patches: preview.proposed_patches,
+                allowedTargetPaths: q.affected_paths,
+                actor: "admin",
+                source: "admin_verify_llm_patch_preview",
+                reason: q.issue_summary,
+              });
+              if (!result.ok || !result.record) {
+                throw new Error(
+                  (result.errors ?? ["Patch tidak valid."]).join("\n"),
+                );
+              }
+              const saved = savePkRecord(result.record);
+              onApply(saved);
+              setIssueApplied((a) => ({ ...a, [q.task_id]: true }));
+              toast.success("Perubahan tersimpan", {
+                description:
+                  "Status review masih perlu dicek ulang sebelum publish.",
+              });
+            } catch (err) {
+              const msg =
+                err instanceof Error
+                  ? err.message
+                  : "Gagal menyimpan perubahan.";
+              setIssueApplyErrors((e) => ({ ...e, [q.task_id]: msg }));
+            } finally {
+              setIssueApplyLoading((p) => ({ ...p, [q.task_id]: false }));
             }
           }}
         />
@@ -1155,6 +1204,10 @@ function ExtractorIssueSection({
   onDraftChange,
   onSave,
   onGeneratePreview,
+  applyLoading,
+  applyErrors,
+  applied,
+  onConfirmApply,
 }: {
   record: PkV10Record;
   issues: AdminVerifyIssueQuestion[];
@@ -1166,6 +1219,10 @@ function ExtractorIssueSection({
   onDraftChange: (taskId: string, value: string) => void;
   onSave: (taskId: string) => void;
   onGeneratePreview: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
+  applyLoading: Record<string, boolean>;
+  applyErrors: Record<string, string>;
+  applied: Record<string, boolean>;
+  onConfirmApply: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
 }) {
   return (
     <div className="space-y-4 pt-2 border-t border-border">
@@ -1200,9 +1257,13 @@ function ExtractorIssueSection({
             preview={previews[q.task_id]}
             isLoading={!!loading[q.task_id]}
             errorMessage={errors[q.task_id]}
+            isApplying={!!applyLoading[q.task_id]}
+            applyErrorMessage={applyErrors[q.task_id]}
+            isApplied={!!applied[q.task_id]}
             onDraftChange={(v) => onDraftChange(q.task_id, v)}
             onSave={() => onSave(q.task_id)}
             onGeneratePreview={() => onGeneratePreview(q)}
+            onConfirmApply={() => onConfirmApply(q)}
           />
         ))}
       </div>
@@ -1217,9 +1278,13 @@ function ExtractorIssueCard({
   preview,
   isLoading,
   errorMessage,
+  isApplying,
+  applyErrorMessage,
+  isApplied,
   onDraftChange,
   onSave,
   onGeneratePreview,
+  onConfirmApply,
 }: {
   question: AdminVerifyIssueQuestion;
   draft: string;
@@ -1227,9 +1292,13 @@ function ExtractorIssueCard({
   preview: ResolveAdminAnswerResult | undefined;
   isLoading: boolean;
   errorMessage?: string;
+  isApplying: boolean;
+  applyErrorMessage?: string;
+  isApplied: boolean;
   onDraftChange: (v: string) => void;
   onSave: () => void;
   onGeneratePreview: () => void;
+  onConfirmApply: () => void;
 }) {
   const human = useMemo(() => humanizeIssue(question), [question]);
   const [selectedOption, setSelectedOption] = useState<string>("");
@@ -1468,11 +1537,53 @@ function ExtractorIssueCard({
             </ul>
           )}
 
-          <div className="flex items-center justify-end pt-1">
-            <Button size="sm" variant="outline" disabled>
-              Setujui & Simpan (akan aktif segera)
-            </Button>
-          </div>
+          {(() => {
+            const hasPatches = preview.proposed_patches.length > 0;
+            const blocked =
+              !hasPatches ||
+              !!preview.needs_clarification ||
+              preview.confidence === "low" ||
+              isApplying ||
+              isApplied;
+            return (
+              <div className="space-y-2 pt-1">
+                {applyErrorMessage && (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
+                    <p className="text-xs font-medium text-destructive">
+                      Perubahan tidak dapat disimpan
+                    </p>
+                    <p className="text-[11px] text-destructive/90 break-words whitespace-pre-wrap">
+                      {applyErrorMessage}
+                    </p>
+                  </div>
+                )}
+                {isApplied && (
+                  <div className="rounded-md border border-success/40 bg-success/10 px-3 py-2">
+                    <p className="text-xs font-medium text-success">
+                      Perubahan sudah disimpan
+                    </p>
+                    <p className="text-[11px] text-success/90">
+                      Status review masih perlu dicek ulang sebelum publish.
+                    </p>
+                  </div>
+                )}
+                <div className="flex items-center justify-end">
+                  <Button
+                    size="sm"
+                    variant="golden"
+                    onClick={onConfirmApply}
+                    disabled={blocked}
+                  >
+                    {isApplied
+                      ? "Tersimpan"
+                      : isApplying
+                        ? "Menyimpan…"
+                        : "Setujui & Simpan"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
