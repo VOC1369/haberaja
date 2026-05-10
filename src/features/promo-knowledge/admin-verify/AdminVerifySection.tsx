@@ -1204,6 +1204,10 @@ function ExtractorIssueSection({
   onDraftChange,
   onSave,
   onGeneratePreview,
+  applyLoading,
+  applyErrors,
+  applied,
+  onConfirmApply,
 }: {
   record: PkV10Record;
   issues: AdminVerifyIssueQuestion[];
@@ -1215,6 +1219,10 @@ function ExtractorIssueSection({
   onDraftChange: (taskId: string, value: string) => void;
   onSave: (taskId: string) => void;
   onGeneratePreview: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
+  applyLoading: Record<string, boolean>;
+  applyErrors: Record<string, string>;
+  applied: Record<string, boolean>;
+  onConfirmApply: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
 }) {
   return (
     <div className="space-y-4 pt-2 border-t border-border">
