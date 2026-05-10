@@ -1123,6 +1123,7 @@ function ExtractorIssueSection({
 }
 
 function ExtractorIssueCard({
+  record,
   question,
   draft,
   savedValue,
@@ -1137,6 +1138,7 @@ function ExtractorIssueCard({
   onGeneratePreview,
   onConfirmApply,
 }: {
+  record: PkV10Record;
   question: AdminVerifyIssueQuestion;
   draft: string;
   savedValue: string | undefined;
@@ -1146,37 +1148,49 @@ function ExtractorIssueCard({
   isApplying: boolean;
   applyErrorMessage?: string;
   isApplied: boolean;
-  onDraftChange: (v: string) => void;
+  onDraftChange: (v: string, meta?: { hint?: string; label?: string }) => void;
   onSave: () => void;
   onGeneratePreview: () => void;
   onConfirmApply: () => void;
 }) {
-  const human = useMemo(() => humanizeIssue(question), [question]);
+  const human = useMemo<HumanizedIssue>(
+    () => humanizeIssue(question, record),
+    [question, record],
+  );
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [extraNote, setExtraNote] = useState<string>("");
   const [techOpen, setTechOpen] = useState(false);
 
-  // Combine structured selection + optional note into the natural-language
-  // answer that the LLM resolver consumes. For free-text fallback, the note
-  // is the answer itself.
+  // Compose the natural-language answer for the LLM resolver. The internal
+  // hint (`value`) is NEVER embedded in answer_text — it travels separately
+  // via onDraftChange meta as `selected_internal_hint` (PR-22).
   const composeDraft = (opt: string, note: string): string => {
     if (human.options) {
       if (!opt) return note.trim();
       const lbl = human.options.find((o) => o.value === opt)?.label ?? opt;
-      const base = `${lbl} (${opt})`;
-      return note.trim() ? `${base}. Catatan: ${note.trim()}` : base;
+      return note.trim() ? `${lbl}. Catatan: ${note.trim()}` : lbl;
     }
     return note.trim();
   };
 
+  const emitDraft = (opt: string, note: string) => {
+    const text = composeDraft(opt, note);
+    const hint = opt || undefined;
+    const label = opt
+      ? human.options?.find((o) => o.value === opt)?.label
+      : undefined;
+    onDraftChange(text, { hint, label });
+  };
+
   const handleOptionChange = (v: string) => {
     setSelectedOption(v);
-    onDraftChange(composeDraft(v, extraNote));
+    emitDraft(v, extraNote);
   };
   const handleNoteChange = (v: string) => {
     setExtraNote(v);
-    onDraftChange(composeDraft(selectedOption, v));
+    emitDraft(selectedOption, v);
   };
+
 
   const isSaved = typeof savedValue === "string" && savedValue.trim().length > 0;
   const isDirty = draft !== (savedValue ?? "");
