@@ -166,30 +166,45 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
     [liveRec, publishGate],
   );
 
-  const handlePublish = async () => {
+  // PR-21 — Structural Supabase write gate (separate from strict canPublish).
+  const structuralGate = useMemo(
+    () =>
+      liveRec
+        ? canWriteToSupabase(liveRec)
+        : { ok: false, reasons: ["no record loaded"] as string[] },
+    [liveRec],
+  );
+
+  // PR-21 — Display-only review issue summary.
+  const reviewIssues = useMemo(
+    () => getPublishReviewIssues(liveRec),
+    [liveRec],
+  );
+
+  const [ackDialogOpen, setAckDialogOpen] = useState(false);
+  const [ackChecks, setAckChecks] = useState({ a: false, b: false });
+  const ackComplete = ackChecks.a && ackChecks.b;
+
+  const performPublish = async () => {
     if (!liveRec) return;
-    const gate = canPublish(liveRec);
-    if (!gate.ok) {
-      const display = buildPublishBlockerDisplay(liveRec, gate);
-      const msg = display.shortSummary;
-      setPublishError(msg);
-      toast.error("Promo belum bisa dipublish", {
-        description: "Selesaikan review item di Admin Verify terlebih dahulu.",
-      });
-      return;
-    }
     setPublishing(true);
     setPublishError(null);
     try {
       const { data: userData } = await supabase.auth.getUser();
       const publishedBy = userData?.user?.email ?? userData?.user?.id ?? undefined;
-      const result = await publishRecord(liveRec, publishedBy);
+      const result = await publishRecord(liveRec, publishedBy, {
+        adminAcknowledgedReviewIssues: true,
+      });
       if (!result.ok) {
         const msg = result.error ?? (result.reasons ?? []).join("; ") ?? "publish failed";
         setPublishError(msg);
         toast.error("Publish gagal", { description: msg });
       } else {
-        toast.success("Record dipublish ke Supabase");
+        toast.success(
+          reviewIssues.hasIssues
+            ? "Published to Supabase — masih ada catatan review"
+            : "Published to Supabase",
+        );
         await refreshPublishStatus();
         refreshLive();
       }
@@ -200,6 +215,31 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
     } finally {
       setPublishing(false);
     }
+  };
+
+  const handlePublish = () => {
+    if (!liveRec) return;
+    const structural = canWriteToSupabase(liveRec);
+    if (!structural.ok) {
+      const msg = "Data belum bisa dipublish karena struktur JSON belum lengkap.";
+      setPublishError(msg);
+      toast.error(msg, {
+        description: structural.reasons.join("; "),
+      });
+      return;
+    }
+    if (reviewIssues.hasIssues) {
+      setAckChecks({ a: false, b: false });
+      setAckDialogOpen(true);
+      return;
+    }
+    void performPublish();
+  };
+
+  const handleConfirmAck = () => {
+    if (!ackComplete) return;
+    setAckDialogOpen(false);
+    void performPublish();
   };
 
   const handleUnpublish = async () => {
@@ -227,17 +267,18 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
 
   // Push publish bridge to parent (FormWizardV10) so the bottom bar can
   // render the primary publish action without duplicating logic.
+  // PR-21: bridge.canPublish reflects the structural gate, not strict canPublish.
   useEffect(() => {
     if (!onPublishBridge) return;
     onPublishBridge({
-      canPublish: publishGate.ok,
+      canPublish: structuralGate.ok,
       publishing,
       published: publishedFlag,
       hasRecord: !!liveRec,
       handlePublish,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [publishGate.ok, publishing, publishedFlag, liveRec]);
+  }, [structuralGate.ok, publishing, publishedFlag, liveRec, reviewIssues.hasIssues]);
 
 
   const handleCopyFinal = async () => {
