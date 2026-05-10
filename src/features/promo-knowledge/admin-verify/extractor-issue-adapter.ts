@@ -75,6 +75,15 @@ export interface AdminNaturalAnswer {
   task_id: string;
   /** Natural language answer from the admin. */
   answer_text: string;
+  /**
+   * PR-22 — Optional internal hint emitted by the UI when the admin picks a
+   * structured radio option. Resolver MAY use this as a non-binding signal to
+   * disambiguate the admin's intent. Backward-compatible: when absent, the
+   * resolver behaves exactly like before (answer_text only).
+   */
+  selected_internal_hint?: string;
+  /** PR-22 — Admin-facing label of the selected option (for resolver context). */
+  selected_label?: string;
 }
 
 export type JsonPatchOperation =
