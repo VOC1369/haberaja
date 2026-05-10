@@ -393,7 +393,7 @@ export function applyAdminPatchPreviewToPkRecord(
   const errors: string[] = [];
   for (const p of patches) {
     const r = validatePatch(record, p, allowedSet);
-    if (!r.ok) errors.push(r.error);
+    if (r.ok === false) errors.push(r.error);
     else validated.push(r.v);
   }
   if (errors.length > 0) {
@@ -406,8 +406,8 @@ export function applyAdminPatchPreviewToPkRecord(
     _human_override_log?: HumanOverrideEntry[];
   };
 
-  const fieldStatus: Record<string, unknown> = {
-    ...(clone._field_status as Record<string, unknown> | undefined ?? {}),
+  const fieldStatus: Record<string, string> = {
+    ...(clone._field_status as Record<string, string> | undefined ?? {}),
   };
   const aiConf = (clone.ai_confidence ?? {}) as Record<string, unknown>;
   const log: HumanOverrideEntry[] = Array.isArray(cloneAny._human_override_log)
