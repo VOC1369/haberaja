@@ -44,9 +44,22 @@ import {
 import { ChevronDown } from "lucide-react";
 import {
   canPublish,
+  canWriteToSupabase,
+  getPublishReviewIssues,
   publishRecord,
   unpublishRecord,
 } from "../../storage/supabase-publish";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import type {
   PkV10Record,
