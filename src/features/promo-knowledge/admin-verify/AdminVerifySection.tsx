@@ -1101,6 +1101,7 @@ function ExtractorIssueSection({
         {issues.map((q) => (
           <ExtractorIssueCard
             key={q.task_id}
+            record={record}
             question={q}
             draft={drafts[q.task_id] ?? ""}
             savedValue={saved[q.task_id]}
