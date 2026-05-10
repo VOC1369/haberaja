@@ -152,6 +152,11 @@ function readProviderVisualContext(record: PkV10Record): {
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
   const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
   const [issueAnswers, setIssueAnswers] = useState<Record<string, string>>({});
+  // PR-22 — internal hint + label per issue (from radio selection). Travel
+  // alongside answer_text to the resolver as `selected_internal_hint`.
+  const [issueAnswerMeta, setIssueAnswerMeta] = useState<
+    Record<string, { hint?: string; label?: string }>
+  >({});
   const [savedIssueAnswers, setSavedIssueAnswers] = useState<Record<string, string>>({});
   const [issuePreviews, setIssuePreviews] = useState<Record<string, ResolveAdminAnswerResult>>({});
   const [issuePreviewLoading, setIssuePreviewLoading] = useState<Record<string, boolean>>({});
