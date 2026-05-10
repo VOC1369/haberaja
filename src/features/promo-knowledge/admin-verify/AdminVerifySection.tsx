@@ -1171,6 +1171,56 @@ function ExtractorIssueCard({
   const [extraNote, setExtraNote] = useState<string>("");
   const [techOpen, setTechOpen] = useState(false);
 
+  // PR-22.1 — Fallback for issues without concrete object/context.
+  // Render a low-priority debug card. No radio, no LLM preview, no save.
+  if (!human.shouldRenderAsAdminQuestion) {
+    return (
+      <div className="bg-card border border-dashed border-border rounded-xl p-5 space-y-3 opacity-90">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0 space-y-1">
+            <h5 className="text-sm font-medium text-muted-foreground">
+              Catatan sistem (tidak bisa ditanyakan ke admin)
+            </h5>
+            <p className="text-sm text-foreground">
+              Masalah ini belum memiliki konteks yang cukup untuk ditanyakan ke admin.
+            </p>
+          </div>
+          <Badge variant={human.badge.variant} size="sm">
+            {human.badge.label}
+          </Badge>
+        </div>
+        <Collapsible open={techOpen} onOpenChange={setTechOpen}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ChevronDown
+                className={`h-3 w-3 transition-transform ${techOpen ? "rotate-180" : ""}`}
+              />
+              {techOpen ? "Sembunyikan detail teknis" : "Lihat detail teknis"}
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-2 rounded-lg border border-border bg-background/50 px-4 py-3 space-y-1">
+              <p className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all">
+                {question.source_text || "(tidak ada source_text)"}
+              </p>
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
+                severity: {question.severity}
+              </p>
+              {question.affected_paths.length > 0 && (
+                <p className="text-[10px] font-mono text-muted-foreground/70 break-all">
+                  {question.affected_paths.join(", ")}
+                </p>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+    );
+  }
+
   // Compose the natural-language answer for the LLM resolver. The internal
   // hint (`value`) is NEVER embedded in answer_text — it travels separately
   // via onDraftChange meta as `selected_internal_hint` (PR-22).
