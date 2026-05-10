@@ -602,6 +602,49 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
               setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: false }));
             }
           }}
+          applyLoading={issueApplyLoading}
+          applyErrors={issueApplyErrors}
+          applied={issueApplied}
+          onConfirmApply={async (q) => {
+            const preview = issuePreviews[q.task_id];
+            if (!preview || preview.proposed_patches.length === 0) return;
+            setIssueApplyLoading((p) => ({ ...p, [q.task_id]: true }));
+            setIssueApplyErrors((e) => {
+              const next = { ...e };
+              delete next[q.task_id];
+              return next;
+            });
+            try {
+              const result = applyAdminPatchPreviewToPkRecord({
+                record,
+                patches: preview.proposed_patches,
+                allowedTargetPaths: q.affected_paths,
+                actor: "admin",
+                source: "admin_verify_llm_patch_preview",
+                reason: q.issue_summary,
+              });
+              if (!result.ok || !result.record) {
+                throw new Error(
+                  (result.errors ?? ["Patch tidak valid."]).join("\n"),
+                );
+              }
+              const saved = savePkRecord(result.record);
+              onApply(saved);
+              setIssueApplied((a) => ({ ...a, [q.task_id]: true }));
+              toast.success("Perubahan tersimpan", {
+                description:
+                  "Status review masih perlu dicek ulang sebelum publish.",
+              });
+            } catch (err) {
+              const msg =
+                err instanceof Error
+                  ? err.message
+                  : "Gagal menyimpan perubahan.";
+              setIssueApplyErrors((e) => ({ ...e, [q.task_id]: msg }));
+            } finally {
+              setIssueApplyLoading((p) => ({ ...p, [q.task_id]: false }));
+            }
+          }}
         />
       )}
 
