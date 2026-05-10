@@ -1537,11 +1537,53 @@ function ExtractorIssueCard({
             </ul>
           )}
 
-          <div className="flex items-center justify-end pt-1">
-            <Button size="sm" variant="outline" disabled>
-              Setujui & Simpan (akan aktif segera)
-            </Button>
-          </div>
+          {(() => {
+            const hasPatches = preview.proposed_patches.length > 0;
+            const blocked =
+              !hasPatches ||
+              !!preview.needs_clarification ||
+              preview.confidence === "low" ||
+              isApplying ||
+              isApplied;
+            return (
+              <div className="space-y-2 pt-1">
+                {applyErrorMessage && (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
+                    <p className="text-xs font-medium text-destructive">
+                      Perubahan tidak dapat disimpan
+                    </p>
+                    <p className="text-[11px] text-destructive/90 break-words whitespace-pre-wrap">
+                      {applyErrorMessage}
+                    </p>
+                  </div>
+                )}
+                {isApplied && (
+                  <div className="rounded-md border border-success/40 bg-success/10 px-3 py-2">
+                    <p className="text-xs font-medium text-success">
+                      Perubahan sudah disimpan
+                    </p>
+                    <p className="text-[11px] text-success/90">
+                      Status review masih perlu dicek ulang sebelum publish.
+                    </p>
+                  </div>
+                )}
+                <div className="flex items-center justify-end">
+                  <Button
+                    size="sm"
+                    variant="golden"
+                    onClick={onConfirmApply}
+                    disabled={blocked}
+                  >
+                    {isApplied
+                      ? "Tersimpan"
+                      : isApplying
+                        ? "Menyimpan…"
+                        : "Setujui & Simpan"}
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
