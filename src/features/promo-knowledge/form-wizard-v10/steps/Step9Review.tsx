@@ -414,24 +414,36 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
             </div>
           </Section>
 
-          {/* ── Phase 3C — Publish to Supabase (status + action only) ─── */}
+          {/* ── PR-21 — Publish to Supabase (structural gate + ack flow) ─ */}
           <Section title="Publish to Supabase">
             <div
               className={`flex items-start gap-3 rounded-lg border p-3 ${
-                publishGate.ok
-                  ? "border-success/40 bg-success/10"
-                  : "border-warning/40 bg-warning/10"
+                !structuralGate.ok
+                  ? "border-warning/40 bg-warning/10"
+                  : reviewIssues.hasIssues
+                  ? "border-warning/40 bg-warning/10"
+                  : "border-success/40 bg-success/10"
               }`}
             >
-              {publishGate.ok ? (
-                <UploadCloud className="h-5 w-5 text-success mt-0.5 shrink-0" />
+              {structuralGate.ok ? (
+                <UploadCloud
+                  className={`h-5 w-5 mt-0.5 shrink-0 ${
+                    reviewIssues.hasIssues ? "text-warning" : "text-success"
+                  }`}
+                />
               ) : (
                 <ShieldAlert className="h-5 w-5 text-warning mt-0.5 shrink-0" />
               )}
               <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   {publishedFlag === true ? (
-                    <Badge className="bg-success/15 text-success border-0">Sudah dipublish</Badge>
+                    reviewIssues.hasIssues ? (
+                      <Badge className="bg-warning/15 text-warning border-0">
+                        Published — masih ada catatan review
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-success/15 text-success border-0">Published</Badge>
+                    )
                   ) : (
                     <Badge className="bg-muted text-muted-foreground border-0">Belum dipublish</Badge>
                   )}
@@ -441,10 +453,30 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
                     </span>
                   )}
                 </div>
-                {!publishGate.ok && (
-                  <p className="text-xs text-muted-foreground">
-                    Selesaikan review dulu di kartu “Yang harus diperbaiki sebelum publish”.
-                  </p>
+                {!structuralGate.ok && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-foreground">
+                      Data belum bisa dipublish karena struktur JSON belum lengkap.
+                    </p>
+                    <ul className="text-[11px] text-muted-foreground list-disc pl-5 font-mono">
+                      {structuralGate.reasons.map((r, i) => (
+                        <li key={i}>{r}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {structuralGate.ok && reviewIssues.hasIssues && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-foreground">
+                      Struktur JSON aman, tapi masih ada catatan review. Admin perlu
+                      acknowledge risiko sebelum publish.
+                    </p>
+                    <ul className="text-[11px] text-muted-foreground list-disc pl-5">
+                      {reviewIssues.issues.map((it, i) => (
+                        <li key={i}>{it}</li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
                 {publishError && (
                   <div className="text-xs text-destructive">{publishError}</div>
@@ -453,14 +485,16 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
                   <Button
                     type="button"
                     onClick={handlePublish}
-                    disabled={!liveRec || !publishGate.ok || publishing}
+                    disabled={!liveRec || !structuralGate.ok || publishing}
                   >
                     {publishing ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                       <UploadCloud className="h-4 w-4 mr-2" />
                     )}
-                    Publish to Supabase
+                    {reviewIssues.hasIssues
+                      ? "Publish ke Supabase dengan Catatan"
+                      : "Publish ke Supabase"}
                   </Button>
                   {publishedFlag === true && (
                     <Button
@@ -491,6 +525,90 @@ export function Step9Review({ state, update, recordId, onPublishBridge }: Step9P
             </div>
           </Section>
 
+          {/* PR-21 — Admin acknowledgement modal */}
+          <AlertDialog open={ackDialogOpen} onOpenChange={setAckDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Promo masih memiliki catatan review</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Data ini tetap bisa dipublish ke Supabase untuk diuji Danila.
+                  Namun masih ada catatan yang perlu diperhatikan. Jika Danila
+                  menjawab tidak tepat, admin wajib unpublish/delete promo ini,
+                  memperbaiki data, lalu publish ulang.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="rounded border border-border p-2">
+                    <div className="text-muted-foreground">Warnings</div>
+                    <div className="font-mono text-foreground">
+                      {reviewIssues.counts.warnings}
+                    </div>
+                  </div>
+                  <div className="rounded border border-border p-2">
+                    <div className="text-muted-foreground">Ambiguity</div>
+                    <div className="font-mono text-foreground">
+                      {reviewIssues.counts.ambiguity}
+                    </div>
+                  </div>
+                  <div className="rounded border border-border p-2">
+                    <div className="text-muted-foreground">Contradiction</div>
+                    <div className="font-mono text-foreground">
+                      {reviewIssues.counts.contradictions}
+                    </div>
+                  </div>
+                  <div className="rounded border border-border p-2">
+                    <div className="text-muted-foreground">review_required</div>
+                    <div className="font-mono text-foreground">
+                      {String(reviewIssues.reviewRequired)}
+                    </div>
+                  </div>
+                  <div className="rounded border border-border p-2 col-span-2">
+                    <div className="text-muted-foreground">ready_to_commit</div>
+                    <div className="font-mono text-foreground">
+                      {String(reviewIssues.readyToCommit)}
+                    </div>
+                  </div>
+                </div>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={ackChecks.a}
+                    onCheckedChange={(v) =>
+                      setAckChecks((s) => ({ ...s, a: v === true }))
+                    }
+                  />
+                  <span>Saya paham bahwa data ini masih memiliki catatan review.</span>
+                </label>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <Checkbox
+                    checked={ackChecks.b}
+                    onCheckedChange={(v) =>
+                      setAckChecks((s) => ({ ...s, b: v === true }))
+                    }
+                  />
+                  <span>
+                    Saya paham jika Danila menjawab tidak tepat, promo harus
+                    di-unpublish/delete dan diperbaiki.
+                  </span>
+                </label>
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batalkan</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={!ackComplete}
+                  onClick={(e) => {
+                    if (!ackComplete) {
+                      e.preventDefault();
+                      return;
+                    }
+                    handleConfirmAck();
+                  }}
+                >
+                  Saya paham, Publish ke Supabase
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           {/* ── Final safety gate pointer (Step9 is NOT a resolver) ───── */}
           {!publishGate.ok && (
             <Section title="Selesaikan review di Admin Verify">
