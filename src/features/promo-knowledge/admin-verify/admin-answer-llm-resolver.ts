@@ -132,6 +132,10 @@ export const liveAdminAnswerResolver: AdminAnswerResolver = async (input) => {
       source_text: reviewTask.source_text,
     },
     admin_answer: trimmed,
+    // PR-22: optional UI-side hints from the structured radio selection.
+    // Resolver MAY use them to disambiguate intent. NOT a binding signal.
+    admin_selected_hint: adminAnswer.selected_internal_hint ?? null,
+    admin_selected_label: adminAnswer.selected_label ?? null,
     allowed_target_paths: allowedTargetPaths,
     current_values: currentValues,
   };
