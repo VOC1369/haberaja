@@ -166,14 +166,196 @@ export function extractPromoKnowledgeMetadata(
 }
 
 /**
- * publishRecord — gate then upsert into promo_knowledge keyed on record_id.
+ * PR-21 — Structural Supabase write gate.
+ *
+ * Answers: "Is this record structurally safe to write to promo_knowledge?"
+ *
+ * Hard structural blockers ONLY. Does NOT consider:
+ *   - readiness_engine.observability_block.review_required
+ *   - readiness_engine.commit_block.ready_to_commit
+ *   - readiness_engine.validation_block.status === "needs_review"
+ *   - validation_block.warnings
+ *   - observability_block.ambiguity_flags
+ *   - observability_block.contradiction_flags
+ *
+ * Those belong to the (display-only) Review Issues summary — admin
+ * must acknowledge them, but they do NOT block writing to Supabase.
+ */
+export function canWriteToSupabase(rec: unknown): CanPublishResult {
+  const reasons: string[] = [];
+
+  if (!isObj(rec)) {
+    return { ok: false, reasons: ["record is missing or not an object"] };
+  }
+
+  const r = rec as Record<string, unknown>;
+
+  if (!nonEmptyString(r.record_id)) reasons.push("record_id missing");
+
+  const identity = r.identity_engine as Record<string, unknown> | undefined;
+  if (!isObj(identity)) reasons.push("identity_engine missing");
+  const clientBlock = identity?.client_block as Record<string, unknown> | undefined;
+  const promoBlock = identity?.promo_block as Record<string, unknown> | undefined;
+
+  if (!nonEmptyString(clientBlock?.client_id)) {
+    reasons.push("identity_engine.client_block.client_id missing");
+  }
+  if (!nonEmptyString(promoBlock?.promo_name)) {
+    reasons.push("identity_engine.promo_block.promo_name missing");
+  }
+
+  const meta = r.meta_engine as Record<string, unknown> | undefined;
+  const schemaBlock = meta?.schema_block as Record<string, unknown> | undefined;
+  if (!isObj(schemaBlock)) reasons.push("meta_engine.schema_block missing");
+  if (schemaBlock?.schema_version !== PK_V10_SCHEMA_VERSION) {
+    reasons.push(
+      `meta_engine.schema_block.schema_version must be "${PK_V10_SCHEMA_VERSION}"`,
+    );
+  }
+
+  const sourceBlock = meta?.source_block as Record<string, unknown> | undefined;
+  if (!nonEmptyString(sourceBlock?.raw_content)) {
+    reasons.push("meta_engine.source_block.raw_content missing or empty");
+  }
+
+  if (!isObj(r.variant_engine)) reasons.push("variant_engine missing");
+  if (!isObj(r._field_status)) reasons.push("_field_status missing");
+  if (!isObj(r.ai_confidence)) reasons.push("ai_confidence missing");
+
+  return { ok: reasons.length === 0, reasons };
+}
+
+export interface PublishReviewIssues {
+  hasIssues: boolean;
+  issues: string[];
+  summary: string;
+  counts: {
+    warnings: number;
+    ambiguity: number;
+    contradictions: number;
+  };
+  reviewRequired: boolean;
+  readyToCommit: boolean;
+  validationStatus: string;
+  warnings: string[];
+  ambiguity: string[];
+  contradictions: string[];
+}
+
+/**
+ * PR-21 — Display-only review issue summary. Pure read, no regex,
+ * no word matching, no mutation. Just surfaces extractor flags and
+ * readiness booleans so the admin can acknowledge risk before publish.
+ */
+export function getPublishReviewIssues(rec: unknown): PublishReviewIssues {
+  const empty: PublishReviewIssues = {
+    hasIssues: false,
+    issues: [],
+    summary: "Tidak ada catatan review.",
+    counts: { warnings: 0, ambiguity: 0, contradictions: 0 },
+    reviewRequired: false,
+    readyToCommit: true,
+    validationStatus: "",
+    warnings: [],
+    ambiguity: [],
+    contradictions: [],
+  };
+  if (!isObj(rec)) return empty;
+
+  const readiness = (rec as Record<string, unknown>).readiness_engine as
+    | Record<string, unknown>
+    | undefined;
+  const obs = (readiness?.observability_block ?? {}) as Record<string, unknown>;
+  const val = (readiness?.validation_block ?? {}) as Record<string, unknown>;
+  const commit = (readiness?.commit_block ?? {}) as Record<string, unknown>;
+
+  const warnings = Array.isArray(val.warnings) ? (val.warnings as string[]) : [];
+  const ambiguity = Array.isArray(obs.ambiguity_flags)
+    ? (obs.ambiguity_flags as string[])
+    : [];
+  const contradictions = Array.isArray(obs.contradiction_flags)
+    ? (obs.contradiction_flags as string[])
+    : [];
+  const reviewRequired = obs.review_required === true;
+  const readyToCommit = commit.ready_to_commit === true;
+  const validationStatus = typeof val.status === "string" ? (val.status as string) : "";
+
+  const issues: string[] = [];
+  if (reviewRequired) issues.push("Promo masih perlu review manual.");
+  if (!readyToCommit) issues.push("Promo belum ditandai siap publish.");
+  if (validationStatus === "needs_review") {
+    issues.push("Status validasi masih needs_review.");
+  }
+  if (warnings.length > 0) issues.push(`Masih ada ${warnings.length} warning dari extractor.`);
+  if (ambiguity.length > 0) issues.push(`Masih ada ${ambiguity.length} ambiguity dari extractor.`);
+  if (contradictions.length > 0) {
+    issues.push(`Masih ada ${contradictions.length} contradiction dari extractor.`);
+  }
+
+  const hasIssues = issues.length > 0;
+  return {
+    hasIssues,
+    issues,
+    summary: hasIssues
+      ? "Promo masih memiliki catatan review yang perlu diperhatikan."
+      : "Tidak ada catatan review.",
+    counts: {
+      warnings: warnings.length,
+      ambiguity: ambiguity.length,
+      contradictions: contradictions.length,
+    },
+    reviewRequired,
+    readyToCommit,
+    validationStatus,
+    warnings,
+    ambiguity,
+    contradictions,
+  };
+}
+
+export interface PublishOptions {
+  /**
+   * PR-21 — Admin has acknowledged the (display-only) review issues
+   * surfaced via getPublishReviewIssues. When true, publish proceeds
+   * with the structural gate only. When false (default) and the record
+   * has review issues, publish is blocked with reason
+   * "admin acknowledgement required".
+   *
+   * The strict canPublish gate is NOT used by this code path.
+   */
+  adminAcknowledgedReviewIssues?: boolean;
+}
+
+/**
+ * publishRecord — Backwards-compatible publish.
+ *
+ * Default behaviour (no options) preserves the historical strict gate
+ * (canPublish) so existing tests/callers keep working.
+ *
+ * PR-21 callers should pass `{ adminAcknowledgedReviewIssues: true }`
+ * to publish with review issues present. In that mode, the structural
+ * gate (canWriteToSupabase) is used and review issues are NOT blockers.
  */
 export async function publishRecord(
   rec: PkV10Record,
   publishedBy?: string,
+  options?: PublishOptions,
 ): Promise<PublishResult> {
-  const gate = canPublish(rec);
-  if (!gate.ok) return { ok: false, reasons: gate.reasons };
+  if (options && options.adminAcknowledgedReviewIssues !== undefined) {
+    const structural = canWriteToSupabase(rec);
+    if (!structural.ok) return { ok: false, reasons: structural.reasons };
+
+    const review = getPublishReviewIssues(rec);
+    if (review.hasIssues && options.adminAcknowledgedReviewIssues !== true) {
+      return {
+        ok: false,
+        reasons: ["admin acknowledgement required for review issues", ...review.issues],
+      };
+    }
+  } else {
+    const gate = canPublish(rec);
+    if (!gate.ok) return { ok: false, reasons: gate.reasons };
+  }
 
   const meta = extractPromoKnowledgeMetadata(rec);
   const nowIso = new Date().toISOString();
