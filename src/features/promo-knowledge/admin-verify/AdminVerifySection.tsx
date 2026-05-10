@@ -1229,6 +1229,34 @@ function ExtractorIssueCard({
         </div>
       </div>
 
+      {/* PR-22 — Concrete object: source_text / current_value / variant_name */}
+      {(human.objectValue || (human.contextLines && human.contextLines.length > 0)) && (
+        <div className="rounded-lg border border-border bg-background/50 px-4 py-3 space-y-2">
+          {human.objectValue && (
+            <>
+              {human.objectLabel && (
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {human.objectLabel}
+                </p>
+              )}
+              <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                “{human.objectValue}”
+              </p>
+            </>
+          )}
+          {human.contextLines && human.contextLines.length > 0 && (
+            <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs">
+              {human.contextLines.map((c, i) => (
+                <div key={i} className="contents">
+                  <dt className="text-muted-foreground">{c.key}</dt>
+                  <dd className="text-foreground break-words">{c.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      )}
+
       {human.options ? (
         <div className="space-y-3">
           <Label className="text-sm font-medium text-foreground">
