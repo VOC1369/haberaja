@@ -152,6 +152,11 @@ function readProviderVisualContext(record: PkV10Record): {
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
   const [answers, setAnswers] = useState<Record<string, AdminAnswer>>({});
   const [issueAnswers, setIssueAnswers] = useState<Record<string, string>>({});
+  // PR-22 — internal hint + label per issue (from radio selection). Travel
+  // alongside answer_text to the resolver as `selected_internal_hint`.
+  const [issueAnswerMeta, setIssueAnswerMeta] = useState<
+    Record<string, { hint?: string; label?: string }>
+  >({});
   const [savedIssueAnswers, setSavedIssueAnswers] = useState<Record<string, string>>({});
   const [issuePreviews, setIssuePreviews] = useState<Record<string, ResolveAdminAnswerResult>>({});
   const [issuePreviewLoading, setIssuePreviewLoading] = useState<Record<string, boolean>>({});
@@ -555,9 +560,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
           previews={issuePreviews}
           loading={issuePreviewLoading}
           errors={issuePreviewErrors}
-          onDraftChange={(taskId, value) =>
-            setIssueAnswers((prev) => ({ ...prev, [taskId]: value }))
-          }
+          onDraftChange={(taskId, value, meta) => {
+            setIssueAnswers((prev) => ({ ...prev, [taskId]: value }));
+            setIssueAnswerMeta((prev) => ({ ...prev, [taskId]: meta ?? {} }));
+          }}
           onSave={(taskId) =>
             setSavedIssueAnswers((prev) => ({
               ...prev,
@@ -573,13 +579,17 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
             });
             try {
               // PR-19C: live LLM resolver via ai-proxy (type=intent).
-              // Hard error on failure — NO silent fallback to mock.
+              // PR-22: pass selected_internal_hint + selected_label alongside
+              // answer_text. Backward-compatible — resolver may ignore them.
+              const meta = issueAnswerMeta[q.task_id] ?? {};
               const result = await resolveAdminAnswerToPatchPreview({
                 record,
                 reviewTask: q,
                 adminAnswer: {
                   task_id: q.task_id,
                   answer_text: issueAnswers[q.task_id] ?? "",
+                  selected_internal_hint: meta.hint,
+                  selected_label: meta.label,
                 },
                 rawContentReadonly:
                   record.meta_engine?.source_block?.raw_content ?? null,
@@ -1036,162 +1046,12 @@ function TagInput({
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
+import {
+  humanizeIssue,
+  type HumanizedIssue,
+  type HumanOption,
+} from "./humanize-issue";
 
-interface HumanOption {
-  /** Canonical value passed to the LLM resolver (matches F3 enums). */
-  value: string;
-  /** Admin-facing label (Bahasa Indonesia, no jargon). */
-  label: string;
-  /** Optional short helper sentence under the label. */
-  helper?: string;
-}
-
-interface HumanizedIssue {
-  title: string;
-  description: string;
-  mainQuestion: string;
-  options: HumanOption[] | null;
-  badge: { label: string; variant: "warning" | "destructive" | "pending" };
-}
-
-const SEVERITY_HUMAN: Record<
-  AdminVerifyIssueQuestion["severity"],
-  { label: string; variant: "warning" | "destructive" | "pending" }
-> = {
-  warning: { label: "Perlu Dicek", variant: "warning" },
-  ambiguity: { label: "Belum Jelas", variant: "pending" },
-  contradiction: { label: "Tidak Konsisten", variant: "destructive" },
-};
-
-const RULE_TYPE_OPTIONS: HumanOption[] = [
-  {
-    value: "conditional",
-    label: "Hanya untuk member baru setelah deposit pertama",
-    helper: "Contoh: member baru + deposit pertama.",
-  },
-  {
-    value: "threshold",
-    label: "Berlaku setelah member mencapai batas tertentu",
-    helper: "Contoh: minimal deposit, minimal turnover, atau batas nominal tertentu.",
-  },
-  {
-    value: "compound",
-    label: "Berlaku jika beberapa syarat digabung",
-    helper: "Contoh: member baru + deposit pertama + pilih paket.",
-  },
-  {
-    value: "sequential",
-    label: "Syarat harus dipenuhi berurutan",
-    helper: "Contoh: daftar → deposit → klaim.",
-  },
-  {
-    value: "recurring",
-    label: "Berlaku berulang",
-    helper: "Contoh: bisa diklaim harian/mingguan/bulanan.",
-  },
-  {
-    value: "manual",
-    label: "Lainnya, saya jelaskan manual",
-    helper: "Gunakan jika opsi di atas tidak cocok.",
-  },
-];
-
-const TURNOVER_FORMAT_OPTIONS: HumanOption[] = [
-  { value: "multiplier", label: "Kelipatan turnover", helper: "Contoh: 5x deposit + bonus." },
-  { value: "min_rupiah", label: "Minimal nominal turnover", helper: "Contoh: minimal Rp 500.000." },
-];
-
-const STATE_OPTIONS: HumanOption[] = [
-  { value: "draft", label: "Masih draft" },
-  { value: "ready", label: "Siap publish" },
-  { value: "published", label: "Sudah publish" },
-  { value: "rejected", label: "Ditolak" },
-];
-
-const VALIDATION_STATUS_OPTIONS: HumanOption[] = [
-  { value: "draft", label: "Masih draft" },
-  { value: "ready", label: "Siap" },
-  { value: "needs_review", label: "Perlu ditinjau ulang" },
-  { value: "rejected", label: "Ditolak" },
-];
-
-const CURRENCY_OPTIONS: HumanOption[] = [
-  { value: "IDR", label: "Rupiah (IDR)" },
-  { value: "KHR", label: "Riel Kamboja (KHR)" },
-  { value: "PHP", label: "Peso Filipina (PHP)" },
-  { value: "MYR", label: "Ringgit Malaysia (MYR)" },
-];
-
-function humanizeIssue(question: AdminVerifyIssueQuestion): HumanizedIssue {
-  const badge = SEVERITY_HUMAN[question.severity];
-  const path = question.affected_paths[0] ?? "";
-
-  if (path === "trigger_engine.trigger_rule_block.rule_type") {
-    return {
-      title: "Cara promo ini aktif perlu dikonfirmasi",
-      description:
-        "Sistem perlu memastikan kondisi apa yang membuat promo ini bisa diklaim.",
-      mainQuestion: "Promo ini bisa diklaim dalam kondisi apa?",
-      options: RULE_TYPE_OPTIONS,
-      badge,
-    };
-  }
-  if (path.endsWith(".turnover_rule_format") || path.includes(".turnover_rule_format")) {
-    return {
-      title: "Format turnover belum sesuai",
-      description:
-        "Format aturan turnover untuk varian ini belum dikenali. Pilih format yang seharusnya dipakai.",
-      mainQuestion: "Format turnover mana yang seharusnya dipakai?",
-      options: TURNOVER_FORMAT_OPTIONS,
-      badge,
-    };
-  }
-  if (path === "readiness_engine.state_block.state") {
-    return {
-      title: "Status promo belum sesuai",
-      description: "Status promo saat ini tidak dikenali sistem.",
-      mainQuestion: "Status promo yang benar?",
-      options: STATE_OPTIONS,
-      badge,
-    };
-  }
-  if (path === "readiness_engine.validation_block.status") {
-    return {
-      title: "Status validasi belum sesuai",
-      description: "Status validasi promo saat ini tidak dikenali sistem.",
-      mainQuestion: "Status validasi yang benar?",
-      options: VALIDATION_STATUS_OPTIONS,
-      badge,
-    };
-  }
-  if (path === "reward_engine.currency") {
-    return {
-      title: "Mata uang promo perlu dicek",
-      description:
-        "Mata uang biasanya berupa kode 3 huruf (mis. IDR). Mohon konfirmasi mata uang yang benar.",
-      mainQuestion: "Mata uang mana yang benar untuk promo ini?",
-      options: CURRENCY_OPTIONS,
-      badge,
-    };
-  }
-
-  // Generic fallback for raw extractor warnings/ambiguity/contradictions
-  // (no structured affected_paths). Use free-text only.
-  const fallbackTitle =
-    question.severity === "contradiction"
-      ? "Ada informasi promo yang tidak konsisten"
-      : question.severity === "ambiguity"
-        ? "Ada bagian promo yang belum jelas"
-        : "Ada catatan promo yang perlu dicek";
-  return {
-    title: fallbackTitle,
-    description:
-      "Sistem menemukan data yang belum cukup jelas untuk dipublikasikan. Mohon konfirmasi singkat dari Anda.",
-    mainQuestion: "Apa penjelasan yang benar untuk bagian ini?",
-    options: null,
-    badge,
-  };
-}
 
 function ExtractorIssueSection({
   record,
@@ -1216,7 +1076,7 @@ function ExtractorIssueSection({
   previews: Record<string, ResolveAdminAnswerResult>;
   loading: Record<string, boolean>;
   errors: Record<string, string>;
-  onDraftChange: (taskId: string, value: string) => void;
+  onDraftChange: (taskId: string, value: string, meta?: { hint?: string; label?: string }) => void;
   onSave: (taskId: string) => void;
   onGeneratePreview: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
   applyLoading: Record<string, boolean>;
@@ -1251,6 +1111,7 @@ function ExtractorIssueSection({
         {issues.map((q) => (
           <ExtractorIssueCard
             key={q.task_id}
+            record={record}
             question={q}
             draft={drafts[q.task_id] ?? ""}
             savedValue={saved[q.task_id]}
@@ -1260,7 +1121,7 @@ function ExtractorIssueSection({
             isApplying={!!applyLoading[q.task_id]}
             applyErrorMessage={applyErrors[q.task_id]}
             isApplied={!!applied[q.task_id]}
-            onDraftChange={(v) => onDraftChange(q.task_id, v)}
+            onDraftChange={(v, meta) => onDraftChange(q.task_id, v, meta)}
             onSave={() => onSave(q.task_id)}
             onGeneratePreview={() => onGeneratePreview(q)}
             onConfirmApply={() => onConfirmApply(q)}
@@ -1272,6 +1133,7 @@ function ExtractorIssueSection({
 }
 
 function ExtractorIssueCard({
+  record,
   question,
   draft,
   savedValue,
@@ -1286,6 +1148,7 @@ function ExtractorIssueCard({
   onGeneratePreview,
   onConfirmApply,
 }: {
+  record: PkV10Record;
   question: AdminVerifyIssueQuestion;
   draft: string;
   savedValue: string | undefined;
@@ -1295,37 +1158,49 @@ function ExtractorIssueCard({
   isApplying: boolean;
   applyErrorMessage?: string;
   isApplied: boolean;
-  onDraftChange: (v: string) => void;
+  onDraftChange: (v: string, meta?: { hint?: string; label?: string }) => void;
   onSave: () => void;
   onGeneratePreview: () => void;
   onConfirmApply: () => void;
 }) {
-  const human = useMemo(() => humanizeIssue(question), [question]);
+  const human = useMemo<HumanizedIssue>(
+    () => humanizeIssue(question, record),
+    [question, record],
+  );
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [extraNote, setExtraNote] = useState<string>("");
   const [techOpen, setTechOpen] = useState(false);
 
-  // Combine structured selection + optional note into the natural-language
-  // answer that the LLM resolver consumes. For free-text fallback, the note
-  // is the answer itself.
+  // Compose the natural-language answer for the LLM resolver. The internal
+  // hint (`value`) is NEVER embedded in answer_text — it travels separately
+  // via onDraftChange meta as `selected_internal_hint` (PR-22).
   const composeDraft = (opt: string, note: string): string => {
     if (human.options) {
       if (!opt) return note.trim();
       const lbl = human.options.find((o) => o.value === opt)?.label ?? opt;
-      const base = `${lbl} (${opt})`;
-      return note.trim() ? `${base}. Catatan: ${note.trim()}` : base;
+      return note.trim() ? `${lbl}. Catatan: ${note.trim()}` : lbl;
     }
     return note.trim();
   };
 
+  const emitDraft = (opt: string, note: string) => {
+    const text = composeDraft(opt, note);
+    const hint = opt || undefined;
+    const label = opt
+      ? human.options?.find((o) => o.value === opt)?.label
+      : undefined;
+    onDraftChange(text, { hint, label });
+  };
+
   const handleOptionChange = (v: string) => {
     setSelectedOption(v);
-    onDraftChange(composeDraft(v, extraNote));
+    emitDraft(v, extraNote);
   };
   const handleNoteChange = (v: string) => {
     setExtraNote(v);
-    onDraftChange(composeDraft(selectedOption, v));
+    emitDraft(selectedOption, v);
   };
+
 
   const isSaved = typeof savedValue === "string" && savedValue.trim().length > 0;
   const isDirty = draft !== (savedValue ?? "");
@@ -1353,6 +1228,34 @@ function ExtractorIssueCard({
           )}
         </div>
       </div>
+
+      {/* PR-22 — Concrete object: source_text / current_value / variant_name */}
+      {(human.objectValue || (human.contextLines && human.contextLines.length > 0)) && (
+        <div className="rounded-lg border border-border bg-background/50 px-4 py-3 space-y-2">
+          {human.objectValue && (
+            <>
+              {human.objectLabel && (
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  {human.objectLabel}
+                </p>
+              )}
+              <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                “{human.objectValue}”
+              </p>
+            </>
+          )}
+          {human.contextLines && human.contextLines.length > 0 && (
+            <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs">
+              {human.contextLines.map((c, i) => (
+                <div key={i} className="contents">
+                  <dt className="text-muted-foreground">{c.key}</dt>
+                  <dd className="text-foreground break-words">{c.value}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+        </div>
+      )}
 
       {human.options ? (
         <div className="space-y-3">
