@@ -1278,9 +1278,13 @@ function ExtractorIssueCard({
   preview,
   isLoading,
   errorMessage,
+  isApplying,
+  applyErrorMessage,
+  isApplied,
   onDraftChange,
   onSave,
   onGeneratePreview,
+  onConfirmApply,
 }: {
   question: AdminVerifyIssueQuestion;
   draft: string;
@@ -1288,9 +1292,13 @@ function ExtractorIssueCard({
   preview: ResolveAdminAnswerResult | undefined;
   isLoading: boolean;
   errorMessage?: string;
+  isApplying: boolean;
+  applyErrorMessage?: string;
+  isApplied: boolean;
   onDraftChange: (v: string) => void;
   onSave: () => void;
   onGeneratePreview: () => void;
+  onConfirmApply: () => void;
 }) {
   const human = useMemo(() => humanizeIssue(question), [question]);
   const [selectedOption, setSelectedOption] = useState<string>("");
