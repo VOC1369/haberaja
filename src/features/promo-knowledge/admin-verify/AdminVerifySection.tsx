@@ -1111,7 +1111,7 @@ function ExtractorIssueSection({
             isApplying={!!applyLoading[q.task_id]}
             applyErrorMessage={applyErrors[q.task_id]}
             isApplied={!!applied[q.task_id]}
-            onDraftChange={(v) => onDraftChange(q.task_id, v)}
+            onDraftChange={(v, meta) => onDraftChange(q.task_id, v, meta)}
             onSave={() => onSave(q.task_id)}
             onGeneratePreview={() => onGeneratePreview(q)}
             onConfirmApply={() => onConfirmApply(q)}
