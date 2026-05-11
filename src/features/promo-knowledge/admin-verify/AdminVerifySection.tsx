@@ -1375,6 +1375,11 @@ function ExtractorIssueCard({
             <p className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-all">
               {question.source_text}
             </p>
+            {question.affected_paths.length > 0 && (
+              <p className="text-[10px] font-mono text-muted-foreground/70 break-all">
+                path: {question.affected_paths.join(", ")}
+              </p>
+            )}
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">
               severity: {question.severity}
             </p>
