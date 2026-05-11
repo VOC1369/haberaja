@@ -72,6 +72,11 @@ const SEVERITY_HUMAN: Record<
 
 export const RULE_TYPE_OPTIONS: HumanOption[] = [
   {
+    value: "simple",
+    label: "Berlaku langsung tanpa syarat tambahan",
+    helper: "Contoh: siapapun yang deposit langsung dapat bonus.",
+  },
+  {
     value: "conditional",
     label: "Hanya untuk member baru setelah deposit pertama",
     helper: "Contoh: member baru + deposit pertama.",
