@@ -182,6 +182,135 @@ function asString(v: unknown): string {
   }
 }
 
+// ─── Condition humanizer (presentation-only) ───────────────────────────
+
+const FIELD_LABELS: Record<string, string> = {
+  deposit_amount: "deposit",
+  deposit_count: "jumlah deposit",
+  withdraw_amount: "withdraw",
+  turnover_amount: "turnover",
+  bonus_amount: "bonus",
+  user_status: "status member",
+  member_status: "status member",
+  member_level: "level member",
+  game_type: "tipe game",
+  provider: "provider",
+  currency: "mata uang",
+};
+
+const VALUE_LABELS: Record<string, string> = {
+  new_member: "member baru",
+  old_member: "member lama",
+  vip: "member VIP",
+  active: "member aktif",
+};
+
+function formatNumberValue(value: unknown, currency?: string): string {
+  if (typeof value !== "number") return String(value ?? "");
+  const formatted = new Intl.NumberFormat("id-ID").format(value);
+  if (currency === "IDR") return `Rp${formatted}`;
+  if (currency) return `${formatted} ${currency}`;
+  return formatted;
+}
+
+function humanizeValue(value: unknown, currency?: string): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return VALUE_LABELS[value] ?? value;
+  if (typeof value === "number") return formatNumberValue(value, currency);
+  if (typeof value === "boolean") return value ? "ya" : "tidak";
+  if (Array.isArray(value)) {
+    return value.map((v) => humanizeValue(v, currency)).join(", ");
+  }
+  return asString(value);
+}
+
+/**
+ * Display-only: convert a condition object to a Bahasa Indonesia phrase.
+ * Falls back to the original string when shape is unknown.
+ */
+export function humanizeCondition(cond: unknown): string {
+  if (cond === null || cond === undefined) return "";
+  if (typeof cond === "string") return cond;
+  if (typeof cond !== "object") return asString(cond);
+
+  const obj = cond as Record<string, unknown>;
+
+  // Logic operator wrappers.
+  const logicOp =
+    typeof obj.logic_operator === "string"
+      ? obj.logic_operator.toUpperCase()
+      : typeof obj.operator === "string" && !obj.field
+        ? obj.operator.toUpperCase()
+        : "";
+  if (logicOp === "AND" && !obj.field)
+    return "Semua syarat harus terpenuhi";
+  if (logicOp === "OR" && !obj.field)
+    return "Salah satu syarat cukup terpenuhi";
+
+  const field = typeof obj.field === "string" ? obj.field : "";
+  const operator = typeof obj.operator === "string" ? obj.operator : "";
+  const value = obj.value;
+  const currency = typeof obj.currency === "string" ? obj.currency : undefined;
+
+  if (!field && !operator) return asString(cond);
+
+  const fieldLabel = FIELD_LABELS[field] ?? field.replace(/_/g, " ");
+
+  // Special-case combos.
+  if (field === "deposit_count" && operator === "equals" && value === 1) {
+    return "Deposit pertama";
+  }
+  if (field === "user_status" || field === "member_status") {
+    const v = humanizeValue(value);
+    if (operator === "equals" || operator === "==") {
+      if (v === "member baru") return "Khusus member baru";
+      if (v === "member lama") return "Khusus member lama";
+      return `Khusus ${v}`;
+    }
+  }
+
+  const valueText = humanizeValue(value, currency);
+
+  switch (operator) {
+    case "greater_than_or_equal":
+    case ">=":
+    case "gte":
+      return `Minimal ${fieldLabel} ${valueText}`;
+    case "less_than_or_equal":
+    case "<=":
+    case "lte":
+      return `Maksimal ${fieldLabel} ${valueText}`;
+    case "greater_than":
+    case ">":
+    case "gt":
+      return `${capitalize(fieldLabel)} lebih dari ${valueText}`;
+    case "less_than":
+    case "<":
+    case "lt":
+      return `${capitalize(fieldLabel)} kurang dari ${valueText}`;
+    case "equals":
+    case "==":
+    case "eq":
+      return `${capitalize(fieldLabel)} = ${valueText}`;
+    case "not_equals":
+    case "!=":
+    case "neq":
+      return `${capitalize(fieldLabel)} bukan ${valueText}`;
+    case "in":
+      return `${capitalize(fieldLabel)} termasuk: ${valueText}`;
+    case "not_in":
+      return `${capitalize(fieldLabel)} tidak termasuk: ${valueText}`;
+    default:
+      return operator
+        ? `${capitalize(fieldLabel)} ${operator.replace(/_/g, " ")} ${valueText}`.trim()
+        : asString(cond);
+  }
+}
+
+function capitalize(s: string): string {
+  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
+}
+
 function variantNameFromPath(rec: PkV10Record | null, path: string): string {
   // Accept both `subcategories[2].turnover_rule_format` and
   // `subcategories.2.turnover_rule_format`.
