@@ -347,8 +347,9 @@ export function humanizeIssue(
     );
     const conditions = (() => {
       const v = readPath(record, "trigger_engine.trigger_rule_block.conditions");
-      if (Array.isArray(v)) return v.map(asString).filter(Boolean).join("; ");
-      return asString(v);
+      if (Array.isArray(v))
+        return v.map(humanizeCondition).filter(Boolean).join("; ");
+      return humanizeCondition(v);
     })();
     const targetUser = asString(
       readPath(record, "scope_engine.audience_block.target_user"),
