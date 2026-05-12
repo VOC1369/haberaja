@@ -104,22 +104,29 @@ export function buildF3ComplianceQuestions(
   const out: AdminVerifyIssueQuestion[] = [];
 
   // 1) trigger_engine.trigger_rule_block.rule_type
+  //    GATING (general logic, not per-promo): if structured conditions are
+  //    already present and well-formed, the trigger semantics are explicit
+  //    from data — do NOT force the admin to classify rule_type. The value
+  //    can still be normalized downstream by the LLM/governance layer.
   {
     const path = "trigger_engine.trigger_rule_block.rule_type";
     const v = readPath(rec, ["trigger_engine", "trigger_rule_block", "rule_type"]);
     if (typeof v === "string" && v.trim().length > 0) {
       if (!(ALLOWED_RULE_TYPE as readonly string[]).includes(v)) {
-        out.push(
-          makeQuestion({
-            kind: "rule_type",
-            severity: "contradiction",
-            path,
-            invalidValue: v,
-            allowed: ALLOWED_RULE_TYPE,
-            issueSummary: "Jenis aturan trigger tidak sesuai F3 V.10.1.",
-            adminQuestion: `Nilai saat ini adalah '${v}'. Pilih jenis aturan yang paling sesuai (simple, compound, sequential, conditional, threshold, atau recurring).`,
-          }),
-        );
+        const conditionsResolved = hasResolvedStructuredConditions(rec);
+        if (!conditionsResolved) {
+          out.push(
+            makeQuestion({
+              kind: "rule_type",
+              severity: "contradiction",
+              path,
+              invalidValue: v,
+              allowed: ALLOWED_RULE_TYPE,
+              issueSummary: "Jenis aturan trigger tidak sesuai F3 V.10.1.",
+              adminQuestion: `Nilai saat ini adalah '${v}'. Pilih jenis aturan yang paling sesuai (simple, compound, sequential, conditional, threshold, atau recurring).`,
+            }),
+          );
+        }
       }
     }
   }
