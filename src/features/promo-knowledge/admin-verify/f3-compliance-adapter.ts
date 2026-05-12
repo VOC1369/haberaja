@@ -15,6 +15,7 @@
 
 import type { PkV10Record } from "../schema/pk-v10";
 import type { AdminVerifyIssueQuestion } from "./extractor-issue-adapter";
+import { hasResolvedStructuredConditions } from "./condition-summary";
 
 // ─── F3 V.10.1 closed enums (authority) ────────────────────────────────
 const ALLOWED_RULE_TYPE = [
