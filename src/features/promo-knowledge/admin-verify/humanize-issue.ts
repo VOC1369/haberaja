@@ -19,6 +19,8 @@
 
 import type { PkV10Record } from "../schema/pk-v10";
 import type { AdminVerifyIssueQuestion } from "./extractor-issue-adapter";
+import { FIELD_REGISTRY_INDEX } from "./field-registry";
+import { resolveCanonicalPath } from "./field-key-path-map";
 
 // ─── Public model ──────────────────────────────────────────────────────
 
