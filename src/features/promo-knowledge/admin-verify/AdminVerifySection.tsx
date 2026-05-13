@@ -174,26 +174,6 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   //   tersebut via warning/ambiguity bucket dengan question/options humanize
   //   resmi dari FIELD_REGISTRY. Tidak ada regex/keyword matching; murni
   //   path-equality check terhadap FIELD_REGISTRY_INDEX.
-  const issueQuestions = useMemo<AdminVerifyIssueQuestion[]>(() => {
-    if (!record) return [];
-    const merged = [
-      ...buildIssueQuestions(record),
-      ...buildF3ComplianceQuestions(record),
-    ];
-    const seen = new Set<string>();
-    return merged.filter((q) => {
-      // Dedupe by task_id (deterministic ids prevent collisions across adapters).
-      if (seen.has(q.task_id)) return false;
-      seen.add(q.task_id);
-      // Path-first: suppress when Jalur A already owns this path.
-      const primaryPath = q.affected_paths?.[0];
-      if (primaryPath && FIELD_REGISTRY_INDEX.has(primaryPath)) return false;
-      return true;
-    });
-  }, [record]);
-
-
-
   // Visual context only — does NOT decide whether the card is shown.
   const providerVisual = useMemo(
     () =>
@@ -203,12 +183,34 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     [record],
   );
 
-  // GapQuestion (JSON-driven) joined with FieldRegistryEntry for UI rendering.
-  // gap-reader is the single source of truth for ALL questions, including provider.
+  // GapQuestion (JSON-driven) — single source of truth for missing-field cards.
   const gaps = useMemo<GapQuestion[]>(
     () => (record ? readGapsFromJson(record) : []),
     [record],
   );
+
+  // PR-19A — Extractor + F3 issue questions.
+  // Path-first dedupe: suppress only when gap-reader is ACTIVELY showing
+  // the same canonical path (avoid duplicate cards for the same field).
+  // Issues whose path is in FIELD_REGISTRY but NOT in current gaps still
+  // render via humanize-issue → FIELD_REGISTRY question + universal options.
+  const issueQuestions = useMemo<AdminVerifyIssueQuestion[]>(() => {
+    if (!record) return [];
+    const gapPaths = new Set(gaps.map((g) => g.path));
+    const merged = [
+      ...buildIssueQuestions(record),
+      ...buildF3ComplianceQuestions(record),
+    ];
+    const seen = new Set<string>();
+    return merged.filter((q) => {
+      if (seen.has(q.task_id)) return false;
+      seen.add(q.task_id);
+      const primaryPath = q.affected_paths?.[0];
+      if (primaryPath && gapPaths.has(primaryPath)) return false;
+      return true;
+    });
+  }, [record, gaps]);
+
 
   // V.10.1 diagnostic — verifies record freshness for Admin Verify gate.
   // Logs whether geo_restriction is being correctly skipped per _field_status.
