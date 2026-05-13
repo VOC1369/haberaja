@@ -56,6 +56,12 @@ export interface AdminVerifyIssueQuestion {
   task_id: string;
   severity: ExtractorIssueSeverity;
   source_text: string;
+  /**
+   * Optional canonical field-key (e.g. "valid_until", "min_deposit").
+   * Forward-compatible: extractor MAY emit this in structured warnings.
+   * When present, used by routing to map to canonical V.10.1 path.
+   */
+  field_key?: string;
   /** Generic, non-keyword summary. Real semantic summary belongs to the LLM. */
   issue_summary: string;
   /** Generic, non-keyword admin question. LLM may rewrite per-issue later. */
