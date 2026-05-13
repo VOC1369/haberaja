@@ -311,7 +311,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     (hasNormalizerPending && !providerPendingRequired);
 
   // Empty state — only when truly nothing to do
-  if (questions.length === 0 && !hasNormalizerPending && !showProviderCard && issueQuestions.length === 0) {
+  if (questions.length === 0 && !hasNormalizerPending && !showProviderCard) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
@@ -566,8 +566,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         ))}
       </div>
 
-      {/* PR-19A/19B — Extractor issue questions + preview-only patch flow. No JSON mutation. */}
-      {issueQuestions.length > 0 && (
+      {/* Jalur B (ExtractorIssueSection) DI-DROP dari UI per doctrine field-first V.10.1.
+          Semua pertanyaan field-based hanya datang dari gap-reader → FIELD_REGISTRY.
+          Tidak ada generic bucket. Tidak ada duplicate. Infrastruktur tetap ada untuk reuse. */}
+      {false && issueQuestions.length > 0 && (
         <ExtractorIssueSection
           record={record}
           issues={issueQuestions}
