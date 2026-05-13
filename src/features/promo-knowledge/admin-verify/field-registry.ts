@@ -74,6 +74,14 @@ export interface FieldRegistryEntry {
   read: (rec: PkV10Record) => unknown;
   write: (draft: PkV10Record, answer: AdminAnswer) => void;
   /**
+   * Optional admin_note resolver. When it returns a non-empty string,
+   * AdminVerify uses it as the entry's `admin_note` (overriding `a.note`).
+   * Used by options that carry a fixed semantic note (e.g.
+   * "not_stated_confirmed") or that pipe `customValue` into admin_note
+   * (e.g. "manual_note"). Does NOT change schema or _field_status.
+   */
+  getAdminNote?: (answer: AdminAnswer) => string | undefined;
+  /**
    * Optional relevance gate. Used ONLY by gap-reader for the
    * not_stated / missing branch (authority gate still wins for
    * explicit / inferred / propagated / derived).
