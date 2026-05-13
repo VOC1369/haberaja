@@ -436,11 +436,34 @@ export function humanizeIssue(
     };
   }
 
-  // ── E. Generic fallback (no structured affected_paths) ───────────────
-  // Show source_text as the concrete object. Ask admin to classify.
+  // ── E. Generic fallback ──────────────────────────────────────────────
+  // Two sub-cases:
+  //   E1. Path-known but no humanize template here → "Field belum punya
+  //       template pertanyaan" debug card. NO routing-bucket options
+  //       (jangan menebak field dari wording).
+  //   E2. Path-less issue (truly unclassified text) → routing-bucket
+  //       options atau contradiction-resolution options.
   const isContradiction = question.severity === "contradiction";
   const source = (question.source_text ?? "").trim();
+  const hasPath = (question.affected_paths?.length ?? 0) > 0;
 
+  // E1 — path exists but no template → debug-only card, no bucket options.
+  if (hasPath) {
+    return {
+      title: "Field belum punya template pertanyaan",
+      description:
+        "Sistem mendeteksi masalah pada path ini, tapi belum ada pertanyaan humanize yang dipasang. Mohon laporkan agar template ditambahkan.",
+      objectLabel: "Path teknis:",
+      objectValue: path || undefined,
+      contextLines: source ? [{ key: "Catatan extractor", value: source }] : undefined,
+      mainQuestion: "Apa yang seharusnya tertulis untuk field ini?",
+      options: null,
+      badge,
+      shouldRenderAsAdminQuestion: false,
+    };
+  }
+
+  // E2 — path-less generic.
   if (isContradiction) {
     return {
       title: "Ada informasi promo yang saling bertentangan",
