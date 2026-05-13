@@ -19,6 +19,8 @@
 
 import type { PkV10Record } from "../schema/pk-v10";
 import type { AdminVerifyIssueQuestion } from "./extractor-issue-adapter";
+import { FIELD_REGISTRY_INDEX } from "./field-registry";
+import { resolveCanonicalPath } from "./field-key-path-map";
 
 // ─── Public model ──────────────────────────────────────────────────────
 
@@ -338,7 +340,10 @@ export function humanizeIssue(
   record: PkV10Record | null,
 ): HumanizedIssue {
   const badge = SEVERITY_HUMAN[question.severity];
-  const path = question.affected_paths[0] ?? "";
+  // Path-first identity resolution (V.10.1):
+  //   1) affected_paths[0]  2) field_key  3) canonical field-key token in source_text
+  // No regex/wording inference — only canonical schema identity.
+  const path = resolveCanonicalPath(question) ?? "";
 
   // ── A. rule_type ─────────────────────────────────────────────────────
   if (path === "trigger_engine.trigger_rule_block.rule_type") {
@@ -436,19 +441,47 @@ export function humanizeIssue(
     };
   }
 
-  // ── E. Generic fallback ──────────────────────────────────────────────
-  // Two sub-cases:
-  //   E1. Path-known but no humanize template here → "Field belum punya
-  //       template pertanyaan" debug card. NO routing-bucket options
-  //       (jangan menebak field dari wording).
-  //   E2. Path-less issue (truly unclassified text) → routing-bucket
-  //       options atau contradiction-resolution options.
+  // ── E. Path-resolved or generic fallback ─────────────────────────────
+  // Sub-cases:
+  //   E0. Canonical path resolved + ada di FIELD_REGISTRY → render question
+  //       + options dari registry, dilengkapi 2 opsi universal:
+  //       "Tidak disebutkan di sumber" + "Jelaskan manual".
+  //   E1. Path resolved tapi BUKAN di FIELD_REGISTRY → debug card.
+  //   E2. Path tidak teridentifikasi sama sekali → routing-bucket / contradiction.
   const isContradiction = question.severity === "contradiction";
   const source = (question.source_text ?? "").trim();
-  const hasPath = (question.affected_paths?.length ?? 0) > 0;
+  const hasPath = path.length > 0;
 
-  // E1 — path exists but no template → debug-only card, no bucket options.
+  // E0 — registry-driven humanized card.
   if (hasPath) {
+    const entry = FIELD_REGISTRY_INDEX.get(path);
+    if (entry) {
+      const baseOptions: HumanOption[] = (entry.options ?? []).map((o) => ({
+        value: o.value,
+        label: o.label,
+      }));
+      const universalExtras: HumanOption[] = [
+        { value: "__not_stated__", label: "Tidak disebutkan di sumber" },
+        { value: "__manual__", label: "Jelaskan manual" },
+      ];
+      const currentValue = asString(readPath(record, path));
+      return {
+        title: `${entry.label} perlu dikonfirmasi`,
+        description:
+          "Sistem menemukan data yang perlu Anda pastikan untuk field ini.",
+        objectLabel: source ? "Catatan dari extractor:" : undefined,
+        objectValue: source || undefined,
+        contextLines: currentValue
+          ? [{ key: "Nilai saat ini", value: currentValue }]
+          : undefined,
+        mainQuestion: entry.question,
+        options: [...baseOptions, ...universalExtras],
+        badge,
+        shouldRenderAsAdminQuestion: true,
+      };
+    }
+
+    // E1 — path known but registry has no entry → debug card.
     return {
       title: "Field belum punya template pertanyaan",
       description:
