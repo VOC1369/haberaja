@@ -402,7 +402,14 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         overridden_by: "admin",
         timestamp: ts,
       };
-      if (a.note && a.note.trim()) entry.admin_note = a.note.trim();
+      // Registry-driven admin_note (e.g. "not_stated_confirmed" fixed string,
+      // "manual_note" pipes customValue) takes precedence over freeform a.note.
+      const registryNote = q.spec.getAdminNote?.(a);
+      if (registryNote && registryNote.trim()) {
+        entry.admin_note = registryNote.trim();
+      } else if (a.note && a.note.trim()) {
+        entry.admin_note = a.note.trim();
+      }
       log.push(entry);
 
       // ── Semantic-pair sibling commit (e.g. *_unlimited boolean) ──
