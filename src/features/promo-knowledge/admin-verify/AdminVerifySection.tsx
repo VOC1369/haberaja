@@ -76,6 +76,7 @@ import {
   type AdminAnswer,
 } from "./field-registry";
 import { readGapsFromJson, type GapQuestion } from "./gap-reader";
+import { resolveCanonicalPath } from "./field-key-path-map";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AUDIT LOG TYPE — sidecar at root, not in schema
