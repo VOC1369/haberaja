@@ -76,6 +76,7 @@ import {
   type AdminAnswer,
 } from "./field-registry";
 import { readGapsFromJson, type GapQuestion } from "./gap-reader";
+import { resolveCanonicalPath } from "./field-key-path-map";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AUDIT LOG TYPE — sidecar at root, not in schema
@@ -205,8 +206,11 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     return merged.filter((q) => {
       if (seen.has(q.task_id)) return false;
       seen.add(q.task_id);
-      const primaryPath = q.affected_paths?.[0];
-      if (primaryPath && gapPaths.has(primaryPath)) return false;
+      // Resolve canonical path the same way humanize-issue does:
+      // affected_paths[0] → field_key → canonical token in source_text.
+      // Suppress when gap-reader is already showing the same path.
+      const canonical = resolveCanonicalPath(q);
+      if (canonical && gapPaths.has(canonical)) return false;
       return true;
     });
   }, [record, gaps]);
