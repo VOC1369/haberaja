@@ -367,6 +367,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       ) {
         continue;
       }
+      // manual_note option requires a non-empty admin explanation.
+      if (a.choice === "manual_note" && (!a.customValue || a.customValue.trim() === "")) {
+        continue;
+      }
       if (q.spec.inputKind === "multi-chip" && (!a.customSelection || a.customSelection.length === 0)) {
         continue;
       }
