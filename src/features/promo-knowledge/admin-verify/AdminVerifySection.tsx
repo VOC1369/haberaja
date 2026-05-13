@@ -367,6 +367,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       ) {
         continue;
       }
+      // manual_note option requires a non-empty admin explanation.
+      if (a.choice === "manual_note" && (!a.customValue || a.customValue.trim() === "")) {
+        continue;
+      }
       if (q.spec.inputKind === "multi-chip" && (!a.customSelection || a.customSelection.length === 0)) {
         continue;
       }
@@ -398,7 +402,14 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         overridden_by: "admin",
         timestamp: ts,
       };
-      if (a.note && a.note.trim()) entry.admin_note = a.note.trim();
+      // Registry-driven admin_note (e.g. "not_stated_confirmed" fixed string,
+      // "manual_note" pipes customValue) takes precedence over freeform a.note.
+      const registryNote = q.spec.getAdminNote?.(a);
+      if (registryNote && registryNote.trim()) {
+        entry.admin_note = registryNote.trim();
+      } else if (a.note && a.note.trim()) {
+        entry.admin_note = a.note.trim();
+      }
       log.push(entry);
 
       // ── Semantic-pair sibling commit (e.g. *_unlimited boolean) ──
@@ -845,7 +856,13 @@ function QuestionInput({
     <div className="space-y-3">
       <RadioGroup
         value={choice}
-        onValueChange={(v) => onChange({ choice: v, customValue: v === CUSTOM ? answer?.customValue : undefined })}
+        onValueChange={(v) =>
+          onChange({
+            choice: v,
+            customValue:
+              v === CUSTOM || v === "manual_note" ? answer?.customValue : undefined,
+          })
+        }
         className={useTwoCols ? "grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2" : "grid gap-2"}
       >
         {spec.options.map((opt) => {
@@ -880,6 +897,16 @@ function QuestionInput({
             onChange={(e) => onChange({ customValue: e.target.value })}
             placeholder="Masukkan angka (IDR)"
             className="flex h-10 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-all"
+          />
+        </div>
+      )}
+      {choice === "manual_note" && (
+        <div className="pl-8">
+          <Textarea
+            value={answer?.customValue ?? ""}
+            onChange={(e) => onChange({ customValue: e.target.value })}
+            placeholder="Jelaskan kondisi masa berlaku promo ini…"
+            rows={3}
           />
         </div>
       )}

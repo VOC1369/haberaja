@@ -74,6 +74,14 @@ export interface FieldRegistryEntry {
   read: (rec: PkV10Record) => unknown;
   write: (draft: PkV10Record, answer: AdminAnswer) => void;
   /**
+   * Optional admin_note resolver. When it returns a non-empty string,
+   * AdminVerify uses it as the entry's `admin_note` (overriding `a.note`).
+   * Used by options that carry a fixed semantic note (e.g.
+   * "not_stated_confirmed") or that pipe `customValue` into admin_note
+   * (e.g. "manual_note"). Does NOT change schema or _field_status.
+   */
+  getAdminNote?: (answer: AdminAnswer) => string | undefined;
+  /**
    * Optional relevance gate. Used ONLY by gap-reader for the
    * not_stated / missing branch (authority gate still wins for
    * explicit / inferred / propagated / derived).
@@ -202,17 +210,38 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
     options: [
       { value: "no_expiry", label: "Tidak ada batas waktu" },
       { value: CUSTOM, label: "Tanggal tertentu" },
+      { value: "not_stated_confirmed", label: "Tidak disebutkan di sumber" },
+      { value: "manual_note", label: "Jelaskan manual" },
     ],
     read: (r) => r.period_engine?.validity_block?.valid_until,
     write: (d, a) => {
-      d.period_engine.validity_block.valid_until =
-        a.choice === "no_expiry" ? (null as never) : ((a.customValue ?? "") as never);
+      if (a.choice === "no_expiry") {
+        d.period_engine.validity_block.valid_until = null as never;
+      } else if (a.choice === "not_stated_confirmed" || a.choice === "manual_note") {
+        // Admin confirms absence / explains manually — no fabricated date,
+        // no unlimited flag. Audit trail lives in _human_override_log via getAdminNote.
+        d.period_engine.validity_block.valid_until = null as never;
+      } else {
+        d.period_engine.validity_block.valid_until = ((a.customValue ?? "") as never);
+      }
     },
     unlimitedSiblingPath: "period_engine.validity_block.valid_until_unlimited",
     readSibling: (r) => r.period_engine?.validity_block?.valid_until_unlimited,
     writeSibling: (d, a) => {
+      // Only "no_expiry" implies unlimited. The two new admin-confirmation
+      // options explicitly do NOT flip this flag (per doctrine).
       d.period_engine.validity_block.valid_until_unlimited =
         a.choice === "no_expiry";
+    },
+    getAdminNote: (a) => {
+      if (a.choice === "not_stated_confirmed") {
+        return "Admin confirmed valid_until is not stated in source";
+      }
+      if (a.choice === "manual_note") {
+        const v = (a.customValue ?? "").trim();
+        return v.length > 0 ? v : undefined;
+      }
+      return undefined;
     },
   },
   {
