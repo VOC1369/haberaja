@@ -340,7 +340,10 @@ export function humanizeIssue(
   record: PkV10Record | null,
 ): HumanizedIssue {
   const badge = SEVERITY_HUMAN[question.severity];
-  const path = question.affected_paths[0] ?? "";
+  // Path-first identity resolution (V.10.1):
+  //   1) affected_paths[0]  2) field_key  3) canonical field-key token in source_text
+  // No regex/wording inference — only canonical schema identity.
+  const path = resolveCanonicalPath(question) ?? "";
 
   // ── A. rule_type ─────────────────────────────────────────────────────
   if (path === "trigger_engine.trigger_rule_block.rule_type") {
