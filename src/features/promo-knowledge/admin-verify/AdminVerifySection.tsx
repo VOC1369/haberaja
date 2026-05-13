@@ -167,17 +167,27 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
 
   // PR-19A — Extractor issue questions (warnings/ambiguity/contradictions).
   // Local UI state ONLY. Never mutates the record. Live LLM resolver lands in PR-19B.
+  //
+  // PATH-FIRST ROUTING (V.10.1):
+  //   Jika issue punya `affected_paths[0]` yang dikenal FIELD_REGISTRY,
+  //   suppress dari Jalur B — Jalur A (gap-reader) sudah meng-handle path
+  //   tersebut via warning/ambiguity bucket dengan question/options humanize
+  //   resmi dari FIELD_REGISTRY. Tidak ada regex/keyword matching; murni
+  //   path-equality check terhadap FIELD_REGISTRY_INDEX.
   const issueQuestions = useMemo<AdminVerifyIssueQuestion[]>(() => {
     if (!record) return [];
     const merged = [
       ...buildIssueQuestions(record),
       ...buildF3ComplianceQuestions(record),
     ];
-    // Dedupe by task_id (deterministic ids prevent collisions across adapters).
     const seen = new Set<string>();
     return merged.filter((q) => {
+      // Dedupe by task_id (deterministic ids prevent collisions across adapters).
       if (seen.has(q.task_id)) return false;
       seen.add(q.task_id);
+      // Path-first: suppress when Jalur A already owns this path.
+      const primaryPath = q.affected_paths?.[0];
+      if (primaryPath && FIELD_REGISTRY_INDEX.has(primaryPath)) return false;
       return true;
     });
   }, [record]);
