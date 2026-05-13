@@ -566,8 +566,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         ))}
       </div>
 
-      {/* PR-19A/19B — Extractor issue questions + preview-only patch flow. No JSON mutation. */}
-      {issueQuestions.length > 0 && (
+      {/* Jalur B (ExtractorIssueSection) DI-DROP dari UI per doctrine field-first V.10.1.
+          Semua pertanyaan field-based hanya datang dari gap-reader → FIELD_REGISTRY.
+          Tidak ada generic bucket. Tidak ada duplicate. Infrastruktur tetap ada untuk reuse. */}
+      {false && issueQuestions.length > 0 && (
         <ExtractorIssueSection
           record={record}
           issues={issueQuestions}
