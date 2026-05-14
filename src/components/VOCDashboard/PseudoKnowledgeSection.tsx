@@ -151,7 +151,17 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // remain accessible because they read pkRecord, not mappedPreview.
   const [mappedPreviewError, setMappedPreviewError] = useState<string | null>(null);
 
-  // Memoized mapped preview (single source of truth for badge + commit)
+  // ⚠️ TEMPORARY VISUAL DEBT — NOT source of truth.
+  // After PARTIAL SAFE REBIND, mappedPreview is retained ONLY for display
+  // gaps that have no authoritative V.10.1 path yet:
+  //   - fixed_voucher_valid_until / fixed_voucher_valid_unlimited
+  //   - fixed_spin_validity_mode / _duration / _unit
+  //   - min_calculation_enabled / min_calculation
+  // All other displays (reward_mode, reward_type, apk_required, trigger_event,
+  // min_deposit, lucky_spin_max_per_day, physical_item_name, physical_quantity,
+  // voucher_kind, subcategories[idx], RewardArchetypePicker rewardMode prop)
+  // now read directly from PkV10Record via `sel.*` selectors.
+  // DO NOT add new mappedPreview readers. Resolve gaps via V.10.1 schema first.
   const mappedPreview = useMemo<PromoFormData | null>(() => {
     if (!extractedPromo) {
       // Reset error when there is nothing to map (avoid stale message).
@@ -904,8 +914,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           {/* ✅ Hide "Nilai Bonus" for unit-based rewards (Lucky Spin/Voucher/Ticket) in Fixed mode */}
           {(() => {
-            const isFixedMode = mappedPreview?.reward_mode === 'fixed';
-            const rewardType = isFixedMode ? mappedPreview?.fixed_reward_type : displaySub.reward_type;
+            // PARTIAL REBIND — V.10.1 selectors (replaces mappedPreview reads)
+            const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
+            const rewardType = isFixedMode ? sel.rewardType(pkRecord as PkV10Record) : displaySub.reward_type;
             const isUnitBased = isFixedMode && ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
             
             // Skip rendering for unit-based rewards - "Jumlah Reward" shown in detail section instead
@@ -913,7 +924,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             
             // ✅ V1.2.1: Detect APK Fixed promos for special display
             const isApkFixedPromo = isFixedMode && 
-              (mappedPreview?.require_apk || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
+              (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
             
             // ✅ FIX: Use displaySub (normalized) for calculation display
             const calcMethod = displaySub.calculation_method;
@@ -966,7 +977,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               }
               
               // ✅ Withdraw Bonus: use min_calculation as "Min WD", not min_deposit
-              const isWithdrawTrigger = mappedPreview?.trigger_event === 'Withdraw' || 
+              // HOLD: trigger_event rebound to V.10.1; min_calculation* still on mappedPreview (gap, no V.10.1 path yet)
+              const isWithdrawTrigger = sel.triggerEvent(pkRecord as PkV10Record) === 'Withdraw' || 
                 /withdraw|bonus.*wd|extra.*wd/i.test(extractedPromo?.promo_name || '');
               
               if (isWithdrawTrigger) {
@@ -984,10 +996,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               }
               
               // Default: Min Deposit for other promo types
-              // ✅ For Fixed Mode, read from mappedPreview (guarded values)
-              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+              // PARTIAL REBIND — V.10.1 selectors
+              const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const minDepoValue = isFixedMode 
-                ? mappedPreview?.fixed_min_depo 
+                ? sel.minDeposit(pkRecord as PkV10Record) 
                 : sub.minimum_base;
               
               return (
@@ -1006,16 +1018,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           </div>
           <div className="bg-muted rounded-lg p-3">
             {(() => {
-              // ✅ Use mappedPreview for Fixed mode (single source of truth)
-              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+              // PARTIAL REBIND — V.10.1 selectors
+              const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const rewardType = isFixedMode 
-                ? mappedPreview?.fixed_reward_type 
+                ? sel.rewardType(pkRecord as PkV10Record) 
                 : sub.reward_type;
               const isUnitBased = ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
               
               // For unit-based rewards, show "Max Claim Reward" with unit count
               if (isUnitBased && isFixedMode) {
-                const maxPerDay = mappedPreview?.fixed_lucky_spin_max_per_day;
+                const maxPerDay = sel.luckySpinMaxPerDay(pkRecord as PkV10Record);
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Max Claim Reward</span>
@@ -1028,7 +1040,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               
               // ✅ V1.2.1: APK Fixed promos - show "Nilai Hadiah" with parsed amount
               const isApkFixedPromo = !isUnitBased && isFixedMode && 
-                (mappedPreview?.require_apk || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
+                (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
               
               if (isApkFixedPromo) {
                 // For APK Fixed, max_bonus = reward_amount, never "Unlimited"
@@ -1067,10 +1079,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           </div>
           <div className="bg-muted rounded-lg p-3">
             {(() => {
-              // ✅ Use mappedPreview for Fixed mode (single source of truth)
-              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+              // PARTIAL REBIND — V.10.1 selectors
+              const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const rewardType = isFixedMode 
-                ? mappedPreview?.fixed_reward_type 
+                ? sel.rewardType(pkRecord as PkV10Record) 
                 : sub.reward_type;
               
               // Display label based on reward type
@@ -1080,7 +1092,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   case 'voucher': return 'Voucher';
                   case 'ticket': return 'Ticket';
                   case 'hadiah_fisik': return isFixedMode 
-                    ? (mappedPreview?.fixed_physical_reward_name || 'Hadiah Fisik')
+                    ? (sel.physicalItemName(pkRecord as PkV10Record) || 'Hadiah Fisik')
                     : (sub.physical_reward_name || 'Hadiah Fisik');
                   case 'uang_tunai': return 'Uang Tunai';
                   default: return 'Credit Game';
@@ -1168,8 +1180,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             <span className="text-muted-foreground text-xs block mb-1">Jenis Game</span>
             {(() => {
               // ✅ V1.2: APK/Freechip promos don't have game type constraints
-              const isApkPromo = mappedPreview?.trigger_event === 'APK Download' || 
-                mappedPreview?.require_apk === true ||
+              // PARTIAL REBIND — V.10.1 selectors for trigger_event + apk_required
+              const isApkPromo = sel.triggerEvent(pkRecord as PkV10Record) === 'APK Download' || 
+                sel.apkRequired(pkRecord as PkV10Record) === true ||
                 /apk|download|aplikasi|freechip|freebet/i.test(extractedPromo?.promo_name || '');
               
               if (isApkPromo) {
@@ -1193,8 +1206,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
         {/* ✅ Lucky Spin / Voucher / Ticket specific fields (Fixed Mode only) */}
         {(() => {
-          const isFixedMode = mappedPreview?.reward_mode === 'fixed';
-          const rewardType = isFixedMode ? mappedPreview?.fixed_reward_type : undefined;
+          const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
+          const rewardType = isFixedMode ? sel.rewardType(pkRecord as PkV10Record) : undefined;
           const isUnitBased = isFixedMode && ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
           
           if (!isUnitBased) return null;
@@ -1211,7 +1224,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 <div className="bg-muted rounded-lg p-3">
                   <span className="text-muted-foreground text-xs block mb-1">Jumlah Reward</span>
                   <span className="text-foreground font-medium">
-                    {mappedPreview?.fixed_reward_quantity || 1}
+                    {sel.physicalQuantity(pkRecord as PkV10Record) ?? 1}
                   </span>
                 </div>
                 {rewardType === 'lucky_spin' && (
@@ -1236,7 +1249,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   <div className="bg-muted rounded-lg p-3">
                     <span className="text-muted-foreground text-xs block mb-1">Jenis Voucher</span>
                     <span className="text-foreground font-medium">
-                      {mappedPreview?.fixed_voucher_kind || 'Umum'}
+                      {sel.voucherKind(pkRecord as PkV10Record) || 'Umum'}
                     </span>
                   </div>
                 )}
@@ -1635,7 +1648,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                         sub,
                         idx,
                         archetype,
-                        mappedPreview?.subcategories?.[idx] as any,
+                        pkRecord?.variant_engine?.items_block?.subcategories?.[idx] as any,
                         idx === attachIdx,
                       );
                     });
@@ -2070,7 +2083,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   categoryName={extractedPromo.program_classification_name || 'Unknown'}
                   confidence={extractedPromo.classification_confidence || 'medium'}
                   qualityFlags={extractedPromo.quality_flags || []}
-                  rewardMode={mappedPreview?.reward_mode}
+                  rewardMode={sel.rewardMode(pkRecord as PkV10Record) === 'fixed' ? 'fixed' : undefined}
                   promoSubType={getPromoSubTypeDisplay(
                     extractedPromo.promo_name,
                     extractedPromo.promo_type
