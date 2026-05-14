@@ -1506,110 +1506,65 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
           {/* V1.1 global blacklist is rendered inside the matching variant card (see renderSubCategoryCard). */}
 
-          {/* Subcategories - Conditional for Referral vs Other */}
-          {/* HOLD (Phase B-decision): subcategories iteration + referral simulation columns
-              (winlose / cashback / fee / commission_result) belum punya path V.10.1 di
-              variant_engine.items_block.subcategories[]. NEEDS_SCHEMA_REVIEW. */}
-          {extractedPromo.subcategories.length > 0 && (
+          {/* Subcategories - Conditional for Referral vs Other (V.10.1 sourced) */}
+          {sel.subcategoryCount(pkRecord as PkV10Record) > 0 && (
             /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
-              // REFERRAL: Render as Tier Table with ALL simulation columns
+              // REFERRAL: HARD CUTOVER GAP — simulation columns
+              // (winlose / cashback / fee / wl_bersih / komisi_rp) tidak ada di V.10.1
+              // variant_engine.items_block.subcategories[]. Render empty state.
+              // TODO: NEEDS_SCHEMA_REVIEW — ADD_FIELD per-tier simulation rows
+              //       (winlose, cashback_deduction, fee_deduction, net_winlose,
+              //        commission_result) + min_downline.
               <div>
                 <h4 className="text-base font-semibold text-button-hover mb-4">
                   Detail Tier Komisi Referral
                 </h4>
-                <div className="bg-card rounded-lg overflow-hidden border border-border overflow-x-auto">
-                  <table className="w-full text-sm min-w-[700px]">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Nama Tier</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Min Downline</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Winlose</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Cashback</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Fee</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">WL Bersih</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Komisi %</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Komisi Rp</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...extractedPromo.subcategories]
-                        .sort((a, b) => (Number(a.calculation_value) || 0) - (Number(b.calculation_value) || 0))
-                        .map((tier, idx) => {
-                          // Extract min_downline from sub data, sub_name, or terms pattern
-                          const subMinDownline = (tier as any).min_downline;
-                          const nameMatch = tier.sub_name?.match(/(\d+)\s*(id|member|downline)/i);
-                          const termsMatch = sel.termsConditions(pkRecord as PkV10Record).find(t => 
-                            t.includes(`${tier.calculation_value}%`) && /(\d+)\s*(id|member|downline)/i.test(t)
-                          )?.match(/(\d+)\s*(id|member|downline)/i);
-                          const minDownline = subMinDownline || nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
-                          
-                          // CALCULATION RULES: Ini ATURAN FINAL dari tabel promo, bukan sample!
-                          const ruleWinlose = (tier as any).winlose || (tier as any).sample_winlose || tier.minimum_base;
-                          const ruleCashback = (tier as any).cashback_deduction || (tier as any).sample_cashback;
-                          const ruleFee = (tier as any).fee_deduction || (tier as any).sample_commission_deduction;
-                          const ruleNetWL = (tier as any).net_winlose || (tier as any).sample_net_winlose;
-                          const ruleKomisi = (tier as any).commission_result || (tier as any).sample_commission_result;
-                          
-                          // Format helpers
-                          const formatRp = (val: any) => val && Number(val) > 0 
-                            ? `Rp ${new Intl.NumberFormat('id-ID').format(Number(val))}` 
-                            : '-';
-                          
-                          return (
-                            <tr key={idx} className="border-t border-border">
-                              <td className="py-3 px-3 text-foreground font-medium">{tier.sub_name || `Tier ${idx + 1}`}</td>
-                              <td className="py-3 px-3 text-foreground">{minDownline} ID</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(ruleWinlose)}</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(ruleCashback)}</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(ruleFee)}</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(ruleNetWL)}</td>
-                              <td className="py-3 px-3 text-button-hover font-semibold">{tier.calculation_value}%</td>
-                              <td className="py-3 px-3 text-amber-400 font-semibold">{formatRp(ruleKomisi)}</td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
+                <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
+                  <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground italic">
+                    Referral tier detail belum tersedia di JSON V.10.1.
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">
+                    Field yang dibutuhkan: <code className="font-mono">min_downline</code>,{" "}
+                    <code className="font-mono">winlose</code>,{" "}
+                    <code className="font-mono">cashback_deduction</code>,{" "}
+                    <code className="font-mono">fee_deduction</code>,{" "}
+                    <code className="font-mono">net_winlose</code>,{" "}
+                    <code className="font-mono">commission_result</code>.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 px-1">
-                  * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah ATURAN FINAL dari tabel promo. Threshold tier berdasarkan Min Downline.
-                </p>
               </div>
             ) : (
-              // NON-REFERRAL: Keep existing variant cards
+              // NON-REFERRAL: variant cards iterated from V.10.1 selectors
               <div>
-                {/* Only show header if multi-variant */}
-                {extractedPromo.subcategories.length > 1 && (
+                {sel.subcategoryCount(pkRecord as PkV10Record) > 1 && (
                   <h4 className="text-base font-semibold text-button-hover mb-4">
-                    Sub Kategori ({extractedPromo.subcategories.length} Varian)
+                    Sub Kategori ({sel.subcategoryCount(pkRecord as PkV10Record)} Varian)
                   </h4>
                 )}
                 <div className="space-y-4">
                   {(() => {
-                    const sortedSubs = [...extractedPromo.subcategories]
-                      .sort((a, b) => {
-                        const valueA = Number(a.calculation_value) || 0;
-                        const valueB = Number(b.calculation_value) || 0;
-                        return valueA - valueB; // ascending (smallest first)
-                      });
-
-                    // Pick attach target for global blacklist:
-                    // first variant whose V.10.1 game_domain matches /slot/, else first.
-                    // Phase B3 — read sourced from sel.subGameDomain (PkV10Record).
                     const rec = pkRecord as PkV10Record;
-                    const slotIdx = sortedSubs.findIndex((_s, i) =>
-                      /slot/i.test(String(sel.subGameDomain(rec, i) ?? ''))
+                    const n = sel.subcategoryCount(rec);
+                    // Sort by per-variant calculation_value (V.10.1 selector).
+                    const order = Array.from({ length: n }, (_, i) => i)
+                      .sort((a, b) => (Number(sel.subCalculationValue(rec, a)) || 0) - (Number(sel.subCalculationValue(rec, b)) || 0));
+                    // Pick attach target for global blacklist: first variant whose
+                    // V.10.1 game_domain matches /slot/, else first.
+                    const slotPos = order.findIndex((origIdx) =>
+                      /slot/i.test(String(sel.subGameDomain(rec, origIdx) ?? ''))
                     );
-                    const attachIdx = slotIdx >= 0 ? slotIdx : 0;
+                    const attachOriginalIdx = slotPos >= 0 ? order[slotPos] : order[0];
 
-                    return sortedSubs.map((sub, idx) => {
-                      const archetype = detectRewardArchetype(extractedPromo);
+                    return order.map((origIdx) => {
+                      // archetype dropped — no V.10.1 equivalent for per-variant archetype detection.
+                      // renderSubCategoryCard ignores legacy `sub` and reads from sel.* per idx.
                       return renderSubCategoryCard(
-                        sub,
-                        idx,
-                        archetype,
-                        pkRecord?.variant_engine?.items_block?.subcategories?.[idx] as any,
-                        idx === attachIdx,
+                        undefined,
+                        origIdx,
+                        'unknown' as RewardArchetype,
+                        undefined,
+                        origIdx === attachOriginalIdx,
                       );
                     });
                   })()}
