@@ -1151,12 +1151,18 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 return <span className="text-muted-foreground/60 italic">-</span>;
               }
               
-              // HARD CUTOVER GAP — per-variant game_types[] has no V.10.1 path.
-              // V.10.1 has scope_engine.game_block.game_domain (record-level), beda granularity.
-              // TODO: ADD_FIELD variant_engine.items_block.subcategories[].game_types[].
+              // Phase D2 — per-variant game_types via sel.subGameTypes (V.10.1).
+              const gameTypes = sel.subGameTypes(pkRecord as PkV10Record, idx);
+              if (!gameTypes || gameTypes.length === 0) {
+                return (
+                  <span className="text-muted-foreground/60 italic text-xs">
+                    Jenis game belum tersedia di JSON V.10.1.
+                  </span>
+                );
+              }
               return (
-                <span className="text-muted-foreground/60 italic text-xs">
-                  Belum tersedia di JSON V.10.1
+                <span className="text-foreground font-medium text-sm">
+                  {gameTypes.map(formatGameType).join(', ')}
                 </span>
               );
             })()}
