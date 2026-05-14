@@ -1574,7 +1574,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
           {/* Subcategories - Conditional for Referral vs Other */}
           {extractedPromo.subcategories.length > 0 && (
-            /referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') ? (
+            /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
               // REFERRAL: Render as Tier Table with ALL simulation columns
               <div>
                 <h4 className="text-base font-semibold text-button-hover mb-4">
