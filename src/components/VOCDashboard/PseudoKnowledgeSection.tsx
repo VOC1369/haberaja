@@ -1222,21 +1222,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 )}
                 <div className="bg-muted rounded-lg p-3">
                   <span className="text-muted-foreground text-xs block mb-1">Waktu Berlaku</span>
-                  <span className="text-foreground font-medium">
-                    {(() => {
-                      // Check validity mode from mappedPreview
-                      const validityMode = mappedPreview?.fixed_spin_validity_mode;
-                      if (mappedPreview?.fixed_voucher_valid_unlimited) return 'Tidak Terbatas';
-                      if (mappedPreview?.fixed_voucher_valid_until) return `s/d ${mappedPreview.fixed_voucher_valid_until}`;
-                      if (validityMode === 'relative') {
-                        const duration = mappedPreview?.fixed_spin_validity_duration;
-                        const unit = mappedPreview?.fixed_spin_validity_unit;
-                        if (duration === 24 && unit === 'hours') return 'Reset Harian';
-                        if (duration && unit) return `${duration} ${unit === 'hours' ? 'Jam' : unit === 'days' ? 'Hari' : unit}`;
-                      }
-                      return 'Reset Harian'; // Default fallback
-                    })()}
-                  </span>
+                  {(() => {
+                    // HARD CUTOVER — per-variant V.10.1 voucher validity selectors only.
+                    // Spin duration/mode/unit dropped (V.09 visual residue, no V.10.1 path).
+                    // TODO: ADD_FIELD subVoucher validity for non-voucher unit-based rewards if needed.
+                    const unlimited = sel.subVoucherValidUnlimited(pkRecord as PkV10Record, idx);
+                    const validUntil = sel.subVoucherValidUntil(pkRecord as PkV10Record, idx);
+                    if (unlimited) return <span className="text-foreground font-medium">Tidak Terbatas</span>;
+                    if (validUntil) return <span className="text-foreground font-medium">{`s/d ${validUntil}`}</span>;
+                    return <span className="text-muted-foreground/60 italic text-xs">Belum tersedia di JSON V.10.1</span>;
+                  })()}
                 </div>
               </div>
             </div>
