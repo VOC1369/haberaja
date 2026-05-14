@@ -739,83 +739,15 @@ V10.1-R4. SUBCATEGORY SHAPE (ringkas — detail di tool schema).
      calculation_basis, calculation_method, calculation_value, calculation_unit,
      min_deposit, max_reward, max_reward_unlimited, min_claim,
      turnover_multiplier, turnover_rule_format,
-     game_domain, eligible_providers, game_names, game_types,
+     game_domain, eligible_providers, game_names,
      blacklist {enabled, types[], providers[], games[], rules[], note},
      reward_type, payout_direction, currency,
      physical_reward_name, physical_reward_quantity,
      cash_reward_amount, reward_quantity,
      voucher_kind, voucher_valid_from, voucher_valid_until, voucher_valid_unlimited,
      lucky_spin_id, lucky_spin_max_per_day,
-     product_note,
-     min_downline, winlose, cashback_deduction, fee_deduction,
-     net_winlose, commission_result.
+     product_note.
    Tidak boleh ada key di luar daftar ini.
-
-V10.1-R5. NEW V.10.1 BUSINESS FIELDS — STRICT EVIDENCE ONLY.
-   Tambahan di D1, wajib evidence-driven. Kalau sumber tidak menyatakan,
-   biarkan null / array kosong. JANGAN tebak. JANGAN hitung. JANGAN default 0.
-
-   (a) reward_engine.requirement_block.min_withdraw  (number | null)
-       Definisi semantik: jumlah minimum (nominal numeric) yang harus
-       tercapai agar user bisa MELAKUKAN WITHDRAW / mencairkan bonus /
-       menarik hasil bonus / cashout / menerima payout.
-
-       Reasoning-first (WAJIB, bukan keyword matching):
-         1. Identifikasi nominal angka di sumber.
-         2. Tentukan tindakan apa yang dibatasi nominal itu.
-         3. Tentukan apakah tindakan tersebut adalah withdraw /
-            pencairan / penarikan / cashout / payout bonus.
-         4. Tentukan apakah nominal itu BENAR syarat MINIMUM untuk
-            tindakan tersebut (bukan maksimum, bukan deposit, bukan
-            turnover, bukan bonus, bukan fee, bukan komisi).
-         Jika keempat kondisi terpenuhi → set min_withdraw = nominal.
-         Jika tidak → min_withdraw = null.
-
-       Contoh konsep (ILUSTRASI semantik, BUKAN daftar keyword):
-         - "Minimum withdraw Rp 100.000" → 100000
-           (nominal membatasi aksi withdraw)
-         - "Bonus baru bisa dicairkan setelah mencapai Rp 100.000" → 100000
-           (nominal membatasi pencairan bonus)
-         - "Minimal penarikan hasil bonus 200rb" → 200000
-           (nominal membatasi penarikan hasil bonus)
-
-       Negatif (JANGAN isi min_withdraw kalau nominal milik):
-         min_deposit, turnover/wagering, min_bonus, max_bonus,
-         min_claim non-withdraw, admin_fee, referral_threshold,
-         commission_threshold, max_withdraw, valid_bet/valid_turnover.
-         Contoh: "Min deposit Rp 50.000, TO 3x" → min_withdraw = null.
-
-       Ambiguity: kalau ada nominal tapi relasi ke withdraw tidak jelas,
-       JANGAN tebak. Set min_withdraw = null DAN tambahkan entry di
-       readiness_engine.observability_block.ambiguity_flags.
-
-       Larangan keras: JANGAN turunkan dari min_deposit, turnover, atau
-       field lain. JANGAN hitung. JANGAN default 0.
-
-   (b) variant_engine.items_block.subcategories[].game_types  (string[])
-       Isi per-varian saat sumber menyegmentasi game (slot, live_casino,
-       casino, sport, sportsbook, togel, sabung, arcade, fishing, poker).
-       Kalau global berlaku ke semua varian, propagasi ke setiap varian
-       relevan. Kalau tidak disebut → array kosong.
-
-   (c) Referral commission per subcategory (semua number | null):
-         min_downline, winlose, cashback_deduction, fee_deduction,
-         net_winlose, commission_result
-       Ekstrak HANYA nilai yang eksplisit di tabel/teks. JANGAN hitung
-       net_winlose atau commission_result kalau sumber tidak memberi.
-       Setiap baris tabel referral = satu subcategory/varian sesuai
-       struktur sumber. Kalau struktur ambigu, biarkan null dan
-       tambahkan flag di readiness_engine.observability_block.ambiguity_flags.
-
-   (d) loyalty_engine.exchange_block.exchange_groups[]
-       Isi saat sumber punya tabel tukar poin / point redemption / loyalty
-       exchange. Shape per item:
-         { points, reward, reward_type, cash_reward_amount,
-           physical_reward_name }
-       JANGAN hitung cash value. JANGAN karang reward_type. Kalau hadiah
-       fisik → physical_reward_name; kalau cash/bonus → cash_reward_amount.
-       Kolom sumber tambahan boleh dipertahankan apa adanya
-       (additionalProperties: true).
 
 OUTPUT
 Panggil tool '${TOOL_NAME}' dengan input PkV10Record V.10.1 (boleh partial — server
@@ -1109,9 +1041,6 @@ function buildExtractorToolSchema(): AnyObj {
             type: "object", additionalProperties: false,
             properties: {
               min_deposit: { type: ["number", "null"] },
-              // V.10.1 D1 additive — minimum withdraw threshold (explicit only).
-              // null = not stated; do NOT infer from min_deposit/turnover.
-              min_withdraw: { type: ["number", "null"] },
               unlock_conditions: { type: "array", items: { type: "object", additionalProperties: true } },
             },
           },
@@ -1175,22 +1104,7 @@ function buildExtractorToolSchema(): AnyObj {
           exchange_block: {
             type: "object", additionalProperties: false,
             properties: {
-              // V.10.1 D1 — typed item shape, additionalProperties:true preserves
-              // any extra source columns without destruction.
-              exchange_groups: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: true,
-                  properties: {
-                    points: { type: ["number", "null"] },
-                    reward: { type: ["string", "null"] },
-                    reward_type: { type: ["string", "null"] },
-                    cash_reward_amount: { type: ["number", "null"] },
-                    physical_reward_name: { type: ["string", "null"] },
-                  },
-                },
-              },
+              exchange_groups: { type: "array", items: { type: "object", additionalProperties: true } },
             },
           },
           tier_block: {
@@ -1543,20 +1457,6 @@ function subcategoryShape(): JSONSchema {
       lucky_spin_id: { type: ["string", "null"] },
       lucky_spin_max_per_day: { type: ["number", "null"] },
       product_note: { type: ["string", "null"] },
-      // V.10.1 D1 additive — per-variant game segmentation.
-      // Examples: "slot", "live_casino", "casino", "sport", "sportsbook",
-      // "togel", "sabung", "arcade", "fishing", "poker".
-      // Empty array = not stated; do NOT default.
-      game_types: { type: "array", items: { type: "string" } },
-      // V.10.1 D1 additive — referral commission per-variant fields.
-      // Fill ONLY when source explicitly states each value. null = not stated.
-      // Do NOT calculate net_winlose or commission_result.
-      min_downline: { type: ["number", "null"] },
-      winlose: { type: ["number", "null"] },
-      cashback_deduction: { type: ["number", "null"] },
-      fee_deduction: { type: ["number", "null"] },
-      net_winlose: { type: ["number", "null"] },
-      commission_result: { type: ["number", "null"] },
     },
   };
 }

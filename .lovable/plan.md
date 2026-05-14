@@ -1,68 +1,95 @@
-# Hard Cutover — PseudoKnowledgeSection V.10.1-Only Display
 
-Sebelum eksekusi, saya butuh konfirmasi karena cutover ini menyentuh ~50 lokasi di `PseudoKnowledgeSection.tsx` (2614 baris) dan akan mengosongkan beberapa section UI secara visible.
 
-## Scope yang akan dipotong (display only)
+# Fix: Complete Round-Trip Integrity (5 Remaining Gaps)
 
-**A. Hapus mappedPreview total**
-- `useMemo mappedPreview` (L183–218)
-- `mappedPreviewError` state + alert block (L170, L2440–2450)
-- Import `mapExtractedToPromoFormData` (L53)
-- 6 display reads: min withdraw row (L1007–1008), voucher validity block (L1281–1287), 2 stale comments
+## Masalah
+Setelah import canonical JSON v2.1 lalu edit dan export, masih ada 5 field yang hilang/berubah. Fix #1 dan #2 sudah diapprove sebelumnya, fix #3-#5 adalah temuan baru.
 
-**B. Hapus extractedPromo dari display authority** (~20 display reads)
-- Subcategory iteration: `[...extractedPromo.subcategories]` di L1499, 1506, 1582, 1604, 1651–1675 → ganti ke `sel.subcategoryCount(pkRecord)` + per-index selectors
-- `getGameTypesSummary(extractedPromo.subcategories)` L1544 → empty state (no V.10.1 path)
-- `detectRewardArchetype(extractedPromo)` L1675 → empty state atau drop
-- Loyalty exchange table L1821–1859 → cek `loyalty_engine.exchange_block.exchange_groups`, kalau kosong → empty state
-- Footer bar render gate L2137, L2371 → ganti ke `pkRecord != null`
-- Empty-state gate L1948, L1951 → ganti ke `pkRecord`
+## 5 Fixes dalam 1 File
 
-**C. State `extractedPromo` TETAP DIPERTAHANKAN** untuk:
-- Save draft sync (L303–315)
-- Restart gate (L336)
-- Edit-command engine (L639–659) — ini mutasi non-display
-- onOverride compat sync (L2243–2245)
-- Extraction result write (L608)
-- Classification override secondary sync
+### File: `src/components/VOCDashboard/PromoFormWizard/types.ts`
 
-Alasan: spec hanya minta "display authority" V.10.1. State lifecycle (draft sync, edit commands, restart) belum ada equivalent di pkRecord pipeline. Kalau user mau cabut ini juga, scope membesar ke draft/edit-command rewrite.
+### Fix 1 — `calculation_basis` hilang (APPROVED, belum implemented)
 
-## Empty states yang akan muncul setelah cutover
+Di `buildCanonicalPayload()`, setelah line `canonical.calculation_basis = data.calculation_base || '';`:
 
-| Section | Status | Alasan |
-|---|---|---|
-| Tabel detail referral (winlose/cashback/fee/komisi) | KOSONG | V.09-only fields, no V.10.1 path |
-| Loyalty exchange table | KOSONG kalau `exchange_groups` empty | V.10.1 typed `unknown[]`, schema belum jelas |
-| Min withdraw row | HIDDEN | No V.10.1 path |
-| Spin duration/mode/unit | DROPPED | V.09 visual residue |
-| game_types summary cell di subcategory list | "Belum tersedia" | V.10.1 pakai game_domain (per-variant), beda granularity |
-| Reward archetype hint | DROPPED | Detector V.09-shape only |
+```
+if (!canonical.calculation_basis && data.tier_archetype === 'tier_point_store') {
+  canonical.calculation_basis = 'loyalty_point';
+}
+```
 
-## Gap Report yang akan dihasilkan
+### Fix 2 — `conversion_formula` hilang (APPROVED, belum implemented)
 
-Tabel `| UI section | Missing data | Needed V.10.1 path | Business importance | Recommendation |` ditulis sebagai komentar di file + di chat reply. Recommendation: ADD_FIELD / ADD_EXTRACTOR_FILL / ADD_UI_COMPONENT / DROP_V09_RESIDUE.
+Di `buildCanonicalPayload()`, setelah `canonical.conversion_formula = data.conversion_formula || '';`:
 
-## Yang TIDAK disentuh
+```
+if (!canonical.conversion_formula && data.tier_archetype === 'tier_point_store') {
+  const basis = data.lp_earn_basis || 'turnover';
+  const amount = data.lp_earn_amount || 1000;
+  const points = data.lp_earn_point_amount || 1;
+  canonical.conversion_formula = `IDR ${amount.toLocaleString('id-ID')} ${basis} = ${points} LP. LP ditukar sesuai tabel tier.`;
+}
+```
 
-- Schema (`pk-v10.ts`)
-- Extractor (`pk-extractor`, `voc-wolf-extractor`)
-- Supabase publish path
-- Copy JSON / Save Draft / Publish helpers
-- AdminVerify, ReviewGate, FormWizardV10
-- Selectors file (kecuali confirm read-only existing selectors)
+### Fix 3 — `max_claim_unlimited` berubah dari false ke true (BARU)
 
-## Validation setelah cutover
+Root cause: Di `normalizePromoData()` line ~2001, `max_bonus_unlimited = true` otomatis set `dinamis_max_claim_unlimited = true`. Lalu di export line ~1362, `canonical.max_claim_unlimited = data.dinamis_max_claim_unlimited || ...` jadi `true`.
 
-1. `tsc` typecheck
-2. Full test suite (`bunx vitest run`)
-3. Copy Final JSON regression test (3/3 must pass)
-4. Manual count: `extractedPromo` display reads = 0 (state reads OK), `mappedPreview` reads = 0
+Tapi `max_bonus_unlimited` dan `max_claim_unlimited` adalah 2 field berbeda di canonical:
+- `max_bonus_unlimited` = tidak ada batas reward per claim
+- `max_claim_unlimited` = tidak ada batas jumlah klaim
 
-## Pertanyaan konfirmasi sebelum eksekusi
+Fix: Di `buildCanonicalPayload()`, prioritaskan `data.max_claim_unlimited` langsung jika ada:
 
-1. **State `extractedPromo` boleh tetap untuk draft/edit-command?** (Y/N) — kalau N, scope membesar signifikan dan butuh phase terpisah.
-2. **Loyalty exchange — kalau `exchange_groups` ada tapi `unknown[]`** — render rows pakai `JSON.stringify(item)` placeholder atau langsung empty state? Saya pilih empty state (lebih jujur).
-3. **Subcategory header tetap render** dari `sel.subcategoryCount` walau detail kolom kosong, atau seluruh tabel di-empty-state-kan kalau satu kolom hilang? Saya pilih: header tetap render, kolom yang gap tampilkan "—" + footnote.
+```
+canonical.max_claim_unlimited = data.max_claim_unlimited ?? data.dinamis_max_claim_unlimited ?? data.fixed_max_claim_unlimited ?? false;
+```
 
-Konfirmasi 3 pertanyaan di atas dan saya eksekusi.
+Dan di `normalizePromoData()` Section 0, hydrate `max_claim_unlimited` ke form field terpisah (jangan merge dengan `dinamis_max_claim_unlimited`).
+
+### Fix 4 — `game_scope = "all"` hilang jadi `""` (BARU)
+
+Root cause: Canonical `game_scope` dimapping ke form `game_restriction` saat export (line 1394: `canonical.game_scope = data.game_restriction || ''`). Tapi di import/hydration (Section 0), tidak ada mapping `game_scope -> game_restriction`.
+
+Fix: Di `normalizePromoData()` Section 0, tambahkan:
+
+```
+// 0k. game_scope → game_restriction hydration
+if ((raw.game_scope as string) && !normalized.game_restriction) {
+  const scopeMap: Record<string, string> = { 'all': 'semua', 'specific': 'tertentu' };
+  normalized.game_restriction = scopeMap[(raw.game_scope as string).toLowerCase()] || (raw.game_scope as string);
+}
+```
+
+### Fix 5 — Rich tier fields hilang (`tier_group`, `max_claim_per_month`, `note`) (BARU)
+
+Root cause: Tier konversi di Section 0f hanya ambil 4 field dasar. Rich fields dari Claude (tier_group, max_claim_per_month, note) dibuang.
+
+Fix: Di Section 0f tier conversion, preserve extra fields ke `extra` object di UniversalTier:
+
+Dan di `buildCanonicalPayload()` tier export section, pastikan `extra` field dari tiers di-preserve.
+
+Juga di Section 0f, saat convert canonical tiers ke form tiers, simpan rich fields:
+
+```
+// In tier conversion, preserve additional fields
+const extraFields: Record<string, unknown> = {};
+for (const [k, v] of Object.entries(t)) {
+  if (!['tier_id', 'tier_name', 'tier_order', 'lp_required', 'requirement_value', 
+        'reward_amount', 'reward_value', 'reward_type', 'turnover_multiplier', 'extra'].includes(k)) {
+    extraFields[k] = v;
+  }
+}
+// Merge with existing extra
+return {
+  ...basicTierFields,
+  extra: { ...(t.extra as Record<string, unknown> || {}), ...extraFields }
+};
+```
+
+## Dampak
+- 1 file diubah: `types.ts`
+- ~30 baris tambahan (5 fixes kecil)
+- Backward compatible
+- Setelah fix, canonical JSON yang diimport akan round-trip dengan benar (kecuali normalisasi casing yang by design)

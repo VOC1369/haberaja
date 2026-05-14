@@ -50,9 +50,9 @@ import {
   fetchUrlContent, 
   getStatusBadgeStyle,
   getStatusLabel,
-  // mapExtractedToPromoFormData — removed (Hard Cutover): display authority = V.10.1 only.
+  mapExtractedToPromoFormData,
   detectRewardArchetype,
-  // detectGameDomain — removed Phase B3 (replaced by sel.gameDomain).
+  detectGameDomain,
   getFieldStatus,
   type ExtractedPromo,
   type ExtractedPromoSubCategory,
@@ -91,16 +91,10 @@ const formatGameType = (type: string): string => {
   return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 };
 
-// Helper: COMBO Summary - Payout direction (Phase A — V.10.1 sourced via per-variant selector)
-const getPayoutSummaryFromRec = (rec: PkV10Record): string => {
-  const n = sel.subcategoryCount(rec);
-  let depan = 0;
-  let belakang = 0;
-  for (let i = 0; i < n; i++) {
-    const p = sel.subPayoutDirection(rec, i);
-    if (p === 'depan') depan++;
-    else if (p === 'belakang') belakang++;
-  }
+// Helper: COMBO Summary - Payout direction (simplified: "Payout: Depan")
+const getPayoutSummary = (subs: ExtractedPromoSubCategory[]): string => {
+  const depan = subs.filter(s => s.payout_direction === 'depan').length;
+  const belakang = subs.filter(s => s.payout_direction === 'belakang').length;
   if (depan > 0 && belakang > 0) return 'Payout: Campuran';
   if (depan > 0) return 'Payout: Depan';
   if (belakang > 0) return 'Payout: Belakang';
@@ -108,7 +102,6 @@ const getPayoutSummaryFromRec = (rec: PkV10Record): string => {
 };
 
 // Helper: COMBO Summary - Game types
-// HOLD (Phase B/C): game_types[] has no V.10.1 selector authority. Keep V.09 source.
 const getGameTypesSummary = (subs: ExtractedPromoSubCategory[]): string => {
   const types = [...new Set(subs.flatMap(s => s.game_types || []))];
   if (types.length === 0) return '-';
@@ -117,25 +110,14 @@ const getGameTypesSummary = (subs: ExtractedPromoSubCategory[]): string => {
   return formatted.join(', ');
 };
 
-// Helper: COMBO Summary - Blacklist status (Phase A — V.10.1 sourced via selectors).
-// `enabled` for global is derived from any non-empty providers/games/rules array
-// because `sel.gameBlacklist` does not surface a flat `enabled` flag.
-const getBlacklistSummaryFromRec = (rec: PkV10Record): { text: string; active: boolean } => {
-  const n = sel.subcategoryCount(rec);
-  let subsWithBlacklist = 0;
-  for (let i = 0; i < n; i++) {
-    if (sel.subBlacklist(rec, i).enabled) subsWithBlacklist++;
-  }
-  const g = sel.gameBlacklist(rec);
-  const globalActive = g.providers.length + g.games.length + g.rules.length > 0;
-  const text = globalActive && subsWithBlacklist > 0
-    ? `Global + ${subsWithBlacklist} Varian`
-    : globalActive
-      ? 'Global Aktif'
-      : subsWithBlacklist > 0
-        ? `${subsWithBlacklist} Varian`
-        : 'Tidak Aktif';
-  return { text, active: globalActive || subsWithBlacklist > 0 };
+// Helper: COMBO Summary - Blacklist status
+const getBlacklistSummary = (data: ExtractedPromo): string => {
+  const subsWithBlacklist = data.subcategories.filter(s => s.blacklist?.enabled).length;
+  const globalActive = data.global_blacklist?.enabled;
+  if (globalActive && subsWithBlacklist > 0) return `Global + ${subsWithBlacklist} Varian`;
+  if (globalActive) return 'Global Aktif';
+  if (subsWithBlacklist > 0) return `${subsWithBlacklist} Varian`;
+  return 'Tidak Aktif';
 };
 
 interface PseudoKnowledgeSectionProps {
@@ -160,10 +142,62 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const [pkFailReason, setPkFailReason] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
-  // HARD CUTOVER — mappedPreview removed entirely.
-  // Display authority for Extractor UI = PkV10Record / sel.* selectors only.
-  // Any field that needs a non-existent V.10.1 path renders empty state instead.
-  // mapExtractedToPromoFormData() is no longer used here.
+  // BUG #4 FIX — non-blocking mapper failure surface.
+  // Previously: catch block called setExtractedPromo(null), wiping the
+  // successful V.09 extraction and forcing UI back to landing (data loss
+  // + Copy JSON unavailable). Now: extractedPromo + pkRecord stay intact;
+  // mappedPreview returns null and a non-blocking error message is shown
+  // via mappedPreviewError state. Copy JSON / V.09 result
+  // remain accessible because they read pkRecord, not mappedPreview.
+  const [mappedPreviewError, setMappedPreviewError] = useState<string | null>(null);
+
+  // ⚠️ TEMPORARY VISUAL DEBT — NOT source of truth.
+  // After PARTIAL SAFE REBIND, mappedPreview is retained ONLY for display
+  // gaps that have no authoritative V.10.1 path yet:
+  //   - fixed_voucher_valid_until / fixed_voucher_valid_unlimited
+  //   - fixed_spin_validity_mode / _duration / _unit
+  //   - min_calculation_enabled / min_calculation
+  // All other displays (reward_mode, reward_type, apk_required, trigger_event,
+  // min_deposit, lucky_spin_max_per_day, physical_item_name, physical_quantity,
+  // voucher_kind, subcategories[idx], RewardArchetypePicker rewardMode prop)
+  // now read directly from PkV10Record via `sel.*` selectors.
+  // DO NOT add new mappedPreview readers. Resolve gaps via V.10.1 schema first.
+  const mappedPreview = useMemo<PromoFormData | null>(() => {
+    if (!extractedPromo) {
+      // Reset error when there is nothing to map (avoid stale message).
+      if (mappedPreviewError !== null) setMappedPreviewError(null);
+      return null;
+    }
+    try {
+      console.log('[TRACE-6B] useMemo calling mapExtractedToPromoFormData...');
+      const result = mapExtractedToPromoFormData(extractedPromo);
+      console.log('[TRACE-6B] mapExtractedToPromoFormData succeeded', {
+        reward_mode: (result as any)?.reward_mode,
+        tier_archetype: (result as any)?.tier_archetype,
+        tiers_count: (result as any)?.tiers?.length ?? 0,
+      });
+      if (mappedPreviewError !== null) setMappedPreviewError(null);
+      return result;
+    } catch (err) {
+      console.error('[TRACE-6B] mapExtractedToPromoFormData FAILED:', err);
+      console.error(
+        '[PseudoKnowledgeSection] mapExtractedToPromoFormData failed — extraction preserved, preview unavailable:',
+        err,
+      );
+      // BUG #4: do NOT call setExtractedPromo(null). Preserve raw extraction
+      // and pkRecord so Copy JSON / V.09 result stay accessible.
+      const reason = err instanceof Error ? err.message : String(err);
+      const next = `Preview failed, raw JSON still available — ${reason}`;
+      // Guard: only update if changed, to avoid an infinite re-render loop
+      // (state setter inside useMemo would otherwise re-run on every render).
+      if (mappedPreviewError !== next) setMappedPreviewError(next);
+      return null;
+    }
+    // mappedPreviewError intentionally NOT in deps: it is a write-only side
+    // channel here, gated by equality checks above. Including it would risk
+    // a re-run loop because we setState inside the memo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extractedPromo]);
   
   // Confidence Gate state (LLM Classifier)
   const [showConfidenceGate, setShowConfidenceGate] = useState(false);
@@ -400,9 +434,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     setImagePreview(null);
     setImageBase64(null);
     
-    // HOTFIX: If current extraction was from image, clear it too to prevent stale data.
-    // Phase B3 — gate read sourced from V.10.1 selector (sel.extractionSource).
-    if (sel.extractionSource(pkRecord as PkV10Record) === 'image') {
+    // HOTFIX: If current extraction was from image, clear it too to prevent stale data
+    if (extractedPromo?._extraction_source === 'image') {
       setExtractedPromo(null);
       setEditHistory([]);
       setEditInput('');
@@ -509,11 +542,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       setExtractedPromo(result);
       setEditHistory([]);
 
-      // STEP 1 — paralel call ke pk-extractor V.10.1. Tidak blocking utama;
+      // STEP 1 — paralel call ke pk-extractor (V.09). Tidak blocking utama;
       // hasilnya dipakai untuk Copy JSON / Gunakan Promo.
-      // Phase B3 — display authority sudah pindah ke pkRecord (PkV10Record).
-      // extractedPromo masih dipertahankan untuk subcategories/referral/loyalty
-      // yang belum punya path V.10.1 (HOLD → Phase B-decision).
+      // Card body tetap render dari `extractedPromo` (voc-wolf) di Step 1.
       setPkStatus("loading");
       setPkRecord(null);
       setPkFailReason("");
@@ -730,7 +761,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // SYSTEM RULE GATE: C is NOT a promo - cannot be saved to KB
     // Show informational message instead of commit
     // ============================================
-    if (sel.programClassification(pkRecord as PkV10Record) === 'C') {
+    if (extractedPromo.program_classification === 'C') {
       toast.info("Ini adalah System Rule, bukan promo", {
         description: "Aturan sistem tidak disimpan ke Promo KB. Gunakan Copy JSON jika perlu referensi.",
         duration: 5000
@@ -742,7 +773,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // CONFIDENCE GATE: Block commit if LOW confidence
     // Human must acknowledge before proceeding
     // ============================================
-    if (sel.classificationReviewConfidence(pkRecord as PkV10Record) === 'low') {
+    if (extractedPromo.classification_confidence === 'low') {
       console.log('[ConfidenceGate] LOW confidence detected, showing gate modal');
       setShowConfidenceGate(true);
       return;
@@ -788,19 +819,27 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // ============================================
   
   const renderSubCategoryCard = (
-    _sub: ExtractedPromoSubCategory | undefined, 
+    sub: ExtractedPromoSubCategory, 
     idx: number, 
     archetype: RewardArchetype,
-    _normalizedSub?: Partial<ExtractedPromoSubCategory>, // Hard Cutover: legacy params, no longer read for display.
-    attachGlobalBlacklist?: boolean
+    normalizedSub?: Partial<typeof sub>, // ✅ Accept normalized data from mappedPreview
+    attachGlobalBlacklist?: boolean // attach V1.1 scope_engine.blacklist_block to this card
   ) => {
-    // HARD CUTOVER — display authority = V.10.1 selectors only.
-    // Legacy `sub` and `normalizedSub` are NOT read for display anymore.
+    // ✅ Merge: normalized data takes priority over raw extraction
+    const displaySub = {
+      ...sub,
+      calculation_value: normalizedSub?.calculation_value ?? sub.calculation_value,
+      calculation_method: normalizedSub?.calculation_method ?? sub.calculation_method,
+      turnover_rule: normalizedSub?.turnover_rule ?? sub.turnover_rule,
+      payout_direction: normalizedSub?.payout_direction ?? sub.payout_direction,
+      min_calculation: (normalizedSub as any)?.min_calculation ?? (sub as any).min_calculation,
+    };
     
-    // V.10.1 — per-variant blacklist sourced from selector.
-    const subBL = sel.subBlacklist(pkRecord as PkV10Record, idx);
-    const hasPerVariantBlacklist = subBL.enabled && (
-      subBL.types.length + subBL.providers.length + subBL.games.length + subBL.rules.length > 0
+    const hasPerVariantBlacklist = sub.blacklist?.enabled && (
+      (sub.blacklist.types?.length || 0) > 0 ||
+      (sub.blacklist.providers?.length || 0) > 0 || 
+      (sub.blacklist.games?.length || 0) > 0 || 
+      (sub.blacklist.rules?.length || 0) > 0
     );
 
     // V1.1 global blacklist payload (only attached to designated card)
@@ -816,11 +855,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
     const hasBlacklist = hasPerVariantBlacklist || hasGlobalBlacklist;
     
-    // HARD CUTOVER GAP — per-field confidence (sub.confidence) has no V.10.1 path.
-    // TODO: ADD_FIELD per-variant confidence in variant_engine.items_block.subcategories[].
-    // Critical-issue flag dropped until schema gives equivalent.
-    const hasCriticalIssue = false;
-    void archetype; // archetype-driven required-field check requires V.10.1 confidence — gap.
+    // Only flag critical issues for REQUIRED fields based on archetype
+    const hasCriticalIssue = ['calculation_value', 'turnover_rule', 'payout_direction'].some(f => {
+      const status = getFieldStatus(f, archetype);
+      if (status !== 'required') return false; // Skip non-required fields
+      const conf = sub.confidence?.[f as keyof typeof sub.confidence];
+      return conf === 'ambiguous' || conf === 'missing';
+    });
+    
     // Helper: Get display value for a field based on archetype
     const getFieldDisplay = (field: string, value: any, suffix?: string) => {
       const status = getFieldStatus(field, archetype);
@@ -872,11 +914,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           {/* ✅ Hide "Nilai Bonus" for unit-based rewards (Lucky Spin/Voucher/Ticket) in Fixed mode */}
           {(() => {
-            // Phase A — V.10.1 selectors (Fixed: record-level; Dinamis: per-variant)
+            // PARTIAL REBIND — V.10.1 selectors (replaces mappedPreview reads)
             const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
-            const rewardType = isFixedMode
-              ? sel.rewardType(pkRecord as PkV10Record)
-              : sel.subRewardType(pkRecord as PkV10Record, idx);
+            const rewardType = isFixedMode ? sel.rewardType(pkRecord as PkV10Record) : displaySub.reward_type;
             const isUnitBased = isFixedMode && ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
             
             // Skip rendering for unit-based rewards - "Jumlah Reward" shown in detail section instead
@@ -884,14 +924,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             
             // ✅ V1.2.1: Detect APK Fixed promos for special display
             const isApkFixedPromo = isFixedMode && 
-              (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(sel.promoName(pkRecord as PkV10Record) || ''));
+              (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
             
-            // Phase A — calc method/value sourced from per-variant V.10.1 selectors
-            const calcMethod = sel.subCalculationMethod(pkRecord as PkV10Record, idx);
-            const calcValueDirect = sel.subCalculationValue(pkRecord as PkV10Record, idx);
+            // ✅ FIX: Use displaySub (normalized) for calculation display
+            const calcMethod = displaySub.calculation_method;
+            // For APK Fixed, use calculation_value or max_bonus as reward amount
             const calcValue = isApkFixedPromo 
-              ? (calcValueDirect ?? sel.subMaxReward(pkRecord as PkV10Record, idx) ?? 0)
-              : calcValueDirect;
+              ? (displaySub.calculation_value || displaySub.max_bonus || 0)
+              : displaySub.calculation_value;
             
             // Determine if this is a fixed amount display
             const isFixedAmount = calcMethod === 'fixed' || isApkFixedPromo;
@@ -920,12 +960,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           <div className="bg-muted rounded-lg p-3">
             {(() => {
               // Rollingan/Cashback: No min deposit, use min_claim instead
-              const isRollinganArchetype = sel.subCalculationBasis(pkRecord as PkV10Record, idx) === 'turnover' || 
+              const isRollinganArchetype = sub.calculation_base === 'turnover' || 
                 archetype?.toLowerCase().includes('rollingan') ||
                 archetype?.toLowerCase().includes('cashback');
               
               if (isRollinganArchetype) {
-                const minClaim = sel.subMinClaim(pkRecord as PkV10Record, idx);
+                const minClaim = (sub as any).min_reward_claim || (sub as any).min_claim;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Min Bonus Cair</span>
@@ -936,24 +976,21 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 );
               }
               
-              // ✅ Withdraw Bonus: Min WD — Phase D2 rebind to sel.minWithdraw (V.10.1).
+              // ✅ Withdraw Bonus: use min_calculation as "Min WD", not min_deposit
+              // HOLD: trigger_event rebound to V.10.1; min_calculation* still on mappedPreview (gap, no V.10.1 path yet)
               const isWithdrawTrigger = sel.triggerEvent(pkRecord as PkV10Record) === 'Withdraw' || 
-                /withdraw|bonus.*wd|extra.*wd/i.test(sel.promoName(pkRecord as PkV10Record) || '');
+                /withdraw|bonus.*wd|extra.*wd/i.test(extractedPromo?.promo_name || '');
               
               if (isWithdrawTrigger) {
-                const minWd = sel.minWithdraw(pkRecord as PkV10Record);
+                const minWdValue = mappedPreview?.min_calculation_enabled 
+                  ? mappedPreview?.min_calculation 
+                  : null;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Min WD</span>
-                    {minWd != null ? (
-                      <span className="text-foreground font-medium">
-                        Rp {Number(minWd).toLocaleString('id-ID')}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground/60 italic text-xs">
-                        Belum tersedia di JSON V.10.1
-                      </span>
-                    )}
+                    <span className="text-foreground font-medium">
+                      {minWdValue ? `Rp ${Number(minWdValue).toLocaleString('id-ID')}` : "-"}
+                    </span>
                   </>
                 );
               }
@@ -963,7 +1000,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const minDepoValue = isFixedMode 
                 ? sel.minDeposit(pkRecord as PkV10Record) 
-                : sel.subMinDeposit(pkRecord as PkV10Record, idx);
+                : sub.minimum_base;
               
               return (
                 <>
@@ -985,7 +1022,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const rewardType = isFixedMode 
                 ? sel.rewardType(pkRecord as PkV10Record) 
-                : sel.subRewardType(pkRecord as PkV10Record, idx);
+                : sub.reward_type;
               const isUnitBased = ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
               
               // For unit-based rewards, show "Max Claim Reward" with unit count
@@ -1003,11 +1040,11 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               
               // ✅ V1.2.1: APK Fixed promos - show "Nilai Hadiah" with parsed amount
               const isApkFixedPromo = !isUnitBased && isFixedMode && 
-                (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(sel.promoName(pkRecord as PkV10Record) || ''));
+                (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
               
               if (isApkFixedPromo) {
                 // For APK Fixed, max_bonus = reward_amount, never "Unlimited"
-                const rewardAmount = sel.subCalculationValue(pkRecord as PkV10Record, idx) ?? sel.subMaxReward(pkRecord as PkV10Record, idx) ?? 0;
+                const rewardAmount = sub.max_bonus || displaySub.calculation_value || 0;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Nilai Hadiah</span>
@@ -1018,8 +1055,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 );
               }
               
-              // Phase A — Max Bonus / unlimited sourced from per-variant V.10.1 selectors
-              const isUnlimited = sel.subMaxRewardUnlimited(pkRecord as PkV10Record, idx);
+              // Regular max bonus logic
+              const isUnlimited = (sub as any).dinamis_max_claim_unlimited || (sub as any).max_bonus_unlimited;
               if (isUnlimited) {
                 return (
                   <>
@@ -1029,7 +1066,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 );
               }
               
-              const maxValue = sel.subMaxReward(pkRecord as PkV10Record, idx);
+              const maxValue = sub.max_bonus || (sub as any).dinamis_max_claim;
               return (
                 <>
                   <span className="text-muted-foreground text-xs block mb-1">Max Bonus</span>
@@ -1046,7 +1083,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const rewardType = isFixedMode 
                 ? sel.rewardType(pkRecord as PkV10Record) 
-                : sel.subRewardType(pkRecord as PkV10Record, idx);
+                : sub.reward_type;
               
               // Display label based on reward type
               const getRewardLabel = (type: string | undefined) => {
@@ -1056,7 +1093,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   case 'ticket': return 'Ticket';
                   case 'hadiah_fisik': return isFixedMode 
                     ? (sel.physicalItemName(pkRecord as PkV10Record) || 'Hadiah Fisik')
-                    : (sel.subPhysicalRewardName(pkRecord as PkV10Record, idx) || 'Hadiah Fisik');
+                    : (sub.physical_reward_name || 'Hadiah Fisik');
                   case 'uang_tunai': return 'Uang Tunai';
                   default: return 'Credit Game';
                 }
@@ -1127,8 +1164,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 return <span className="text-muted-foreground/60 italic">-</span>;
               }
 
-              // Phase A — payout sourced from per-variant V.10.1 selector.
-              const payoutValue = sel.subPayoutDirection(pkRecord as PkV10Record, idx);
+              // PHASE 2 — Step 4E: payout sourced from pkRecord via selector only.
+              // Per-variant payout degraded to record-level (BL5 decision).
+              const payoutValue = sel.payoutDirection(pkRecord as PkV10Record);
               const isDepan = payoutValue === 'depan';
               const isBelakang = payoutValue === 'belakang';
               return (
@@ -1145,24 +1183,15 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               // PARTIAL REBIND — V.10.1 selectors for trigger_event + apk_required
               const isApkPromo = sel.triggerEvent(pkRecord as PkV10Record) === 'APK Download' || 
                 sel.apkRequired(pkRecord as PkV10Record) === true ||
-                /apk|download|aplikasi|freechip|freebet/i.test(sel.promoName(pkRecord as PkV10Record) || '');
+                /apk|download|aplikasi|freechip|freebet/i.test(extractedPromo?.promo_name || '');
               
               if (isApkPromo) {
                 return <span className="text-muted-foreground/60 italic">-</span>;
               }
               
-              // Phase D2 — per-variant game_types via sel.subGameTypes (V.10.1).
-              const gameTypes = sel.subGameTypes(pkRecord as PkV10Record, idx);
-              if (!gameTypes || gameTypes.length === 0) {
-                return (
-                  <span className="text-muted-foreground/60 italic text-xs">
-                    Jenis game belum tersedia di JSON V.10.1.
-                  </span>
-                );
-              }
               return (
-                <span className="text-foreground font-medium text-sm">
-                  {gameTypes.map(formatGameType).join(', ')}
+                <span className="text-foreground font-medium">
+                  {sub.game_types?.length ? sub.game_types.map(formatGameTypeLabel).join(", ") : "Semua"}
                 </span>
               );
             })()}
@@ -1226,16 +1255,21 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 )}
                 <div className="bg-muted rounded-lg p-3">
                   <span className="text-muted-foreground text-xs block mb-1">Waktu Berlaku</span>
-                  {(() => {
-                    // HARD CUTOVER — per-variant V.10.1 voucher validity selectors only.
-                    // Spin duration/mode/unit dropped (V.09 visual residue, no V.10.1 path).
-                    // TODO: ADD_FIELD subVoucher validity for non-voucher unit-based rewards if needed.
-                    const unlimited = sel.subVoucherValidUnlimited(pkRecord as PkV10Record, idx);
-                    const validUntil = sel.subVoucherValidUntil(pkRecord as PkV10Record, idx);
-                    if (unlimited) return <span className="text-foreground font-medium">Tidak Terbatas</span>;
-                    if (validUntil) return <span className="text-foreground font-medium">{`s/d ${validUntil}`}</span>;
-                    return <span className="text-muted-foreground/60 italic text-xs">Belum tersedia di JSON V.10.1</span>;
-                  })()}
+                  <span className="text-foreground font-medium">
+                    {(() => {
+                      // Check validity mode from mappedPreview
+                      const validityMode = mappedPreview?.fixed_spin_validity_mode;
+                      if (mappedPreview?.fixed_voucher_valid_unlimited) return 'Tidak Terbatas';
+                      if (mappedPreview?.fixed_voucher_valid_until) return `s/d ${mappedPreview.fixed_voucher_valid_until}`;
+                      if (validityMode === 'relative') {
+                        const duration = mappedPreview?.fixed_spin_validity_duration;
+                        const unit = mappedPreview?.fixed_spin_validity_unit;
+                        if (duration === 24 && unit === 'hours') return 'Reset Harian';
+                        if (duration && unit) return `${duration} ${unit === 'hours' ? 'Jam' : unit === 'days' ? 'Hari' : unit}`;
+                      }
+                      return 'Reset Harian'; // Default fallback
+                    })()}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1272,12 +1306,22 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         })()}
 
         {hasBlacklist && (() => {
-          // HARD CUTOVER — per-variant blacklist sourced from sel.subBlacklist (V.10.1).
-          // Merged with global blacklist_block when this card is the attach target.
-          const rules = [...subBL.rules, ...gblRules];
-          const providers = [...subBL.providers, ...gblProviders];
-          const types = [...subBL.types, ...gblTypes];
-          const games = [...subBL.games, ...gblGames];
+          const rules = [
+            ...((sub.blacklist?.rules as string[] | undefined) || []),
+            ...gblRules,
+          ];
+          const providers = [
+            ...((sub.blacklist?.providers as string[] | undefined) || []),
+            ...gblProviders,
+          ];
+          const types = [
+            ...((sub.blacklist?.types as string[] | undefined) || []),
+            ...gblTypes,
+          ];
+          const games = [
+            ...((sub.blacklist?.games as string[] | undefined) || []),
+            ...gblGames,
+          ];
           return (
             <div className="mt-4 pt-4 border-t border-border">
               <div className="bg-destructive/10 rounded-lg p-3">
@@ -1339,10 +1383,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // ============================================
   
   const renderExtractedData = () => {
-    if (!pkRecord) return null;
+    if (!extractedPromo) return null;
     
-    // Phase A — validation status/warnings sourced from V.10.1 selectors only
-    // (see headerStatusRaw / headerWarnings below).
+    const status = extractedPromo.validation?.status || 'draft';
+    const warnings = extractedPromo.validation?.warnings || [];
 
     // PHASE 2 — header display sources from pkRecord via selectors only.
     const headerPromoName = sel.promoName(pkRecord as PkV10Record) ?? "-";
@@ -1418,7 +1462,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         </div>
 
         {/* Image Source Warning */}
-        {sel.extractionSource(pkRecord as PkV10Record) === 'image' && (
+        {extractedPromo._extraction_source === 'image' && (
           <div className="px-6 pb-4">
             <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
               <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
@@ -1430,91 +1474,62 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           </div>
         )}
 
-        {/* COMBO Summary Bar - Conditional for Referral vs Other (V.10.1 sourced) */}
-        {sel.promoMode(pkRecord as PkV10Record) === 'multi' && sel.subcategoryCount(pkRecord as PkV10Record) > 1 && (
-          /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
-            // REFERRAL: Show Tier Summary (V.10.1 per-variant selectors)
+        {/* COMBO Summary Bar - Conditional for Referral vs Other */}
+        {extractedPromo.promo_mode === 'multi' && extractedPromo.subcategories.length > 1 && (
+          /referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') ? (
+            // REFERRAL: Show Tier Summary (simpler layout)
             <div className="px-6 pb-4">
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-xs text-muted-foreground mb-3">Struktur Tier Komisi</p>
                 <div className="space-y-2">
-                  {(() => {
-                    const rec = pkRecord as PkV10Record;
-                    const n = sel.subcategoryCount(rec);
-                    const tiers = Array.from({ length: n }, (_, i) => ({
-                      idx: i,
-                      name: sel.subVariantName(rec, i),
-                      value: sel.subCalculationValue(rec, i),
-                    })).sort((a, b) => (Number(a.value) || 0) - (Number(b.value) || 0));
-                    return tiers.map((tier) => (
-                      <div key={tier.idx} className="flex items-center justify-between bg-card rounded-lg px-3 py-2">
-                        <span className="text-foreground font-medium">
-                          {tier.name || `Tier ${tier.idx + 1}`}
-                        </span>
-                        <Badge className="bg-button-hover/20 text-button-hover border-button-hover/40">
-                          {tier.value != null ? `${tier.value}%` : '-'}
-                        </Badge>
-                      </div>
-                    ));
-                  })()}
+                  {[...extractedPromo.subcategories]
+                    .sort((a, b) => (Number(a.calculation_value) || 0) - (Number(b.calculation_value) || 0))
+                    .map((tier, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-card rounded-lg px-3 py-2">
+                      <span className="text-foreground font-medium">
+                        {tier.sub_name || `Tier ${idx + 1}`}
+                      </span>
+                      <Badge className="bg-button-hover/20 text-button-hover border-button-hover/40">
+                        {tier.calculation_value}%
+                      </Badge>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           ) : (
-            // NON-REFERRAL: Keep existing COMBO Summary Bar (Phase A — V.10.1 sourced)
-            (() => {
-              const rec = pkRecord as PkV10Record;
-              const blSummary = getBlacklistSummaryFromRec(rec);
-              return (
-                <div className="px-6 pb-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="bg-muted rounded-lg p-3 text-center">
-                      <span className="text-2xl font-bold text-button-hover">
-                        {sel.subcategoryCount(rec)}
-                      </span>
-                      <span className="text-xs text-muted-foreground block mt-1">Sub Kategori</span>
-                    </div>
-                    <div className="bg-muted rounded-lg p-3 text-center">
-                      <span className="text-sm font-semibold text-foreground">
-                        {getPayoutSummaryFromRec(rec)}
-                      </span>
-                      <span className="text-xs text-muted-foreground block mt-1">Payout</span>
-                    </div>
-                    <div className="bg-muted rounded-lg p-3 text-center">
-                      {(() => {
-                        // Phase D2 — derive from sel.subGameTypes across all variants (V.10.1 only).
-                        const n = sel.subcategoryCount(rec);
-                        const all = new Set<string>();
-                        for (let i = 0; i < n; i++) {
-                          for (const g of sel.subGameTypes(rec, i)) all.add(g);
-                        }
-                        if (all.size === 0) {
-                          return (
-                            <span className="text-sm font-semibold text-muted-foreground/60 italic">
-                              Belum tersedia.
-                            </span>
-                          );
-                        }
-                        const formatted = [...all].map(formatGameType);
-                        const text = formatted.length > 3
-                          ? `${formatted.slice(0, 2).join(', ')} +${formatted.length - 2}`
-                          : formatted.join(', ');
-                        return (
-                          <span className="text-sm font-semibold text-foreground">{text}</span>
-                        );
-                      })()}
-                      <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
-                    </div>
-                    <div className="bg-muted rounded-lg p-3 text-center">
-                      <span className={`text-sm font-semibold ${blSummary.active ? 'text-destructive' : 'text-muted-foreground'}`}>
-                        {blSummary.text}
-                      </span>
-                      <span className="text-xs text-muted-foreground block mt-1">Blacklist</span>
-                    </div>
-                  </div>
+            // NON-REFERRAL: Keep existing COMBO Summary Bar
+            <div className="px-6 pb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <span className="text-2xl font-bold text-button-hover">
+                    {extractedPromo.subcategories.length}
+                  </span>
+                  <span className="text-xs text-muted-foreground block mt-1">Sub Kategori</span>
                 </div>
-              );
-            })()
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <span className="text-sm font-semibold text-foreground">
+                    {getPayoutSummary(extractedPromo.subcategories)}
+                  </span>
+                  <span className="text-xs text-muted-foreground block mt-1">Payout</span>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <span className="text-sm font-semibold text-foreground capitalize">
+                    {getGameTypesSummary(extractedPromo.subcategories)}
+                  </span>
+                  <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-center">
+                  <span className={`text-sm font-semibold ${
+                    extractedPromo.global_blacklist?.enabled || extractedPromo.subcategories.some(s => s.blacklist?.enabled) 
+                      ? 'text-destructive' : 'text-muted-foreground'
+                  }`}>
+                    {getBlacklistSummary(extractedPromo)}
+                  </span>
+                  <span className="text-xs text-muted-foreground block mt-1">Blacklist</span>
+                </div>
+              </div>
+            </div>
           )
         )}
 
@@ -1535,112 +1550,106 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
           {/* V1.1 global blacklist is rendered inside the matching variant card (see renderSubCategoryCard). */}
 
-          {/* Subcategories - Conditional for Referral vs Other (V.10.1 sourced) */}
-          {sel.subcategoryCount(pkRecord as PkV10Record) > 0 && (
-            /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
-              // REFERRAL: Phase D2 — render per-tier rows from V.10.1 selectors.
-              // No calculation. Null = unknown, displayed as "-".
-              (() => {
-                const rec = pkRecord as PkV10Record;
-                const n = sel.subcategoryCount(rec);
-                const rows = Array.from({ length: n }, (_, i) => ({
-                  idx: i,
-                  name: sel.subVariantName(rec, i),
-                  pct: sel.subCalculationValue(rec, i),
-                  min_downline: sel.subMinDownline(rec, i),
-                  winlose: sel.subWinlose(rec, i),
-                  cashback: sel.subCashbackDeduction(rec, i),
-                  fee: sel.subFeeDeduction(rec, i),
-                  net: sel.subNetWinlose(rec, i),
-                  commission: sel.subCommissionResult(rec, i),
-                }));
-                const allEmpty = rows.every(r =>
-                  r.min_downline == null && r.winlose == null && r.cashback == null &&
-                  r.fee == null && r.net == null && r.commission == null
-                );
-                const fmt = (v: number | null) =>
-                  v == null ? '-' : Number(v).toLocaleString('id-ID');
-                return (
-                  <div>
-                    <h4 className="text-base font-semibold text-button-hover mb-4">
-                      Detail Tier Komisi Referral
-                    </h4>
-                    {allEmpty ? (
-                      <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
-                        <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground italic">
-                          Detail komisi referral belum tersedia di JSON V.10.1.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto rounded-lg border border-border">
-                        <table className="w-full text-sm">
-                          <thead className="bg-muted">
-                            <tr>
-                              <th className="text-left p-3 font-semibold text-foreground">Tier</th>
-                              <th className="text-right p-3 font-semibold text-foreground">Min Downline</th>
-                              <th className="text-right p-3 font-semibold text-foreground">Winlose</th>
-                              <th className="text-right p-3 font-semibold text-foreground">Cashback</th>
-                              <th className="text-right p-3 font-semibold text-foreground">Fee</th>
-                              <th className="text-right p-3 font-semibold text-foreground">Net Winlose</th>
-                              <th className="text-right p-3 font-semibold text-foreground">Komisi</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {rows.map((r) => (
-                              <tr key={r.idx} className="border-t border-border">
-                                <td className="p-3 text-foreground font-medium">
-                                  {r.name || `Tier ${r.idx + 1}`}
-                                  {r.pct != null && (
-                                    <span className="text-muted-foreground"> ({r.pct}%)</span>
-                                  )}
-                                </td>
-                                <td className="p-3 text-right text-foreground">{fmt(r.min_downline)}</td>
-                                <td className="p-3 text-right text-foreground">{fmt(r.winlose)}</td>
-                                <td className="p-3 text-right text-foreground">{fmt(r.cashback)}</td>
-                                <td className="p-3 text-right text-foreground">{fmt(r.fee)}</td>
-                                <td className="p-3 text-right text-foreground">{fmt(r.net)}</td>
-                                <td className="p-3 text-right text-foreground">{fmt(r.commission)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()
-            ) : (
-              // NON-REFERRAL: variant cards iterated from V.10.1 selectors
+          {/* Subcategories - Conditional for Referral vs Other */}
+          {extractedPromo.subcategories.length > 0 && (
+            /referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') ? (
+              // REFERRAL: Render as Tier Table with ALL simulation columns
               <div>
-                {sel.subcategoryCount(pkRecord as PkV10Record) > 1 && (
+                <h4 className="text-base font-semibold text-button-hover mb-4">
+                  Detail Tier Komisi Referral
+                </h4>
+                <div className="bg-card rounded-lg overflow-hidden border border-border overflow-x-auto">
+                  <table className="w-full text-sm min-w-[700px]">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Nama Tier</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Min Downline</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Winlose</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Cashback</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Fee</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">WL Bersih</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Komisi %</th>
+                        <th className="text-left py-3 px-3 font-medium text-foreground">Komisi Rp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...extractedPromo.subcategories]
+                        .sort((a, b) => (Number(a.calculation_value) || 0) - (Number(b.calculation_value) || 0))
+                        .map((tier, idx) => {
+                          // Extract min_downline from sub data, sub_name, or terms pattern
+                          const subMinDownline = (tier as any).min_downline;
+                          const nameMatch = tier.sub_name?.match(/(\d+)\s*(id|member|downline)/i);
+                          const termsMatch = extractedPromo.terms_conditions?.find(t => 
+                            t.includes(`${tier.calculation_value}%`) && /(\d+)\s*(id|member|downline)/i.test(t)
+                          )?.match(/(\d+)\s*(id|member|downline)/i);
+                          const minDownline = subMinDownline || nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
+                          
+                          // CALCULATION RULES: Ini ATURAN FINAL dari tabel promo, bukan sample!
+                          const ruleWinlose = (tier as any).winlose || (tier as any).sample_winlose || tier.minimum_base;
+                          const ruleCashback = (tier as any).cashback_deduction || (tier as any).sample_cashback;
+                          const ruleFee = (tier as any).fee_deduction || (tier as any).sample_commission_deduction;
+                          const ruleNetWL = (tier as any).net_winlose || (tier as any).sample_net_winlose;
+                          const ruleKomisi = (tier as any).commission_result || (tier as any).sample_commission_result;
+                          
+                          // Format helpers
+                          const formatRp = (val: any) => val && Number(val) > 0 
+                            ? `Rp ${new Intl.NumberFormat('id-ID').format(Number(val))}` 
+                            : '-';
+                          
+                          return (
+                            <tr key={idx} className="border-t border-border">
+                              <td className="py-3 px-3 text-foreground font-medium">{tier.sub_name || `Tier ${idx + 1}`}</td>
+                              <td className="py-3 px-3 text-foreground">{minDownline} ID</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(ruleWinlose)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(ruleCashback)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(ruleFee)}</td>
+                              <td className="py-3 px-3 text-foreground">{formatRp(ruleNetWL)}</td>
+                              <td className="py-3 px-3 text-button-hover font-semibold">{tier.calculation_value}%</td>
+                              <td className="py-3 px-3 text-amber-400 font-semibold">{formatRp(ruleKomisi)}</td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 px-1">
+                  * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah ATURAN FINAL dari tabel promo. Threshold tier berdasarkan Min Downline.
+                </p>
+              </div>
+            ) : (
+              // NON-REFERRAL: Keep existing variant cards
+              <div>
+                {/* Only show header if multi-variant */}
+                {extractedPromo.subcategories.length > 1 && (
                   <h4 className="text-base font-semibold text-button-hover mb-4">
-                    Sub Kategori ({sel.subcategoryCount(pkRecord as PkV10Record)} Varian)
+                    Sub Kategori ({extractedPromo.subcategories.length} Varian)
                   </h4>
                 )}
                 <div className="space-y-4">
                   {(() => {
-                    const rec = pkRecord as PkV10Record;
-                    const n = sel.subcategoryCount(rec);
-                    // Sort by per-variant calculation_value (V.10.1 selector).
-                    const order = Array.from({ length: n }, (_, i) => i)
-                      .sort((a, b) => (Number(sel.subCalculationValue(rec, a)) || 0) - (Number(sel.subCalculationValue(rec, b)) || 0));
-                    // Pick attach target for global blacklist: first variant whose
-                    // V.10.1 game_domain matches /slot/, else first.
-                    const slotPos = order.findIndex((origIdx) =>
-                      /slot/i.test(String(sel.subGameDomain(rec, origIdx) ?? ''))
-                    );
-                    const attachOriginalIdx = slotPos >= 0 ? order[slotPos] : order[0];
+                    const sortedSubs = [...extractedPromo.subcategories]
+                      .sort((a, b) => {
+                        const valueA = Number(a.calculation_value) || 0;
+                        const valueB = Number(b.calculation_value) || 0;
+                        return valueA - valueB; // ascending (smallest first)
+                      });
 
-                    return order.map((origIdx) => {
-                      // archetype dropped — no V.10.1 equivalent for per-variant archetype detection.
-                      // renderSubCategoryCard ignores legacy `sub` and reads from sel.* per idx.
+                    // Pick attach target for V1.1 global blacklist:
+                    // first variant whose game_types contains "slot",
+                    // else first variant in the list.
+                    const slotIdx = sortedSubs.findIndex(s =>
+                      (s.game_types || []).some(t => /slot/i.test(String(t)))
+                    );
+                    const attachIdx = slotIdx >= 0 ? slotIdx : 0;
+
+                    return sortedSubs.map((sub, idx) => {
+                      const archetype = detectRewardArchetype(extractedPromo);
                       return renderSubCategoryCard(
-                        undefined,
-                        origIdx,
-                        'unknown' as RewardArchetype,
-                        undefined,
-                        origIdx === attachOriginalIdx,
+                        sub,
+                        idx,
+                        archetype,
+                        pkRecord?.variant_engine?.items_block?.subcategories?.[idx] as any,
+                        idx === attachIdx,
                       );
                     });
                   })()}
@@ -1651,14 +1660,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
           {/* Tabel Hadiah (Togel Event Rewards) - READ ONLY */}
           {(() => {
-            // Phase B3 — gate sourced from V.10.1 sel.gameDomain (scope_engine.game_block).
-            const domain = sel.gameDomain(pkRecord as PkV10Record);
-            const eventRewards = sel.eventRewards(pkRecord as PkV10Record) as Array<{
-              prize_rank?: string | number;
-              digit_type?: string;
-              reward_amount?: number;
-            }>;
-            const applicableMarkets = sel.applicableMarkets(pkRecord as PkV10Record);
+            const domain = detectGameDomain(extractedPromo);
+            const eventRewards = extractedPromo.event_rewards;
             
             if (domain === 'togel' && eventRewards && eventRewards.length > 0) {
               return (
@@ -1666,10 +1669,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   <h4 className="text-base font-semibold text-button-hover mb-4">
                     Tabel Hadiah
                   </h4>
-                  {applicableMarkets.length > 0 && (
+                  {extractedPromo.applicable_markets && extractedPromo.applicable_markets.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-4">
                       <span className="text-sm text-muted-foreground">Pasaran:</span>
-                      {applicableMarkets.map((market, i) => (
+                      {extractedPromo.applicable_markets.map((market, i) => (
                         <Badge key={i} variant="outline" className="text-xs bg-button-hover/20 text-button-hover border-button-hover/40">
                           {market}
                         </Badge>
@@ -1691,7 +1694,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                             <td className="py-2 px-4 text-foreground">{r.prize_rank}</td>
                             <td className="py-2 px-4 text-foreground">{r.digit_type}</td>
                             <td className="py-2 px-4 text-right font-semibold text-amber-400">
-                              Rp {(r.reward_amount ?? 0).toLocaleString('id-ID')}
+                              Rp {r.reward_amount.toLocaleString('id-ID')}
                             </td>
                           </tr>
                         ))}
@@ -1708,16 +1711,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* PHASE 1C: Event Prizes Summary (Read-Only) */}
           {/* Untuk Category B - Tournament/Leaderboard */}
           {/* ============================================ */}
-          {(() => {
-            const prizes = sel.prizes(pkRecord as PkV10Record) as Array<{
-              rank?: string | number;
-              prize?: string;
-              physical_reward_name?: string;
-              reward_type?: string;
-              value?: number;
-            }>;
-            if (!prizes || prizes.length === 0) return null;
-            return (
+          {extractedPromo.prizes && extractedPromo.prizes.length > 0 && (
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <h4 className="text-base font-semibold text-button-hover">
@@ -1738,7 +1732,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     </tr>
                   </thead>
                   <tbody>
-                    {prizes.map((prize, i) => (
+                    {extractedPromo.prizes.map((prize, i) => (
                       <tr key={i} className="border-b border-border/50 last:border-0">
                         <td className="py-2 px-4 text-foreground font-medium">
                           {prize.rank || `#${i + 1}`}
@@ -1773,131 +1767,112 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 Data hadiah event diekstrak dari sumber. Editing belum tersedia di versi ini.
               </p>
             </div>
-            );
-          })()}
+          )}
 
           {/* ============================================ */}
-          {/* PHASE 1D: Exchange Table (V.10.1 only) */}
+          {/* PHASE 1D: Exchange Table Summary (Read-Only) */}
           {/* Untuk Category C - Loyalty Point Redemption */}
           {/* ============================================ */}
-          {(() => {
-            const rec = pkRecord as PkV10Record;
-            const pointName = sel.loyaltyPointName(rec) || 'Point';
-            const earningRule = sel.loyaltyEarningRule(rec);
-            const hasLoyalty = !!(rec as any)?.loyalty_engine;
-
-            // Render section only when loyalty_engine exists at all.
-            if (!hasLoyalty) return null;
-
-            // Phase D2 — typed read from sel.loyaltyExchangeGroups (V.10.1).
-            const groups = sel.loyaltyExchangeGroups(rec) ?? [];
-            const items = groups.flat().filter((it) => it && typeof it === 'object');
-
-            return (
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <h4 className="text-base font-semibold text-button-hover">
-                    Tabel Penukaran {pointName}
-                  </h4>
-                  <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/30 text-xs">
-                    Read-Only
+          {extractedPromo.loyalty_mechanism?.exchange_table && 
+           extractedPromo.loyalty_mechanism.exchange_table.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <h4 className="text-base font-semibold text-button-hover">
+                  Tabel Penukaran {extractedPromo.loyalty_mechanism.point_name || 'Point'}
+                </h4>
+                <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/30 text-xs">
+                  Read-Only
+                </Badge>
+              </div>
+              {extractedPromo.loyalty_mechanism.earning_rule && (
+                <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                  <span>Aturan Perolehan:</span>
+                  <Badge variant="outline" className="bg-muted text-foreground">
+                    {extractedPromo.loyalty_mechanism.earning_rule}
                   </Badge>
                 </div>
-                {earningRule && (
-                  <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                    <span>Aturan Perolehan:</span>
-                    <Badge variant="outline" className="bg-muted text-foreground">
-                      {earningRule}
-                    </Badge>
-                  </div>
-                )}
-                {items.length === 0 ? (
-                  <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
-                    <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground italic">
-                      Exchange table belum tersedia di JSON V.10.1.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="w-full text-sm">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="text-left p-3 font-semibold text-foreground">{pointName}</th>
-                          <th className="text-left p-3 font-semibold text-foreground">Reward</th>
-                          <th className="text-left p-3 font-semibold text-foreground">Tipe</th>
-                          <th className="text-right p-3 font-semibold text-foreground">Cash Reward</th>
-                          <th className="text-left p-3 font-semibold text-foreground">Item Fisik</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {items.map((it, i) => {
-                          const points = (it as any).points;
-                          const reward = (it as any).reward;
-                          const rewardType = (it as any).reward_type;
-                          const cash = (it as any).cash_reward_amount;
-                          const physical = (it as any).physical_reward_name;
-                          return (
-                            <tr key={i} className="border-t border-border">
-                              <td className="p-3 text-foreground">
-                                {points != null ? Number(points).toLocaleString('id-ID') : '-'}
-                              </td>
-                              <td className="p-3 text-foreground">{reward ?? '-'}</td>
-                              <td className="p-3 text-muted-foreground">{rewardType ?? '-'}</td>
-                              <td className="p-3 text-right text-foreground">
-                                {cash != null ? `Rp ${Number(cash).toLocaleString('id-ID')}` : '-'}
-                              </td>
-                              <td className="p-3 text-foreground">{physical ?? '-'}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+              )}
+              <div className="bg-muted rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-card">
+                      <th className="text-right py-2 px-4 text-muted-foreground font-medium">
+                        {extractedPromo.loyalty_mechanism.point_name || 'Point'}
+                      </th>
+                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Hadiah</th>
+                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Jenis</th>
+                      <th className="text-right py-2 px-4 text-muted-foreground font-medium">Nilai</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {extractedPromo.loyalty_mechanism.exchange_table.map((item, i) => (
+                      <tr key={i} className="border-b border-border/50 last:border-0">
+                        <td className="py-2 px-4 text-right font-semibold text-purple-400">
+                          {item.points?.toLocaleString('id-ID') || '-'}
+                        </td>
+                        <td className="py-2 px-4 text-foreground">
+                          {item.reward || item.physical_reward_name || '-'}
+                        </td>
+                        <td className="py-2 px-4">
+                          <Badge variant="outline" className={`text-xs ${
+                            item.reward_type === 'hadiah_fisik' 
+                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' 
+                              : item.reward_type === 'uang_tunai'
+                                ? 'bg-green-500/20 text-green-400 border-green-500/40'
+                                : 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                          }`}>
+                            {item.reward_type === 'hadiah_fisik' ? 'Fisik' 
+                              : item.reward_type === 'uang_tunai' ? 'Tunai' 
+                              : 'Credit'}
+                          </Badge>
+                        </td>
+                        <td className="py-2 px-4 text-right font-semibold text-green-400">
+                          {item.cash_reward_amount 
+                            ? `Rp ${item.cash_reward_amount.toLocaleString('id-ID')}`
+                            : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            );
-          })()}
+              <p className="text-xs text-muted-foreground/60 mt-2 italic">
+                Tabel penukaran point diekstrak dari sumber. Editing tier tersedia di Phase 2.
+              </p>
+            </div>
+          )}
 
           {/* Special Requirements (Syarat Khusus) */}
-          {(() => {
-            const reqs = sel.specialRequirements(pkRecord as PkV10Record);
-            if (reqs.length === 0) return null;
-            return (
-              <div>
-                <h4 className="text-base font-semibold text-amber-500 mb-4">
-                  Syarat Khusus
-                </h4>
-                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-                  <div className="flex flex-wrap gap-2">
-                    {reqs.map((req, idx) => (
-                      <Badge key={idx} variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/40">
-                        {req}
-                      </Badge>
-                    ))}
-                  </div>
+          {extractedPromo.special_requirements && extractedPromo.special_requirements.length > 0 && (
+            <div>
+              <h4 className="text-base font-semibold text-amber-500 mb-4">
+                Syarat Khusus
+              </h4>
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                <div className="flex flex-wrap gap-2">
+                  {extractedPromo.special_requirements.map((req, idx) => (
+                    <Badge key={idx} variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/40">
+                      {req}
+                    </Badge>
+                  ))}
                 </div>
               </div>
-            );
-          })()}
+            </div>
+          )}
 
           {/* Terms */}
-          {(() => {
-            const terms = sel.termsConditions(pkRecord as PkV10Record);
-            if (terms.length === 0) return null;
-            return (
-              <div>
-                <h4 className="text-base font-semibold text-button-hover mb-4">
-                  Syarat & Ketentuan
-                </h4>
-                <div className="bg-muted rounded-lg p-4">
-                  <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
-                    {terms.map((term, idx) => <li key={idx}>{term}</li>)}
-                  </ul>
-                </div>
+          {extractedPromo.terms_conditions && extractedPromo.terms_conditions.length > 0 && (
+            <div>
+              <h4 className="text-base font-semibold text-button-hover mb-4">
+                Syarat & Ketentuan
+              </h4>
+              <div className="bg-muted rounded-lg p-4">
+                <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
+                  {extractedPromo.terms_conditions.map((term, idx) => <li key={idx}>{term}</li>)}
+                </ul>
               </div>
-            );
-          })()}
+            </div>
+          )}
         </div>
       </Card>
     );
@@ -1910,10 +1885,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   return (
     <div className="relative flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
-        <div className={`page-wrapper p-6 pb-20 ${!pkRecord && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
+        <div className={`page-wrapper p-6 pb-20 ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
           
           {/* INPUT SECTION - Unified Design */}
-          {!pkRecord && !isExtracting && (
+          {!extractedPromo && !isExtracting && (
             <Card className="p-8">
               {/* Header — vertically stacked & centered (mirror Parser) */}
               <div className="flex flex-col items-center text-center gap-3 mb-8">
@@ -2099,134 +2074,55 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           )}
 
           {/* RESULT SECTION */}
-          {pkRecord && (
+          {extractedPromo && (
             <>
-              {/* CLASSIFICATION OVERRIDE (LLM Classifier) — Phase B1: V.10.1 sourced */}
-              {(() => {
-                const rec = pkRecord as PkV10Record;
-                const classification = sel.programClassification(rec) as ProgramCategory | null;
-                if (!classification) return null;
-                const categoryNames: Record<ProgramCategory, string> = {
-                  A: 'Reward Program',
-                  B: 'Event Program',
-                  C: 'System Rule',
-                };
-                const confidence = (sel.classificationReviewConfidence(rec) || 'medium') as ClassificationConfidence;
-                const qualityFlags = sel.classificationQualityFlags(rec) as QualityFlag[];
-                const qs = sel.classificationQuestions(rec);
-                const adaptQ = (q: { answer: string; reasoning: string; evidence: string } | null) =>
-                  q && q.answer
-                    ? {
-                        answer: q.answer as 'ya' | 'tidak',
-                        reasoning: q.reasoning,
-                        evidence: q.evidence === '' ? null : (q.evidence as string | null),
-                      }
-                    : null;
-                const q1 = adaptQ(qs.q1);
-                const legacyReasoning = q1
-                  ? {
-                      q1,
-                      q2: adaptQ(qs.q2)!,
-                      q3: adaptQ(qs.q3)!,
-                      q4: adaptQ(qs.q4)!,
-                    }
-                  : undefined;
-                return (
-                  <ClassificationOverride
-                    currentCategory={classification}
-                    categoryName={categoryNames[classification] ?? 'Unknown'}
-                    confidence={confidence}
-                    qualityFlags={qualityFlags}
-                    rewardMode={sel.rewardMode(rec) === 'fixed' ? 'fixed' : undefined}
-                    promoSubType={getPromoSubTypeDisplay(
-                      sel.promoName(rec) ?? '',
-                      sel.promoType(rec) ?? '',
-                    )}
-                    legacyReasoning={legacyReasoning}
-                    onOverride={(newCategory, reason) => {
-                      // Phase B2: PkV10Record is the primary write target.
-                      // extractedPromo sync remains as secondary compat only —
-                      // it is no longer the authority for classification.
-                      const now = new Date().toISOString();
-                      const fieldPath =
-                        'classification_engine.result_block.program_classification';
-
-                      setPkRecord((prev) => {
-                        if (!prev) return prev;
-                        const cls = (prev.classification_engine ?? {}) as any;
-                        const result = (cls.result_block ?? {}) as any;
-                        const meta = (cls.meta_block ?? {}) as any;
-                        const prevValue = result.program_classification ?? null;
-
-                        const fieldStatus: Record<string, string> = {
-                          ...((prev._field_status as Record<string, string> | undefined) ?? {}),
-                          [fieldPath]: 'explicit',
-                        };
-                        const aiConf = (prev.ai_confidence ?? {}) as Record<string, unknown>;
-                        const prevConf = typeof aiConf[fieldPath] === 'number'
-                          ? (aiConf[fieldPath] as number)
-                          : null;
-
-                        const entry = {
-                          field_path: fieldPath,
-                          previous_value: prevValue,
-                          new_value: newCategory,
-                          previous_field_status:
-                            typeof fieldStatus[fieldPath] === 'string' ? null : null,
-                          previous_ai_confidence: prevConf,
-                          overridden_by: 'admin',
-                          timestamp: now,
-                          source: 'classification_override_phase_b2',
-                          reason,
-                        };
-
-                        const existingLog = Array.isArray(prev._human_override_log)
-                          ? [...prev._human_override_log]
-                          : [];
-
-                        return {
-                          ...prev,
-                          classification_engine: {
-                            ...cls,
-                            result_block: {
-                              ...result,
-                              program_classification: newCategory,
-                            },
-                            meta_block: {
-                              ...meta,
-                              override: true,
-                              override_detail: reason,
-                            },
-                          },
-                          _field_status: fieldStatus,
-                          _human_override_log: [...existingLog, entry],
-                          updated_at: now,
-                        } as PkV10Record;
-                      });
-
-                      // Secondary compat sync — NOT source of truth.
-                      if (extractedPromo) {
-                        setExtractedPromo({
-                          ...extractedPromo,
-                          program_classification: newCategory,
-                          program_classification_name: categoryNames[newCategory],
-                        });
-                      }
-
-                      console.log('[ClassificationOverride] pkRecord updated:', {
-                        from: classification,
-                        to: newCategory,
-                        reason,
-                        timestamp: now,
-                      });
-                      toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
-                    }}
-                  />
-                );
-              })()}
+              {/* CLASSIFICATION OVERRIDE (LLM Classifier) */}
+              {extractedPromo.program_classification && (
+                <ClassificationOverride
+                  currentCategory={extractedPromo.program_classification}
+                  categoryName={extractedPromo.program_classification_name || 'Unknown'}
+                  confidence={extractedPromo.classification_confidence || 'medium'}
+                  qualityFlags={extractedPromo.quality_flags || []}
+                  rewardMode={sel.rewardMode(pkRecord as PkV10Record) === 'fixed' ? 'fixed' : undefined}
+                  promoSubType={getPromoSubTypeDisplay(
+                    extractedPromo.promo_name,
+                    extractedPromo.promo_type
+                  )}
+                  legacyReasoning={
+                    extractedPromo.classification_q1 ? {
+                      q1: extractedPromo.classification_q1,
+                      q2: extractedPromo.classification_q2!,
+                      q3: extractedPromo.classification_q3!,
+                      q4: extractedPromo.classification_q4!,
+                    } : undefined
+                  }
+                  onOverride={(newCategory, reason) => {
+                    // Apply override and update state
+                    const override = {
+                      from: extractedPromo.program_classification!,
+                      to: newCategory,
+                      reason,
+                      overridden_by: 'anonymous',
+                      timestamp: new Date().toISOString(),
+                    };
+                    
+                    console.log('[ClassificationOverride] Override applied:', override);
+                    
+                    const categoryNames = { A: 'Reward Program', B: 'Event Program', C: 'System Rule' };
+                    setExtractedPromo({
+                      ...extractedPromo,
+                      program_classification: newCategory,
+                      program_classification_name: categoryNames[newCategory],
+                      classification_override: override,
+                    });
+                    
+                    toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
+                  }}
+                />
+              )}
               
               {/* SYSTEM RULE WARNING BANNER */}
-              {sel.programClassification(pkRecord as PkV10Record) === 'C' && (
+              {extractedPromo.program_classification === 'C' && (
                 <div className="flex items-start gap-3 p-4 bg-pink-500/10 border border-pink-500/30 rounded-xl">
                   <Info className="w-5 h-5 text-pink-400 flex-shrink-0 mt-0.5" />
                   <div className="space-y-1">
@@ -2333,7 +2229,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       </ScrollArea>
 
       {/* FIXED ACTION BAR - Consistent with APBESummaryReview */}
-      {pkRecord && (
+      {extractedPromo && (
         <div className="footer-bar">
           <div className="footer-bar-content">
             {/* Left: Restart + Re-Extract */}
@@ -2400,7 +2296,23 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   </Tooltip>
                 </TooltipProvider>
               )}
-              {/* mappedPreviewError surface removed — Hard Cutover (mappedPreview gone). */}
+              {/* BUG #4 — non-blocking mapper failure surface (preview only).
+                  pkRecord + Copy JSON remain available even when this shows. */}
+              {mappedPreviewError && extractedPromo && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-xs font-medium text-amber-700 dark:text-amber-300 cursor-help">
+                        <AlertTriangle className="w-3 h-3" />
+                        Preview failed, raw JSON still available
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-md">
+                      <p className="text-xs break-words">{mappedPreviewError}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
             
             {/* Right: Copy JSON + Primary Action */}
@@ -2435,7 +2347,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 </DropdownMenuContent>
               </DropdownMenu>
               {/* System Rule (C) cannot be saved to promo KB */}
-              {sel.programClassification(pkRecord as PkV10Record) === 'C' ? (
+              {extractedPromo.program_classification === 'C' ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -2551,12 +2463,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           setShowConfidenceGate(false);
           proceedWithCommit();
         }}
-        qualityFlags={(pkRecord ? sel.classificationQualityFlags(pkRecord) : []) as QualityFlag[]}
-        categoryName={(() => {
-          const c = pkRecord ? sel.programClassification(pkRecord) : null;
-          const map: Record<string, string> = { A: 'Reward Program', B: 'Event Program', C: 'System Rule' };
-          return c ? (map[c] ?? '') : '';
-        })()}
+        qualityFlags={extractedPromo?.quality_flags || []}
+        categoryName={extractedPromo?.program_classification_name || ''}
       />
     </div>
   );

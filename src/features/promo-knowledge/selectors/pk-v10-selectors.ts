@@ -29,7 +29,6 @@ import type {
   PkV10Record,
   PkV10Subcategory,
   PkV10MechanicItem,
-  PkV10QuestionAnswer,
 } from "../schema/pk-v10";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -479,178 +478,8 @@ function promoValidUntil(rec: PkV10Record): string | null {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Phase B1 — Read-only selectors for fields that already exist in PkV10Record
-// at exact paths but were not yet exposed via `sel.*`.
-// STRICT: no transforms, no fallbacks, no defaults, no schema expansion.
+// Public selector namespace
 // ──────────────────────────────────────────────────────────────────────────
-
-/** 25. Extraction source — `meta_engine.source_block.extraction_source` */
-function extractionSource(rec: PkV10Record): string | null {
-  return s(rec?.meta_engine?.source_block?.extraction_source);
-}
-
-/** 26. Promo mode — `identity_engine.promo_block.promo_mode` */
-function promoMode(rec: PkV10Record): string | null {
-  return s(rec?.identity_engine?.promo_block?.promo_mode);
-}
-
-/** 27. Promo type — `identity_engine.promo_block.promo_type` */
-function promoType(rec: PkV10Record): string | null {
-  return s(rec?.identity_engine?.promo_block?.promo_type);
-}
-
-/** 28. Event rewards — `reward_engine.event_block.event_rewards` (unknown[]) */
-function eventRewards(rec: PkV10Record): unknown[] {
-  return arr(
-    (rec?.reward_engine as { event_block?: { event_rewards?: unknown[] } } | undefined)
-      ?.event_block?.event_rewards,
-  );
-}
-
-/** 29. Applicable markets — `scope_engine.game_block.applicable_markets` */
-function applicableMarkets(rec: PkV10Record): string[] {
-  return arr(
-    (rec?.scope_engine?.game_block as { applicable_markets?: string[] } | undefined)
-      ?.applicable_markets,
-  );
-}
-
-/** 30. Prizes — `reward_engine.event_block.prizes` (unknown[]) */
-function prizes(rec: PkV10Record): unknown[] {
-  return arr(
-    (rec?.reward_engine as { event_block?: { prizes?: unknown[] } } | undefined)
-      ?.event_block?.prizes,
-  );
-}
-
-/** 31. Loyalty point name — `loyalty_engine.mechanism_block.point_name` */
-function loyaltyPointName(rec: PkV10Record): string | null {
-  return s(rec?.loyalty_engine?.mechanism_block?.point_name);
-}
-
-/** 32. Loyalty earning rule — `loyalty_engine.mechanism_block.earning_rule` */
-function loyaltyEarningRule(rec: PkV10Record): string | null {
-  return s(rec?.loyalty_engine?.mechanism_block?.earning_rule);
-}
-
-/** 33. Loyalty mode — `loyalty_engine.mechanism_block.loyalty_mode` */
-function loyaltyMode(rec: PkV10Record): string | null {
-  return s(rec?.loyalty_engine?.mechanism_block?.loyalty_mode);
-}
-
-/** 34. Special requirements — `terms_engine.requirements_block.special_requirements` */
-function specialRequirements(rec: PkV10Record): string[] {
-  return arr(rec?.terms_engine?.requirements_block?.special_requirements);
-}
-
-/** 35. Terms conditions — `terms_engine.conditions_block.terms_conditions` */
-function termsConditions(rec: PkV10Record): string[] {
-  return arr(rec?.terms_engine?.conditions_block?.terms_conditions);
-}
-
-/** 36. Program classification — `classification_engine.result_block.program_classification` */
-function programClassification(rec: PkV10Record): string | null {
-  return s(rec?.classification_engine?.result_block?.program_classification);
-}
-
-/** 37. Classification review confidence — `classification_engine.result_block.review_confidence` */
-function classificationReviewConfidence(rec: PkV10Record): string | null {
-  return s(rec?.classification_engine?.result_block?.review_confidence);
-}
-
-/**
- * 38. Classification questions — `classification_engine.question_block.q1..q4`.
- * Returns the four PkV10QuestionAnswer entries directly. Missing → null per slot.
- */
-function classificationQuestions(rec: PkV10Record): {
-  q1: PkV10QuestionAnswer | null;
-  q2: PkV10QuestionAnswer | null;
-  q3: PkV10QuestionAnswer | null;
-  q4: PkV10QuestionAnswer | null;
-} {
-  const qb = rec?.classification_engine?.question_block;
-  return {
-    q1: qb?.q1 ?? null,
-    q2: qb?.q2 ?? null,
-    q3: qb?.q3 ?? null,
-    q4: qb?.q4 ?? null,
-  };
-}
-
-/** 39. Quality flags — `classification_engine.meta_block.quality_flags` */
-function classificationQualityFlags(rec: PkV10Record): string[] {
-  return arr(rec?.classification_engine?.meta_block?.quality_flags);
-}
-
-/** 40. Game domain (record-level) — `scope_engine.game_block.game_domain` */
-function gameDomain(rec: PkV10Record): string | null {
-  return s(rec?.scope_engine?.game_block?.game_domain);
-}
-
-/** 41. Eligible providers (record-level) — `scope_engine.game_block.eligible_providers` */
-function eligibleProviders(rec: PkV10Record): string[] {
-  return arr(rec?.scope_engine?.game_block?.eligible_providers);
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Phase D1 — Additive selectors for newly-added V.10.1 paths.
-// STRICT: path getter only. No fallback, no default, no business logic.
-// ──────────────────────────────────────────────────────────────────────────
-
-/** 42. Min withdraw — `reward_engine.requirement_block.min_withdraw` */
-function minWithdraw(rec: PkV10Record): number | null {
-  return n(rec?.reward_engine?.requirement_block?.min_withdraw);
-}
-
-/** 43. sub.game_types (Phase D1) */
-function subGameTypes(rec: PkV10Record, i: number): string[] {
-  return arr(subAt(rec, i)?.game_types);
-}
-
-/** 44. sub.min_downline (Phase D1 — referral) */
-function subMinDownline(rec: PkV10Record, i: number): number | null {
-  return n(subAt(rec, i)?.min_downline);
-}
-
-/** 45. sub.winlose (Phase D1 — referral) */
-function subWinlose(rec: PkV10Record, i: number): number | null {
-  return n(subAt(rec, i)?.winlose);
-}
-
-/** 46. sub.cashback_deduction (Phase D1 — referral) */
-function subCashbackDeduction(rec: PkV10Record, i: number): number | null {
-  return n(subAt(rec, i)?.cashback_deduction);
-}
-
-/** 47. sub.fee_deduction (Phase D1 — referral) */
-function subFeeDeduction(rec: PkV10Record, i: number): number | null {
-  return n(subAt(rec, i)?.fee_deduction);
-}
-
-/** 48. sub.net_winlose (Phase D1 — referral) */
-function subNetWinlose(rec: PkV10Record, i: number): number | null {
-  return n(subAt(rec, i)?.net_winlose);
-}
-
-/** 49. sub.commission_result (Phase D1 — referral) */
-function subCommissionResult(rec: PkV10Record, i: number): number | null {
-  return n(subAt(rec, i)?.commission_result);
-}
-
-/**
- * 50. Loyalty exchange groups — `loyalty_engine.exchange_block.exchange_groups`.
- * Returns array as-is (typed shape per Phase D1). Missing → [].
- */
-function loyaltyExchangeGroups(rec: PkV10Record): Array<{
-  points?: number | null;
-  reward?: string | null;
-  reward_type?: string | null;
-  cash_reward_amount?: number | null;
-  physical_reward_name?: string | null;
-  [key: string]: unknown;
-}> {
-  return arr(rec?.loyalty_engine?.exchange_block?.exchange_groups);
-}
 
 export const sel = {
   promoName,
@@ -714,34 +543,6 @@ export const sel = {
   maxRewardUnlimited,
   validUntilUnlimited,
   promoValidUntil,
-  // Phase B1 — record-level fields with existing V.10.1 paths
-  extractionSource,
-  promoMode,
-  promoType,
-  eventRewards,
-  applicableMarkets,
-  prizes,
-  loyaltyPointName,
-  loyaltyEarningRule,
-  loyaltyMode,
-  specialRequirements,
-  termsConditions,
-  programClassification,
-  classificationReviewConfidence,
-  classificationQuestions,
-  classificationQualityFlags,
-  gameDomain,
-  eligibleProviders,
-  // Phase D1 — additive
-  minWithdraw,
-  subGameTypes,
-  subMinDownline,
-  subWinlose,
-  subCashbackDeduction,
-  subFeeDeduction,
-  subNetWinlose,
-  subCommissionResult,
-  loyaltyExchangeGroups,
 } as const;
 
 export type PkV10Selectors = typeof sel;
