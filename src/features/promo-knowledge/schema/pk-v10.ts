@@ -1236,6 +1236,12 @@ export interface PkV10RewardEngine {
   requirement_block: {
     min_deposit: number | null;
     unlock_conditions: unknown[];
+    /**
+     * Phase D1 — additive. Authoritative minimum withdraw bonus / minimum
+     * calculation withdraw threshold. `null` means not set; presence (number)
+     * implies "enabled". DO NOT add a separate `min_withdraw_enabled` flag.
+     */
+    min_withdraw?: number | null;
   };
   combo_reward_block: {
     combo_items: unknown[];
@@ -1282,7 +1288,19 @@ export interface PkV10LoyaltyEngine {
     loyalty_mode: string; // PkV10LoyaltyMode when filled
   };
   exchange_block: {
-    exchange_groups: unknown[];
+    /**
+     * Phase D1 — strengthened typing. Each entry is an exchange catalog row
+     * (points → reward). Additive: extractor may emit additional keys that
+     * remain accessible via index signature. No business logic, no defaults.
+     */
+    exchange_groups: Array<{
+      points?: number | null;
+      reward?: string | null;
+      reward_type?: string | null;
+      cash_reward_amount?: number | null;
+      physical_reward_name?: string | null;
+      [key: string]: unknown;
+    }>;
   };
   tier_block: {
     tier_system: unknown[]; // entries may carry PkV10TierName
@@ -1350,6 +1368,19 @@ export interface PkV10Subcategory {
   lucky_spin_id?: string | null;
   lucky_spin_max_per_day?: number | null;
   product_note?: string | null;
+  // ── Phase D1 — additive. Per-variant game segmentation. Strings only;
+  // enum tightening deferred. Extractor must populate from source. No
+  // derivation from providers. Empty / unknown → omit or [].
+  game_types?: string[];
+  // ── Phase D1 — additive. Referral commission display fields. Canonical
+  // extracted values only. NO calculator. Source-implicit values stay null.
+  // Never default to 0.
+  min_downline?: number | null;
+  winlose?: number | null;
+  cashback_deduction?: number | null;
+  fee_deduction?: number | null;
+  net_winlose?: number | null;
+  commission_result?: number | null;
 }
 
 export interface PkV10VariantEngine {
