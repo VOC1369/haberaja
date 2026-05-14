@@ -1683,7 +1683,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* Tabel Hadiah (Togel Event Rewards) - READ ONLY */}
           {(() => {
             const domain = detectGameDomain(extractedPromo);
-            const eventRewards = extractedPromo.event_rewards;
+            const eventRewards = sel.eventRewards(pkRecord as PkV10Record) as Array<{
+              prize_rank?: string | number;
+              digit_type?: string;
+              reward_amount?: number;
+            }>;
+            const applicableMarkets = sel.applicableMarkets(pkRecord as PkV10Record);
             
             if (domain === 'togel' && eventRewards && eventRewards.length > 0) {
               return (
@@ -1691,10 +1696,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   <h4 className="text-base font-semibold text-button-hover mb-4">
                     Tabel Hadiah
                   </h4>
-                  {extractedPromo.applicable_markets && extractedPromo.applicable_markets.length > 0 && (
+                  {applicableMarkets.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-4">
                       <span className="text-sm text-muted-foreground">Pasaran:</span>
-                      {extractedPromo.applicable_markets.map((market, i) => (
+                      {applicableMarkets.map((market, i) => (
                         <Badge key={i} variant="outline" className="text-xs bg-button-hover/20 text-button-hover border-button-hover/40">
                           {market}
                         </Badge>
@@ -1716,7 +1721,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                             <td className="py-2 px-4 text-foreground">{r.prize_rank}</td>
                             <td className="py-2 px-4 text-foreground">{r.digit_type}</td>
                             <td className="py-2 px-4 text-right font-semibold text-amber-400">
-                              Rp {r.reward_amount.toLocaleString('id-ID')}
+                              Rp {(r.reward_amount ?? 0).toLocaleString('id-ID')}
                             </td>
                           </tr>
                         ))}
