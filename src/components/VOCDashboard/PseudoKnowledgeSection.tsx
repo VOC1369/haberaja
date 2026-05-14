@@ -984,7 +984,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 archetype?.toLowerCase().includes('cashback');
               
               if (isRollinganArchetype) {
-                const minClaim = (sub as any).min_reward_claim || (sub as any).min_claim;
+                const minClaim = sel.subMinClaim(pkRecord as PkV10Record, idx);
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Min Bonus Cair</span>
