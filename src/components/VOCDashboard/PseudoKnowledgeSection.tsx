@@ -788,23 +788,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // ============================================
   
   const renderSubCategoryCard = (
-    sub: ExtractedPromoSubCategory, 
+    _sub: ExtractedPromoSubCategory | undefined, 
     idx: number, 
     archetype: RewardArchetype,
-    normalizedSub?: Partial<typeof sub>, // ✅ Accept normalized data from mappedPreview
-    attachGlobalBlacklist?: boolean // attach V1.1 scope_engine.blacklist_block to this card
+    _normalizedSub?: Partial<ExtractedPromoSubCategory>, // Hard Cutover: legacy params, no longer read for display.
+    attachGlobalBlacklist?: boolean
   ) => {
-    // ✅ Merge: normalized data takes priority over raw extraction
-    const displaySub = {
-      ...sub,
-      calculation_value: normalizedSub?.calculation_value ?? sub.calculation_value,
-      calculation_method: normalizedSub?.calculation_method ?? sub.calculation_method,
-      turnover_rule: normalizedSub?.turnover_rule ?? sub.turnover_rule,
-      payout_direction: normalizedSub?.payout_direction ?? sub.payout_direction,
-      min_calculation: (normalizedSub as any)?.min_calculation ?? (sub as any).min_calculation,
-    };
+    // HARD CUTOVER — display authority = V.10.1 selectors only.
+    // Legacy `sub` and `normalizedSub` are NOT read for display anymore.
     
-    // Phase A — per-variant blacklist sourced from V.10.1 selector.
+    // V.10.1 — per-variant blacklist sourced from selector.
     const subBL = sel.subBlacklist(pkRecord as PkV10Record, idx);
     const hasPerVariantBlacklist = subBL.enabled && (
       subBL.types.length + subBL.providers.length + subBL.games.length + subBL.rules.length > 0
@@ -823,14 +816,11 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
     const hasBlacklist = hasPerVariantBlacklist || hasGlobalBlacklist;
     
-    // Only flag critical issues for REQUIRED fields based on archetype
-    const hasCriticalIssue = ['calculation_value', 'turnover_rule', 'payout_direction'].some(f => {
-      const status = getFieldStatus(f, archetype);
-      if (status !== 'required') return false; // Skip non-required fields
-      const conf = sub.confidence?.[f as keyof typeof sub.confidence];
-      return conf === 'ambiguous' || conf === 'missing';
-    });
-    
+    // HARD CUTOVER GAP — per-field confidence (sub.confidence) has no V.10.1 path.
+    // TODO: ADD_FIELD per-variant confidence in variant_engine.items_block.subcategories[].
+    // Critical-issue flag dropped until schema gives equivalent.
+    const hasCriticalIssue = false;
+    void archetype; // archetype-driven required-field check requires V.10.1 confidence — gap.
     // Helper: Get display value for a field based on archetype
     const getFieldDisplay = (field: string, value: any, suffix?: string) => {
       const status = getFieldStatus(field, archetype);
