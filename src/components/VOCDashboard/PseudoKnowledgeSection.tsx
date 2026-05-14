@@ -1470,9 +1470,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                       <span className="text-xs text-muted-foreground block mt-1">Payout</span>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
-                      <span className="text-sm font-semibold text-foreground capitalize">
-                        {/* HOLD (Phase B/C): game_types[] has no V.10.1 selector authority */}
-                        {getGameTypesSummary(extractedPromo.subcategories)}
+                      <span className="text-sm font-semibold text-muted-foreground/60 italic">
+                        {/* HARD CUTOVER GAP — game_types[] no V.10.1 path. TODO: ADD_FIELD per-variant game_types. */}
+                        Belum tersedia
                       </span>
                       <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
                     </div>
