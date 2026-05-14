@@ -452,8 +452,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     setImagePreview(null);
     setImageBase64(null);
     
-    // HOTFIX: If current extraction was from image, clear it too to prevent stale data
-    if (extractedPromo?._extraction_source === 'image') {
+    // HOTFIX: If current extraction was from image, clear it too to prevent stale data.
+    // Phase B3 — gate read sourced from V.10.1 selector (sel.extractionSource).
+    if (sel.extractionSource(pkRecord as PkV10Record) === 'image') {
       setExtractedPromo(null);
       setEditHistory([]);
       setEditInput('');
@@ -560,9 +561,11 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       setExtractedPromo(result);
       setEditHistory([]);
 
-      // STEP 1 — paralel call ke pk-extractor (V.09). Tidak blocking utama;
+      // STEP 1 — paralel call ke pk-extractor V.10.1. Tidak blocking utama;
       // hasilnya dipakai untuk Copy JSON / Gunakan Promo.
-      // Card body tetap render dari `extractedPromo` (voc-wolf) di Step 1.
+      // Phase B3 — display authority sudah pindah ke pkRecord (PkV10Record).
+      // extractedPromo masih dipertahankan untuk subcategories/referral/loyalty
+      // yang belum punya path V.10.1 (HOLD → Phase B-decision).
       setPkStatus("loading");
       setPkRecord(null);
       setPkFailReason("");
@@ -1656,11 +1659,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                         return valueA - valueB; // ascending (smallest first)
                       });
 
-                    // Pick attach target for V1.1 global blacklist:
-                    // first variant whose game_types contains "slot",
-                    // else first variant in the list.
-                    const slotIdx = sortedSubs.findIndex(s =>
-                      (s.game_types || []).some(t => /slot/i.test(String(t)))
+                    // Pick attach target for global blacklist:
+                    // first variant whose V.10.1 game_domain matches /slot/, else first.
+                    // Phase B3 — read sourced from sel.subGameDomain (PkV10Record).
+                    const rec = pkRecord as PkV10Record;
+                    const slotIdx = sortedSubs.findIndex((_s, i) =>
+                      /slot/i.test(String(sel.subGameDomain(rec, i) ?? ''))
                     );
                     const attachIdx = slotIdx >= 0 ? slotIdx : 0;
 
@@ -1682,7 +1686,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
           {/* Tabel Hadiah (Togel Event Rewards) - READ ONLY */}
           {(() => {
-            const domain = detectGameDomain(extractedPromo);
+            // Phase B3 — gate sourced from V.10.1 sel.gameDomain (scope_engine.game_block).
+            const domain = sel.gameDomain(pkRecord as PkV10Record);
             const eventRewards = sel.eventRewards(pkRecord as PkV10Record) as Array<{
               prize_rank?: string | number;
               digit_type?: string;
