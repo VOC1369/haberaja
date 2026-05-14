@@ -1538,31 +1538,78 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* Subcategories - Conditional for Referral vs Other (V.10.1 sourced) */}
           {sel.subcategoryCount(pkRecord as PkV10Record) > 0 && (
             /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
-              // REFERRAL: HARD CUTOVER GAP — simulation columns
-              // (winlose / cashback / fee / wl_bersih / komisi_rp) tidak ada di V.10.1
-              // variant_engine.items_block.subcategories[]. Render empty state.
-              // TODO: NEEDS_SCHEMA_REVIEW — ADD_FIELD per-tier simulation rows
-              //       (winlose, cashback_deduction, fee_deduction, net_winlose,
-              //        commission_result) + min_downline.
-              <div>
-                <h4 className="text-base font-semibold text-button-hover mb-4">
-                  Detail Tier Komisi Referral
-                </h4>
-                <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
-                  <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground italic">
-                    Referral tier detail belum tersedia di JSON V.10.1.
-                  </p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">
-                    Field yang dibutuhkan: <code className="font-mono">min_downline</code>,{" "}
-                    <code className="font-mono">winlose</code>,{" "}
-                    <code className="font-mono">cashback_deduction</code>,{" "}
-                    <code className="font-mono">fee_deduction</code>,{" "}
-                    <code className="font-mono">net_winlose</code>,{" "}
-                    <code className="font-mono">commission_result</code>.
-                  </p>
-                </div>
-              </div>
+              // REFERRAL: Phase D2 — render per-tier rows from V.10.1 selectors.
+              // No calculation. Null = unknown, displayed as "-".
+              (() => {
+                const rec = pkRecord as PkV10Record;
+                const n = sel.subcategoryCount(rec);
+                const rows = Array.from({ length: n }, (_, i) => ({
+                  idx: i,
+                  name: sel.subVariantName(rec, i),
+                  pct: sel.subCalculationValue(rec, i),
+                  min_downline: sel.subMinDownline(rec, i),
+                  winlose: sel.subWinlose(rec, i),
+                  cashback: sel.subCashbackDeduction(rec, i),
+                  fee: sel.subFeeDeduction(rec, i),
+                  net: sel.subNetWinlose(rec, i),
+                  commission: sel.subCommissionResult(rec, i),
+                }));
+                const allEmpty = rows.every(r =>
+                  r.min_downline == null && r.winlose == null && r.cashback == null &&
+                  r.fee == null && r.net == null && r.commission == null
+                );
+                const fmt = (v: number | null) =>
+                  v == null ? '-' : Number(v).toLocaleString('id-ID');
+                return (
+                  <div>
+                    <h4 className="text-base font-semibold text-button-hover mb-4">
+                      Detail Tier Komisi Referral
+                    </h4>
+                    {allEmpty ? (
+                      <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
+                        <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground italic">
+                          Detail komisi referral belum tersedia di JSON V.10.1.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-lg border border-border">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted">
+                            <tr>
+                              <th className="text-left p-3 font-semibold text-foreground">Tier</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Min Downline</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Winlose</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Cashback</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Fee</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Net Winlose</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Komisi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.map((r) => (
+                              <tr key={r.idx} className="border-t border-border">
+                                <td className="p-3 text-foreground font-medium">
+                                  {r.name || `Tier ${r.idx + 1}`}
+                                  {r.pct != null && (
+                                    <span className="text-muted-foreground"> ({r.pct}%)</span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.min_downline)}</td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.winlose)}</td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.cashback)}</td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.fee)}</td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.net)}</td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.commission)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
             ) : (
               // NON-REFERRAL: variant cards iterated from V.10.1 selectors
               <div>
