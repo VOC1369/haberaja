@@ -1328,7 +1328,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // ============================================
   
   const renderExtractedData = () => {
-    if (!extractedPromo) return null;
+    if (!pkRecord) return null;
     
     // Phase A — validation status/warnings sourced from V.10.1 selectors only
     // (see headerStatusRaw / headerWarnings below).
