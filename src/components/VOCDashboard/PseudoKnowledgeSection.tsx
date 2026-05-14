@@ -1403,8 +1403,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const renderExtractedData = () => {
     if (!extractedPromo) return null;
     
-    const status = extractedPromo.validation?.status || 'draft';
-    const warnings = extractedPromo.validation?.warnings || [];
+    // Phase A — validation status/warnings sourced from V.10.1 selectors only
+    // (see headerStatusRaw / headerWarnings below).
 
     // PHASE 2 — header display sources from pkRecord via selectors only.
     const headerPromoName = sel.promoName(pkRecord as PkV10Record) ?? "-";
