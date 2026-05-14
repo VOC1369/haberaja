@@ -1475,6 +1475,20 @@ function subcategoryShape(): JSONSchema {
       lucky_spin_id: { type: ["string", "null"] },
       lucky_spin_max_per_day: { type: ["number", "null"] },
       product_note: { type: ["string", "null"] },
+      // V.10.1 D1 additive — per-variant game segmentation.
+      // Examples: "slot", "live_casino", "casino", "sport", "sportsbook",
+      // "togel", "sabung", "arcade", "fishing", "poker".
+      // Empty array = not stated; do NOT default.
+      game_types: { type: "array", items: { type: "string" } },
+      // V.10.1 D1 additive — referral commission per-variant fields.
+      // Fill ONLY when source explicitly states each value. null = not stated.
+      // Do NOT calculate net_winlose or commission_result.
+      min_downline: { type: ["number", "null"] },
+      winlose: { type: ["number", "null"] },
+      cashback_deduction: { type: ["number", "null"] },
+      fee_deduction: { type: ["number", "null"] },
+      net_winlose: { type: ["number", "null"] },
+      commission_result: { type: ["number", "null"] },
     },
   };
 }
