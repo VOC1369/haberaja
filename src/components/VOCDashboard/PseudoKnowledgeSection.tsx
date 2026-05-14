@@ -1701,82 +1701,63 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           })()}
 
           {/* ============================================ */}
-          {/* PHASE 1D: Exchange Table Summary (Read-Only) */}
+          {/* PHASE 1D: Exchange Table (V.10.1 only) */}
           {/* Untuk Category C - Loyalty Point Redemption */}
           {/* ============================================ */}
-          {extractedPromo.loyalty_mechanism?.exchange_table && 
-           extractedPromo.loyalty_mechanism.exchange_table.length > 0 && (() => {
-            const pointName = sel.loyaltyPointName(pkRecord as PkV10Record) || 'Point';
-            const earningRule = sel.loyaltyEarningRule(pkRecord as PkV10Record);
-            // HOLD (Phase B-decision): exchange_table belum punya path authoritative di
-            // V.10.1 (loyalty_engine.exchange_block.exchange_groups bertipe unknown[]).
-            // NEEDS_SCHEMA_REVIEW — preserved as legacy read until schema decision.
+          {(() => {
+            const rec = pkRecord as PkV10Record;
+            const exchangeGroups: unknown[] = (rec as any)?.loyalty_engine?.exchange_block?.exchange_groups ?? [];
+            const pointName = sel.loyaltyPointName(rec) || 'Point';
+            const earningRule = sel.loyaltyEarningRule(rec);
+            const hasLoyalty = !!(rec as any)?.loyalty_engine;
+
+            // Render section only when loyalty_engine exists at all.
+            if (!hasLoyalty) return null;
+
             return (
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <h4 className="text-base font-semibold text-button-hover">
-                  Tabel Penukaran {pointName}
-                </h4>
-                <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/30 text-xs">
-                  Read-Only
-                </Badge>
-              </div>
-              {earningRule && (
-                <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                  <span>Aturan Perolehan:</span>
-                  <Badge variant="outline" className="bg-muted text-foreground">
-                    {earningRule}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <h4 className="text-base font-semibold text-button-hover">
+                    Tabel Penukaran {pointName}
+                  </h4>
+                  <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/30 text-xs">
+                    Read-Only
                   </Badge>
                 </div>
-              )}
-              <div className="bg-muted rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-card">
-                      <th className="text-right py-2 px-4 text-muted-foreground font-medium">
-                        {pointName}
-                      </th>
-                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Hadiah</th>
-                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Jenis</th>
-                      <th className="text-right py-2 px-4 text-muted-foreground font-medium">Nilai</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {extractedPromo.loyalty_mechanism.exchange_table.map((item, i) => (
-                      <tr key={i} className="border-b border-border/50 last:border-0">
-                        <td className="py-2 px-4 text-right font-semibold text-purple-400">
-                          {item.points?.toLocaleString('id-ID') || '-'}
-                        </td>
-                        <td className="py-2 px-4 text-foreground">
-                          {item.reward || item.physical_reward_name || '-'}
-                        </td>
-                        <td className="py-2 px-4">
-                          <Badge variant="outline" className={`text-xs ${
-                            item.reward_type === 'hadiah_fisik' 
-                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' 
-                              : item.reward_type === 'uang_tunai'
-                                ? 'bg-green-500/20 text-green-400 border-green-500/40'
-                                : 'bg-blue-500/20 text-blue-400 border-blue-500/40'
-                          }`}>
-                            {item.reward_type === 'hadiah_fisik' ? 'Fisik' 
-                              : item.reward_type === 'uang_tunai' ? 'Tunai' 
-                              : 'Credit'}
-                          </Badge>
-                        </td>
-                        <td className="py-2 px-4 text-right font-semibold text-green-400">
-                          {item.cash_reward_amount 
-                            ? `Rp ${item.cash_reward_amount.toLocaleString('id-ID')}`
-                            : '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {earningRule && (
+                  <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                    <span>Aturan Perolehan:</span>
+                    <Badge variant="outline" className="bg-muted text-foreground">
+                      {earningRule}
+                    </Badge>
+                  </div>
+                )}
+                {/* HARD CUTOVER GAP — exchange_groups bertipe unknown[] di V.10.1.
+                    TODO: NEEDS_SCHEMA_REVIEW — define exchange_block.exchange_groups[] shape:
+                    { points, reward, reward_type, cash_reward_amount, physical_reward_name }. */}
+                {exchangeGroups.length === 0 ? (
+                  <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
+                    <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground italic">
+                      Exchange table belum tersedia di JSON V.10.1.
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">
+                      Path yang dibutuhkan: <code className="font-mono">loyalty_engine.exchange_block.exchange_groups[]</code>
+                      {" "}(shape: points, reward, reward_type, cash_reward_amount).
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
+                    <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground italic">
+                      Exchange table terdeteksi ({exchangeGroups.length} entri) tapi shape belum terdefinisi di V.10.1.
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">
+                      NEEDS_SCHEMA_REVIEW — type masih <code className="font-mono">unknown[]</code>.
+                    </p>
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground/60 mt-2 italic">
-                Tabel penukaran point diekstrak dari sumber. Editing tier tersedia di Phase 2.
-              </p>
-            </div>
             );
           })()}
 
