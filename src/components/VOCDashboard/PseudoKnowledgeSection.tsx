@@ -1019,7 +1019,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const minDepoValue = isFixedMode 
                 ? sel.minDeposit(pkRecord as PkV10Record) 
-                : sub.minimum_base;
+                : sel.subMinDeposit(pkRecord as PkV10Record, idx);
               
               return (
                 <>
