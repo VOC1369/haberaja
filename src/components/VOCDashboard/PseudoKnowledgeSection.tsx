@@ -779,7 +779,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // SYSTEM RULE GATE: C is NOT a promo - cannot be saved to KB
     // Show informational message instead of commit
     // ============================================
-    if (extractedPromo.program_classification === 'C') {
+    if (sel.programClassification(pkRecord as PkV10Record) === 'C') {
       toast.info("Ini adalah System Rule, bukan promo", {
         description: "Aturan sistem tidak disimpan ke Promo KB. Gunakan Copy JSON jika perlu referensi.",
         duration: 5000
@@ -791,7 +791,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // CONFIDENCE GATE: Block commit if LOW confidence
     // Human must acknowledge before proceeding
     // ============================================
-    if (extractedPromo.classification_confidence === 'low') {
+    if (sel.classificationReviewConfidence(pkRecord as PkV10Record) === 'low') {
       console.log('[ConfidenceGate] LOW confidence detected, showing gate modal');
       setShowConfidenceGate(true);
       return;
@@ -1480,7 +1480,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         </div>
 
         {/* Image Source Warning */}
-        {extractedPromo._extraction_source === 'image' && (
+        {sel.extractionSource(pkRecord as PkV10Record) === 'image' && (
           <div className="px-6 pb-4">
             <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
               <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
@@ -1493,8 +1493,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         )}
 
         {/* COMBO Summary Bar - Conditional for Referral vs Other */}
-        {extractedPromo.promo_mode === 'multi' && extractedPromo.subcategories.length > 1 && (
-          /referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') ? (
+        {sel.promoMode(pkRecord as PkV10Record) === 'multi' && extractedPromo.subcategories.length > 1 && (
+          /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
             // REFERRAL: Show Tier Summary (simpler layout)
             <div className="px-6 pb-4">
               <div className="bg-muted/50 rounded-lg p-4">
@@ -1574,7 +1574,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
           {/* Subcategories - Conditional for Referral vs Other */}
           {extractedPromo.subcategories.length > 0 && (
-            /referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') ? (
+            /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
               // REFERRAL: Render as Tier Table with ALL simulation columns
               <div>
                 <h4 className="text-base font-semibold text-button-hover mb-4">
@@ -1601,7 +1601,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                           // Extract min_downline from sub data, sub_name, or terms pattern
                           const subMinDownline = (tier as any).min_downline;
                           const nameMatch = tier.sub_name?.match(/(\d+)\s*(id|member|downline)/i);
-                          const termsMatch = extractedPromo.terms_conditions?.find(t => 
+                          const termsMatch = sel.termsConditions(pkRecord as PkV10Record).find(t => 
                             t.includes(`${tier.calculation_value}%`) && /(\d+)\s*(id|member|downline)/i.test(t)
                           )?.match(/(\d+)\s*(id|member|downline)/i);
                           const minDownline = subMinDownline || nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
@@ -1683,7 +1683,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* Tabel Hadiah (Togel Event Rewards) - READ ONLY */}
           {(() => {
             const domain = detectGameDomain(extractedPromo);
-            const eventRewards = extractedPromo.event_rewards;
+            const eventRewards = sel.eventRewards(pkRecord as PkV10Record) as Array<{
+              prize_rank?: string | number;
+              digit_type?: string;
+              reward_amount?: number;
+            }>;
+            const applicableMarkets = sel.applicableMarkets(pkRecord as PkV10Record);
             
             if (domain === 'togel' && eventRewards && eventRewards.length > 0) {
               return (
@@ -1691,10 +1696,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   <h4 className="text-base font-semibold text-button-hover mb-4">
                     Tabel Hadiah
                   </h4>
-                  {extractedPromo.applicable_markets && extractedPromo.applicable_markets.length > 0 && (
+                  {applicableMarkets.length > 0 && (
                     <div className="flex flex-wrap gap-2 mb-4">
                       <span className="text-sm text-muted-foreground">Pasaran:</span>
-                      {extractedPromo.applicable_markets.map((market, i) => (
+                      {applicableMarkets.map((market, i) => (
                         <Badge key={i} variant="outline" className="text-xs bg-button-hover/20 text-button-hover border-button-hover/40">
                           {market}
                         </Badge>
@@ -1716,7 +1721,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                             <td className="py-2 px-4 text-foreground">{r.prize_rank}</td>
                             <td className="py-2 px-4 text-foreground">{r.digit_type}</td>
                             <td className="py-2 px-4 text-right font-semibold text-amber-400">
-                              Rp {r.reward_amount.toLocaleString('id-ID')}
+                              Rp {(r.reward_amount ?? 0).toLocaleString('id-ID')}
                             </td>
                           </tr>
                         ))}
@@ -1733,7 +1738,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* PHASE 1C: Event Prizes Summary (Read-Only) */}
           {/* Untuk Category B - Tournament/Leaderboard */}
           {/* ============================================ */}
-          {extractedPromo.prizes && extractedPromo.prizes.length > 0 && (
+          {(() => {
+            const prizes = sel.prizes(pkRecord as PkV10Record) as Array<{
+              rank?: string | number;
+              prize?: string;
+              physical_reward_name?: string;
+              reward_type?: string;
+              value?: number;
+            }>;
+            if (!prizes || prizes.length === 0) return null;
+            return (
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <h4 className="text-base font-semibold text-button-hover">
@@ -1754,7 +1768,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     </tr>
                   </thead>
                   <tbody>
-                    {extractedPromo.prizes.map((prize, i) => (
+                    {prizes.map((prize, i) => (
                       <tr key={i} className="border-b border-border/50 last:border-0">
                         <td className="py-2 px-4 text-foreground font-medium">
                           {prize.rank || `#${i + 1}`}
@@ -1789,28 +1803,34 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 Data hadiah event diekstrak dari sumber. Editing belum tersedia di versi ini.
               </p>
             </div>
-          )}
+            );
+          })()}
 
           {/* ============================================ */}
           {/* PHASE 1D: Exchange Table Summary (Read-Only) */}
           {/* Untuk Category C - Loyalty Point Redemption */}
           {/* ============================================ */}
           {extractedPromo.loyalty_mechanism?.exchange_table && 
-           extractedPromo.loyalty_mechanism.exchange_table.length > 0 && (
+           extractedPromo.loyalty_mechanism.exchange_table.length > 0 && (() => {
+            const pointName = sel.loyaltyPointName(pkRecord as PkV10Record) || 'Point';
+            const earningRule = sel.loyaltyEarningRule(pkRecord as PkV10Record);
+            // NOTE: exchange_table itself has no V.10.1 selector path (HOLD).
+            // Phase B1 only rebinds point_name + earning_rule; the table rows remain V.09.
+            return (
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <h4 className="text-base font-semibold text-button-hover">
-                  Tabel Penukaran {extractedPromo.loyalty_mechanism.point_name || 'Point'}
+                  Tabel Penukaran {pointName}
                 </h4>
                 <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/30 text-xs">
                   Read-Only
                 </Badge>
               </div>
-              {extractedPromo.loyalty_mechanism.earning_rule && (
+              {earningRule && (
                 <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
                   <span>Aturan Perolehan:</span>
                   <Badge variant="outline" className="bg-muted text-foreground">
-                    {extractedPromo.loyalty_mechanism.earning_rule}
+                    {earningRule}
                   </Badge>
                 </div>
               )}
@@ -1819,7 +1839,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   <thead>
                     <tr className="border-b border-border bg-card">
                       <th className="text-right py-2 px-4 text-muted-foreground font-medium">
-                        {extractedPromo.loyalty_mechanism.point_name || 'Point'}
+                        {pointName}
                       </th>
                       <th className="text-left py-2 px-4 text-muted-foreground font-medium">Hadiah</th>
                       <th className="text-left py-2 px-4 text-muted-foreground font-medium">Jenis</th>
@@ -1862,39 +1882,48 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 Tabel penukaran point diekstrak dari sumber. Editing tier tersedia di Phase 2.
               </p>
             </div>
-          )}
+            );
+          })()}
 
           {/* Special Requirements (Syarat Khusus) */}
-          {extractedPromo.special_requirements && extractedPromo.special_requirements.length > 0 && (
-            <div>
-              <h4 className="text-base font-semibold text-amber-500 mb-4">
-                Syarat Khusus
-              </h4>
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-                <div className="flex flex-wrap gap-2">
-                  {extractedPromo.special_requirements.map((req, idx) => (
-                    <Badge key={idx} variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/40">
-                      {req}
-                    </Badge>
-                  ))}
+          {(() => {
+            const reqs = sel.specialRequirements(pkRecord as PkV10Record);
+            if (reqs.length === 0) return null;
+            return (
+              <div>
+                <h4 className="text-base font-semibold text-amber-500 mb-4">
+                  Syarat Khusus
+                </h4>
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {reqs.map((req, idx) => (
+                      <Badge key={idx} variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/40">
+                        {req}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Terms */}
-          {extractedPromo.terms_conditions && extractedPromo.terms_conditions.length > 0 && (
-            <div>
-              <h4 className="text-base font-semibold text-button-hover mb-4">
-                Syarat & Ketentuan
-              </h4>
-              <div className="bg-muted rounded-lg p-4">
-                <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
-                  {extractedPromo.terms_conditions.map((term, idx) => <li key={idx}>{term}</li>)}
-                </ul>
+          {(() => {
+            const terms = sel.termsConditions(pkRecord as PkV10Record);
+            if (terms.length === 0) return null;
+            return (
+              <div>
+                <h4 className="text-base font-semibold text-button-hover mb-4">
+                  Syarat & Ketentuan
+                </h4>
+                <div className="bg-muted rounded-lg p-4">
+                  <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
+                    {terms.map((term, idx) => <li key={idx}>{term}</li>)}
+                  </ul>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </Card>
     );
@@ -2098,53 +2127,75 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* RESULT SECTION */}
           {extractedPromo && (
             <>
-              {/* CLASSIFICATION OVERRIDE (LLM Classifier) */}
-              {extractedPromo.program_classification && (
-                <ClassificationOverride
-                  currentCategory={extractedPromo.program_classification}
-                  categoryName={extractedPromo.program_classification_name || 'Unknown'}
-                  confidence={extractedPromo.classification_confidence || 'medium'}
-                  qualityFlags={extractedPromo.quality_flags || []}
-                  rewardMode={sel.rewardMode(pkRecord as PkV10Record) === 'fixed' ? 'fixed' : undefined}
-                  promoSubType={getPromoSubTypeDisplay(
-                    extractedPromo.promo_name,
-                    extractedPromo.promo_type
-                  )}
-                  legacyReasoning={
-                    extractedPromo.classification_q1 ? {
-                      q1: extractedPromo.classification_q1,
-                      q2: extractedPromo.classification_q2!,
-                      q3: extractedPromo.classification_q3!,
-                      q4: extractedPromo.classification_q4!,
-                    } : undefined
-                  }
-                  onOverride={(newCategory, reason) => {
-                    // Apply override and update state
-                    const override = {
-                      from: extractedPromo.program_classification!,
-                      to: newCategory,
-                      reason,
-                      overridden_by: 'anonymous',
-                      timestamp: new Date().toISOString(),
-                    };
-                    
-                    console.log('[ClassificationOverride] Override applied:', override);
-                    
-                    const categoryNames = { A: 'Reward Program', B: 'Event Program', C: 'System Rule' };
-                    setExtractedPromo({
-                      ...extractedPromo,
-                      program_classification: newCategory,
-                      program_classification_name: categoryNames[newCategory],
-                      classification_override: override,
-                    });
-                    
-                    toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
-                  }}
-                />
-              )}
+              {/* CLASSIFICATION OVERRIDE (LLM Classifier) — Phase B1: V.10.1 sourced */}
+              {(() => {
+                const rec = pkRecord as PkV10Record;
+                const classification = sel.programClassification(rec) as ProgramCategory | null;
+                if (!classification) return null;
+                const categoryNames: Record<ProgramCategory, string> = {
+                  A: 'Reward Program',
+                  B: 'Event Program',
+                  C: 'System Rule',
+                };
+                const confidence = (sel.classificationReviewConfidence(rec) || 'medium') as ClassificationConfidence;
+                const qualityFlags = sel.classificationQualityFlags(rec) as QualityFlag[];
+                const qs = sel.classificationQuestions(rec);
+                const adaptQ = (q: { answer: string; reasoning: string; evidence: string } | null) =>
+                  q && q.answer
+                    ? {
+                        answer: q.answer as 'ya' | 'tidak',
+                        reasoning: q.reasoning,
+                        evidence: q.evidence === '' ? null : (q.evidence as string | null),
+                      }
+                    : null;
+                const q1 = adaptQ(qs.q1);
+                const legacyReasoning = q1
+                  ? {
+                      q1,
+                      q2: adaptQ(qs.q2)!,
+                      q3: adaptQ(qs.q3)!,
+                      q4: adaptQ(qs.q4)!,
+                    }
+                  : undefined;
+                return (
+                  <ClassificationOverride
+                    currentCategory={classification}
+                    categoryName={categoryNames[classification] ?? 'Unknown'}
+                    confidence={confidence}
+                    qualityFlags={qualityFlags}
+                    rewardMode={sel.rewardMode(rec) === 'fixed' ? 'fixed' : undefined}
+                    promoSubType={getPromoSubTypeDisplay(
+                      sel.promoName(rec) ?? '',
+                      sel.promoType(rec) ?? '',
+                    )}
+                    legacyReasoning={legacyReasoning}
+                    onOverride={(newCategory, reason) => {
+                      // NOTE (Phase B1): override still mutates V.09 extractedPromo —
+                      // pkRecord override path is out of scope for this phase. Display
+                      // now reads from pkRecord, so override visualization may lag
+                      // until extractor re-runs. Tracked as dual-track debt.
+                      const override = {
+                        from: classification,
+                        to: newCategory,
+                        reason,
+                        overridden_by: 'anonymous',
+                        timestamp: new Date().toISOString(),
+                      };
+                      console.log('[ClassificationOverride] Override applied:', override);
+                      setExtractedPromo({
+                        ...extractedPromo!,
+                        program_classification: newCategory,
+                        program_classification_name: categoryNames[newCategory],
+                        classification_override: override,
+                      });
+                      toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
+                    }}
+                  />
+                );
+              })()}
               
               {/* SYSTEM RULE WARNING BANNER */}
-              {extractedPromo.program_classification === 'C' && (
+              {sel.programClassification(pkRecord as PkV10Record) === 'C' && (
                 <div className="flex items-start gap-3 p-4 bg-pink-500/10 border border-pink-500/30 rounded-xl">
                   <Info className="w-5 h-5 text-pink-400 flex-shrink-0 mt-0.5" />
                   <div className="space-y-1">
@@ -2369,7 +2420,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 </DropdownMenuContent>
               </DropdownMenu>
               {/* System Rule (C) cannot be saved to promo KB */}
-              {extractedPromo.program_classification === 'C' ? (
+              {sel.programClassification(pkRecord as PkV10Record) === 'C' ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -2485,8 +2536,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           setShowConfidenceGate(false);
           proceedWithCommit();
         }}
-        qualityFlags={extractedPromo?.quality_flags || []}
-        categoryName={extractedPromo?.program_classification_name || ''}
+        qualityFlags={(pkRecord ? sel.classificationQualityFlags(pkRecord) : []) as QualityFlag[]}
+        categoryName={(() => {
+          const c = pkRecord ? sel.programClassification(pkRecord) : null;
+          const map: Record<string, string> = { A: 'Reward Program', B: 'Event Program', C: 'System Rule' };
+          return c ? (map[c] ?? '') : '';
+        })()}
       />
     </div>
   );
