@@ -2170,23 +2170,80 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     )}
                     legacyReasoning={legacyReasoning}
                     onOverride={(newCategory, reason) => {
-                      // NOTE (Phase B1): override still mutates V.09 extractedPromo —
-                      // pkRecord override path is out of scope for this phase. Display
-                      // now reads from pkRecord, so override visualization may lag
-                      // until extractor re-runs. Tracked as dual-track debt.
-                      const override = {
+                      // Phase B2: PkV10Record is the primary write target.
+                      // extractedPromo sync remains as secondary compat only —
+                      // it is no longer the authority for classification.
+                      const now = new Date().toISOString();
+                      const fieldPath =
+                        'classification_engine.result_block.program_classification';
+
+                      setPkRecord((prev) => {
+                        if (!prev) return prev;
+                        const cls = (prev.classification_engine ?? {}) as any;
+                        const result = (cls.result_block ?? {}) as any;
+                        const meta = (cls.meta_block ?? {}) as any;
+                        const prevValue = result.program_classification ?? null;
+
+                        const fieldStatus: Record<string, string> = {
+                          ...((prev._field_status as Record<string, string> | undefined) ?? {}),
+                          [fieldPath]: 'explicit',
+                        };
+                        const aiConf = (prev.ai_confidence ?? {}) as Record<string, unknown>;
+                        const prevConf = typeof aiConf[fieldPath] === 'number'
+                          ? (aiConf[fieldPath] as number)
+                          : null;
+
+                        const entry = {
+                          field_path: fieldPath,
+                          previous_value: prevValue,
+                          new_value: newCategory,
+                          previous_field_status:
+                            typeof fieldStatus[fieldPath] === 'string' ? null : null,
+                          previous_ai_confidence: prevConf,
+                          overridden_by: 'admin',
+                          timestamp: now,
+                          source: 'classification_override_phase_b2',
+                          reason,
+                        };
+
+                        const existingLog = Array.isArray(prev._human_override_log)
+                          ? [...prev._human_override_log]
+                          : [];
+
+                        return {
+                          ...prev,
+                          classification_engine: {
+                            ...cls,
+                            result_block: {
+                              ...result,
+                              program_classification: newCategory,
+                            },
+                            meta_block: {
+                              ...meta,
+                              override: true,
+                              override_detail: reason,
+                            },
+                          },
+                          _field_status: fieldStatus,
+                          _human_override_log: [...existingLog, entry],
+                          updated_at: now,
+                        } as PkV10Record;
+                      });
+
+                      // Secondary compat sync — NOT source of truth.
+                      if (extractedPromo) {
+                        setExtractedPromo({
+                          ...extractedPromo,
+                          program_classification: newCategory,
+                          program_classification_name: categoryNames[newCategory],
+                        });
+                      }
+
+                      console.log('[ClassificationOverride] pkRecord updated:', {
                         from: classification,
                         to: newCategory,
                         reason,
-                        overridden_by: 'anonymous',
-                        timestamp: new Date().toISOString(),
-                      };
-                      console.log('[ClassificationOverride] Override applied:', override);
-                      setExtractedPromo({
-                        ...extractedPromo!,
-                        program_classification: newCategory,
-                        program_classification_name: categoryNames[newCategory],
-                        classification_override: override,
+                        timestamp: now,
                       });
                       toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
                     }}
