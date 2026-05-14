@@ -2536,8 +2536,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           setShowConfidenceGate(false);
           proceedWithCommit();
         }}
-        qualityFlags={extractedPromo?.quality_flags || []}
-        categoryName={extractedPromo?.program_classification_name || ''}
+        qualityFlags={(pkRecord ? sel.classificationQualityFlags(pkRecord) : []) as QualityFlag[]}
+        categoryName={(() => {
+          const c = pkRecord ? sel.programClassification(pkRecord) : null;
+          const map: Record<string, string> = { A: 'Reward Program', B: 'Event Program', C: 'System Rule' };
+          return c ? (map[c] ?? '') : '';
+        })()}
       />
     </div>
   );
