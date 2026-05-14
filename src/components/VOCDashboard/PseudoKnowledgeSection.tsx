@@ -1419,26 +1419,33 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           </div>
         )}
 
-        {/* COMBO Summary Bar - Conditional for Referral vs Other */}
-        {sel.promoMode(pkRecord as PkV10Record) === 'multi' && extractedPromo.subcategories.length > 1 && (
+        {/* COMBO Summary Bar - Conditional for Referral vs Other (V.10.1 sourced) */}
+        {sel.promoMode(pkRecord as PkV10Record) === 'multi' && sel.subcategoryCount(pkRecord as PkV10Record) > 1 && (
           /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
-            // REFERRAL: Show Tier Summary (simpler layout)
+            // REFERRAL: Show Tier Summary (V.10.1 per-variant selectors)
             <div className="px-6 pb-4">
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-xs text-muted-foreground mb-3">Struktur Tier Komisi</p>
                 <div className="space-y-2">
-                  {[...extractedPromo.subcategories]
-                    .sort((a, b) => (Number(a.calculation_value) || 0) - (Number(b.calculation_value) || 0))
-                    .map((tier, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-card rounded-lg px-3 py-2">
-                      <span className="text-foreground font-medium">
-                        {tier.sub_name || `Tier ${idx + 1}`}
-                      </span>
-                      <Badge className="bg-button-hover/20 text-button-hover border-button-hover/40">
-                        {tier.calculation_value}%
-                      </Badge>
-                    </div>
-                  ))}
+                  {(() => {
+                    const rec = pkRecord as PkV10Record;
+                    const n = sel.subcategoryCount(rec);
+                    const tiers = Array.from({ length: n }, (_, i) => ({
+                      idx: i,
+                      name: sel.subVariantName(rec, i),
+                      value: sel.subCalculationValue(rec, i),
+                    })).sort((a, b) => (Number(a.value) || 0) - (Number(b.value) || 0));
+                    return tiers.map((tier) => (
+                      <div key={tier.idx} className="flex items-center justify-between bg-card rounded-lg px-3 py-2">
+                        <span className="text-foreground font-medium">
+                          {tier.name || `Tier ${tier.idx + 1}`}
+                        </span>
+                        <Badge className="bg-button-hover/20 text-button-hover border-button-hover/40">
+                          {tier.value != null ? `${tier.value}%` : '-'}
+                        </Badge>
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
