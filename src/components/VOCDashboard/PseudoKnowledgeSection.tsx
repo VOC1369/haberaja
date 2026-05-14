@@ -1493,8 +1493,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         )}
 
         {/* COMBO Summary Bar - Conditional for Referral vs Other */}
-        {extractedPromo.promo_mode === 'multi' && extractedPromo.subcategories.length > 1 && (
-          /referral|referal|refferal|ajak.*teman/i.test(extractedPromo.promo_type || '') ? (
+        {sel.promoMode(pkRecord as PkV10Record) === 'multi' && extractedPromo.subcategories.length > 1 && (
+          /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
             // REFERRAL: Show Tier Summary (simpler layout)
             <div className="px-6 pb-4">
               <div className="bg-muted/50 rounded-lg p-4">
