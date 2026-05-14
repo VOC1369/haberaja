@@ -1886,36 +1886,44 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           })()}
 
           {/* Special Requirements (Syarat Khusus) */}
-          {extractedPromo.special_requirements && extractedPromo.special_requirements.length > 0 && (
-            <div>
-              <h4 className="text-base font-semibold text-amber-500 mb-4">
-                Syarat Khusus
-              </h4>
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-                <div className="flex flex-wrap gap-2">
-                  {extractedPromo.special_requirements.map((req, idx) => (
-                    <Badge key={idx} variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/40">
-                      {req}
-                    </Badge>
-                  ))}
+          {(() => {
+            const reqs = sel.specialRequirements(pkRecord as PkV10Record);
+            if (reqs.length === 0) return null;
+            return (
+              <div>
+                <h4 className="text-base font-semibold text-amber-500 mb-4">
+                  Syarat Khusus
+                </h4>
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                  <div className="flex flex-wrap gap-2">
+                    {reqs.map((req, idx) => (
+                      <Badge key={idx} variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/40">
+                        {req}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Terms */}
-          {extractedPromo.terms_conditions && extractedPromo.terms_conditions.length > 0 && (
-            <div>
-              <h4 className="text-base font-semibold text-button-hover mb-4">
-                Syarat & Ketentuan
-              </h4>
-              <div className="bg-muted rounded-lg p-4">
-                <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
-                  {extractedPromo.terms_conditions.map((term, idx) => <li key={idx}>{term}</li>)}
-                </ul>
+          {(() => {
+            const terms = sel.termsConditions(pkRecord as PkV10Record);
+            if (terms.length === 0) return null;
+            return (
+              <div>
+                <h4 className="text-base font-semibold text-button-hover mb-4">
+                  Syarat & Ketentuan
+                </h4>
+                <div className="bg-muted rounded-lg p-4">
+                  <ul className="list-disc list-outside pl-4 space-y-1 text-sm text-foreground">
+                    {terms.map((term, idx) => <li key={idx}>{term}</li>)}
+                  </ul>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </Card>
     );
