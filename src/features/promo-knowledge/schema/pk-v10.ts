@@ -1368,6 +1368,19 @@ export interface PkV10Subcategory {
   lucky_spin_id?: string | null;
   lucky_spin_max_per_day?: number | null;
   product_note?: string | null;
+  // ── Phase D1 — additive. Per-variant game segmentation. Strings only;
+  // enum tightening deferred. Extractor must populate from source. No
+  // derivation from providers. Empty / unknown → omit or [].
+  game_types?: string[];
+  // ── Phase D1 — additive. Referral commission display fields. Canonical
+  // extracted values only. NO calculator. Source-implicit values stay null.
+  // Never default to 0.
+  min_downline?: number | null;
+  winlose?: number | null;
+  cashback_deduction?: number | null;
+  fee_deduction?: number | null;
+  net_winlose?: number | null;
+  commission_result?: number | null;
 }
 
 export interface PkV10VariantEngine {
