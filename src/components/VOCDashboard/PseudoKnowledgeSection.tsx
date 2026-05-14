@@ -50,7 +50,7 @@ import {
   fetchUrlContent, 
   getStatusBadgeStyle,
   getStatusLabel,
-  mapExtractedToPromoFormData,
+  // mapExtractedToPromoFormData — removed (Hard Cutover): display authority = V.10.1 only.
   detectRewardArchetype,
   // detectGameDomain — removed Phase B3 (replaced by sel.gameDomain).
   getFieldStatus,
@@ -160,62 +160,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const [pkFailReason, setPkFailReason] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
-  // BUG #4 FIX — non-blocking mapper failure surface.
-  // Previously: catch block called setExtractedPromo(null), wiping the
-  // successful V.09 extraction and forcing UI back to landing (data loss
-  // + Copy JSON unavailable). Now: extractedPromo + pkRecord stay intact;
-  // mappedPreview returns null and a non-blocking error message is shown
-  // via mappedPreviewError state. Copy JSON / V.09 result
-  // remain accessible because they read pkRecord, not mappedPreview.
-  const [mappedPreviewError, setMappedPreviewError] = useState<string | null>(null);
-
-  // ⚠️ TEMPORARY VISUAL DEBT — NOT source of truth.
-  // After PARTIAL SAFE REBIND, mappedPreview is retained ONLY for display
-  // gaps that have no authoritative V.10.1 path yet:
-  //   - fixed_voucher_valid_until / fixed_voucher_valid_unlimited
-  //   - fixed_spin_validity_mode / _duration / _unit
-  //   - min_calculation_enabled / min_calculation
-  // All other displays (reward_mode, reward_type, apk_required, trigger_event,
-  // min_deposit, lucky_spin_max_per_day, physical_item_name, physical_quantity,
-  // voucher_kind, subcategories[idx], RewardArchetypePicker rewardMode prop)
-  // now read directly from PkV10Record via `sel.*` selectors.
-  // DO NOT add new mappedPreview readers. Resolve gaps via V.10.1 schema first.
-  const mappedPreview = useMemo<PromoFormData | null>(() => {
-    if (!extractedPromo) {
-      // Reset error when there is nothing to map (avoid stale message).
-      if (mappedPreviewError !== null) setMappedPreviewError(null);
-      return null;
-    }
-    try {
-      console.log('[TRACE-6B] useMemo calling mapExtractedToPromoFormData...');
-      const result = mapExtractedToPromoFormData(extractedPromo);
-      console.log('[TRACE-6B] mapExtractedToPromoFormData succeeded', {
-        reward_mode: (result as any)?.reward_mode,
-        tier_archetype: (result as any)?.tier_archetype,
-        tiers_count: (result as any)?.tiers?.length ?? 0,
-      });
-      if (mappedPreviewError !== null) setMappedPreviewError(null);
-      return result;
-    } catch (err) {
-      console.error('[TRACE-6B] mapExtractedToPromoFormData FAILED:', err);
-      console.error(
-        '[PseudoKnowledgeSection] mapExtractedToPromoFormData failed — extraction preserved, preview unavailable:',
-        err,
-      );
-      // BUG #4: do NOT call setExtractedPromo(null). Preserve raw extraction
-      // and pkRecord so Copy JSON / V.09 result stay accessible.
-      const reason = err instanceof Error ? err.message : String(err);
-      const next = `Preview failed, raw JSON still available — ${reason}`;
-      // Guard: only update if changed, to avoid an infinite re-render loop
-      // (state setter inside useMemo would otherwise re-run on every render).
-      if (mappedPreviewError !== next) setMappedPreviewError(next);
-      return null;
-    }
-    // mappedPreviewError intentionally NOT in deps: it is a write-only side
-    // channel here, gated by equality checks above. Including it would risk
-    // a re-run loop because we setState inside the memo.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extractedPromo]);
+  // HARD CUTOVER — mappedPreview removed entirely.
+  // Display authority for Extractor UI = PkV10Record / sel.* selectors only.
+  // Any field that needs a non-existent V.10.1 path renders empty state instead.
+  // mapExtractedToPromoFormData() is no longer used here.
   
   // Confidence Gate state (LLM Classifier)
   const [showConfidenceGate, setShowConfidenceGate] = useState(false);
@@ -840,23 +788,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // ============================================
   
   const renderSubCategoryCard = (
-    sub: ExtractedPromoSubCategory, 
+    _sub: ExtractedPromoSubCategory | undefined, 
     idx: number, 
     archetype: RewardArchetype,
-    normalizedSub?: Partial<typeof sub>, // ✅ Accept normalized data from mappedPreview
-    attachGlobalBlacklist?: boolean // attach V1.1 scope_engine.blacklist_block to this card
+    _normalizedSub?: Partial<ExtractedPromoSubCategory>, // Hard Cutover: legacy params, no longer read for display.
+    attachGlobalBlacklist?: boolean
   ) => {
-    // ✅ Merge: normalized data takes priority over raw extraction
-    const displaySub = {
-      ...sub,
-      calculation_value: normalizedSub?.calculation_value ?? sub.calculation_value,
-      calculation_method: normalizedSub?.calculation_method ?? sub.calculation_method,
-      turnover_rule: normalizedSub?.turnover_rule ?? sub.turnover_rule,
-      payout_direction: normalizedSub?.payout_direction ?? sub.payout_direction,
-      min_calculation: (normalizedSub as any)?.min_calculation ?? (sub as any).min_calculation,
-    };
+    // HARD CUTOVER — display authority = V.10.1 selectors only.
+    // Legacy `sub` and `normalizedSub` are NOT read for display anymore.
     
-    // Phase A — per-variant blacklist sourced from V.10.1 selector.
+    // V.10.1 — per-variant blacklist sourced from selector.
     const subBL = sel.subBlacklist(pkRecord as PkV10Record, idx);
     const hasPerVariantBlacklist = subBL.enabled && (
       subBL.types.length + subBL.providers.length + subBL.games.length + subBL.rules.length > 0
@@ -875,14 +816,11 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
     const hasBlacklist = hasPerVariantBlacklist || hasGlobalBlacklist;
     
-    // Only flag critical issues for REQUIRED fields based on archetype
-    const hasCriticalIssue = ['calculation_value', 'turnover_rule', 'payout_direction'].some(f => {
-      const status = getFieldStatus(f, archetype);
-      if (status !== 'required') return false; // Skip non-required fields
-      const conf = sub.confidence?.[f as keyof typeof sub.confidence];
-      return conf === 'ambiguous' || conf === 'missing';
-    });
-    
+    // HARD CUTOVER GAP — per-field confidence (sub.confidence) has no V.10.1 path.
+    // TODO: ADD_FIELD per-variant confidence in variant_engine.items_block.subcategories[].
+    // Critical-issue flag dropped until schema gives equivalent.
+    const hasCriticalIssue = false;
+    void archetype; // archetype-driven required-field check requires V.10.1 confidence — gap.
     // Helper: Get display value for a field based on archetype
     const getFieldDisplay = (field: string, value: any, suffix?: string) => {
       const status = getFieldStatus(field, archetype);
@@ -982,7 +920,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           <div className="bg-muted rounded-lg p-3">
             {(() => {
               // Rollingan/Cashback: No min deposit, use min_claim instead
-              const isRollinganArchetype = sub.calculation_base === 'turnover' || 
+              const isRollinganArchetype = sel.subCalculationBasis(pkRecord as PkV10Record, idx) === 'turnover' || 
                 archetype?.toLowerCase().includes('rollingan') ||
                 archetype?.toLowerCase().includes('cashback');
               
@@ -998,20 +936,18 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 );
               }
               
-              // ✅ Withdraw Bonus: use min_calculation as "Min WD", not min_deposit
-              // HOLD: trigger_event rebound to V.10.1; min_calculation* still on mappedPreview (gap, no V.10.1 path yet)
+              // ✅ Withdraw Bonus: Min WD
+              // HARD CUTOVER GAP — no V.10.1 selector for min_withdraw yet.
+              // TODO: ADD_FIELD reward_engine.requirement_block.min_withdraw (+ enabled flag).
               const isWithdrawTrigger = sel.triggerEvent(pkRecord as PkV10Record) === 'Withdraw' || 
                 /withdraw|bonus.*wd|extra.*wd/i.test(sel.promoName(pkRecord as PkV10Record) || '');
               
               if (isWithdrawTrigger) {
-                const minWdValue = mappedPreview?.min_calculation_enabled 
-                  ? mappedPreview?.min_calculation 
-                  : null;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Min WD</span>
-                    <span className="text-foreground font-medium">
-                      {minWdValue ? `Rp ${Number(minWdValue).toLocaleString('id-ID')}` : "-"}
+                    <span className="text-muted-foreground/60 italic text-xs">
+                      Belum tersedia di JSON V.10.1
                     </span>
                   </>
                 );
@@ -1210,9 +1146,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 return <span className="text-muted-foreground/60 italic">-</span>;
               }
               
+              // HARD CUTOVER GAP — per-variant game_types[] has no V.10.1 path.
+              // V.10.1 has scope_engine.game_block.game_domain (record-level), beda granularity.
+              // TODO: ADD_FIELD variant_engine.items_block.subcategories[].game_types[].
               return (
-                <span className="text-foreground font-medium">
-                  {sub.game_types?.length ? sub.game_types.map(formatGameTypeLabel).join(", ") : "Semua"}
+                <span className="text-muted-foreground/60 italic text-xs">
+                  Belum tersedia di JSON V.10.1
                 </span>
               );
             })()}
@@ -1276,21 +1215,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 )}
                 <div className="bg-muted rounded-lg p-3">
                   <span className="text-muted-foreground text-xs block mb-1">Waktu Berlaku</span>
-                  <span className="text-foreground font-medium">
-                    {(() => {
-                      // Check validity mode from mappedPreview
-                      const validityMode = mappedPreview?.fixed_spin_validity_mode;
-                      if (mappedPreview?.fixed_voucher_valid_unlimited) return 'Tidak Terbatas';
-                      if (mappedPreview?.fixed_voucher_valid_until) return `s/d ${mappedPreview.fixed_voucher_valid_until}`;
-                      if (validityMode === 'relative') {
-                        const duration = mappedPreview?.fixed_spin_validity_duration;
-                        const unit = mappedPreview?.fixed_spin_validity_unit;
-                        if (duration === 24 && unit === 'hours') return 'Reset Harian';
-                        if (duration && unit) return `${duration} ${unit === 'hours' ? 'Jam' : unit === 'days' ? 'Hari' : unit}`;
-                      }
-                      return 'Reset Harian'; // Default fallback
-                    })()}
-                  </span>
+                  {(() => {
+                    // HARD CUTOVER — per-variant V.10.1 voucher validity selectors only.
+                    // Spin duration/mode/unit dropped (V.09 visual residue, no V.10.1 path).
+                    // TODO: ADD_FIELD subVoucher validity for non-voucher unit-based rewards if needed.
+                    const unlimited = sel.subVoucherValidUnlimited(pkRecord as PkV10Record, idx);
+                    const validUntil = sel.subVoucherValidUntil(pkRecord as PkV10Record, idx);
+                    if (unlimited) return <span className="text-foreground font-medium">Tidak Terbatas</span>;
+                    if (validUntil) return <span className="text-foreground font-medium">{`s/d ${validUntil}`}</span>;
+                    return <span className="text-muted-foreground/60 italic text-xs">Belum tersedia di JSON V.10.1</span>;
+                  })()}
                 </div>
               </div>
             </div>
@@ -1327,22 +1261,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         })()}
 
         {hasBlacklist && (() => {
-          const rules = [
-            ...((sub.blacklist?.rules as string[] | undefined) || []),
-            ...gblRules,
-          ];
-          const providers = [
-            ...((sub.blacklist?.providers as string[] | undefined) || []),
-            ...gblProviders,
-          ];
-          const types = [
-            ...((sub.blacklist?.types as string[] | undefined) || []),
-            ...gblTypes,
-          ];
-          const games = [
-            ...((sub.blacklist?.games as string[] | undefined) || []),
-            ...gblGames,
-          ];
+          // HARD CUTOVER — per-variant blacklist sourced from sel.subBlacklist (V.10.1).
+          // Merged with global blacklist_block when this card is the attach target.
+          const rules = [...subBL.rules, ...gblRules];
+          const providers = [...subBL.providers, ...gblProviders];
+          const types = [...subBL.types, ...gblTypes];
+          const games = [...subBL.games, ...gblGames];
           return (
             <div className="mt-4 pt-4 border-t border-border">
               <div className="bg-destructive/10 rounded-lg p-3">
@@ -1404,7 +1328,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // ============================================
   
   const renderExtractedData = () => {
-    if (!extractedPromo) return null;
+    if (!pkRecord) return null;
     
     // Phase A — validation status/warnings sourced from V.10.1 selectors only
     // (see headerStatusRaw / headerWarnings below).
@@ -1495,26 +1419,33 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           </div>
         )}
 
-        {/* COMBO Summary Bar - Conditional for Referral vs Other */}
-        {sel.promoMode(pkRecord as PkV10Record) === 'multi' && extractedPromo.subcategories.length > 1 && (
+        {/* COMBO Summary Bar - Conditional for Referral vs Other (V.10.1 sourced) */}
+        {sel.promoMode(pkRecord as PkV10Record) === 'multi' && sel.subcategoryCount(pkRecord as PkV10Record) > 1 && (
           /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
-            // REFERRAL: Show Tier Summary (simpler layout)
+            // REFERRAL: Show Tier Summary (V.10.1 per-variant selectors)
             <div className="px-6 pb-4">
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-xs text-muted-foreground mb-3">Struktur Tier Komisi</p>
                 <div className="space-y-2">
-                  {[...extractedPromo.subcategories]
-                    .sort((a, b) => (Number(a.calculation_value) || 0) - (Number(b.calculation_value) || 0))
-                    .map((tier, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-card rounded-lg px-3 py-2">
-                      <span className="text-foreground font-medium">
-                        {tier.sub_name || `Tier ${idx + 1}`}
-                      </span>
-                      <Badge className="bg-button-hover/20 text-button-hover border-button-hover/40">
-                        {tier.calculation_value}%
-                      </Badge>
-                    </div>
-                  ))}
+                  {(() => {
+                    const rec = pkRecord as PkV10Record;
+                    const n = sel.subcategoryCount(rec);
+                    const tiers = Array.from({ length: n }, (_, i) => ({
+                      idx: i,
+                      name: sel.subVariantName(rec, i),
+                      value: sel.subCalculationValue(rec, i),
+                    })).sort((a, b) => (Number(a.value) || 0) - (Number(b.value) || 0));
+                    return tiers.map((tier) => (
+                      <div key={tier.idx} className="flex items-center justify-between bg-card rounded-lg px-3 py-2">
+                        <span className="text-foreground font-medium">
+                          {tier.name || `Tier ${tier.idx + 1}`}
+                        </span>
+                        <Badge className="bg-button-hover/20 text-button-hover border-button-hover/40">
+                          {tier.value != null ? `${tier.value}%` : '-'}
+                        </Badge>
+                      </div>
+                    ));
+                  })()}
                 </div>
               </div>
             </div>
@@ -1539,9 +1470,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                       <span className="text-xs text-muted-foreground block mt-1">Payout</span>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
-                      <span className="text-sm font-semibold text-foreground capitalize">
-                        {/* HOLD (Phase B/C): game_types[] has no V.10.1 selector authority */}
-                        {getGameTypesSummary(extractedPromo.subcategories)}
+                      <span className="text-sm font-semibold text-muted-foreground/60 italic">
+                        {/* HARD CUTOVER GAP — game_types[] no V.10.1 path. TODO: ADD_FIELD per-variant game_types. */}
+                        Belum tersedia
                       </span>
                       <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
                     </div>
@@ -1575,110 +1506,65 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
           {/* V1.1 global blacklist is rendered inside the matching variant card (see renderSubCategoryCard). */}
 
-          {/* Subcategories - Conditional for Referral vs Other */}
-          {/* HOLD (Phase B-decision): subcategories iteration + referral simulation columns
-              (winlose / cashback / fee / commission_result) belum punya path V.10.1 di
-              variant_engine.items_block.subcategories[]. NEEDS_SCHEMA_REVIEW. */}
-          {extractedPromo.subcategories.length > 0 && (
+          {/* Subcategories - Conditional for Referral vs Other (V.10.1 sourced) */}
+          {sel.subcategoryCount(pkRecord as PkV10Record) > 0 && (
             /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
-              // REFERRAL: Render as Tier Table with ALL simulation columns
+              // REFERRAL: HARD CUTOVER GAP — simulation columns
+              // (winlose / cashback / fee / wl_bersih / komisi_rp) tidak ada di V.10.1
+              // variant_engine.items_block.subcategories[]. Render empty state.
+              // TODO: NEEDS_SCHEMA_REVIEW — ADD_FIELD per-tier simulation rows
+              //       (winlose, cashback_deduction, fee_deduction, net_winlose,
+              //        commission_result) + min_downline.
               <div>
                 <h4 className="text-base font-semibold text-button-hover mb-4">
                   Detail Tier Komisi Referral
                 </h4>
-                <div className="bg-card rounded-lg overflow-hidden border border-border overflow-x-auto">
-                  <table className="w-full text-sm min-w-[700px]">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Nama Tier</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Min Downline</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Winlose</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Cashback</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Fee</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">WL Bersih</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Komisi %</th>
-                        <th className="text-left py-3 px-3 font-medium text-foreground">Komisi Rp</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...extractedPromo.subcategories]
-                        .sort((a, b) => (Number(a.calculation_value) || 0) - (Number(b.calculation_value) || 0))
-                        .map((tier, idx) => {
-                          // Extract min_downline from sub data, sub_name, or terms pattern
-                          const subMinDownline = (tier as any).min_downline;
-                          const nameMatch = tier.sub_name?.match(/(\d+)\s*(id|member|downline)/i);
-                          const termsMatch = sel.termsConditions(pkRecord as PkV10Record).find(t => 
-                            t.includes(`${tier.calculation_value}%`) && /(\d+)\s*(id|member|downline)/i.test(t)
-                          )?.match(/(\d+)\s*(id|member|downline)/i);
-                          const minDownline = subMinDownline || nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
-                          
-                          // CALCULATION RULES: Ini ATURAN FINAL dari tabel promo, bukan sample!
-                          const ruleWinlose = (tier as any).winlose || (tier as any).sample_winlose || tier.minimum_base;
-                          const ruleCashback = (tier as any).cashback_deduction || (tier as any).sample_cashback;
-                          const ruleFee = (tier as any).fee_deduction || (tier as any).sample_commission_deduction;
-                          const ruleNetWL = (tier as any).net_winlose || (tier as any).sample_net_winlose;
-                          const ruleKomisi = (tier as any).commission_result || (tier as any).sample_commission_result;
-                          
-                          // Format helpers
-                          const formatRp = (val: any) => val && Number(val) > 0 
-                            ? `Rp ${new Intl.NumberFormat('id-ID').format(Number(val))}` 
-                            : '-';
-                          
-                          return (
-                            <tr key={idx} className="border-t border-border">
-                              <td className="py-3 px-3 text-foreground font-medium">{tier.sub_name || `Tier ${idx + 1}`}</td>
-                              <td className="py-3 px-3 text-foreground">{minDownline} ID</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(ruleWinlose)}</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(ruleCashback)}</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(ruleFee)}</td>
-                              <td className="py-3 px-3 text-foreground">{formatRp(ruleNetWL)}</td>
-                              <td className="py-3 px-3 text-button-hover font-semibold">{tier.calculation_value}%</td>
-                              <td className="py-3 px-3 text-amber-400 font-semibold">{formatRp(ruleKomisi)}</td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
+                <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
+                  <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground italic">
+                    Referral tier detail belum tersedia di JSON V.10.1.
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">
+                    Field yang dibutuhkan: <code className="font-mono">min_downline</code>,{" "}
+                    <code className="font-mono">winlose</code>,{" "}
+                    <code className="font-mono">cashback_deduction</code>,{" "}
+                    <code className="font-mono">fee_deduction</code>,{" "}
+                    <code className="font-mono">net_winlose</code>,{" "}
+                    <code className="font-mono">commission_result</code>.
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2 px-1">
-                  * Kolom Winlose, Cashback, Fee, WL Bersih, Komisi Rp adalah ATURAN FINAL dari tabel promo. Threshold tier berdasarkan Min Downline.
-                </p>
               </div>
             ) : (
-              // NON-REFERRAL: Keep existing variant cards
+              // NON-REFERRAL: variant cards iterated from V.10.1 selectors
               <div>
-                {/* Only show header if multi-variant */}
-                {extractedPromo.subcategories.length > 1 && (
+                {sel.subcategoryCount(pkRecord as PkV10Record) > 1 && (
                   <h4 className="text-base font-semibold text-button-hover mb-4">
-                    Sub Kategori ({extractedPromo.subcategories.length} Varian)
+                    Sub Kategori ({sel.subcategoryCount(pkRecord as PkV10Record)} Varian)
                   </h4>
                 )}
                 <div className="space-y-4">
                   {(() => {
-                    const sortedSubs = [...extractedPromo.subcategories]
-                      .sort((a, b) => {
-                        const valueA = Number(a.calculation_value) || 0;
-                        const valueB = Number(b.calculation_value) || 0;
-                        return valueA - valueB; // ascending (smallest first)
-                      });
-
-                    // Pick attach target for global blacklist:
-                    // first variant whose V.10.1 game_domain matches /slot/, else first.
-                    // Phase B3 — read sourced from sel.subGameDomain (PkV10Record).
                     const rec = pkRecord as PkV10Record;
-                    const slotIdx = sortedSubs.findIndex((_s, i) =>
-                      /slot/i.test(String(sel.subGameDomain(rec, i) ?? ''))
+                    const n = sel.subcategoryCount(rec);
+                    // Sort by per-variant calculation_value (V.10.1 selector).
+                    const order = Array.from({ length: n }, (_, i) => i)
+                      .sort((a, b) => (Number(sel.subCalculationValue(rec, a)) || 0) - (Number(sel.subCalculationValue(rec, b)) || 0));
+                    // Pick attach target for global blacklist: first variant whose
+                    // V.10.1 game_domain matches /slot/, else first.
+                    const slotPos = order.findIndex((origIdx) =>
+                      /slot/i.test(String(sel.subGameDomain(rec, origIdx) ?? ''))
                     );
-                    const attachIdx = slotIdx >= 0 ? slotIdx : 0;
+                    const attachOriginalIdx = slotPos >= 0 ? order[slotPos] : order[0];
 
-                    return sortedSubs.map((sub, idx) => {
-                      const archetype = detectRewardArchetype(extractedPromo);
+                    return order.map((origIdx) => {
+                      // archetype dropped — no V.10.1 equivalent for per-variant archetype detection.
+                      // renderSubCategoryCard ignores legacy `sub` and reads from sel.* per idx.
                       return renderSubCategoryCard(
-                        sub,
-                        idx,
-                        archetype,
-                        pkRecord?.variant_engine?.items_block?.subcategories?.[idx] as any,
-                        idx === attachIdx,
+                        undefined,
+                        origIdx,
+                        'unknown' as RewardArchetype,
+                        undefined,
+                        origIdx === attachOriginalIdx,
                       );
                     });
                   })()}
@@ -1815,82 +1701,63 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           })()}
 
           {/* ============================================ */}
-          {/* PHASE 1D: Exchange Table Summary (Read-Only) */}
+          {/* PHASE 1D: Exchange Table (V.10.1 only) */}
           {/* Untuk Category C - Loyalty Point Redemption */}
           {/* ============================================ */}
-          {extractedPromo.loyalty_mechanism?.exchange_table && 
-           extractedPromo.loyalty_mechanism.exchange_table.length > 0 && (() => {
-            const pointName = sel.loyaltyPointName(pkRecord as PkV10Record) || 'Point';
-            const earningRule = sel.loyaltyEarningRule(pkRecord as PkV10Record);
-            // HOLD (Phase B-decision): exchange_table belum punya path authoritative di
-            // V.10.1 (loyalty_engine.exchange_block.exchange_groups bertipe unknown[]).
-            // NEEDS_SCHEMA_REVIEW — preserved as legacy read until schema decision.
+          {(() => {
+            const rec = pkRecord as PkV10Record;
+            const exchangeGroups: unknown[] = (rec as any)?.loyalty_engine?.exchange_block?.exchange_groups ?? [];
+            const pointName = sel.loyaltyPointName(rec) || 'Point';
+            const earningRule = sel.loyaltyEarningRule(rec);
+            const hasLoyalty = !!(rec as any)?.loyalty_engine;
+
+            // Render section only when loyalty_engine exists at all.
+            if (!hasLoyalty) return null;
+
             return (
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <h4 className="text-base font-semibold text-button-hover">
-                  Tabel Penukaran {pointName}
-                </h4>
-                <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/30 text-xs">
-                  Read-Only
-                </Badge>
-              </div>
-              {earningRule && (
-                <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                  <span>Aturan Perolehan:</span>
-                  <Badge variant="outline" className="bg-muted text-foreground">
-                    {earningRule}
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <h4 className="text-base font-semibold text-button-hover">
+                    Tabel Penukaran {pointName}
+                  </h4>
+                  <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/30 text-xs">
+                    Read-Only
                   </Badge>
                 </div>
-              )}
-              <div className="bg-muted rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-card">
-                      <th className="text-right py-2 px-4 text-muted-foreground font-medium">
-                        {pointName}
-                      </th>
-                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Hadiah</th>
-                      <th className="text-left py-2 px-4 text-muted-foreground font-medium">Jenis</th>
-                      <th className="text-right py-2 px-4 text-muted-foreground font-medium">Nilai</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {extractedPromo.loyalty_mechanism.exchange_table.map((item, i) => (
-                      <tr key={i} className="border-b border-border/50 last:border-0">
-                        <td className="py-2 px-4 text-right font-semibold text-purple-400">
-                          {item.points?.toLocaleString('id-ID') || '-'}
-                        </td>
-                        <td className="py-2 px-4 text-foreground">
-                          {item.reward || item.physical_reward_name || '-'}
-                        </td>
-                        <td className="py-2 px-4">
-                          <Badge variant="outline" className={`text-xs ${
-                            item.reward_type === 'hadiah_fisik' 
-                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' 
-                              : item.reward_type === 'uang_tunai'
-                                ? 'bg-green-500/20 text-green-400 border-green-500/40'
-                                : 'bg-blue-500/20 text-blue-400 border-blue-500/40'
-                          }`}>
-                            {item.reward_type === 'hadiah_fisik' ? 'Fisik' 
-                              : item.reward_type === 'uang_tunai' ? 'Tunai' 
-                              : 'Credit'}
-                          </Badge>
-                        </td>
-                        <td className="py-2 px-4 text-right font-semibold text-green-400">
-                          {item.cash_reward_amount 
-                            ? `Rp ${item.cash_reward_amount.toLocaleString('id-ID')}`
-                            : '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {earningRule && (
+                  <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                    <span>Aturan Perolehan:</span>
+                    <Badge variant="outline" className="bg-muted text-foreground">
+                      {earningRule}
+                    </Badge>
+                  </div>
+                )}
+                {/* HARD CUTOVER GAP — exchange_groups bertipe unknown[] di V.10.1.
+                    TODO: NEEDS_SCHEMA_REVIEW — define exchange_block.exchange_groups[] shape:
+                    { points, reward, reward_type, cash_reward_amount, physical_reward_name }. */}
+                {exchangeGroups.length === 0 ? (
+                  <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
+                    <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground italic">
+                      Exchange table belum tersedia di JSON V.10.1.
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">
+                      Path yang dibutuhkan: <code className="font-mono">loyalty_engine.exchange_block.exchange_groups[]</code>
+                      {" "}(shape: points, reward, reward_type, cash_reward_amount).
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
+                    <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground italic">
+                      Exchange table terdeteksi ({exchangeGroups.length} entri) tapi shape belum terdefinisi di V.10.1.
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">
+                      NEEDS_SCHEMA_REVIEW — type masih <code className="font-mono">unknown[]</code>.
+                    </p>
+                  </div>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground/60 mt-2 italic">
-                Tabel penukaran point diekstrak dari sumber. Editing tier tersedia di Phase 2.
-              </p>
-            </div>
             );
           })()}
 
@@ -1945,10 +1812,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   return (
     <div className="relative flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
-        <div className={`page-wrapper p-6 pb-20 ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
+        <div className={`page-wrapper p-6 pb-20 ${!pkRecord && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
           
           {/* INPUT SECTION - Unified Design */}
-          {!extractedPromo && !isExtracting && (
+          {!pkRecord && !isExtracting && (
             <Card className="p-8">
               {/* Header — vertically stacked & centered (mirror Parser) */}
               <div className="flex flex-col items-center text-center gap-3 mb-8">
@@ -2134,7 +2001,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           )}
 
           {/* RESULT SECTION */}
-          {extractedPromo && (
+          {pkRecord && (
             <>
               {/* CLASSIFICATION OVERRIDE (LLM Classifier) — Phase B1: V.10.1 sourced */}
               {(() => {
@@ -2368,7 +2235,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       </ScrollArea>
 
       {/* FIXED ACTION BAR - Consistent with APBESummaryReview */}
-      {extractedPromo && (
+      {pkRecord && (
         <div className="footer-bar">
           <div className="footer-bar-content">
             {/* Left: Restart + Re-Extract */}
@@ -2435,23 +2302,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   </Tooltip>
                 </TooltipProvider>
               )}
-              {/* BUG #4 — non-blocking mapper failure surface (preview only).
-                  pkRecord + Copy JSON remain available even when this shows. */}
-              {mappedPreviewError && extractedPromo && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-xs font-medium text-amber-700 dark:text-amber-300 cursor-help">
-                        <AlertTriangle className="w-3 h-3" />
-                        Preview failed, raw JSON still available
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-md">
-                      <p className="text-xs break-words">{mappedPreviewError}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+              {/* mappedPreviewError surface removed — Hard Cutover (mappedPreview gone). */}
             </div>
             
             {/* Right: Copy JSON + Primary Action */}
