@@ -931,9 +931,11 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           {/* ✅ Hide "Nilai Bonus" for unit-based rewards (Lucky Spin/Voucher/Ticket) in Fixed mode */}
           {(() => {
-            // PARTIAL REBIND — V.10.1 selectors (replaces mappedPreview reads)
+            // Phase A — V.10.1 selectors (Fixed: record-level; Dinamis: per-variant)
             const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
-            const rewardType = isFixedMode ? sel.rewardType(pkRecord as PkV10Record) : displaySub.reward_type;
+            const rewardType = isFixedMode
+              ? sel.rewardType(pkRecord as PkV10Record)
+              : sel.subRewardType(pkRecord as PkV10Record, idx);
             const isUnitBased = isFixedMode && ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
             
             // Skip rendering for unit-based rewards - "Jumlah Reward" shown in detail section instead
@@ -941,14 +943,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             
             // ✅ V1.2.1: Detect APK Fixed promos for special display
             const isApkFixedPromo = isFixedMode && 
-              (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
+              (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(sel.promoName(pkRecord as PkV10Record) || ''));
             
-            // ✅ FIX: Use displaySub (normalized) for calculation display
-            const calcMethod = displaySub.calculation_method;
-            // For APK Fixed, use calculation_value or max_bonus as reward amount
+            // Phase A — calc method/value sourced from per-variant V.10.1 selectors
+            const calcMethod = sel.subCalculationMethod(pkRecord as PkV10Record, idx);
+            const calcValueDirect = sel.subCalculationValue(pkRecord as PkV10Record, idx);
             const calcValue = isApkFixedPromo 
-              ? (displaySub.calculation_value || displaySub.max_bonus || 0)
-              : displaySub.calculation_value;
+              ? (calcValueDirect ?? sel.subMaxReward(pkRecord as PkV10Record, idx) ?? 0)
+              : calcValueDirect;
             
             // Determine if this is a fixed amount display
             const isFixedAmount = calcMethod === 'fixed' || isApkFixedPromo;
