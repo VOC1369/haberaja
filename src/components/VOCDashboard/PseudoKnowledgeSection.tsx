@@ -1239,7 +1239,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   <div className="bg-muted rounded-lg p-3">
                     <span className="text-muted-foreground text-xs block mb-1">Jenis Voucher</span>
                     <span className="text-foreground font-medium">
-                      {mappedPreview?.fixed_voucher_kind || 'Umum'}
+                      {sel.voucherKind(pkRecord as PkV10Record) || 'Umum'}
                     </span>
                   </div>
                 )}
