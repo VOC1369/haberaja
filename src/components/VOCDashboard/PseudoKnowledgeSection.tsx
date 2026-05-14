@@ -1102,7 +1102,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const rewardType = isFixedMode 
                 ? sel.rewardType(pkRecord as PkV10Record) 
-                : sub.reward_type;
+                : sel.subRewardType(pkRecord as PkV10Record, idx);
               
               // Display label based on reward type
               const getRewardLabel = (type: string | undefined) => {
@@ -1112,7 +1112,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   case 'ticket': return 'Ticket';
                   case 'hadiah_fisik': return isFixedMode 
                     ? (sel.physicalItemName(pkRecord as PkV10Record) || 'Hadiah Fisik')
-                    : (sub.physical_reward_name || 'Hadiah Fisik');
+                    : (sel.subPhysicalRewardName(pkRecord as PkV10Record, idx) || 'Hadiah Fisik');
                   case 'uang_tunai': return 'Uang Tunai';
                   default: return 'Credit Game';
                 }
