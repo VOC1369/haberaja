@@ -1811,21 +1811,26 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* Untuk Category C - Loyalty Point Redemption */}
           {/* ============================================ */}
           {extractedPromo.loyalty_mechanism?.exchange_table && 
-           extractedPromo.loyalty_mechanism.exchange_table.length > 0 && (
+           extractedPromo.loyalty_mechanism.exchange_table.length > 0 && (() => {
+            const pointName = sel.loyaltyPointName(pkRecord as PkV10Record) || 'Point';
+            const earningRule = sel.loyaltyEarningRule(pkRecord as PkV10Record);
+            // NOTE: exchange_table itself has no V.10.1 selector path (HOLD).
+            // Phase B1 only rebinds point_name + earning_rule; the table rows remain V.09.
+            return (
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <h4 className="text-base font-semibold text-button-hover">
-                  Tabel Penukaran {extractedPromo.loyalty_mechanism.point_name || 'Point'}
+                  Tabel Penukaran {pointName}
                 </h4>
                 <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/30 text-xs">
                   Read-Only
                 </Badge>
               </div>
-              {extractedPromo.loyalty_mechanism.earning_rule && (
+              {earningRule && (
                 <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
                   <span>Aturan Perolehan:</span>
                   <Badge variant="outline" className="bg-muted text-foreground">
-                    {extractedPromo.loyalty_mechanism.earning_rule}
+                    {earningRule}
                   </Badge>
                 </div>
               )}
@@ -1834,7 +1839,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   <thead>
                     <tr className="border-b border-border bg-card">
                       <th className="text-right py-2 px-4 text-muted-foreground font-medium">
-                        {extractedPromo.loyalty_mechanism.point_name || 'Point'}
+                        {pointName}
                       </th>
                       <th className="text-left py-2 px-4 text-muted-foreground font-medium">Hadiah</th>
                       <th className="text-left py-2 px-4 text-muted-foreground font-medium">Jenis</th>
@@ -1877,7 +1882,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 Tabel penukaran point diekstrak dari sumber. Editing tier tersedia di Phase 2.
               </p>
             </div>
-          )}
+            );
+          })()}
 
           {/* Special Requirements (Syarat Khusus) */}
           {extractedPromo.special_requirements && extractedPromo.special_requirements.length > 0 && (
