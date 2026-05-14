@@ -756,10 +756,41 @@ V10.1-R5. NEW V.10.1 BUSINESS FIELDS — STRICT EVIDENCE ONLY.
    biarkan null / array kosong. JANGAN tebak. JANGAN hitung. JANGAN default 0.
 
    (a) reward_engine.requirement_block.min_withdraw  (number | null)
-       Isi HANYA kalau sumber menyebut "minimum withdraw", "minimal WD",
-       "minimum penarikan", "min calculation withdraw", atau frasa setara.
-       JANGAN turunkan dari min_deposit. JANGAN turunkan dari turnover.
-       Kalau tidak ada → null.
+       Definisi semantik: jumlah minimum (nominal numeric) yang harus
+       tercapai agar user bisa MELAKUKAN WITHDRAW / mencairkan bonus /
+       menarik hasil bonus / cashout / menerima payout.
+
+       Reasoning-first (WAJIB, bukan keyword matching):
+         1. Identifikasi nominal angka di sumber.
+         2. Tentukan tindakan apa yang dibatasi nominal itu.
+         3. Tentukan apakah tindakan tersebut adalah withdraw /
+            pencairan / penarikan / cashout / payout bonus.
+         4. Tentukan apakah nominal itu BENAR syarat MINIMUM untuk
+            tindakan tersebut (bukan maksimum, bukan deposit, bukan
+            turnover, bukan bonus, bukan fee, bukan komisi).
+         Jika keempat kondisi terpenuhi → set min_withdraw = nominal.
+         Jika tidak → min_withdraw = null.
+
+       Contoh konsep (ILUSTRASI semantik, BUKAN daftar keyword):
+         - "Minimum withdraw Rp 100.000" → 100000
+           (nominal membatasi aksi withdraw)
+         - "Bonus baru bisa dicairkan setelah mencapai Rp 100.000" → 100000
+           (nominal membatasi pencairan bonus)
+         - "Minimal penarikan hasil bonus 200rb" → 200000
+           (nominal membatasi penarikan hasil bonus)
+
+       Negatif (JANGAN isi min_withdraw kalau nominal milik):
+         min_deposit, turnover/wagering, min_bonus, max_bonus,
+         min_claim non-withdraw, admin_fee, referral_threshold,
+         commission_threshold, max_withdraw, valid_bet/valid_turnover.
+         Contoh: "Min deposit Rp 50.000, TO 3x" → min_withdraw = null.
+
+       Ambiguity: kalau ada nominal tapi relasi ke withdraw tidak jelas,
+       JANGAN tebak. Set min_withdraw = null DAN tambahkan entry di
+       readiness_engine.observability_block.ambiguity_flags.
+
+       Larangan keras: JANGAN turunkan dari min_deposit, turnover, atau
+       field lain. JANGAN hitung. JANGAN default 0.
 
    (b) variant_engine.items_block.subcategories[].game_types  (string[])
        Isi per-varian saat sumber menyegmentasi game (slot, live_casino,
