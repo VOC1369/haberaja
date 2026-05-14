@@ -936,19 +936,24 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 );
               }
               
-              // ✅ Withdraw Bonus: Min WD
-              // HARD CUTOVER GAP — no V.10.1 selector for min_withdraw yet.
-              // TODO: ADD_FIELD reward_engine.requirement_block.min_withdraw (+ enabled flag).
+              // ✅ Withdraw Bonus: Min WD — Phase D2 rebind to sel.minWithdraw (V.10.1).
               const isWithdrawTrigger = sel.triggerEvent(pkRecord as PkV10Record) === 'Withdraw' || 
                 /withdraw|bonus.*wd|extra.*wd/i.test(sel.promoName(pkRecord as PkV10Record) || '');
               
               if (isWithdrawTrigger) {
+                const minWd = sel.minWithdraw(pkRecord as PkV10Record);
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Min WD</span>
-                    <span className="text-muted-foreground/60 italic text-xs">
-                      Belum tersedia di JSON V.10.1
-                    </span>
+                    {minWd != null ? (
+                      <span className="text-foreground font-medium">
+                        Rp {Number(minWd).toLocaleString('id-ID')}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground/60 italic text-xs">
+                        Belum tersedia di JSON V.10.1
+                      </span>
+                    )}
                   </>
                 );
               }
@@ -1146,12 +1151,18 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 return <span className="text-muted-foreground/60 italic">-</span>;
               }
               
-              // HARD CUTOVER GAP — per-variant game_types[] has no V.10.1 path.
-              // V.10.1 has scope_engine.game_block.game_domain (record-level), beda granularity.
-              // TODO: ADD_FIELD variant_engine.items_block.subcategories[].game_types[].
+              // Phase D2 — per-variant game_types via sel.subGameTypes (V.10.1).
+              const gameTypes = sel.subGameTypes(pkRecord as PkV10Record, idx);
+              if (!gameTypes || gameTypes.length === 0) {
+                return (
+                  <span className="text-muted-foreground/60 italic text-xs">
+                    Jenis game belum tersedia di JSON V.10.1.
+                  </span>
+                );
+              }
               return (
-                <span className="text-muted-foreground/60 italic text-xs">
-                  Belum tersedia di JSON V.10.1
+                <span className="text-foreground font-medium text-sm">
+                  {gameTypes.map(formatGameType).join(', ')}
                 </span>
               );
             })()}
@@ -1470,10 +1481,28 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                       <span className="text-xs text-muted-foreground block mt-1">Payout</span>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
-                      <span className="text-sm font-semibold text-muted-foreground/60 italic">
-                        {/* HARD CUTOVER GAP — game_types[] no V.10.1 path. TODO: ADD_FIELD per-variant game_types. */}
-                        Belum tersedia
-                      </span>
+                      {(() => {
+                        // Phase D2 — derive from sel.subGameTypes across all variants (V.10.1 only).
+                        const n = sel.subcategoryCount(rec);
+                        const all = new Set<string>();
+                        for (let i = 0; i < n; i++) {
+                          for (const g of sel.subGameTypes(rec, i)) all.add(g);
+                        }
+                        if (all.size === 0) {
+                          return (
+                            <span className="text-sm font-semibold text-muted-foreground/60 italic">
+                              Belum tersedia.
+                            </span>
+                          );
+                        }
+                        const formatted = [...all].map(formatGameType);
+                        const text = formatted.length > 3
+                          ? `${formatted.slice(0, 2).join(', ')} +${formatted.length - 2}`
+                          : formatted.join(', ');
+                        return (
+                          <span className="text-sm font-semibold text-foreground">{text}</span>
+                        );
+                      })()}
                       <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
@@ -1509,31 +1538,78 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* Subcategories - Conditional for Referral vs Other (V.10.1 sourced) */}
           {sel.subcategoryCount(pkRecord as PkV10Record) > 0 && (
             /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
-              // REFERRAL: HARD CUTOVER GAP — simulation columns
-              // (winlose / cashback / fee / wl_bersih / komisi_rp) tidak ada di V.10.1
-              // variant_engine.items_block.subcategories[]. Render empty state.
-              // TODO: NEEDS_SCHEMA_REVIEW — ADD_FIELD per-tier simulation rows
-              //       (winlose, cashback_deduction, fee_deduction, net_winlose,
-              //        commission_result) + min_downline.
-              <div>
-                <h4 className="text-base font-semibold text-button-hover mb-4">
-                  Detail Tier Komisi Referral
-                </h4>
-                <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
-                  <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground italic">
-                    Referral tier detail belum tersedia di JSON V.10.1.
-                  </p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">
-                    Field yang dibutuhkan: <code className="font-mono">min_downline</code>,{" "}
-                    <code className="font-mono">winlose</code>,{" "}
-                    <code className="font-mono">cashback_deduction</code>,{" "}
-                    <code className="font-mono">fee_deduction</code>,{" "}
-                    <code className="font-mono">net_winlose</code>,{" "}
-                    <code className="font-mono">commission_result</code>.
-                  </p>
-                </div>
-              </div>
+              // REFERRAL: Phase D2 — render per-tier rows from V.10.1 selectors.
+              // No calculation. Null = unknown, displayed as "-".
+              (() => {
+                const rec = pkRecord as PkV10Record;
+                const n = sel.subcategoryCount(rec);
+                const rows = Array.from({ length: n }, (_, i) => ({
+                  idx: i,
+                  name: sel.subVariantName(rec, i),
+                  pct: sel.subCalculationValue(rec, i),
+                  min_downline: sel.subMinDownline(rec, i),
+                  winlose: sel.subWinlose(rec, i),
+                  cashback: sel.subCashbackDeduction(rec, i),
+                  fee: sel.subFeeDeduction(rec, i),
+                  net: sel.subNetWinlose(rec, i),
+                  commission: sel.subCommissionResult(rec, i),
+                }));
+                const allEmpty = rows.every(r =>
+                  r.min_downline == null && r.winlose == null && r.cashback == null &&
+                  r.fee == null && r.net == null && r.commission == null
+                );
+                const fmt = (v: number | null) =>
+                  v == null ? '-' : Number(v).toLocaleString('id-ID');
+                return (
+                  <div>
+                    <h4 className="text-base font-semibold text-button-hover mb-4">
+                      Detail Tier Komisi Referral
+                    </h4>
+                    {allEmpty ? (
+                      <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
+                        <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground italic">
+                          Detail komisi referral belum tersedia di JSON V.10.1.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-lg border border-border">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted">
+                            <tr>
+                              <th className="text-left p-3 font-semibold text-foreground">Tier</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Min Downline</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Winlose</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Cashback</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Fee</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Net Winlose</th>
+                              <th className="text-right p-3 font-semibold text-foreground">Komisi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.map((r) => (
+                              <tr key={r.idx} className="border-t border-border">
+                                <td className="p-3 text-foreground font-medium">
+                                  {r.name || `Tier ${r.idx + 1}`}
+                                  {r.pct != null && (
+                                    <span className="text-muted-foreground"> ({r.pct}%)</span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.min_downline)}</td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.winlose)}</td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.cashback)}</td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.fee)}</td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.net)}</td>
+                                <td className="p-3 text-right text-foreground">{fmt(r.commission)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
             ) : (
               // NON-REFERRAL: variant cards iterated from V.10.1 selectors
               <div>
@@ -1706,13 +1782,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* ============================================ */}
           {(() => {
             const rec = pkRecord as PkV10Record;
-            const exchangeGroups: unknown[] = (rec as any)?.loyalty_engine?.exchange_block?.exchange_groups ?? [];
             const pointName = sel.loyaltyPointName(rec) || 'Point';
             const earningRule = sel.loyaltyEarningRule(rec);
             const hasLoyalty = !!(rec as any)?.loyalty_engine;
 
             // Render section only when loyalty_engine exists at all.
             if (!hasLoyalty) return null;
+
+            // Phase D2 — typed read from sel.loyaltyExchangeGroups (V.10.1).
+            const groups = sel.loyaltyExchangeGroups(rec) ?? [];
+            const items = groups.flat().filter((it) => it && typeof it === 'object');
 
             return (
               <div>
@@ -1732,29 +1811,48 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     </Badge>
                   </div>
                 )}
-                {/* HARD CUTOVER GAP — exchange_groups bertipe unknown[] di V.10.1.
-                    TODO: NEEDS_SCHEMA_REVIEW — define exchange_block.exchange_groups[] shape:
-                    { points, reward, reward_type, cash_reward_amount, physical_reward_name }. */}
-                {exchangeGroups.length === 0 ? (
+                {items.length === 0 ? (
                   <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
                     <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground italic">
                       Exchange table belum tersedia di JSON V.10.1.
                     </p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">
-                      Path yang dibutuhkan: <code className="font-mono">loyalty_engine.exchange_block.exchange_groups[]</code>
-                      {" "}(shape: points, reward, reward_type, cash_reward_amount).
-                    </p>
                   </div>
                 ) : (
-                  <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
-                    <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground italic">
-                      Exchange table terdeteksi ({exchangeGroups.length} entri) tapi shape belum terdefinisi di V.10.1.
-                    </p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">
-                      NEEDS_SCHEMA_REVIEW — type masih <code className="font-mono">unknown[]</code>.
-                    </p>
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="text-left p-3 font-semibold text-foreground">{pointName}</th>
+                          <th className="text-left p-3 font-semibold text-foreground">Reward</th>
+                          <th className="text-left p-3 font-semibold text-foreground">Tipe</th>
+                          <th className="text-right p-3 font-semibold text-foreground">Cash Reward</th>
+                          <th className="text-left p-3 font-semibold text-foreground">Item Fisik</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((it, i) => {
+                          const points = (it as any).points;
+                          const reward = (it as any).reward;
+                          const rewardType = (it as any).reward_type;
+                          const cash = (it as any).cash_reward_amount;
+                          const physical = (it as any).physical_reward_name;
+                          return (
+                            <tr key={i} className="border-t border-border">
+                              <td className="p-3 text-foreground">
+                                {points != null ? Number(points).toLocaleString('id-ID') : '-'}
+                              </td>
+                              <td className="p-3 text-foreground">{reward ?? '-'}</td>
+                              <td className="p-3 text-muted-foreground">{rewardType ?? '-'}</td>
+                              <td className="p-3 text-right text-foreground">
+                                {cash != null ? `Rp ${Number(cash).toLocaleString('id-ID')}` : '-'}
+                              </td>
+                              <td className="p-3 text-foreground">{physical ?? '-'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
