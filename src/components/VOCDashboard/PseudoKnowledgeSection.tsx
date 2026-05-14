@@ -1201,7 +1201,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               // PARTIAL REBIND — V.10.1 selectors for trigger_event + apk_required
               const isApkPromo = sel.triggerEvent(pkRecord as PkV10Record) === 'APK Download' || 
                 sel.apkRequired(pkRecord as PkV10Record) === true ||
-                /apk|download|aplikasi|freechip|freebet/i.test(extractedPromo?.promo_name || '');
+                /apk|download|aplikasi|freechip|freebet/i.test(sel.promoName(pkRecord as PkV10Record) || '');
               
               if (isApkPromo) {
                 return <span className="text-muted-foreground/60 italic">-</span>;
