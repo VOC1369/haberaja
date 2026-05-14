@@ -1481,10 +1481,28 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                       <span className="text-xs text-muted-foreground block mt-1">Payout</span>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
-                      <span className="text-sm font-semibold text-muted-foreground/60 italic">
-                        {/* HARD CUTOVER GAP — game_types[] no V.10.1 path. TODO: ADD_FIELD per-variant game_types. */}
-                        Belum tersedia
-                      </span>
+                      {(() => {
+                        // Phase D2 — derive from sel.subGameTypes across all variants (V.10.1 only).
+                        const n = sel.subcategoryCount(rec);
+                        const all = new Set<string>();
+                        for (let i = 0; i < n; i++) {
+                          for (const g of sel.subGameTypes(rec, i)) all.add(g);
+                        }
+                        if (all.size === 0) {
+                          return (
+                            <span className="text-sm font-semibold text-muted-foreground/60 italic">
+                              Belum tersedia.
+                            </span>
+                          );
+                        }
+                        const formatted = [...all].map(formatGameType);
+                        const text = formatted.length > 3
+                          ? `${formatted.slice(0, 2).join(', ')} +${formatted.length - 2}`
+                          : formatted.join(', ');
+                        return (
+                          <span className="text-sm font-semibold text-foreground">{text}</span>
+                        );
+                      })()}
                       <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
                     </div>
                     <div className="bg-muted rounded-lg p-3 text-center">
