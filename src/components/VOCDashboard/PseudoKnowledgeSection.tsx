@@ -779,7 +779,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // SYSTEM RULE GATE: C is NOT a promo - cannot be saved to KB
     // Show informational message instead of commit
     // ============================================
-    if (extractedPromo.program_classification === 'C') {
+    if (sel.programClassification(pkRecord as PkV10Record) === 'C') {
       toast.info("Ini adalah System Rule, bukan promo", {
         description: "Aturan sistem tidak disimpan ke Promo KB. Gunakan Copy JSON jika perlu referensi.",
         duration: 5000
@@ -791,7 +791,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     // CONFIDENCE GATE: Block commit if LOW confidence
     // Human must acknowledge before proceeding
     // ============================================
-    if (extractedPromo.classification_confidence === 'low') {
+    if (sel.classificationReviewConfidence(pkRecord as PkV10Record) === 'low') {
       console.log('[ConfidenceGate] LOW confidence detected, showing gate modal');
       setShowConfidenceGate(true);
       return;
