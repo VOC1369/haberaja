@@ -1480,7 +1480,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         </div>
 
         {/* Image Source Warning */}
-        {extractedPromo._extraction_source === 'image' && (
+        {sel.extractionSource(pkRecord as PkV10Record) === 'image' && (
           <div className="px-6 pb-4">
             <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
               <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
