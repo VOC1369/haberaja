@@ -1738,7 +1738,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* PHASE 1C: Event Prizes Summary (Read-Only) */}
           {/* Untuk Category B - Tournament/Leaderboard */}
           {/* ============================================ */}
-          {extractedPromo.prizes && extractedPromo.prizes.length > 0 && (
+          {(() => {
+            const prizes = sel.prizes(pkRecord as PkV10Record) as Array<{
+              rank?: string | number;
+              prize?: string;
+              physical_reward_name?: string;
+              reward_type?: string;
+              value?: number;
+            }>;
+            if (!prizes || prizes.length === 0) return null;
+            return (
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <h4 className="text-base font-semibold text-button-hover">
@@ -1759,7 +1768,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     </tr>
                   </thead>
                   <tbody>
-                    {extractedPromo.prizes.map((prize, i) => (
+                    {prizes.map((prize, i) => (
                       <tr key={i} className="border-b border-border/50 last:border-0">
                         <td className="py-2 px-4 text-foreground font-medium">
                           {prize.rank || `#${i + 1}`}
@@ -1794,7 +1803,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 Data hadiah event diekstrak dari sumber. Editing belum tersedia di versi ini.
               </p>
             </div>
-          )}
+            );
+          })()}
 
           {/* ============================================ */}
           {/* PHASE 1D: Exchange Table Summary (Read-Only) */}
