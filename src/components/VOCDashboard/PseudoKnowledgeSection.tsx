@@ -2127,53 +2127,75 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* RESULT SECTION */}
           {extractedPromo && (
             <>
-              {/* CLASSIFICATION OVERRIDE (LLM Classifier) */}
-              {extractedPromo.program_classification && (
-                <ClassificationOverride
-                  currentCategory={extractedPromo.program_classification}
-                  categoryName={extractedPromo.program_classification_name || 'Unknown'}
-                  confidence={extractedPromo.classification_confidence || 'medium'}
-                  qualityFlags={extractedPromo.quality_flags || []}
-                  rewardMode={sel.rewardMode(pkRecord as PkV10Record) === 'fixed' ? 'fixed' : undefined}
-                  promoSubType={getPromoSubTypeDisplay(
-                    extractedPromo.promo_name,
-                    extractedPromo.promo_type
-                  )}
-                  legacyReasoning={
-                    extractedPromo.classification_q1 ? {
-                      q1: extractedPromo.classification_q1,
-                      q2: extractedPromo.classification_q2!,
-                      q3: extractedPromo.classification_q3!,
-                      q4: extractedPromo.classification_q4!,
-                    } : undefined
-                  }
-                  onOverride={(newCategory, reason) => {
-                    // Apply override and update state
-                    const override = {
-                      from: extractedPromo.program_classification!,
-                      to: newCategory,
-                      reason,
-                      overridden_by: 'anonymous',
-                      timestamp: new Date().toISOString(),
-                    };
-                    
-                    console.log('[ClassificationOverride] Override applied:', override);
-                    
-                    const categoryNames = { A: 'Reward Program', B: 'Event Program', C: 'System Rule' };
-                    setExtractedPromo({
-                      ...extractedPromo,
-                      program_classification: newCategory,
-                      program_classification_name: categoryNames[newCategory],
-                      classification_override: override,
-                    });
-                    
-                    toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
-                  }}
-                />
-              )}
+              {/* CLASSIFICATION OVERRIDE (LLM Classifier) — Phase B1: V.10.1 sourced */}
+              {(() => {
+                const rec = pkRecord as PkV10Record;
+                const classification = sel.programClassification(rec) as ProgramCategory | null;
+                if (!classification) return null;
+                const categoryNames: Record<ProgramCategory, string> = {
+                  A: 'Reward Program',
+                  B: 'Event Program',
+                  C: 'System Rule',
+                };
+                const confidence = (sel.classificationReviewConfidence(rec) || 'medium') as ClassificationConfidence;
+                const qualityFlags = sel.classificationQualityFlags(rec) as QualityFlag[];
+                const qs = sel.classificationQuestions(rec);
+                const adaptQ = (q: { answer: string; reasoning: string; evidence: string } | null) =>
+                  q && q.answer
+                    ? {
+                        answer: q.answer as 'ya' | 'tidak',
+                        reasoning: q.reasoning,
+                        evidence: q.evidence === '' ? null : (q.evidence as string | null),
+                      }
+                    : null;
+                const q1 = adaptQ(qs.q1);
+                const legacyReasoning = q1
+                  ? {
+                      q1,
+                      q2: adaptQ(qs.q2)!,
+                      q3: adaptQ(qs.q3)!,
+                      q4: adaptQ(qs.q4)!,
+                    }
+                  : undefined;
+                return (
+                  <ClassificationOverride
+                    currentCategory={classification}
+                    categoryName={categoryNames[classification] ?? 'Unknown'}
+                    confidence={confidence}
+                    qualityFlags={qualityFlags}
+                    rewardMode={sel.rewardMode(rec) === 'fixed' ? 'fixed' : undefined}
+                    promoSubType={getPromoSubTypeDisplay(
+                      sel.promoName(rec) ?? '',
+                      sel.promoType(rec) ?? '',
+                    )}
+                    legacyReasoning={legacyReasoning}
+                    onOverride={(newCategory, reason) => {
+                      // NOTE (Phase B1): override still mutates V.09 extractedPromo —
+                      // pkRecord override path is out of scope for this phase. Display
+                      // now reads from pkRecord, so override visualization may lag
+                      // until extractor re-runs. Tracked as dual-track debt.
+                      const override = {
+                        from: classification,
+                        to: newCategory,
+                        reason,
+                        overridden_by: 'anonymous',
+                        timestamp: new Date().toISOString(),
+                      };
+                      console.log('[ClassificationOverride] Override applied:', override);
+                      setExtractedPromo({
+                        ...extractedPromo!,
+                        program_classification: newCategory,
+                        program_classification_name: categoryNames[newCategory],
+                        classification_override: override,
+                      });
+                      toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
+                    }}
+                  />
+                );
+              })()}
               
               {/* SYSTEM RULE WARNING BANNER */}
-              {extractedPromo.program_classification === 'C' && (
+              {sel.programClassification(pkRecord as PkV10Record) === 'C' && (
                 <div className="flex items-start gap-3 p-4 bg-pink-500/10 border border-pink-500/30 rounded-xl">
                   <Info className="w-5 h-5 text-pink-400 flex-shrink-0 mt-0.5" />
                   <div className="space-y-1">
