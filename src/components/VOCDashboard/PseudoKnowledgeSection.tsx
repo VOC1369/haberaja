@@ -946,20 +946,18 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 );
               }
               
-              // ✅ Withdraw Bonus: use min_calculation as "Min WD", not min_deposit
-              // HOLD: trigger_event rebound to V.10.1; min_calculation* still on mappedPreview (gap, no V.10.1 path yet)
+              // ✅ Withdraw Bonus: Min WD
+              // HARD CUTOVER GAP — no V.10.1 selector for min_withdraw yet.
+              // TODO: ADD_FIELD reward_engine.requirement_block.min_withdraw (+ enabled flag).
               const isWithdrawTrigger = sel.triggerEvent(pkRecord as PkV10Record) === 'Withdraw' || 
                 /withdraw|bonus.*wd|extra.*wd/i.test(sel.promoName(pkRecord as PkV10Record) || '');
               
               if (isWithdrawTrigger) {
-                const minWdValue = mappedPreview?.min_calculation_enabled 
-                  ? mappedPreview?.min_calculation 
-                  : null;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Min WD</span>
-                    <span className="text-foreground font-medium">
-                      {minWdValue ? `Rp ${Number(minWdValue).toLocaleString('id-ID')}` : "-"}
+                    <span className="text-muted-foreground/60 italic text-xs">
+                      Belum tersedia di JSON V.10.1
                     </span>
                   </>
                 );
