@@ -1782,13 +1782,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* ============================================ */}
           {(() => {
             const rec = pkRecord as PkV10Record;
-            const exchangeGroups: unknown[] = (rec as any)?.loyalty_engine?.exchange_block?.exchange_groups ?? [];
             const pointName = sel.loyaltyPointName(rec) || 'Point';
             const earningRule = sel.loyaltyEarningRule(rec);
             const hasLoyalty = !!(rec as any)?.loyalty_engine;
 
             // Render section only when loyalty_engine exists at all.
             if (!hasLoyalty) return null;
+
+            // Phase D2 — typed read from sel.loyaltyExchangeGroups (V.10.1).
+            const groups = sel.loyaltyExchangeGroups(rec) ?? [];
+            const items = groups.flat().filter((it) => it && typeof it === 'object');
 
             return (
               <div>
@@ -1808,29 +1811,48 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                     </Badge>
                   </div>
                 )}
-                {/* HARD CUTOVER GAP — exchange_groups bertipe unknown[] di V.10.1.
-                    TODO: NEEDS_SCHEMA_REVIEW — define exchange_block.exchange_groups[] shape:
-                    { points, reward, reward_type, cash_reward_amount, physical_reward_name }. */}
-                {exchangeGroups.length === 0 ? (
+                {items.length === 0 ? (
                   <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
                     <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground italic">
                       Exchange table belum tersedia di JSON V.10.1.
                     </p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">
-                      Path yang dibutuhkan: <code className="font-mono">loyalty_engine.exchange_block.exchange_groups[]</code>
-                      {" "}(shape: points, reward, reward_type, cash_reward_amount).
-                    </p>
                   </div>
                 ) : (
-                  <div className="bg-muted/30 border border-dashed border-border rounded-lg p-6 text-center">
-                    <Info className="w-5 h-5 text-muted-foreground/60 mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground italic">
-                      Exchange table terdeteksi ({exchangeGroups.length} entri) tapi shape belum terdefinisi di V.10.1.
-                    </p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">
-                      NEEDS_SCHEMA_REVIEW — type masih <code className="font-mono">unknown[]</code>.
-                    </p>
+                  <div className="overflow-x-auto rounded-lg border border-border">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="text-left p-3 font-semibold text-foreground">{pointName}</th>
+                          <th className="text-left p-3 font-semibold text-foreground">Reward</th>
+                          <th className="text-left p-3 font-semibold text-foreground">Tipe</th>
+                          <th className="text-right p-3 font-semibold text-foreground">Cash Reward</th>
+                          <th className="text-left p-3 font-semibold text-foreground">Item Fisik</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.map((it, i) => {
+                          const points = (it as any).points;
+                          const reward = (it as any).reward;
+                          const rewardType = (it as any).reward_type;
+                          const cash = (it as any).cash_reward_amount;
+                          const physical = (it as any).physical_reward_name;
+                          return (
+                            <tr key={i} className="border-t border-border">
+                              <td className="p-3 text-foreground">
+                                {points != null ? Number(points).toLocaleString('id-ID') : '-'}
+                              </td>
+                              <td className="p-3 text-foreground">{reward ?? '-'}</td>
+                              <td className="p-3 text-muted-foreground">{rewardType ?? '-'}</td>
+                              <td className="p-3 text-right text-foreground">
+                                {cash != null ? `Rp ${Number(cash).toLocaleString('id-ID')}` : '-'}
+                              </td>
+                              <td className="p-3 text-foreground">{physical ?? '-'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
