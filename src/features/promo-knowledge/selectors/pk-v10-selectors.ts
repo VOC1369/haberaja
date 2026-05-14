@@ -732,6 +732,16 @@ export const sel = {
   classificationQualityFlags,
   gameDomain,
   eligibleProviders,
+  // Phase D1 — additive
+  minWithdraw,
+  subGameTypes,
+  subMinDownline,
+  subWinlose,
+  subCashbackDeduction,
+  subFeeDeduction,
+  subNetWinlose,
+  subCommissionResult,
+  loyaltyExchangeGroups,
 } as const;
 
 export type PkV10Selectors = typeof sel;
