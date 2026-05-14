@@ -853,11 +853,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       min_calculation: (normalizedSub as any)?.min_calculation ?? (sub as any).min_calculation,
     };
     
-    const hasPerVariantBlacklist = sub.blacklist?.enabled && (
-      (sub.blacklist.types?.length || 0) > 0 ||
-      (sub.blacklist.providers?.length || 0) > 0 || 
-      (sub.blacklist.games?.length || 0) > 0 || 
-      (sub.blacklist.rules?.length || 0) > 0
+    // Phase A — per-variant blacklist sourced from V.10.1 selector.
+    const subBL = sel.subBlacklist(pkRecord as PkV10Record, idx);
+    const hasPerVariantBlacklist = subBL.enabled && (
+      subBL.types.length + subBL.providers.length + subBL.games.length + subBL.rules.length > 0
     );
 
     // V1.1 global blacklist payload (only attached to designated card)
