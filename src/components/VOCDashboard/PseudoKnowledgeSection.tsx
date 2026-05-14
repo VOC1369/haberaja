@@ -52,7 +52,7 @@ import {
   getStatusLabel,
   mapExtractedToPromoFormData,
   detectRewardArchetype,
-  detectGameDomain,
+  // detectGameDomain — removed Phase B3 (replaced by sel.gameDomain).
   getFieldStatus,
   type ExtractedPromo,
   type ExtractedPromoSubCategory,
@@ -1576,6 +1576,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* V1.1 global blacklist is rendered inside the matching variant card (see renderSubCategoryCard). */}
 
           {/* Subcategories - Conditional for Referral vs Other */}
+          {/* HOLD (Phase B-decision): subcategories iteration + referral simulation columns
+              (winlose / cashback / fee / commission_result) belum punya path V.10.1 di
+              variant_engine.items_block.subcategories[]. NEEDS_SCHEMA_REVIEW. */}
           {extractedPromo.subcategories.length > 0 && (
             /referral|referal|refferal|ajak.*teman/i.test(sel.promoType(pkRecord as PkV10Record) || '') ? (
               // REFERRAL: Render as Tier Table with ALL simulation columns
@@ -1819,8 +1822,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
            extractedPromo.loyalty_mechanism.exchange_table.length > 0 && (() => {
             const pointName = sel.loyaltyPointName(pkRecord as PkV10Record) || 'Point';
             const earningRule = sel.loyaltyEarningRule(pkRecord as PkV10Record);
-            // NOTE: exchange_table itself has no V.10.1 selector path (HOLD).
-            // Phase B1 only rebinds point_name + earning_rule; the table rows remain V.09.
+            // HOLD (Phase B-decision): exchange_table belum punya path authoritative di
+            // V.10.1 (loyalty_engine.exchange_block.exchange_groups bertipe unknown[]).
+            // NEEDS_SCHEMA_REVIEW — preserved as legacy read until schema decision.
             return (
             <div>
               <div className="flex items-center gap-2 mb-4">
