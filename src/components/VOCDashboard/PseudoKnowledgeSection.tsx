@@ -1638,7 +1638,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                         sub,
                         idx,
                         archetype,
-                        mappedPreview?.subcategories?.[idx] as any,
+                        pkRecord?.variant_engine?.items_block?.subcategories?.[idx] as any,
                         idx === attachIdx,
                       );
                     });
