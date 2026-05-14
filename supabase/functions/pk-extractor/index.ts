@@ -1041,6 +1041,9 @@ function buildExtractorToolSchema(): AnyObj {
             type: "object", additionalProperties: false,
             properties: {
               min_deposit: { type: ["number", "null"] },
+              // V.10.1 D1 additive — minimum withdraw threshold (explicit only).
+              // null = not stated; do NOT infer from min_deposit/turnover.
+              min_withdraw: { type: ["number", "null"] },
               unlock_conditions: { type: "array", items: { type: "object", additionalProperties: true } },
             },
           },
