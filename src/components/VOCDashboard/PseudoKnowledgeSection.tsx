@@ -1196,8 +1196,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
 
         {/* ✅ Lucky Spin / Voucher / Ticket specific fields (Fixed Mode only) */}
         {(() => {
-          const isFixedMode = mappedPreview?.reward_mode === 'fixed';
-          const rewardType = isFixedMode ? mappedPreview?.fixed_reward_type : undefined;
+          const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
+          const rewardType = isFixedMode ? sel.rewardType(pkRecord as PkV10Record) : undefined;
           const isUnitBased = isFixedMode && ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
           
           if (!isUnitBased) return null;
