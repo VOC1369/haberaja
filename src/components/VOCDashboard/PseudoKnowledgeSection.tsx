@@ -1146,9 +1146,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 return <span className="text-muted-foreground/60 italic">-</span>;
               }
               
+              // HARD CUTOVER GAP — per-variant game_types[] has no V.10.1 path.
+              // V.10.1 has scope_engine.game_block.game_domain (record-level), beda granularity.
+              // TODO: ADD_FIELD variant_engine.items_block.subcategories[].game_types[].
               return (
-                <span className="text-foreground font-medium">
-                  {sub.game_types?.length ? sub.game_types.map(formatGameTypeLabel).join(", ") : "Semua"}
+                <span className="text-muted-foreground/60 italic text-xs">
+                  Belum tersedia di JSON V.10.1
                 </span>
               );
             })()}
