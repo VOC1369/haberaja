@@ -904,8 +904,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           {/* ✅ Hide "Nilai Bonus" for unit-based rewards (Lucky Spin/Voucher/Ticket) in Fixed mode */}
           {(() => {
-            const isFixedMode = mappedPreview?.reward_mode === 'fixed';
-            const rewardType = isFixedMode ? mappedPreview?.fixed_reward_type : displaySub.reward_type;
+            // PARTIAL REBIND — V.10.1 selectors (replaces mappedPreview reads)
+            const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
+            const rewardType = isFixedMode ? sel.rewardType(pkRecord as PkV10Record) : displaySub.reward_type;
             const isUnitBased = isFixedMode && ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
             
             // Skip rendering for unit-based rewards - "Jumlah Reward" shown in detail section instead
@@ -913,7 +914,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             
             // ✅ V1.2.1: Detect APK Fixed promos for special display
             const isApkFixedPromo = isFixedMode && 
-              (mappedPreview?.require_apk || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
+              (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
             
             // ✅ FIX: Use displaySub (normalized) for calculation display
             const calcMethod = displaySub.calculation_method;
