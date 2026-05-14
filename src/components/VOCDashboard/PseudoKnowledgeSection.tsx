@@ -1812,10 +1812,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   return (
     <div className="relative flex flex-col h-[calc(100vh-120px)]">
       <ScrollArea className="flex-1">
-        <div className={`page-wrapper p-6 pb-20 ${!extractedPromo && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
+        <div className={`page-wrapper p-6 pb-20 ${!pkRecord && !isExtracting ? 'min-h-[calc(100vh-160px)] flex flex-col justify-center' : ''} space-y-6`}>
           
           {/* INPUT SECTION - Unified Design */}
-          {!extractedPromo && !isExtracting && (
+          {!pkRecord && !isExtracting && (
             <Card className="p-8">
               {/* Header — vertically stacked & centered (mirror Parser) */}
               <div className="flex flex-col items-center text-center gap-3 mb-8">
