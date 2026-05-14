@@ -967,7 +967,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               }
               
               // ✅ Withdraw Bonus: use min_calculation as "Min WD", not min_deposit
-              const isWithdrawTrigger = mappedPreview?.trigger_event === 'Withdraw' || 
+              // HOLD: trigger_event rebound to V.10.1; min_calculation* still on mappedPreview (gap, no V.10.1 path yet)
+              const isWithdrawTrigger = sel.triggerEvent(pkRecord as PkV10Record) === 'Withdraw' || 
                 /withdraw|bonus.*wd|extra.*wd/i.test(extractedPromo?.promo_name || '');
               
               if (isWithdrawTrigger) {
@@ -985,10 +986,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               }
               
               // Default: Min Deposit for other promo types
-              // ✅ For Fixed Mode, read from mappedPreview (guarded values)
-              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+              // PARTIAL REBIND — V.10.1 selectors
+              const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const minDepoValue = isFixedMode 
-                ? mappedPreview?.fixed_min_depo 
+                ? sel.minDeposit(pkRecord as PkV10Record) 
                 : sub.minimum_base;
               
               return (
