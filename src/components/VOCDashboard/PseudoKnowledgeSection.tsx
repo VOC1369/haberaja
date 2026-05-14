@@ -1074,8 +1074,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 );
               }
               
-              // Regular max bonus logic
-              const isUnlimited = (sub as any).dinamis_max_claim_unlimited || (sub as any).max_bonus_unlimited;
+              // Phase A — Max Bonus / unlimited sourced from per-variant V.10.1 selectors
+              const isUnlimited = sel.subMaxRewardUnlimited(pkRecord as PkV10Record, idx);
               if (isUnlimited) {
                 return (
                   <>
@@ -1085,7 +1085,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 );
               }
               
-              const maxValue = sub.max_bonus || (sub as any).dinamis_max_claim;
+              const maxValue = sel.subMaxReward(pkRecord as PkV10Record, idx);
               return (
                 <>
                   <span className="text-muted-foreground text-xs block mb-1">Max Bonus</span>
