@@ -1261,22 +1261,12 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         })()}
 
         {hasBlacklist && (() => {
-          const rules = [
-            ...((sub.blacklist?.rules as string[] | undefined) || []),
-            ...gblRules,
-          ];
-          const providers = [
-            ...((sub.blacklist?.providers as string[] | undefined) || []),
-            ...gblProviders,
-          ];
-          const types = [
-            ...((sub.blacklist?.types as string[] | undefined) || []),
-            ...gblTypes,
-          ];
-          const games = [
-            ...((sub.blacklist?.games as string[] | undefined) || []),
-            ...gblGames,
-          ];
+          // HARD CUTOVER — per-variant blacklist sourced from sel.subBlacklist (V.10.1).
+          // Merged with global blacklist_block when this card is the attach target.
+          const rules = [...subBL.rules, ...gblRules];
+          const providers = [...subBL.providers, ...gblProviders];
+          const types = [...subBL.types, ...gblTypes];
+          const games = [...subBL.games, ...gblGames];
           return (
             <div className="mt-4 pt-4 border-t border-border">
               <div className="bg-destructive/10 rounded-lg p-3">
