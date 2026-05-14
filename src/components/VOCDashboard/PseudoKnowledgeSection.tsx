@@ -1041,7 +1041,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const rewardType = isFixedMode 
                 ? sel.rewardType(pkRecord as PkV10Record) 
-                : sub.reward_type;
+                : sel.subRewardType(pkRecord as PkV10Record, idx);
               const isUnitBased = ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
               
               // For unit-based rewards, show "Max Claim Reward" with unit count
