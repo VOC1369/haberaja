@@ -654,6 +654,24 @@ export const sel = {
   maxRewardUnlimited,
   validUntilUnlimited,
   promoValidUntil,
+  // Phase B1 — record-level fields with existing V.10.1 paths
+  extractionSource,
+  promoMode,
+  promoType,
+  eventRewards,
+  applicableMarkets,
+  prizes,
+  loyaltyPointName,
+  loyaltyEarningRule,
+  loyaltyMode,
+  specialRequirements,
+  termsConditions,
+  programClassification,
+  classificationReviewConfidence,
+  classificationQuestions,
+  classificationQualityFlags,
+  gameDomain,
+  eligibleProviders,
 } as const;
 
 export type PkV10Selectors = typeof sel;
