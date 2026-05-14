@@ -151,7 +151,17 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // remain accessible because they read pkRecord, not mappedPreview.
   const [mappedPreviewError, setMappedPreviewError] = useState<string | null>(null);
 
-  // Memoized mapped preview (single source of truth for badge + commit)
+  // ⚠️ TEMPORARY VISUAL DEBT — NOT source of truth.
+  // After PARTIAL SAFE REBIND, mappedPreview is retained ONLY for display
+  // gaps that have no authoritative V.10.1 path yet:
+  //   - fixed_voucher_valid_until / fixed_voucher_valid_unlimited
+  //   - fixed_spin_validity_mode / _duration / _unit
+  //   - min_calculation_enabled / min_calculation
+  // All other displays (reward_mode, reward_type, apk_required, trigger_event,
+  // min_deposit, lucky_spin_max_per_day, physical_item_name, physical_quantity,
+  // voucher_kind, subcategories[idx], RewardArchetypePicker rewardMode prop)
+  // now read directly from PkV10Record via `sel.*` selectors.
+  // DO NOT add new mappedPreview readers. Resolve gaps via V.10.1 schema first.
   const mappedPreview = useMemo<PromoFormData | null>(() => {
     if (!extractedPromo) {
       // Reset error when there is nothing to map (avoid stale message).
