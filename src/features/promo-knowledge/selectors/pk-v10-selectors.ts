@@ -29,6 +29,7 @@ import type {
   PkV10Record,
   PkV10Subcategory,
   PkV10MechanicItem,
+  PkV10QuestionAnswer,
 } from "../schema/pk-v10";
 
 // ──────────────────────────────────────────────────────────────────────────
