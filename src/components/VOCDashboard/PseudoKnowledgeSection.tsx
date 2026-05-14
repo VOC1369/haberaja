@@ -2001,7 +2001,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           )}
 
           {/* RESULT SECTION */}
-          {extractedPromo && (
+          {pkRecord && (
             <>
               {/* CLASSIFICATION OVERRIDE (LLM Classifier) — Phase B1: V.10.1 sourced */}
               {(() => {
