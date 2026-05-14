@@ -592,6 +592,66 @@ function eligibleProviders(rec: PkV10Record): string[] {
   return arr(rec?.scope_engine?.game_block?.eligible_providers);
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// Phase D1 — Additive selectors for newly-added V.10.1 paths.
+// STRICT: path getter only. No fallback, no default, no business logic.
+// ──────────────────────────────────────────────────────────────────────────
+
+/** 42. Min withdraw — `reward_engine.requirement_block.min_withdraw` */
+function minWithdraw(rec: PkV10Record): number | null {
+  return n(rec?.reward_engine?.requirement_block?.min_withdraw);
+}
+
+/** 43. sub.game_types (Phase D1) */
+function subGameTypes(rec: PkV10Record, i: number): string[] {
+  return arr(subAt(rec, i)?.game_types);
+}
+
+/** 44. sub.min_downline (Phase D1 — referral) */
+function subMinDownline(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.min_downline);
+}
+
+/** 45. sub.winlose (Phase D1 — referral) */
+function subWinlose(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.winlose);
+}
+
+/** 46. sub.cashback_deduction (Phase D1 — referral) */
+function subCashbackDeduction(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.cashback_deduction);
+}
+
+/** 47. sub.fee_deduction (Phase D1 — referral) */
+function subFeeDeduction(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.fee_deduction);
+}
+
+/** 48. sub.net_winlose (Phase D1 — referral) */
+function subNetWinlose(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.net_winlose);
+}
+
+/** 49. sub.commission_result (Phase D1 — referral) */
+function subCommissionResult(rec: PkV10Record, i: number): number | null {
+  return n(subAt(rec, i)?.commission_result);
+}
+
+/**
+ * 50. Loyalty exchange groups — `loyalty_engine.exchange_block.exchange_groups`.
+ * Returns array as-is (typed shape per Phase D1). Missing → [].
+ */
+function loyaltyExchangeGroups(rec: PkV10Record): Array<{
+  points?: number | null;
+  reward?: string | null;
+  reward_type?: string | null;
+  cash_reward_amount?: number | null;
+  physical_reward_name?: string | null;
+  [key: string]: unknown;
+}> {
+  return arr(rec?.loyalty_engine?.exchange_block?.exchange_groups);
+}
+
 export const sel = {
   promoName,
   clientId,
