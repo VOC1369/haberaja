@@ -1601,7 +1601,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                           // Extract min_downline from sub data, sub_name, or terms pattern
                           const subMinDownline = (tier as any).min_downline;
                           const nameMatch = tier.sub_name?.match(/(\d+)\s*(id|member|downline)/i);
-                          const termsMatch = extractedPromo.terms_conditions?.find(t => 
+                          const termsMatch = sel.termsConditions(pkRecord as PkV10Record).find(t => 
                             t.includes(`${tier.calculation_value}%`) && /(\d+)\s*(id|member|downline)/i.test(t)
                           )?.match(/(\d+)\s*(id|member|downline)/i);
                           const minDownline = subMinDownline || nameMatch?.[1] || termsMatch?.[1] || ((idx + 1) * 5);
