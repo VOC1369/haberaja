@@ -998,7 +998,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               // ✅ Withdraw Bonus: use min_calculation as "Min WD", not min_deposit
               // HOLD: trigger_event rebound to V.10.1; min_calculation* still on mappedPreview (gap, no V.10.1 path yet)
               const isWithdrawTrigger = sel.triggerEvent(pkRecord as PkV10Record) === 'Withdraw' || 
-                /withdraw|bonus.*wd|extra.*wd/i.test(extractedPromo?.promo_name || '');
+                /withdraw|bonus.*wd|extra.*wd/i.test(sel.promoName(pkRecord as PkV10Record) || '');
               
               if (isWithdrawTrigger) {
                 const minWdValue = mappedPreview?.min_calculation_enabled 
