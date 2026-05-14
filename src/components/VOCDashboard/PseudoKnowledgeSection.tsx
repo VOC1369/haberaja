@@ -1516,39 +1516,42 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               </div>
             </div>
           ) : (
-            // NON-REFERRAL: Keep existing COMBO Summary Bar
-            <div className="px-6 pb-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <span className="text-2xl font-bold text-button-hover">
-                    {extractedPromo.subcategories.length}
-                  </span>
-                  <span className="text-xs text-muted-foreground block mt-1">Sub Kategori</span>
+            // NON-REFERRAL: Keep existing COMBO Summary Bar (Phase A — V.10.1 sourced)
+            (() => {
+              const rec = pkRecord as PkV10Record;
+              const blSummary = getBlacklistSummaryFromRec(rec);
+              return (
+                <div className="px-6 pb-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <span className="text-2xl font-bold text-button-hover">
+                        {sel.subcategoryCount(rec)}
+                      </span>
+                      <span className="text-xs text-muted-foreground block mt-1">Sub Kategori</span>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <span className="text-sm font-semibold text-foreground">
+                        {getPayoutSummaryFromRec(rec)}
+                      </span>
+                      <span className="text-xs text-muted-foreground block mt-1">Payout</span>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <span className="text-sm font-semibold text-foreground capitalize">
+                        {/* HOLD (Phase B/C): game_types[] has no V.10.1 selector authority */}
+                        {getGameTypesSummary(extractedPromo.subcategories)}
+                      </span>
+                      <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <span className={`text-sm font-semibold ${blSummary.active ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {blSummary.text}
+                      </span>
+                      <span className="text-xs text-muted-foreground block mt-1">Blacklist</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <span className="text-sm font-semibold text-foreground">
-                    {getPayoutSummary(extractedPromo.subcategories)}
-                  </span>
-                  <span className="text-xs text-muted-foreground block mt-1">Payout</span>
-                </div>
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <span className="text-sm font-semibold text-foreground capitalize">
-                    {getGameTypesSummary(extractedPromo.subcategories)}
-                  </span>
-                  <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
-                </div>
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <span className={`text-sm font-semibold ${
-                    extractedPromo.global_blacklist?.enabled || extractedPromo.subcategories.some(s => s.blacklist?.enabled) 
-                      ? 'text-destructive' : 'text-muted-foreground'
-                  }`}>
-                    {getBlacklistSummary(extractedPromo)}
-                  </span>
-                  <span className="text-xs text-muted-foreground block mt-1">Blacklist</span>
-                </div>
-              </div>
-            </div>
-          )
+              );
+            })()
         )}
 
         {/* Content */}
