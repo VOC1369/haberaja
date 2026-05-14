@@ -2420,7 +2420,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 </DropdownMenuContent>
               </DropdownMenu>
               {/* System Rule (C) cannot be saved to promo KB */}
-              {extractedPromo.program_classification === 'C' ? (
+              {sel.programClassification(pkRecord as PkV10Record) === 'C' ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
