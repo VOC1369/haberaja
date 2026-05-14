@@ -91,10 +91,16 @@ const formatGameType = (type: string): string => {
   return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 };
 
-// Helper: COMBO Summary - Payout direction (simplified: "Payout: Depan")
-const getPayoutSummary = (subs: ExtractedPromoSubCategory[]): string => {
-  const depan = subs.filter(s => s.payout_direction === 'depan').length;
-  const belakang = subs.filter(s => s.payout_direction === 'belakang').length;
+// Helper: COMBO Summary - Payout direction (Phase A — V.10.1 sourced via per-variant selector)
+const getPayoutSummaryFromRec = (rec: PkV10Record): string => {
+  const n = sel.subcategoryCount(rec);
+  let depan = 0;
+  let belakang = 0;
+  for (let i = 0; i < n; i++) {
+    const p = sel.subPayoutDirection(rec, i);
+    if (p === 'depan') depan++;
+    else if (p === 'belakang') belakang++;
+  }
   if (depan > 0 && belakang > 0) return 'Payout: Campuran';
   if (depan > 0) return 'Payout: Depan';
   if (belakang > 0) return 'Payout: Belakang';
@@ -102,6 +108,7 @@ const getPayoutSummary = (subs: ExtractedPromoSubCategory[]): string => {
 };
 
 // Helper: COMBO Summary - Game types
+// HOLD (Phase B/C): game_types[] has no V.10.1 selector authority. Keep V.09 source.
 const getGameTypesSummary = (subs: ExtractedPromoSubCategory[]): string => {
   const types = [...new Set(subs.flatMap(s => s.game_types || []))];
   if (types.length === 0) return '-';
@@ -110,14 +117,25 @@ const getGameTypesSummary = (subs: ExtractedPromoSubCategory[]): string => {
   return formatted.join(', ');
 };
 
-// Helper: COMBO Summary - Blacklist status
-const getBlacklistSummary = (data: ExtractedPromo): string => {
-  const subsWithBlacklist = data.subcategories.filter(s => s.blacklist?.enabled).length;
-  const globalActive = data.global_blacklist?.enabled;
-  if (globalActive && subsWithBlacklist > 0) return `Global + ${subsWithBlacklist} Varian`;
-  if (globalActive) return 'Global Aktif';
-  if (subsWithBlacklist > 0) return `${subsWithBlacklist} Varian`;
-  return 'Tidak Aktif';
+// Helper: COMBO Summary - Blacklist status (Phase A — V.10.1 sourced via selectors).
+// `enabled` for global is derived from any non-empty providers/games/rules array
+// because `sel.gameBlacklist` does not surface a flat `enabled` flag.
+const getBlacklistSummaryFromRec = (rec: PkV10Record): { text: string; active: boolean } => {
+  const n = sel.subcategoryCount(rec);
+  let subsWithBlacklist = 0;
+  for (let i = 0; i < n; i++) {
+    if (sel.subBlacklist(rec, i).enabled) subsWithBlacklist++;
+  }
+  const g = sel.gameBlacklist(rec);
+  const globalActive = g.providers.length + g.games.length + g.rules.length > 0;
+  const text = globalActive && subsWithBlacklist > 0
+    ? `Global + ${subsWithBlacklist} Varian`
+    : globalActive
+      ? 'Global Aktif'
+      : subsWithBlacklist > 0
+        ? `${subsWithBlacklist} Varian`
+        : 'Tidak Aktif';
+  return { text, active: globalActive || subsWithBlacklist > 0 };
 };
 
 interface PseudoKnowledgeSectionProps {
