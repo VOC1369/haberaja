@@ -1183,9 +1183,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 return <span className="text-muted-foreground/60 italic">-</span>;
               }
 
-              // PHASE 2 — Step 4E: payout sourced from pkRecord via selector only.
-              // Per-variant payout degraded to record-level (BL5 decision).
-              const payoutValue = sel.payoutDirection(pkRecord as PkV10Record);
+              // Phase A — payout sourced from per-variant V.10.1 selector.
+              const payoutValue = sel.subPayoutDirection(pkRecord as PkV10Record, idx);
               const isDepan = payoutValue === 'depan';
               const isBelakang = payoutValue === 'belakang';
               return (
