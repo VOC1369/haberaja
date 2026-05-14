@@ -1170,8 +1170,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             <span className="text-muted-foreground text-xs block mb-1">Jenis Game</span>
             {(() => {
               // ✅ V1.2: APK/Freechip promos don't have game type constraints
-              const isApkPromo = mappedPreview?.trigger_event === 'APK Download' || 
-                mappedPreview?.require_apk === true ||
+              // PARTIAL REBIND — V.10.1 selectors for trigger_event + apk_required
+              const isApkPromo = sel.triggerEvent(pkRecord as PkV10Record) === 'APK Download' || 
+                sel.apkRequired(pkRecord as PkV10Record) === true ||
                 /apk|download|aplikasi|freechip|freebet/i.test(extractedPromo?.promo_name || '');
               
               if (isApkPromo) {
