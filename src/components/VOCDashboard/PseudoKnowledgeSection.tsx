@@ -1059,7 +1059,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               
               // ✅ V1.2.1: APK Fixed promos - show "Nilai Hadiah" with parsed amount
               const isApkFixedPromo = !isUnitBased && isFixedMode && 
-                (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
+                (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(sel.promoName(pkRecord as PkV10Record) || ''));
               
               if (isApkFixedPromo) {
                 // For APK Fixed, max_bonus = reward_amount, never "Unlimited"
