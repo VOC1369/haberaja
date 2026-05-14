@@ -1008,16 +1008,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           </div>
           <div className="bg-muted rounded-lg p-3">
             {(() => {
-              // ✅ Use mappedPreview for Fixed mode (single source of truth)
-              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+              // PARTIAL REBIND — V.10.1 selectors
+              const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const rewardType = isFixedMode 
-                ? mappedPreview?.fixed_reward_type 
+                ? sel.rewardType(pkRecord as PkV10Record) 
                 : sub.reward_type;
               const isUnitBased = ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
               
               // For unit-based rewards, show "Max Claim Reward" with unit count
               if (isUnitBased && isFixedMode) {
-                const maxPerDay = mappedPreview?.fixed_lucky_spin_max_per_day;
+                const maxPerDay = sel.luckySpinMaxPerDay(pkRecord as PkV10Record);
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Max Claim Reward</span>
@@ -1030,7 +1030,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               
               // ✅ V1.2.1: APK Fixed promos - show "Nilai Hadiah" with parsed amount
               const isApkFixedPromo = !isUnitBased && isFixedMode && 
-                (mappedPreview?.require_apk || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
+                (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
               
               if (isApkFixedPromo) {
                 // For APK Fixed, max_bonus = reward_amount, never "Unlimited"
