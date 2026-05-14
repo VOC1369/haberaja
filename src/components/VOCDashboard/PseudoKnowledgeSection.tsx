@@ -91,10 +91,16 @@ const formatGameType = (type: string): string => {
   return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 };
 
-// Helper: COMBO Summary - Payout direction (simplified: "Payout: Depan")
-const getPayoutSummary = (subs: ExtractedPromoSubCategory[]): string => {
-  const depan = subs.filter(s => s.payout_direction === 'depan').length;
-  const belakang = subs.filter(s => s.payout_direction === 'belakang').length;
+// Helper: COMBO Summary - Payout direction (Phase A — V.10.1 sourced via per-variant selector)
+const getPayoutSummaryFromRec = (rec: PkV10Record): string => {
+  const n = sel.subcategoryCount(rec);
+  let depan = 0;
+  let belakang = 0;
+  for (let i = 0; i < n; i++) {
+    const p = sel.subPayoutDirection(rec, i);
+    if (p === 'depan') depan++;
+    else if (p === 'belakang') belakang++;
+  }
   if (depan > 0 && belakang > 0) return 'Payout: Campuran';
   if (depan > 0) return 'Payout: Depan';
   if (belakang > 0) return 'Payout: Belakang';
@@ -102,6 +108,7 @@ const getPayoutSummary = (subs: ExtractedPromoSubCategory[]): string => {
 };
 
 // Helper: COMBO Summary - Game types
+// HOLD (Phase B/C): game_types[] has no V.10.1 selector authority. Keep V.09 source.
 const getGameTypesSummary = (subs: ExtractedPromoSubCategory[]): string => {
   const types = [...new Set(subs.flatMap(s => s.game_types || []))];
   if (types.length === 0) return '-';
@@ -110,14 +117,25 @@ const getGameTypesSummary = (subs: ExtractedPromoSubCategory[]): string => {
   return formatted.join(', ');
 };
 
-// Helper: COMBO Summary - Blacklist status
-const getBlacklistSummary = (data: ExtractedPromo): string => {
-  const subsWithBlacklist = data.subcategories.filter(s => s.blacklist?.enabled).length;
-  const globalActive = data.global_blacklist?.enabled;
-  if (globalActive && subsWithBlacklist > 0) return `Global + ${subsWithBlacklist} Varian`;
-  if (globalActive) return 'Global Aktif';
-  if (subsWithBlacklist > 0) return `${subsWithBlacklist} Varian`;
-  return 'Tidak Aktif';
+// Helper: COMBO Summary - Blacklist status (Phase A — V.10.1 sourced via selectors).
+// `enabled` for global is derived from any non-empty providers/games/rules array
+// because `sel.gameBlacklist` does not surface a flat `enabled` flag.
+const getBlacklistSummaryFromRec = (rec: PkV10Record): { text: string; active: boolean } => {
+  const n = sel.subcategoryCount(rec);
+  let subsWithBlacklist = 0;
+  for (let i = 0; i < n; i++) {
+    if (sel.subBlacklist(rec, i).enabled) subsWithBlacklist++;
+  }
+  const g = sel.gameBlacklist(rec);
+  const globalActive = g.providers.length + g.games.length + g.rules.length > 0;
+  const text = globalActive && subsWithBlacklist > 0
+    ? `Global + ${subsWithBlacklist} Varian`
+    : globalActive
+      ? 'Global Aktif'
+      : subsWithBlacklist > 0
+        ? `${subsWithBlacklist} Varian`
+        : 'Tidak Aktif';
+  return { text, active: globalActive || subsWithBlacklist > 0 };
 };
 
 interface PseudoKnowledgeSectionProps {
@@ -835,11 +853,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       min_calculation: (normalizedSub as any)?.min_calculation ?? (sub as any).min_calculation,
     };
     
-    const hasPerVariantBlacklist = sub.blacklist?.enabled && (
-      (sub.blacklist.types?.length || 0) > 0 ||
-      (sub.blacklist.providers?.length || 0) > 0 || 
-      (sub.blacklist.games?.length || 0) > 0 || 
-      (sub.blacklist.rules?.length || 0) > 0
+    // Phase A — per-variant blacklist sourced from V.10.1 selector.
+    const subBL = sel.subBlacklist(pkRecord as PkV10Record, idx);
+    const hasPerVariantBlacklist = subBL.enabled && (
+      subBL.types.length + subBL.providers.length + subBL.games.length + subBL.rules.length > 0
     );
 
     // V1.1 global blacklist payload (only attached to designated card)
@@ -914,9 +931,11 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           {/* ✅ Hide "Nilai Bonus" for unit-based rewards (Lucky Spin/Voucher/Ticket) in Fixed mode */}
           {(() => {
-            // PARTIAL REBIND — V.10.1 selectors (replaces mappedPreview reads)
+            // Phase A — V.10.1 selectors (Fixed: record-level; Dinamis: per-variant)
             const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
-            const rewardType = isFixedMode ? sel.rewardType(pkRecord as PkV10Record) : displaySub.reward_type;
+            const rewardType = isFixedMode
+              ? sel.rewardType(pkRecord as PkV10Record)
+              : sel.subRewardType(pkRecord as PkV10Record, idx);
             const isUnitBased = isFixedMode && ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
             
             // Skip rendering for unit-based rewards - "Jumlah Reward" shown in detail section instead
@@ -924,14 +943,14 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             
             // ✅ V1.2.1: Detect APK Fixed promos for special display
             const isApkFixedPromo = isFixedMode && 
-              (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
+              (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(sel.promoName(pkRecord as PkV10Record) || ''));
             
-            // ✅ FIX: Use displaySub (normalized) for calculation display
-            const calcMethod = displaySub.calculation_method;
-            // For APK Fixed, use calculation_value or max_bonus as reward amount
+            // Phase A — calc method/value sourced from per-variant V.10.1 selectors
+            const calcMethod = sel.subCalculationMethod(pkRecord as PkV10Record, idx);
+            const calcValueDirect = sel.subCalculationValue(pkRecord as PkV10Record, idx);
             const calcValue = isApkFixedPromo 
-              ? (displaySub.calculation_value || displaySub.max_bonus || 0)
-              : displaySub.calculation_value;
+              ? (calcValueDirect ?? sel.subMaxReward(pkRecord as PkV10Record, idx) ?? 0)
+              : calcValueDirect;
             
             // Determine if this is a fixed amount display
             const isFixedAmount = calcMethod === 'fixed' || isApkFixedPromo;
@@ -965,7 +984,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 archetype?.toLowerCase().includes('cashback');
               
               if (isRollinganArchetype) {
-                const minClaim = (sub as any).min_reward_claim || (sub as any).min_claim;
+                const minClaim = sel.subMinClaim(pkRecord as PkV10Record, idx);
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Min Bonus Cair</span>
@@ -979,7 +998,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               // ✅ Withdraw Bonus: use min_calculation as "Min WD", not min_deposit
               // HOLD: trigger_event rebound to V.10.1; min_calculation* still on mappedPreview (gap, no V.10.1 path yet)
               const isWithdrawTrigger = sel.triggerEvent(pkRecord as PkV10Record) === 'Withdraw' || 
-                /withdraw|bonus.*wd|extra.*wd/i.test(extractedPromo?.promo_name || '');
+                /withdraw|bonus.*wd|extra.*wd/i.test(sel.promoName(pkRecord as PkV10Record) || '');
               
               if (isWithdrawTrigger) {
                 const minWdValue = mappedPreview?.min_calculation_enabled 
@@ -1000,7 +1019,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const minDepoValue = isFixedMode 
                 ? sel.minDeposit(pkRecord as PkV10Record) 
-                : sub.minimum_base;
+                : sel.subMinDeposit(pkRecord as PkV10Record, idx);
               
               return (
                 <>
@@ -1022,7 +1041,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const rewardType = isFixedMode 
                 ? sel.rewardType(pkRecord as PkV10Record) 
-                : sub.reward_type;
+                : sel.subRewardType(pkRecord as PkV10Record, idx);
               const isUnitBased = ['lucky_spin', 'voucher', 'ticket'].includes(rewardType || '');
               
               // For unit-based rewards, show "Max Claim Reward" with unit count
@@ -1040,11 +1059,11 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               
               // ✅ V1.2.1: APK Fixed promos - show "Nilai Hadiah" with parsed amount
               const isApkFixedPromo = !isUnitBased && isFixedMode && 
-                (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(extractedPromo?.promo_name || ''));
+                (sel.apkRequired(pkRecord as PkV10Record) || /apk|freechip|freebet/i.test(sel.promoName(pkRecord as PkV10Record) || ''));
               
               if (isApkFixedPromo) {
                 // For APK Fixed, max_bonus = reward_amount, never "Unlimited"
-                const rewardAmount = sub.max_bonus || displaySub.calculation_value || 0;
+                const rewardAmount = sel.subCalculationValue(pkRecord as PkV10Record, idx) ?? sel.subMaxReward(pkRecord as PkV10Record, idx) ?? 0;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Nilai Hadiah</span>
@@ -1055,8 +1074,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 );
               }
               
-              // Regular max bonus logic
-              const isUnlimited = (sub as any).dinamis_max_claim_unlimited || (sub as any).max_bonus_unlimited;
+              // Phase A — Max Bonus / unlimited sourced from per-variant V.10.1 selectors
+              const isUnlimited = sel.subMaxRewardUnlimited(pkRecord as PkV10Record, idx);
               if (isUnlimited) {
                 return (
                   <>
@@ -1066,7 +1085,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 );
               }
               
-              const maxValue = sub.max_bonus || (sub as any).dinamis_max_claim;
+              const maxValue = sel.subMaxReward(pkRecord as PkV10Record, idx);
               return (
                 <>
                   <span className="text-muted-foreground text-xs block mb-1">Max Bonus</span>
@@ -1083,7 +1102,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const rewardType = isFixedMode 
                 ? sel.rewardType(pkRecord as PkV10Record) 
-                : sub.reward_type;
+                : sel.subRewardType(pkRecord as PkV10Record, idx);
               
               // Display label based on reward type
               const getRewardLabel = (type: string | undefined) => {
@@ -1093,7 +1112,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   case 'ticket': return 'Ticket';
                   case 'hadiah_fisik': return isFixedMode 
                     ? (sel.physicalItemName(pkRecord as PkV10Record) || 'Hadiah Fisik')
-                    : (sub.physical_reward_name || 'Hadiah Fisik');
+                    : (sel.subPhysicalRewardName(pkRecord as PkV10Record, idx) || 'Hadiah Fisik');
                   case 'uang_tunai': return 'Uang Tunai';
                   default: return 'Credit Game';
                 }
@@ -1164,9 +1183,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 return <span className="text-muted-foreground/60 italic">-</span>;
               }
 
-              // PHASE 2 — Step 4E: payout sourced from pkRecord via selector only.
-              // Per-variant payout degraded to record-level (BL5 decision).
-              const payoutValue = sel.payoutDirection(pkRecord as PkV10Record);
+              // Phase A — payout sourced from per-variant V.10.1 selector.
+              const payoutValue = sel.subPayoutDirection(pkRecord as PkV10Record, idx);
               const isDepan = payoutValue === 'depan';
               const isBelakang = payoutValue === 'belakang';
               return (
@@ -1183,7 +1201,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               // PARTIAL REBIND — V.10.1 selectors for trigger_event + apk_required
               const isApkPromo = sel.triggerEvent(pkRecord as PkV10Record) === 'APK Download' || 
                 sel.apkRequired(pkRecord as PkV10Record) === true ||
-                /apk|download|aplikasi|freechip|freebet/i.test(extractedPromo?.promo_name || '');
+                /apk|download|aplikasi|freechip|freebet/i.test(sel.promoName(pkRecord as PkV10Record) || '');
               
               if (isApkPromo) {
                 return <span className="text-muted-foreground/60 italic">-</span>;
@@ -1385,8 +1403,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const renderExtractedData = () => {
     if (!extractedPromo) return null;
     
-    const status = extractedPromo.validation?.status || 'draft';
-    const warnings = extractedPromo.validation?.warnings || [];
+    // Phase A — validation status/warnings sourced from V.10.1 selectors only
+    // (see headerStatusRaw / headerWarnings below).
 
     // PHASE 2 — header display sources from pkRecord via selectors only.
     const headerPromoName = sel.promoName(pkRecord as PkV10Record) ?? "-";
@@ -1498,38 +1516,42 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               </div>
             </div>
           ) : (
-            // NON-REFERRAL: Keep existing COMBO Summary Bar
-            <div className="px-6 pb-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <span className="text-2xl font-bold text-button-hover">
-                    {extractedPromo.subcategories.length}
-                  </span>
-                  <span className="text-xs text-muted-foreground block mt-1">Sub Kategori</span>
+            // NON-REFERRAL: Keep existing COMBO Summary Bar (Phase A — V.10.1 sourced)
+            (() => {
+              const rec = pkRecord as PkV10Record;
+              const blSummary = getBlacklistSummaryFromRec(rec);
+              return (
+                <div className="px-6 pb-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <span className="text-2xl font-bold text-button-hover">
+                        {sel.subcategoryCount(rec)}
+                      </span>
+                      <span className="text-xs text-muted-foreground block mt-1">Sub Kategori</span>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <span className="text-sm font-semibold text-foreground">
+                        {getPayoutSummaryFromRec(rec)}
+                      </span>
+                      <span className="text-xs text-muted-foreground block mt-1">Payout</span>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <span className="text-sm font-semibold text-foreground capitalize">
+                        {/* HOLD (Phase B/C): game_types[] has no V.10.1 selector authority */}
+                        {getGameTypesSummary(extractedPromo.subcategories)}
+                      </span>
+                      <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
+                    </div>
+                    <div className="bg-muted rounded-lg p-3 text-center">
+                      <span className={`text-sm font-semibold ${blSummary.active ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {blSummary.text}
+                      </span>
+                      <span className="text-xs text-muted-foreground block mt-1">Blacklist</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <span className="text-sm font-semibold text-foreground">
-                    {getPayoutSummary(extractedPromo.subcategories)}
-                  </span>
-                  <span className="text-xs text-muted-foreground block mt-1">Payout</span>
-                </div>
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <span className="text-sm font-semibold text-foreground capitalize">
-                    {getGameTypesSummary(extractedPromo.subcategories)}
-                  </span>
-                  <span className="text-xs text-muted-foreground block mt-1">Game Type</span>
-                </div>
-                <div className="bg-muted rounded-lg p-3 text-center">
-                  <span className={`text-sm font-semibold ${
-                    extractedPromo.global_blacklist?.enabled || extractedPromo.subcategories.some(s => s.blacklist?.enabled) 
-                      ? 'text-destructive' : 'text-muted-foreground'
-                  }`}>
-                    {getBlacklistSummary(extractedPromo)}
-                  </span>
-                  <span className="text-xs text-muted-foreground block mt-1">Blacklist</span>
-                </div>
-              </div>
-            </div>
+              );
+            })()
           )
         )}
 
