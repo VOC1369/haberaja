@@ -1107,7 +1107,22 @@ function buildExtractorToolSchema(): AnyObj {
           exchange_block: {
             type: "object", additionalProperties: false,
             properties: {
-              exchange_groups: { type: "array", items: { type: "object", additionalProperties: true } },
+              // V.10.1 D1 — typed item shape, additionalProperties:true preserves
+              // any extra source columns without destruction.
+              exchange_groups: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: true,
+                  properties: {
+                    points: { type: ["number", "null"] },
+                    reward: { type: ["string", "null"] },
+                    reward_type: { type: ["string", "null"] },
+                    cash_reward_amount: { type: ["number", "null"] },
+                    physical_reward_name: { type: ["string", "null"] },
+                  },
+                },
+              },
             },
           },
           tier_block: {
