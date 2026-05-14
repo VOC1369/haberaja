@@ -1214,7 +1214,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 <div className="bg-muted rounded-lg p-3">
                   <span className="text-muted-foreground text-xs block mb-1">Jumlah Reward</span>
                   <span className="text-foreground font-medium">
-                    {mappedPreview?.fixed_reward_quantity || 1}
+                    {sel.physicalQuantity(pkRecord as PkV10Record) ?? 1}
                   </span>
                 </div>
                 {rewardType === 'lucky_spin' && (
