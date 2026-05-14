@@ -2235,7 +2235,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       </ScrollArea>
 
       {/* FIXED ACTION BAR - Consistent with APBESummaryReview */}
-      {extractedPromo && (
+      {pkRecord && (
         <div className="footer-bar">
           <div className="footer-bar-content">
             {/* Left: Restart + Re-Extract */}
