@@ -920,7 +920,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           <div className="bg-muted rounded-lg p-3">
             {(() => {
               // Rollingan/Cashback: No min deposit, use min_claim instead
-              const isRollinganArchetype = sub.calculation_base === 'turnover' || 
+              const isRollinganArchetype = sel.subCalculationBasis(pkRecord as PkV10Record, idx) === 'turnover' || 
                 archetype?.toLowerCase().includes('rollingan') ||
                 archetype?.toLowerCase().includes('cashback');
               
