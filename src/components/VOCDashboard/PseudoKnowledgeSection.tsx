@@ -50,7 +50,7 @@ import {
   fetchUrlContent, 
   getStatusBadgeStyle,
   getStatusLabel,
-  mapExtractedToPromoFormData,
+  // mapExtractedToPromoFormData — removed (Hard Cutover): display authority = V.10.1 only.
   detectRewardArchetype,
   // detectGameDomain — removed Phase B3 (replaced by sel.gameDomain).
   getFieldStatus,
