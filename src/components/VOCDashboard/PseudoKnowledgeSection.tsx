@@ -2073,7 +2073,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   categoryName={extractedPromo.program_classification_name || 'Unknown'}
                   confidence={extractedPromo.classification_confidence || 'medium'}
                   qualityFlags={extractedPromo.quality_flags || []}
-                  rewardMode={mappedPreview?.reward_mode}
+                  rewardMode={sel.rewardMode(pkRecord as PkV10Record) ?? undefined}
                   promoSubType={getPromoSubTypeDisplay(
                     extractedPromo.promo_name,
                     extractedPromo.promo_type
