@@ -1288,7 +1288,19 @@ export interface PkV10LoyaltyEngine {
     loyalty_mode: string; // PkV10LoyaltyMode when filled
   };
   exchange_block: {
-    exchange_groups: unknown[];
+    /**
+     * Phase D1 — strengthened typing. Each entry is an exchange catalog row
+     * (points → reward). Additive: extractor may emit additional keys that
+     * remain accessible via index signature. No business logic, no defaults.
+     */
+    exchange_groups: Array<{
+      points?: number | null;
+      reward?: string | null;
+      reward_type?: string | null;
+      cash_reward_amount?: number | null;
+      physical_reward_name?: string | null;
+      [key: string]: unknown;
+    }>;
   };
   tier_block: {
     tier_system: unknown[]; // entries may carry PkV10TierName
