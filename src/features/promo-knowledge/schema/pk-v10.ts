@@ -1236,6 +1236,12 @@ export interface PkV10RewardEngine {
   requirement_block: {
     min_deposit: number | null;
     unlock_conditions: unknown[];
+    /**
+     * Phase D1 — additive. Authoritative minimum withdraw bonus / minimum
+     * calculation withdraw threshold. `null` means not set; presence (number)
+     * implies "enabled". DO NOT add a separate `min_withdraw_enabled` flag.
+     */
+    min_withdraw?: number | null;
   };
   combo_reward_block: {
     combo_items: unknown[];
