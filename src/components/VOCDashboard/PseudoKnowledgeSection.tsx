@@ -1552,6 +1552,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 </div>
               );
             })()
+          )
         )}
 
         {/* Content */}
