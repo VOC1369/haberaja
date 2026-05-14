@@ -1069,10 +1069,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           </div>
           <div className="bg-muted rounded-lg p-3">
             {(() => {
-              // ✅ Use mappedPreview for Fixed mode (single source of truth)
-              const isFixedMode = mappedPreview?.reward_mode === 'fixed';
+              // PARTIAL REBIND — V.10.1 selectors
+              const isFixedMode = sel.rewardMode(pkRecord as PkV10Record) === 'fixed';
               const rewardType = isFixedMode 
-                ? mappedPreview?.fixed_reward_type 
+                ? sel.rewardType(pkRecord as PkV10Record) 
                 : sub.reward_type;
               
               // Display label based on reward type
@@ -1082,7 +1082,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   case 'voucher': return 'Voucher';
                   case 'ticket': return 'Ticket';
                   case 'hadiah_fisik': return isFixedMode 
-                    ? (mappedPreview?.fixed_physical_reward_name || 'Hadiah Fisik')
+                    ? (sel.physicalItemName(pkRecord as PkV10Record) || 'Hadiah Fisik')
                     : (sub.physical_reward_name || 'Hadiah Fisik');
                   case 'uang_tunai': return 'Uang Tunai';
                   default: return 'Credit Game';
