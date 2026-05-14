@@ -1063,7 +1063,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               
               if (isApkFixedPromo) {
                 // For APK Fixed, max_bonus = reward_amount, never "Unlimited"
-                const rewardAmount = sub.max_bonus || displaySub.calculation_value || 0;
+                const rewardAmount = sel.subCalculationValue(pkRecord as PkV10Record, idx) ?? sel.subMaxReward(pkRecord as PkV10Record, idx) ?? 0;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Nilai Hadiah</span>
