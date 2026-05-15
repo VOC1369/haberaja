@@ -572,6 +572,10 @@ const SYSTEM_EXPLICIT_PATHS = new Set([
   "meta_engine.schema_block.created_by",
   "meta_engine.schema_block.status",
   "meta_engine.schema_block.extractor",
+  // V.10.2 additive lifecycle stamps (system-set when D4 cutover happens; harmless until then).
+  "meta_engine.schema_block.record_type",
+  "meta_engine.schema_block.previous_version",
+  "meta_engine.schema_block.previous_released_at",
   "meta_engine.extraction_block.extracted_at",
 ]);
 
