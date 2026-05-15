@@ -93,6 +93,8 @@ export function createInertPkV10Record(
         calculation_period: "",
         distribution_day: "",
       },
+      // V.10.2 additive
+      schedule_variant_block: { enabled: false, variant_type: "", variants: [] },
     },
 
     time_window_engine: {
