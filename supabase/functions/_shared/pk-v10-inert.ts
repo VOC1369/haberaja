@@ -439,6 +439,8 @@ export function createInertPkV10Record(
         classification_override_reason: "",
         original_llm_category: "",
       },
+      // V.10.2 additive — centralized governance for evidence not modeled in schema.
+      unmodeled_evidence_block: { items: [] },
       schema_block: {
         schema_name: PK_V10_SCHEMA_NAME,
         schema_version: PK_V10_SCHEMA_VERSION,
@@ -450,6 +452,11 @@ export function createInertPkV10Record(
         extractor: PK_V10_EXTRACTOR,
         amendment_type: PK_V10_AMENDMENT_TYPE,
         amendment_reason: PK_V10_AMENDMENT_REASON,
+        // V.10.2 additive — record_type & previous-version lineage.
+        // Defaults stay blank; runtime stays V.10.1 until D4 cutover.
+        record_type: "",
+        previous_version: "",
+        previous_released_at: "",
       },
     },
 
