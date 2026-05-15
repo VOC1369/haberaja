@@ -45,7 +45,7 @@ import { sel } from "@/features/promo-knowledge/selectors/pk-v10-selectors";
 import { AdminVerifySection } from "@/features/promo-knowledge/admin-verify/AdminVerifySection";
 
 // ───────────────────────────────────────────────────────────────────────────
-// Local UI helpers — replace voc-wolf-extractor exports.
+// Local UI helpers — V.10.2 native badge/status formatters.
 // ───────────────────────────────────────────────────────────────────────────
 
 type StatusKind = "draft" | "ready";
