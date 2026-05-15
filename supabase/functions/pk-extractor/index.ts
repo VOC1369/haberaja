@@ -1151,9 +1151,38 @@ function buildExtractorToolSchema(): AnyObj {
               quantity: { type: ["number", "null"] },
             },
           },
+          // V.10.2 additive
+          turnover_tier_by_deposit_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              tiers: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          reward_table_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              table_type: enumStr("reward_table_type"),
+              basis: enumStr("reward_table_basis"),
+              rows: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          unit_reward_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              trigger_unit: enumStr("unit_reward_trigger_unit"),
+              value_per_unit: { type: ["number", "null"] },
+              value_unit: enumStr("unit_reward_value_unit"),
+              is_accumulative: { type: "boolean" },
+              max_units_per_claim: { type: ["number", "null"] },
+              max_reward: { type: ["number", "null"] },
+              note: { type: "string" },
+            },
+          },
         },
       },
-      loyalty_engine: {
         type: "object", additionalProperties: false,
         properties: {
           mechanism_block: {
