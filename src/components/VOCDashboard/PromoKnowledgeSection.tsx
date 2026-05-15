@@ -47,7 +47,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2, Zap, Trophy, Cog, RefreshCw, FileJson, Lock, Unlock } from "lucide-react";
-import { classifyContent, type ProgramCategory } from "@/lib/extractors/category-classifier";
+// Phase 2B: legacy `category-classifier` import dropped. `program_classification`
+// must come from PkV10Record / record_json — not from a runtime LLM call.
+type ProgramCategory = 'A' | 'B' | 'C';
 import { toast } from "@/lib/notify";
 import { PromoFormWizard } from "./PromoFormWizard";
 import { PromoItem, deletePromoDraft, duplicatePromo, normalizePromoData } from "./PromoFormWizard/types";
@@ -538,52 +540,12 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   // ============================================
   // AUTO-CLASSIFICATION LOGIC
   // ============================================
-  
-  const autoClassifyPromo = async (promo: PromoItem) => {
-    // Prevent duplicate calls
-    if (classifyingIds.has(promo.id) || classifyQueueRef.current.has(promo.id)) {
-      return;
-    }
-    
-    classifyQueueRef.current.add(promo.id);
-    setClassifyingIds(prev => new Set(prev).add(promo.id));
-    
-    try {
-      // Build content from promo data for classification
-      const content = [
-        promo.promo_name,
-        promo.promo_type,
-        promo.custom_terms || '',
-        promo.special_requirements?.join(' ') || '',
-      ].filter(Boolean).join('\n');
-      
-      console.log('[AutoClassify] Classifying promo:', promo.id, promo.promo_name);
-      
-      const result = await classifyContent(content);
-      
-      // Update promo in Supabase
-      const success = await promoKB.update(promo.id, {
-        program_classification: result.category,
-        classification_confidence: result.confidence,
-      } as Partial<PromoItem>);
-      
-      if (success) {
-        console.log('[AutoClassify] Saved classification:', result.category, 'for', promo.promo_name);
-        // Reload promos to reflect change
-        loadPromos();
-      }
-    } catch (error) {
-      console.error('[AutoClassify] Failed to classify promo:', promo.id, error);
-      toast.error(`Gagal mengklasifikasi ${promo.promo_name}`);
-    } finally {
-      setClassifyingIds(prev => {
-        const next = new Set(prev);
-        next.delete(promo.id);
-        return next;
-      });
-      classifyQueueRef.current.delete(promo.id);
-    }
-  };
+  // Phase 2B — Legacy auto-classification REMOVED.
+  // `classifyContent` from `lib/extractors/category-classifier` is gone.
+  // Classification authority lives on PkV10Record / record_json. If a promo
+  // has no `program_classification` we render "-" instead of triggering an
+  // LLM call from the list view.
+  // ============================================
 
   // ============================================
   // CATEGORY BADGE WITH OVERRIDE
