@@ -556,43 +556,16 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     const [selectedCategory, setSelectedCategory] = useState<ProgramCategory>(promo.program_classification || 'A');
     const [overrideReason, setOverrideReason] = useState('');
     
-    const isClassifying = classifyingIds.has(promo.id);
-    
-    // For sub-promos, inherit classification from parent
+    // Phase 2B: auto-classification dropped — no `isClassifying` polling.
+    // For sub-promos, inherit classification from parent.
     const isSubPromo = !!(promo as any).parent_id;
-    const classification = isSubPromo && parentPromo?.program_classification 
-      ? parentPromo.program_classification 
+    const classification = isSubPromo && parentPromo?.program_classification
+      ? parentPromo.program_classification
       : promo.program_classification;
-    
-    // Only trigger auto-classification for main promos (not sub-promos)
-    useEffect(() => {
-      if (!isSubPromo && !classification && !isClassifying) {
-        autoClassifyPromo(promo);
-      }
-    }, [classification, isClassifying, promo, isSubPromo]);
-    
-    // Loading state (only for main promos)
-    if (!isSubPromo && isClassifying) {
-      return (
-        <Badge variant="outline" className="border-border text-muted-foreground animate-pulse">
-          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-          Menganalisis...
-        </Badge>
-      );
-    }
-    
-    // Not classified yet (fallback during loading)
+
+    // Not classified yet → render dash (no LLM auto-trigger anymore).
     if (!classification) {
-      if (isSubPromo) {
-        // Sub-promo without parent classification - show dash
-        return <span className="text-muted-foreground">-</span>;
-      }
-      return (
-        <Badge variant="outline" className="border-border text-muted-foreground animate-pulse">
-          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-          Menganalisis...
-        </Badge>
-      );
+      return <span className="text-muted-foreground">-</span>;
     }
     
     const getBadgeContent = () => {
