@@ -53,7 +53,7 @@ type ProgramCategory = 'A' | 'B' | 'C';
 import { toast } from "@/lib/notify";
 import { PromoFormWizard } from "./PromoFormWizard";
 import { PromoItem, deletePromoDraft, duplicatePromo, normalizePromoData } from "./PromoFormWizard/types";
-import { promoKB, localDraftKB } from "@/lib/promo-storage";
+import { promoKB, localDraftKB } from "@/lib/legacy-promo-v09-storage";
 import { generateTermsList, formatNumber } from "./PromoFormWizard/Step4Review";
 import { inferRewardType, formatSubcategoryName, getRewardBadgeInfo } from "@/lib/reward-normalization";
 import {

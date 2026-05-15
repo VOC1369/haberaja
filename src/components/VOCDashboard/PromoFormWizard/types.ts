@@ -1,5 +1,5 @@
 import { PERSONA_BINDING_FIELDS, DROPPED_FIELDS, extractPersonaBindingFields, savePersonaBinding } from '@/lib/promo-persona-binding';
-import { promoKB } from '@/lib/promo-storage';
+import { promoKB } from '@/lib/legacy-promo-v09-storage';
 import { generateUUID } from '@/lib/supabase-client';
 import { applyInertValuesToPayload } from '@/lib/extractors/field-applicability-map';
 import { calculateAllReferralTiers, getDefaultReferralFormulaMetadata } from '@/lib/referral-tier-calculator';
@@ -703,7 +703,7 @@ export interface PromoFormData {
   // operator review di preview, tanpa rebuild dari scratch.
   // Type-only import — di-erase saat compile, tidak menimbulkan circular runtime.
   // =============================================
-  _canonical_projection?: import('@/lib/promo-storage').CanonicalProjection;
+  _canonical_projection?: import('@/lib/legacy-promo-v09-storage').CanonicalProjection;
 }
 
 
