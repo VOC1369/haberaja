@@ -1220,9 +1220,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                       <Loader2 className="h-5 w-5 text-button-hover animate-spin" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-foreground">Wolfbrain.V10 sedang mengekstrak…</div>
+                      <div className="text-sm font-semibold text-foreground">Extractor V.10.1 sedang bekerja…</div>
                       <div className="text-xs text-muted-foreground">
-                        Memproses mechanics dan canonical projection. Estimasi 30–60 detik.
+                        Engine dan Canonical Projection
                       </div>
                     </div>
                   </div>
