@@ -10,7 +10,7 @@
  *  - All UI display reads via `sel.*` (pk-v10-selectors) or PkV10Subcategory.
  *
  * Storage:
- *  - sessionStorage for temporary state (via `extractorSession.save({ pkRecord })`).
+ *  - sessionStorage for temporary state (via `pkSession.save({ pkRecord })`).
  *  - localStorage for final commit to KB (via `savePkRecord(pkRecord)`).
  */
 
@@ -191,7 +191,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       // ignore localStorage errors
     }
 
-    const saved = extractorSession.load();
+    const saved = pkSession.load();
     if (!saved) return;
 
     const savedPk = (saved as { pkRecord?: PkV10Record | null }).pkRecord;
@@ -210,7 +210,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // ============================================
   useEffect(() => {
     if (pkRecord) {
-      extractorSession.save({
+      pkSession.save({
         pkRecord,
         inputMode,
         lastInput: currentInput,
@@ -339,7 +339,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       setPkRecord(null);
       setPkStatus("idle");
       setExtractionSource(null);
-      extractorSession.clear();
+      pkSession.clear();
       toast.info("Image dan hasil ekstraksi dihapus");
     }
   };
@@ -434,7 +434,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           extraction_source: pk.extraction_source,
         });
 
-        extractorSession.save({
+        pkSession.save({
           pkRecord: pk.record,
           inputMode,
           lastInput: currentInput,
@@ -483,7 +483,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
     setImagePreview(null);
     setImageBase64(null);
     setHasUnsavedData(false);
-    extractorSession.clear();
+    pkSession.clear();
     toast.success("Extractor direset", { description: "Siap untuk ekstraksi baru" });
   };
 
@@ -1465,7 +1465,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                extractorSession.clear();
+                pkSession.clear();
                 setShowLeaveDialog(false);
                 if (pendingNavigation) {
                   pendingNavigation();
