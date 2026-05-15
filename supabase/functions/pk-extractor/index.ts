@@ -1570,6 +1570,7 @@ function buildExtractorToolSchema(): AnyObj {
           },
         },
       },
+      ai_confidence: {
         type: "object",
         description: "Map field path → 0..1. WAJIB minimal 10 path penting.",
         additionalProperties: { type: "number", minimum: 0, maximum: 1 },
