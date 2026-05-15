@@ -1116,6 +1116,20 @@ export interface PkV10PeriodEngine {
     calculation_period: string;
     distribution_day: string; // PkV10DistributionDay when filled
   };
+  /** V.10.2 additive — schedule variants override per day/date/time-range. */
+  schedule_variant_block?: {
+    enabled: boolean;
+    variant_type: string;
+    variants: Array<{
+      schedule_label: string;
+      applies_to_days: string[];
+      applies_to_dates: string[];
+      applies_to_time_range: { start: string; end: string };
+      reward_override_amount: number | null;
+      reward_override_percent: number | null;
+      reward_override_note: string;
+    }>;
+  };
 }
 
 export interface PkV10TimeWindowSlot {
@@ -1164,6 +1178,32 @@ export interface PkV10ClaimEngine {
   channels_block: {
     channels: string[]; // PkV10Channel[] when filled
     priority_order: string[];
+  };
+  /** V.10.2 additive — gates that must clear before/around claim. */
+  claim_gate_block?: {
+    requires_deposit_before_claim: boolean;
+    min_deposit_for_claim: number | null;
+    requires_withdraw_before_claim: boolean;
+    min_withdraw_for_claim: number | null;
+    requires_claim_before_play: boolean;
+    requires_claim_before_withdraw_form: boolean;
+    requires_claim_after_event_result: boolean;
+    requires_active_user_id: boolean;
+    active_user_period_value: number | null;
+    active_user_period_unit: string;
+    active_user_min_turnover: number | null;
+    requires_history_deposit: boolean;
+    min_history_deposit_amount: number | null;
+    history_deposit_period_value: number | null;
+    history_deposit_period_unit: string;
+    claim_deadline_value: number | null;
+    claim_deadline_unit: string;
+    claim_deadline_anchor: string;
+    claim_limit_per_period: number | null;
+    claim_limit_period: string;
+    claim_limit_scope: string;
+    claim_reset_frequency: string;
+    claim_reset_time: string;
   };
   proof_requirement_block: {
     proof_required: boolean;
@@ -1226,6 +1266,26 @@ export interface PkV10ScopeEngine {
     games: string[];
     rules: string[];
   };
+  /** V.10.2 additive — odds bounds for sportsbook promos. */
+  odds_constraint_block?: {
+    enabled: boolean;
+    min_odds: number | null;
+    max_odds: number | null;
+    min_odds_per_team: number | null;
+    applies_to_bet_types: string[];
+    note: string;
+  };
+  /** V.10.2 additive — bet/parlay configuration constraints. */
+  bet_configuration_block?: {
+    enabled: boolean;
+    min_team_count: number | null;
+    max_team_count: number | null;
+    min_stake: number | null;
+    max_stake: number | null;
+    required_market_segments: string[];
+    required_market_segment_count: number | null;
+    configuration_notes: string[];
+  };
 }
 
 export interface PkV10RewardEngine {
@@ -1239,6 +1299,37 @@ export interface PkV10RewardEngine {
   };
   combo_reward_block: {
     combo_items: unknown[];
+  };
+  /** V.10.2 additive — turnover multiplier tiers indexed by deposit amount. */
+  turnover_tier_by_deposit_block?: {
+    enabled: boolean;
+    tiers: Array<{
+      tier_id: string;
+      deposit_threshold_min: number | null;
+      deposit_threshold_max: number | null;
+      deposit_threshold_max_unlimited: boolean;
+      turnover_multiplier: number | null;
+      turnover_basis: string;
+      note: string;
+    }>;
+  };
+  /** V.10.2 additive — generic reward table (rows of conditions → reward). */
+  reward_table_block?: {
+    enabled: boolean;
+    table_type: string;
+    basis: string;
+    rows: Array<Record<string, unknown>>;
+  };
+  /** V.10.2 additive — unit-based reward (per spin/per ticket/per stake unit). */
+  unit_reward_block?: {
+    enabled: boolean;
+    trigger_unit: string;
+    value_per_unit: number | null;
+    value_unit: string;
+    is_accumulative: boolean;
+    max_units_per_claim: number | null;
+    max_reward: number | null;
+    note: string;
   };
   matrix_reward_block: {
     axis_x_label: string;
