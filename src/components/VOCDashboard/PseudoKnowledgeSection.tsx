@@ -1220,7 +1220,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                       <Loader2 className="h-5 w-5 text-button-hover animate-spin" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-foreground">Extractor V.10.1 sedang bekerja…</div>
+                      <div className="text-sm font-semibold text-foreground">Extractor V.10.2 sedang bekerja…</div>
                       <div className="text-xs text-muted-foreground">
                         Engine dan Canonical Projection
                       </div>
