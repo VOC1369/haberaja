@@ -37,6 +37,26 @@
  *      - No alias. One concept = one value. New values = habe_raja approval only.
  */
 
+// ──────────────────────────────────────────────────────────────────────────
+// PKB_Wolfbrain V.10 Family Type Namespace
+//
+// OFFICIAL SCHEMA AUTHORITY:  V.10.2
+// CURRENT EXTRACTOR RUNTIME:  V.10.1
+// MIGRATION STATUS:           B1_TYPE_READY_ONLY
+//
+// Important:
+//   - Project/doctrine/schema authority resmi sekarang adalah V.10.2.
+//   - File ini tetap bernama `pk-v10.ts` sebagai namespace keluarga V.10.x.
+//   - V.10.2 fields di Phase B1 sudah ditambahkan sebagai optional type-readiness.
+//   - Runtime extractor belum boleh diklaim fully V.10.2 sampai Phase D/E/F/G PASS.
+//   - Jangan confuse: authority = V.10.2, runtime migration = belum selesai.
+//   - Marker ini bukan label UI; hanya audit/contract identity.
+// ──────────────────────────────────────────────────────────────────────────
+
+export const PK_V10_OFFICIAL_SCHEMA_AUTHORITY = "V.10.2" as const;
+export const PK_V10_CURRENT_EXTRACTOR_RUNTIME = "V.10.1" as const;
+export const PK_V10_MIGRATION_STATUS = "B1_TYPE_READY_ONLY" as const;
+
 export const PK_V10_SCHEMA_NAME = "PKB_Wolfbrain" as const;
 export const PK_V10_SCHEMA_VERSION = "V.10.1" as const;
 export const PK_V10_BASE_LOCKED_AT = "2026-04-28" as const;
