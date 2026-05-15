@@ -1,13 +1,18 @@
 /**
  * EDIT COMMANDS - Strict Pattern Matching
- * 
- * CRITICAL: FAIL FAST — No LLM fallback, no fuzzy matching
- * 
- * Commands harus exact match pattern. Unknown = immediate reject.
- * Better reject 10 commands daripada salah execute 1 mutation.
+ *
+ * CRITICAL: FAIL FAST — No LLM fallback, no fuzzy matching.
+ *
+ * PHASE 2B (Legacy Severance):
+ * - Dependency on V.09 `ExtractedPromo` type DROPPED.
+ * - Per-variant mutation paths (minimum_base / turnover_rule / max_bonus /
+ *   payout_direction / blacklist / game_providers / game_types) belong to the
+ *   V.09 sub-category shape and CANNOT be cleanly mapped to PkV10Record
+ *   (variants[].claim_engine et al). Until a V.10.2 command-mapper exists,
+ *   the executor returns the input untouched with a "disabled" message.
+ * - Parser still recognises legacy command syntax (so the help panel keeps
+ *   working) but every execute call is a no-op reject. NO V.09 bridge.
  */
-
-import type { ExtractedPromo, ExtractedPromoSubCategory } from '@/lib/voc-wolf-extractor';
 
 // ============================================
 // COMMAND PATTERNS (EXACT MATCH ONLY)
@@ -58,9 +63,9 @@ export interface EditCommand {
   raw: string;
 }
 
-export interface CommandResult {
+export interface CommandResult<T = unknown> {
   success: boolean;
-  data: ExtractedPromo;
+  data: T;
   message: string;
 }
 
@@ -245,12 +250,11 @@ export function parseEditCommand(input: string): EditCommand {
 // COMMAND EXECUTOR (STRICT - NO FALLBACK)
 // ============================================
 
-export function executeEditCommand(
+export function executeEditCommand<T>(
   command: EditCommand,
-  currentData: ExtractedPromo
-): CommandResult {
-  
-  // ⚠️ FAIL FAST — Langsung reject jika unknown
+  currentData: T
+): CommandResult<T> {
+  // ⚠️ FAIL FAST — Unknown command always rejected.
   if (command.type === 'unknown') {
     return {
       success: false,
@@ -266,189 +270,19 @@ Contoh yang valid:
 • set payout depan semua varian`,
     };
   }
-  
-  // Deep clone to avoid mutation
-  const newData = JSON.parse(JSON.stringify(currentData)) as ExtractedPromo;
-  
-  switch (command.type) {
-    case 'set_all': {
-      if (!newData.subcategories?.length) {
-        return {
-          success: false,
-          data: currentData,
-          message: `✗ Tidak ada subcategory untuk diubah`,
-        };
-      }
-      
-      const field = command.field!;
-      const value = command.value!;
-      
-      newData.subcategories = newData.subcategories.map(sub => ({
-        ...sub,
-        [field]: value,
-      }));
-      
-      return {
-        success: true,
-        data: newData,
-        message: `✓ Set ${field} = ${formatValue(value)} untuk semua ${newData.subcategories.length} varian`,
-      };
-    }
-    
-    case 'set_varian':
-    case 'ubah': {
-      const idx = command.varianIndex as number;
-      
-      if (!newData.subcategories?.[idx]) {
-        return {
-          success: false,
-          data: currentData,
-          message: `✗ Varian ${idx + 1} tidak ditemukan (total: ${newData.subcategories?.length || 0} varian)`,
-        };
-      }
-      
-      const field = command.field!;
-      const value = command.value!;
-      
-      newData.subcategories[idx] = {
-        ...newData.subcategories[idx],
-        [field]: value,
-      };
-      
-      return {
-        success: true,
-        data: newData,
-        message: `✓ Set ${field} = ${formatValue(value)} untuk varian ${idx + 1}`,
-      };
-    }
-    
-    case 'hapus_blacklist': {
-      if (command.varianIndex === 'all') {
-        newData.subcategories = newData.subcategories?.map(sub => ({
-          ...sub,
-          blacklist: {
-            enabled: false,
-            types: [],
-            providers: [],
-            games: [],
-            rules: [],
-          },
-        })) || [];
-        
-        return {
-          success: true,
-          data: newData,
-          message: `✓ Blacklist dihapus untuk semua varian`,
-        };
-      }
-      
-      const idx = command.varianIndex as number;
-      if (!newData.subcategories?.[idx]) {
-        return {
-          success: false,
-          data: currentData,
-          message: `✗ Varian ${idx + 1} tidak ditemukan`,
-        };
-      }
-      
-      newData.subcategories[idx] = {
-        ...newData.subcategories[idx],
-        blacklist: {
-          enabled: false,
-          types: [],
-          providers: [],
-          games: [],
-          rules: [],
-        },
-      };
-      
-      return {
-        success: true,
-        data: newData,
-        message: `✓ Blacklist dihapus untuk varian ${idx + 1}`,
-      };
-    }
-    
-    case 'tambah_blacklist': {
-      const idx = command.varianIndex as number;
-      if (!newData.subcategories?.[idx]) {
-        return {
-          success: false,
-          data: currentData,
-          message: `✗ Varian ${idx + 1} tidak ditemukan`,
-        };
-      }
-      
-      const games = command.value as string[];
-      const existing = newData.subcategories[idx].blacklist?.games || [];
-      
-      newData.subcategories[idx] = {
-        ...newData.subcategories[idx],
-        blacklist: {
-          ...newData.subcategories[idx].blacklist,
-          enabled: true,
-          games: [...existing, ...games],
-        },
-      };
-      
-      return {
-        success: true,
-        data: newData,
-        message: `✓ Tambah ${games.length} game ke blacklist varian ${idx + 1}: ${games.join(', ')}`,
-      };
-    }
-    
-    case 'set_provider': {
-      const idx = command.varianIndex as number;
-      if (!newData.subcategories?.[idx]) {
-        return {
-          success: false,
-          data: currentData,
-          message: `✗ Varian ${idx + 1} tidak ditemukan`,
-        };
-      }
-      
-      newData.subcategories[idx] = {
-        ...newData.subcategories[idx],
-        game_providers: command.value as string[],
-      };
-      
-      return {
-        success: true,
-        data: newData,
-        message: `✓ Set provider varian ${idx + 1}: ${(command.value as string[]).join(', ')}`,
-      };
-    }
-    
-    case 'set_game_type': {
-      const idx = command.varianIndex as number;
-      if (!newData.subcategories?.[idx]) {
-        return {
-          success: false,
-          data: currentData,
-          message: `✗ Varian ${idx + 1} tidak ditemukan`,
-        };
-      }
-      
-      newData.subcategories[idx] = {
-        ...newData.subcategories[idx],
-        game_types: command.value as string[],
-      };
-      
-      return {
-        success: true,
-        data: newData,
-        message: `✓ Set game type varian ${idx + 1}: ${(command.value as string[]).join(', ')}`,
-      };
-    }
-    
-    default:
-      return {
-        success: false,
-        data: currentData,
-        message: `✗ Perintah tidak dikenali`,
-      };
-  }
+
+  // Phase 2B — Legacy mutation paths disabled.
+  // The V.09 mutation surface (subcategories[idx].minimum_base, turnover_rule,
+  // max_bonus, payout_direction, blacklist, game_providers, game_types) does
+  // not exist in PkV10Record V.10.2. We refuse to mutate rather than build a
+  // V.09 bridge. Commands will be re-enabled when a V.10.2 mutator lands.
+  return {
+    success: false,
+    data: currentData,
+    message:
+      '✗ Edit command engine sedang dinonaktifkan (Phase 2B). ' +
+      'Mutator V.10.2 belum tersedia. Edit langsung di Form Wizard / Admin Verify.',
+  };
 }
 
 // ============================================
