@@ -1116,6 +1116,20 @@ export interface PkV10PeriodEngine {
     calculation_period: string;
     distribution_day: string; // PkV10DistributionDay when filled
   };
+  /** V.10.2 additive — schedule variants override per day/date/time-range. */
+  schedule_variant_block?: {
+    enabled: boolean;
+    variant_type: string;
+    variants: Array<{
+      schedule_label: string;
+      applies_to_days: string[];
+      applies_to_dates: string[];
+      applies_to_time_range: { start: string; end: string };
+      reward_override_amount: number | null;
+      reward_override_percent: number | null;
+      reward_override_note: string;
+    }>;
+  };
 }
 
 export interface PkV10TimeWindowSlot {
@@ -1164,6 +1178,32 @@ export interface PkV10ClaimEngine {
   channels_block: {
     channels: string[]; // PkV10Channel[] when filled
     priority_order: string[];
+  };
+  /** V.10.2 additive — gates that must clear before/around claim. */
+  claim_gate_block?: {
+    requires_deposit_before_claim: boolean;
+    min_deposit_for_claim: number | null;
+    requires_withdraw_before_claim: boolean;
+    min_withdraw_for_claim: number | null;
+    requires_claim_before_play: boolean;
+    requires_claim_before_withdraw_form: boolean;
+    requires_claim_after_event_result: boolean;
+    requires_active_user_id: boolean;
+    active_user_period_value: number | null;
+    active_user_period_unit: string;
+    active_user_min_turnover: number | null;
+    requires_history_deposit: boolean;
+    min_history_deposit_amount: number | null;
+    history_deposit_period_value: number | null;
+    history_deposit_period_unit: string;
+    claim_deadline_value: number | null;
+    claim_deadline_unit: string;
+    claim_deadline_anchor: string;
+    claim_limit_per_period: number | null;
+    claim_limit_period: string;
+    claim_limit_scope: string;
+    claim_reset_frequency: string;
+    claim_reset_time: string;
   };
   proof_requirement_block: {
     proof_required: boolean;
@@ -1226,6 +1266,26 @@ export interface PkV10ScopeEngine {
     games: string[];
     rules: string[];
   };
+  /** V.10.2 additive — odds bounds for sportsbook promos. */
+  odds_constraint_block?: {
+    enabled: boolean;
+    min_odds: number | null;
+    max_odds: number | null;
+    min_odds_per_team: number | null;
+    applies_to_bet_types: string[];
+    note: string;
+  };
+  /** V.10.2 additive — bet/parlay configuration constraints. */
+  bet_configuration_block?: {
+    enabled: boolean;
+    min_team_count: number | null;
+    max_team_count: number | null;
+    min_stake: number | null;
+    max_stake: number | null;
+    required_market_segments: string[];
+    required_market_segment_count: number | null;
+    configuration_notes: string[];
+  };
 }
 
 export interface PkV10RewardEngine {
@@ -1239,6 +1299,37 @@ export interface PkV10RewardEngine {
   };
   combo_reward_block: {
     combo_items: unknown[];
+  };
+  /** V.10.2 additive — turnover multiplier tiers indexed by deposit amount. */
+  turnover_tier_by_deposit_block?: {
+    enabled: boolean;
+    tiers: Array<{
+      tier_id: string;
+      deposit_threshold_min: number | null;
+      deposit_threshold_max: number | null;
+      deposit_threshold_max_unlimited: boolean;
+      turnover_multiplier: number | null;
+      turnover_basis: string;
+      note: string;
+    }>;
+  };
+  /** V.10.2 additive — generic reward table (rows of conditions → reward). */
+  reward_table_block?: {
+    enabled: boolean;
+    table_type: string;
+    basis: string;
+    rows: Array<Record<string, unknown>>;
+  };
+  /** V.10.2 additive — unit-based reward (per spin/per ticket/per stake unit). */
+  unit_reward_block?: {
+    enabled: boolean;
+    trigger_unit: string;
+    value_per_unit: number | null;
+    value_unit: string;
+    is_accumulative: boolean;
+    max_units_per_claim: number | null;
+    max_reward: number | null;
+    note: string;
   };
   matrix_reward_block: {
     axis_x_label: string;
@@ -1550,6 +1641,132 @@ export interface PkV10MetaEngine {
     amendment_type: typeof PK_V10_AMENDMENT_TYPE;
     /** V.10.1 — amendment reason for audit log. */
     amendment_reason: typeof PK_V10_AMENDMENT_REASON;
+    /** V.10.2 additive — record kind (promo|amendment|...). Per Governance G7. */
+    record_type?: string;
+    /** V.10.2 additive — previous schema version this record amends. */
+    previous_version?: string;
+    /** V.10.2 additive — release date of the previous schema version. */
+    previous_released_at?: string;
+  };
+  /** V.10.2 additive — centralized escape hatch for unmodeled evidence (Governance G4). */
+  unmodeled_evidence_block?: {
+    items: Array<{
+      evidence_id: string;
+      captured_at: string;
+      captured_by: string;
+      field_candidate: string;
+      source_text: string;
+      reason_not_modeled: string;
+      suggested_engine: string;
+      suggested_path: string;
+      occurrence_count: number | null;
+      requires_schema_review: boolean;
+      review_status: string;
+      promoted_to_field: string;
+    }>;
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V.10.2 ADDITIVE ENGINES — optional on PkV10Record (runtime still V.10.1)
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface PkV10TicketEngine {
+  ticket_block: {
+    enabled: boolean;
+    ticket_name: string;
+    ticket_source: string;
+    min_deposit_for_ticket: number | null;
+    deposit_per_ticket: number | null;
+    is_accumulative: boolean;
+    max_ticket_per_claim: number | null;
+    max_ticket_per_day: number | null;
+    validity_duration_value: number | null;
+    validity_duration_unit: string;
+    valid_until_time: string;
+    expires_on_reset: boolean;
+    ticket_payment_method_exclusion: string[];
+  };
+  draw_block: {
+    draw_type: string;
+    draw_frequency: string;
+    draw_time: string;
+    winner_selection: string;
+    prize_pool: unknown[];
+  };
+}
+
+export interface PkV10ReferralEngine {
+  program_block: {
+    enabled: boolean;
+    referral_type: string;
+    commission_basis: string;
+    commission_rate: number | null;
+    commission_unit: string;
+    eligible_game_types: string[];
+    eligible_markets: string[];
+    min_downline_count: number | null;
+    min_downline_turnover: number | null;
+    downline_period_value: number | null;
+    downline_period_unit: string;
+    requires_downline_active: boolean;
+    requires_referrer_kyc: boolean;
+    requires_media_disclosure: boolean;
+    is_lifetime: boolean;
+  };
+  commission_rule_block: {
+    rules: Array<Record<string, unknown>>;
+  };
+  deduction_block: {
+    deductions: Array<Record<string, unknown>>;
+  };
+  simulation_block: {
+    rows: Array<Record<string, unknown>>;
+  };
+  distribution_block: {
+    distribution_frequency: string;
+    distribution_day: string;
+    distribution_time: string;
+    auto_credit: boolean;
+  };
+  link_block: {
+    requires_referral_link: boolean;
+    link_format: string;
+    example_link: string;
+  };
+}
+
+export interface PkV10ResultEventEngine {
+  result_match_block: {
+    enabled: boolean;
+    result_source: string;
+    result_source_markets: string[];
+    match_target: string;
+    match_digits: number | null;
+    match_position: string;
+    match_logic: string;
+    claim_window_after_result_hours: number | null;
+  };
+  prize_block: {
+    prizes: Array<Record<string, unknown>>;
+    prize_rules: unknown[];
+  };
+}
+
+export interface PkV10FulfillmentEngine {
+  physical_reward_block: {
+    enabled: boolean;
+    requires_shipping: boolean;
+    shipping_period_anchor: string;
+    shipping_period_value: number | null;
+    shipping_period_unit: string;
+    shipping_method: string;
+    recipient_data_required: string[];
+    stock_replacement_allowed: boolean;
+    tax_borne_by: string;
+    fee_required: boolean;
+    fee_note: string;
+    can_convert_to_credit: boolean | null;
   };
 }
 
@@ -1594,6 +1811,15 @@ export interface PkV10Record {
   projection_engine: PkV10ProjectionEngine;
   risk_engine: PkV10RiskEngine;
   meta_engine: PkV10MetaEngine;
+
+  /** V.10.2 additive — optional, runtime extractor still emits V.10.1 (no ticket_engine). */
+  ticket_engine?: PkV10TicketEngine;
+  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  referral_engine?: PkV10ReferralEngine;
+  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  result_event_engine?: PkV10ResultEventEngine;
+  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  fulfillment_engine?: PkV10FulfillmentEngine;
 
   ai_confidence: Record<string, number>;
   _field_status: Record<string, PkV10FieldStatus | string>;
