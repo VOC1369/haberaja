@@ -872,6 +872,15 @@ function buildExtractorToolSchema(): AnyObj {
               distribution_day: enumStr("distribution_day"),
             },
           },
+          // V.10.2 additive
+          schedule_variant_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              variant_type: enumStr("schedule_variant_type"),
+              variants: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
         },
       },
       time_window_engine: {
@@ -939,6 +948,35 @@ function buildExtractorToolSchema(): AnyObj {
             properties: {
               channels: enumStrArray("channel"),
               priority_order: { type: "array", items: { type: "string" } },
+            },
+          },
+          // V.10.2 additive
+          claim_gate_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              requires_deposit_before_claim: { type: "boolean" },
+              min_deposit_for_claim: { type: ["number", "null"] },
+              requires_withdraw_before_claim: { type: "boolean" },
+              min_withdraw_for_claim: { type: ["number", "null"] },
+              requires_claim_before_play: { type: "boolean" },
+              requires_claim_before_withdraw_form: { type: "boolean" },
+              requires_claim_after_event_result: { type: "boolean" },
+              requires_active_user_id: { type: "boolean" },
+              active_user_period_value: { type: ["number", "null"] },
+              active_user_period_unit: enumStr("active_user_period_unit"),
+              active_user_min_turnover: { type: ["number", "null"] },
+              requires_history_deposit: { type: "boolean" },
+              min_history_deposit_amount: { type: ["number", "null"] },
+              history_deposit_period_value: { type: ["number", "null"] },
+              history_deposit_period_unit: enumStr("history_deposit_period_unit"),
+              claim_deadline_value: { type: ["number", "null"] },
+              claim_deadline_unit: enumStr("claim_deadline_unit"),
+              claim_deadline_anchor: enumStr("claim_deadline_anchor"),
+              claim_limit_per_period: { type: ["number", "null"] },
+              claim_limit_period: enumStr("claim_limit_period"),
+              claim_limit_scope: enumStr("claim_limit_scope"),
+              claim_reset_frequency: enumStr("claim_reset_frequency"),
+              claim_reset_time: { type: "string" },
             },
           },
           proof_requirement_block: {
@@ -1025,6 +1063,31 @@ function buildExtractorToolSchema(): AnyObj {
               rules: { type: "array", items: { type: "string" } },
             },
           },
+          // V.10.2 additive
+          odds_constraint_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              min_odds: { type: ["number", "null"] },
+              max_odds: { type: ["number", "null"] },
+              min_odds_per_team: { type: ["number", "null"] },
+              applies_to_bet_types: enumStrArray("odds_constraint_applies_to_bet_types"),
+              note: { type: "string" },
+            },
+          },
+          bet_configuration_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              min_team_count: { type: ["number", "null"] },
+              max_team_count: { type: ["number", "null"] },
+              min_stake: { type: ["number", "null"] },
+              max_stake: { type: ["number", "null"] },
+              required_market_segments: enumStrArray("bet_configuration_required_market_segments"),
+              required_market_segment_count: { type: ["number", "null"] },
+              configuration_notes: { type: "array", items: { type: "string" } },
+            },
+          },
         },
       },
       reward_engine: {
@@ -1086,6 +1149,36 @@ function buildExtractorToolSchema(): AnyObj {
             properties: {
               item_name: { type: ["string", "null"] },
               quantity: { type: ["number", "null"] },
+            },
+          },
+          // V.10.2 additive
+          turnover_tier_by_deposit_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              tiers: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          reward_table_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              table_type: enumStr("reward_table_type"),
+              basis: enumStr("reward_table_basis"),
+              rows: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          unit_reward_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              trigger_unit: enumStr("unit_reward_trigger_unit"),
+              value_per_unit: { type: ["number", "null"] },
+              value_unit: enumStr("unit_reward_value_unit"),
+              is_accumulative: { type: "boolean" },
+              max_units_per_claim: { type: ["number", "null"] },
+              max_reward: { type: ["number", "null"] },
+              note: { type: "string" },
             },
           },
         },
@@ -1318,6 +1411,163 @@ function buildExtractorToolSchema(): AnyObj {
               original_llm_category: { type: "string" },
             },
           },
+          // V.10.2 additive — centralized governance for fields not modeled in schema.
+          unmodeled_evidence_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              items: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          // V.10.2 additive — schema_block lifecycle fields (system-set, but allowed in tool schema).
+          schema_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              record_type: enumStr("record_type"),
+              previous_version: { type: "string" },
+              previous_released_at: { type: "string" },
+            },
+          },
+        },
+      },
+      // V.10.2 additive — 4 new root engines.
+      ticket_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          ticket_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              ticket_name: { type: "string" },
+              ticket_source: enumStr("ticket_source"),
+              min_deposit_for_ticket: { type: ["number", "null"] },
+              deposit_per_ticket: { type: ["number", "null"] },
+              is_accumulative: { type: "boolean" },
+              max_ticket_per_claim: { type: ["number", "null"] },
+              max_ticket_per_day: { type: ["number", "null"] },
+              validity_duration_value: { type: ["number", "null"] },
+              validity_duration_unit: enumStr("ticket_validity_duration_unit"),
+              valid_until_time: { type: "string" },
+              expires_on_reset: { type: "boolean" },
+              ticket_payment_method_exclusion: enumStrArray("ticket_payment_method_exclusion"),
+            },
+          },
+          draw_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              draw_type: enumStr("draw_type"),
+              draw_frequency: enumStr("draw_frequency"),
+              draw_time: { type: "string" },
+              winner_selection: { type: "string" },
+              prize_pool: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+        },
+      },
+      referral_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          program_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              referral_type: enumStr("referral_type"),
+              commission_basis: enumStr("commission_basis"),
+              commission_rate: { type: ["number", "null"] },
+              commission_unit: enumStr("commission_unit"),
+              eligible_game_types: enumStrArray("referral_eligible_game_types"),
+              eligible_markets: { type: "array", items: { type: "string" } },
+              min_downline_count: { type: ["number", "null"] },
+              min_downline_turnover: { type: ["number", "null"] },
+              downline_period_value: { type: ["number", "null"] },
+              downline_period_unit: enumStr("downline_period_unit"),
+              requires_downline_active: { type: "boolean" },
+              requires_referrer_kyc: { type: "boolean" },
+              requires_media_disclosure: { type: "boolean" },
+              is_lifetime: { type: "boolean" },
+            },
+          },
+          commission_rule_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              rules: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          deduction_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              deductions: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          simulation_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              rows: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          distribution_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              distribution_frequency: enumStr("referral_distribution_frequency"),
+              distribution_day: enumStr("distribution_day"),
+              distribution_time: { type: "string" },
+              auto_credit: { type: "boolean" },
+            },
+          },
+          link_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              requires_referral_link: { type: "boolean" },
+              link_format: { type: "string" },
+              example_link: { type: "string" },
+            },
+          },
+        },
+      },
+      result_event_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          result_match_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              result_source: enumStr("result_source"),
+              result_source_markets: enumStrArray("result_source_markets"),
+              match_target: enumStr("match_target"),
+              match_digits: { type: ["number", "null"] },
+              match_position: enumStr("match_position"),
+              match_logic: enumStr("match_logic"),
+              claim_window_after_result_hours: { type: ["number", "null"] },
+            },
+          },
+          prize_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              prizes: { type: "array", items: { type: "object", additionalProperties: true } },
+              prize_rules: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+      },
+      fulfillment_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          physical_reward_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              requires_shipping: { type: "boolean" },
+              shipping_period_anchor: enumStr("shipping_period_anchor"),
+              shipping_period_value: { type: ["number", "null"] },
+              shipping_period_unit: enumStr("shipping_period_unit"),
+              shipping_method: enumStr("shipping_method"),
+              recipient_data_required: enumStrArray("recipient_data_required"),
+              stock_replacement_allowed: { type: "boolean" },
+              tax_borne_by: enumStr("tax_borne_by"),
+              fee_required: { type: "boolean" },
+              fee_note: { type: "string" },
+              can_convert_to_credit: { type: ["boolean", "null"] },
+            },
+          },
         },
       },
       ai_confidence: {
@@ -1457,6 +1707,25 @@ function subcategoryShape(): JSONSchema {
       lucky_spin_id: { type: ["string", "null"] },
       lucky_spin_max_per_day: { type: ["number", "null"] },
       product_note: { type: ["string", "null"] },
+      // V.10.2 additive — per-variant claim gate.
+      claim_gate_block: {
+        type: "object", additionalProperties: false,
+        properties: {
+          requires_deposit_before_claim: { type: "boolean" },
+          min_deposit_for_claim: { type: ["number", "null"] },
+          requires_withdraw_before_claim: { type: "boolean" },
+          min_withdraw_for_claim: { type: ["number", "null"] },
+          requires_claim_before_play: { type: "boolean" },
+          requires_claim_before_withdraw_form: { type: "boolean" },
+          requires_claim_after_event_result: { type: "boolean" },
+          claim_deadline_value: { type: ["number", "null"] },
+          claim_deadline_unit: enumStr("claim_deadline_unit"),
+          claim_deadline_anchor: enumStr("claim_deadline_anchor"),
+          claim_limit_per_period: { type: ["number", "null"] },
+          claim_limit_period: enumStr("claim_limit_period"),
+          claim_limit_scope: enumStr("claim_limit_scope"),
+        },
+      },
     },
   };
 }
