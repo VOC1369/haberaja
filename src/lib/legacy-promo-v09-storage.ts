@@ -1,4 +1,17 @@
 /**
+ * LEGACY V.09 / v3.1 PROMO STORAGE.
+ *
+ * File ini BUKAN canonical storage PKB_Wolfbrain V.10.2.
+ * File ini menangani PromoFormData, PromoV31 mechanics rows, promo_kb legacy
+ * Supabase I/O, localDraftKB, dan extractorSession compatibility.
+ *
+ * Jangan import file ini dari flow canonical V.10.2 baru.
+ * Jangan rename file ini menjadi pk-v10-2 storage.
+ *
+ * Target cleanup: Phase 2E/2F setelah legacy consumer (PromoFormWizard,
+ * PromoKnowledgeSection legacy, livechat-engine V.09 path) diputus.
+ *
+ * --- Original header (preserved) ---
  * PROMO STORAGE ABSTRACTION LAYER — v3.1
  *
  * Schema: Universal Promo Ontology v3.1
