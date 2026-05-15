@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/lib/notify";
 
-import { extractorSession, type InputMode } from "@/lib/legacy-promo-v09-storage";
+import { pkSession, type InputMode } from "@/features/promo-knowledge/storage/session-storage";
 import { extractPromoV10 } from "@/features/promo-knowledge/extractor/extract-client";
 import { fetchUrlContent } from "@/features/promo-knowledge/extractor/fetch-url-content";
 import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";

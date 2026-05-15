@@ -31,7 +31,10 @@
 import type { PromoFormData, PromoItem } from '@/components/VOCDashboard/PromoFormWizard/types';
 import type { ExtractedPromo } from '@/lib/voc-wolf-extractor';
 import { supabase, DEFAULT_CLIENT_ID, generateUUID, logSupabaseError } from '@/lib/supabase-client';
-import { KEYWORD_OVERRIDE_VERSION } from '@/lib/extractors/category-classifier';
+// Inlined from `@/lib/extractors/category-classifier` (Phase 2E-2) so this
+// legacy V.09 storage no longer drags `lib/extractors/*` into the bundle of
+// any consumer. Keep value in sync if the classifier rev changes.
+const KEYWORD_OVERRIDE_VERSION = '2025-01-14-v3';
 import { generatePromoSummary, PromoSummaryContext } from './promo-summary-generator';
 
 // ============================================
