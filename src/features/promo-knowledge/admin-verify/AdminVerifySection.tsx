@@ -359,15 +359,27 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   // Only required-to-answer when gap-reader marked the provider gap as a blocker.
   const providerPendingRequired =
     showProviderCard && providerPriority === "blocker" && !providerAnswered;
+  // PATCH 3 — Contradiction = critical. Verifikasi tidak boleh dianggap
+  // selesai selama contradiction_flags masih ada di JSON.
+  const contradictionFlags =
+    record.readiness_engine?.observability_block?.contradiction_flags ?? [];
+  const hasContradictions = contradictionFlags.length > 0;
+
   // Apply enabled if (admin answered AND no critical missing) OR normalizer has pending enum patches
   const canApply =
-    ((answeredCount > 0 || providerAnswered) &&
+    !hasContradictions &&
+    (((answeredCount > 0 || providerAnswered) &&
       unansweredCritical.length === 0 &&
       !providerPendingRequired) ||
-    (hasNormalizerPending && !providerPendingRequired);
+      (hasNormalizerPending && !providerPendingRequired));
 
-  // Empty state — only when truly nothing to do
-  if (questions.length === 0 && !hasNormalizerPending && !showProviderCard) {
+  // Empty state — only when truly nothing to do (and no critical contradictions)
+  if (
+    questions.length === 0 &&
+    !hasNormalizerPending &&
+    !showProviderCard &&
+    !hasContradictions
+  ) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
