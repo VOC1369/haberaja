@@ -1641,6 +1641,132 @@ export interface PkV10MetaEngine {
     amendment_type: typeof PK_V10_AMENDMENT_TYPE;
     /** V.10.1 — amendment reason for audit log. */
     amendment_reason: typeof PK_V10_AMENDMENT_REASON;
+    /** V.10.2 additive — record kind (promo|amendment|...). Per Governance G7. */
+    record_type?: string;
+    /** V.10.2 additive — previous schema version this record amends. */
+    previous_version?: string;
+    /** V.10.2 additive — release date of the previous schema version. */
+    previous_released_at?: string;
+  };
+  /** V.10.2 additive — centralized escape hatch for unmodeled evidence (Governance G4). */
+  unmodeled_evidence_block?: {
+    items: Array<{
+      evidence_id: string;
+      captured_at: string;
+      captured_by: string;
+      field_candidate: string;
+      source_text: string;
+      reason_not_modeled: string;
+      suggested_engine: string;
+      suggested_path: string;
+      occurrence_count: number | null;
+      requires_schema_review: boolean;
+      review_status: string;
+      promoted_to_field: string;
+    }>;
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// V.10.2 ADDITIVE ENGINES — optional on PkV10Record (runtime still V.10.1)
+// ──────────────────────────────────────────────────────────────────────────
+
+export interface PkV10TicketEngine {
+  ticket_block: {
+    enabled: boolean;
+    ticket_name: string;
+    ticket_source: string;
+    min_deposit_for_ticket: number | null;
+    deposit_per_ticket: number | null;
+    is_accumulative: boolean;
+    max_ticket_per_claim: number | null;
+    max_ticket_per_day: number | null;
+    validity_duration_value: number | null;
+    validity_duration_unit: string;
+    valid_until_time: string;
+    expires_on_reset: boolean;
+    ticket_payment_method_exclusion: string[];
+  };
+  draw_block: {
+    draw_type: string;
+    draw_frequency: string;
+    draw_time: string;
+    winner_selection: string;
+    prize_pool: unknown[];
+  };
+}
+
+export interface PkV10ReferralEngine {
+  program_block: {
+    enabled: boolean;
+    referral_type: string;
+    commission_basis: string;
+    commission_rate: number | null;
+    commission_unit: string;
+    eligible_game_types: string[];
+    eligible_markets: string[];
+    min_downline_count: number | null;
+    min_downline_turnover: number | null;
+    downline_period_value: number | null;
+    downline_period_unit: string;
+    requires_downline_active: boolean;
+    requires_referrer_kyc: boolean;
+    requires_media_disclosure: boolean;
+    is_lifetime: boolean;
+  };
+  commission_rule_block: {
+    rules: Array<Record<string, unknown>>;
+  };
+  deduction_block: {
+    deductions: Array<Record<string, unknown>>;
+  };
+  simulation_block: {
+    rows: Array<Record<string, unknown>>;
+  };
+  distribution_block: {
+    distribution_frequency: string;
+    distribution_day: string;
+    distribution_time: string;
+    auto_credit: boolean;
+  };
+  link_block: {
+    requires_referral_link: boolean;
+    link_format: string;
+    example_link: string;
+  };
+}
+
+export interface PkV10ResultEventEngine {
+  result_match_block: {
+    enabled: boolean;
+    result_source: string;
+    result_source_markets: string[];
+    match_target: string;
+    match_digits: number | null;
+    match_position: string;
+    match_logic: string;
+    claim_window_after_result_hours: number | null;
+  };
+  prize_block: {
+    prizes: Array<Record<string, unknown>>;
+    prize_rules: unknown[];
+  };
+}
+
+export interface PkV10FulfillmentEngine {
+  physical_reward_block: {
+    enabled: boolean;
+    requires_shipping: boolean;
+    shipping_period_anchor: string;
+    shipping_period_value: number | null;
+    shipping_period_unit: string;
+    shipping_method: string;
+    recipient_data_required: string[];
+    stock_replacement_allowed: boolean;
+    tax_borne_by: string;
+    fee_required: boolean;
+    fee_note: string;
+    can_convert_to_credit: boolean | null;
   };
 }
 
@@ -1685,6 +1811,15 @@ export interface PkV10Record {
   projection_engine: PkV10ProjectionEngine;
   risk_engine: PkV10RiskEngine;
   meta_engine: PkV10MetaEngine;
+
+  /** V.10.2 additive — optional, runtime extractor still emits V.10.1 (no ticket_engine). */
+  ticket_engine?: PkV10TicketEngine;
+  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  referral_engine?: PkV10ReferralEngine;
+  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  result_event_engine?: PkV10ResultEventEngine;
+  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  fulfillment_engine?: PkV10FulfillmentEngine;
 
   ai_confidence: Record<string, number>;
   _field_status: Record<string, PkV10FieldStatus | string>;
