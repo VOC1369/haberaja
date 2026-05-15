@@ -1183,6 +1183,7 @@ function buildExtractorToolSchema(): AnyObj {
           },
         },
       },
+      loyalty_engine: {
         type: "object", additionalProperties: false,
         properties: {
           mechanism_block: {
