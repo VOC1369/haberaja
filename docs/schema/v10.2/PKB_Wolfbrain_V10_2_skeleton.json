@@ -1,0 +1,906 @@
+{
+  "domain": "promo_knowledge",
+  "record_id": "",
+  "created_at": "",
+  "updated_at": "",
+
+  "identity_engine": {
+    "client_block": {
+      "client_id": "",
+      "client_id_field_status": "",
+      "client_id_confidence": "",
+      "client_name": ""
+    },
+    "promo_block": {
+      "promo_name": "",
+      "promo_type": "",
+      "target_user": "",
+      "promo_mode": ""
+    }
+  },
+
+  "classification_engine": {
+    "result_block": {
+      "program_classification": "",
+      "secondary_classifications": [],
+      "review_confidence": ""
+    },
+    "question_block": {
+      "q1": { "answer": "", "reasoning": "", "evidence": "" },
+      "q2": { "answer": "", "reasoning": "", "evidence": "" },
+      "q3": { "answer": "", "reasoning": "", "evidence": "" },
+      "q4": { "answer": "", "reasoning": "", "evidence": "" }
+    },
+    "meta_block": {
+      "quality_flags": [],
+      "evidence_count": null,
+      "override": false,
+      "override_detail": null,
+      "prompt_version": "",
+      "latency_ms": null
+    }
+  },
+
+  "taxonomy_engine": {
+    "mode_block": {
+      "mode": "",
+      "tier_archetype": null
+    },
+    "logic_block": {
+      "conversion_formula": "",
+      "turnover_basis": null
+    },
+    "tier_threshold_block": {
+      "enabled": false,
+      "basis": "",
+      "unit": "",
+      "ranges": [
+        {
+          "range_id": "",
+          "label": "",
+          "threshold_min": null,
+          "threshold_max": null,
+          "threshold_max_unlimited": false,
+          "reward_percent": null,
+          "reward_amount": null,
+          "reward_unit": "",
+          "note": ""
+        }
+      ]
+    }
+  },
+
+  "period_engine": {
+    "validity_block": {
+      "valid_from": null,
+      "valid_until": null,
+      "valid_until_unlimited": false,
+      "validity_mode": "",
+      "validity_duration_value": null,
+      "validity_duration_unit": ""
+    },
+    "distribution_block": {
+      "claim_frequency": "",
+      "calculation_period": "",
+      "distribution_day": ""
+    },
+    "schedule_variant_block": {
+      "enabled": false,
+      "variant_type": "",
+      "variants": [
+        {
+          "schedule_label": "",
+          "applies_to_days": [],
+          "applies_to_dates": [],
+          "applies_to_time_range": {
+            "start": "",
+            "end": ""
+          },
+          "reward_override_amount": null,
+          "reward_override_percent": null,
+          "reward_override_note": ""
+        }
+      ]
+    }
+  },
+
+  "time_window_engine": {
+    "timezone_block": {
+      "timezone": "",
+      "offset": ""
+    },
+    "claim_window_block": {
+      "enabled": false,
+      "start_time": "",
+      "end_time": "",
+      "days": []
+    },
+    "distribution_window_block": {
+      "enabled": false,
+      "start_time": "",
+      "end_time": "",
+      "days": []
+    },
+    "reset_block": {
+      "enabled": false,
+      "reset_time": "",
+      "reset_frequency": ""
+    }
+  },
+
+  "trigger_engine": {
+    "primary_trigger_block": {
+      "trigger_event": "",
+      "action": "",
+      "evidence": ""
+    },
+    "trigger_rule_block": {
+      "rule_type": "",
+      "conditions": [],
+      "logic_operator": ""
+    },
+    "alternative_triggers_block": {
+      "or_conditions": [],
+      "and_conditions": []
+    }
+  },
+
+  "claim_engine": {
+    "method_block": {
+      "claim_method": "",
+      "auto_credit": false
+    },
+    "channels_block": {
+      "channels": [],
+      "priority_order": []
+    },
+    "claim_gate_block": {
+      "requires_deposit_before_claim": false,
+      "min_deposit_for_claim": null,
+
+      "requires_withdraw_before_claim": false,
+      "min_withdraw_for_claim": null,
+
+      "requires_claim_before_play": false,
+      "requires_claim_before_withdraw_form": false,
+      "requires_claim_after_event_result": false,
+
+      "requires_active_user_id": false,
+      "active_user_period_value": null,
+      "active_user_period_unit": "",
+      "active_user_min_turnover": null,
+
+      "requires_history_deposit": false,
+      "min_history_deposit_amount": null,
+      "history_deposit_period_value": null,
+      "history_deposit_period_unit": "",
+
+      "claim_deadline_value": null,
+      "claim_deadline_unit": "",
+      "claim_deadline_anchor": "",
+
+      "claim_limit_per_period": null,
+      "claim_limit_period": "",
+      "claim_limit_scope": "",
+      "claim_reset_frequency": "",
+      "claim_reset_time": ""
+    },
+    "proof_requirement_block": {
+      "proof_required": false,
+      "proof_types": [],
+      "proof_destinations": []
+    },
+    "instruction_block": {
+      "claim_steps": [],
+      "claim_url": ""
+    }
+  },
+
+  "proof_engine": {
+    "social_proof_block": {
+      "platforms": [],
+      "hashtags": [],
+      "content_requirements": [],
+      "share_to_groups_count": null,
+      "share_target_group_type": "",
+      "post_timing": "",
+      "post_visibility": "",
+      "proof_destination": ""
+    },
+    "screenshot_proof_block": {
+      "ss_targets": [],
+      "rules": [],
+      "requires_before_action": false,
+      "requires_after_action": false,
+      "disallow_replay_screenshot": false
+    },
+    "document_proof_block": {
+      "documents_required": [],
+      "identity_match_required": false,
+      "account_name_match_required": false
+    }
+  },
+
+  "payment_engine": {
+    "deposit_block": {
+      "deposit_method": "",
+      "deposit_method_providers": [],
+      "deposit_rate": null
+    },
+    "method_whitelist_block": {
+      "methods": [],
+      "providers": []
+    },
+    "method_blacklist_block": {
+      "methods": [],
+      "providers": []
+    }
+  },
+
+  "scope_engine": {
+    "game_block": {
+      "game_domain": "",
+      "game_types": [],
+      "markets": [],
+      "applicable_markets": [],
+      "eligible_providers": [],
+      "included_providers": [],
+      "excluded_providers": [],
+      "game_names": [],
+      "included_games": [],
+      "excluded_games": [],
+      "bet_types": [],
+      "match_types": [],
+      "market_types": []
+    },
+    "platform_block": {
+      "platform_access": "",
+      "apk_required": false
+    },
+    "geo_block": {
+      "geo_restriction": "",
+      "ip_whitelist_country": [],
+      "ip_blacklist_country": []
+    },
+    "blacklist_block": {
+      "types": [],
+      "providers": [],
+      "games": [],
+      "rules": []
+    },
+    "odds_constraint_block": {
+      "enabled": false,
+      "min_odds": null,
+      "max_odds": null,
+      "min_odds_per_team": null,
+      "applies_to_bet_types": [],
+      "note": ""
+    },
+    "bet_configuration_block": {
+      "enabled": false,
+      "min_team_count": null,
+      "max_team_count": null,
+      "min_stake": null,
+      "max_stake": null,
+      "required_market_segments": [],
+      "required_market_segment_count": null,
+      "configuration_notes": []
+    }
+  },
+
+  "reward_engine": {
+    "event_block": {
+      "event_rewards": [],
+      "prizes": []
+    },
+    "requirement_block": {
+      "min_deposit": null,
+      "unlock_conditions": []
+    },
+    "turnover_tier_by_deposit_block": {
+      "enabled": false,
+      "tiers": [
+        {
+          "tier_id": "",
+          "deposit_threshold_min": null,
+          "deposit_threshold_max": null,
+          "deposit_threshold_max_unlimited": false,
+          "turnover_multiplier": null,
+          "turnover_basis": "",
+          "note": ""
+        }
+      ]
+    },
+    "combo_reward_block": {
+      "combo_items": []
+    },
+    "reward_table_block": {
+      "enabled": false,
+      "table_type": "",
+      "basis": "",
+      "rows": [
+        {
+          "row_id": "",
+          "label": "",
+          "threshold_min": null,
+          "threshold_max": null,
+          "threshold_unit": "",
+          "trigger_count": null,
+          "trigger_count_unit": "",
+          "stake_min": null,
+          "stake_max": null,
+          "team_count": null,
+          "win_count": null,
+          "lose_count": null,
+          "condition_text": "",
+          "reward_type": "",
+          "reward_name": "",
+          "reward_amount": null,
+          "reward_percent": null,
+          "reward_unit": "",
+          "reward_basis": "",
+          "reward_multiplier_of_stake": null,
+          "physical_reward_name": "",
+          "cash_reward_amount": null,
+          "bonus_credit_amount": null,
+          "max_reward": null,
+          "payout_direction": "",
+          "turnover_multiplier": null,
+          "note": ""
+        }
+      ]
+    },
+    "matrix_reward_block": {
+      "enabled": false,
+      "matrix_type": "",
+      "axis_x_label": "",
+      "axis_y_label": "",
+      "axis_x_values": [],
+      "axis_y_values": [],
+      "matrix_cells": [
+        {
+          "x": "",
+          "y": "",
+          "condition": "",
+          "stake_amount": null,
+          "stake_range_min": null,
+          "stake_range_max": null,
+          "symbol_count": null,
+          "multiplier": null,
+          "team_count": null,
+          "reward_amount": null,
+          "reward_percent": null,
+          "reward_basis": "",
+          "max_reward": null,
+          "note": ""
+        }
+      ],
+      "source_visual_required": false
+    },
+    "conditional_reward_block": {
+      "conditions": [],
+      "default_reward": null
+    },
+    "unit_reward_block": {
+      "enabled": false,
+      "trigger_unit": "",
+      "value_per_unit": null,
+      "value_unit": "",
+      "is_accumulative": false,
+      "max_units_per_claim": null,
+      "max_reward": null,
+      "note": ""
+    },
+    "reward_identity_block": {
+      "item_name": null,
+      "quantity": null
+    },
+    "calculation_basis": "",
+    "calculation_method": "",
+    "calculation_value": null,
+    "calculation_unit": "",
+    "payout_direction": "",
+    "reward_type": "",
+    "voucher_kind": null,
+    "max_reward": null,
+    "max_reward_unlimited": false,
+    "currency": ""
+  },
+
+  "ticket_engine": {
+    "ticket_block": {
+      "enabled": false,
+      "ticket_name": "",
+      "ticket_source": "",
+      "min_deposit_for_ticket": null,
+      "deposit_per_ticket": null,
+      "is_accumulative": false,
+      "max_ticket_per_claim": null,
+      "max_ticket_per_day": null,
+      "validity_duration_value": null,
+      "validity_duration_unit": "",
+      "valid_until_time": "",
+      "expires_on_reset": false,
+      "ticket_payment_method_exclusion": []
+    },
+    "draw_block": {
+      "draw_type": "",
+      "draw_frequency": "",
+      "draw_time": "",
+      "winner_selection": "",
+      "prize_pool": []
+    }
+  },
+
+  "loyalty_engine": {
+    "mechanism_block": {
+      "point_name": "",
+      "earning_rule": "",
+      "loyalty_mode": "",
+      "turnover_per_point": null,
+      "point_per_turnover": null,
+      "accumulation_time": "",
+      "accumulation_timezone": "",
+      "reset_period": "",
+      "requires_apk": false
+    },
+    "exchange_block": {
+      "exchange_groups": [
+        {
+          "group_id": "",
+          "group_name": "",
+          "claim_limit": null,
+          "claim_limit_period": "",
+          "items": [
+            {
+              "item_id": "",
+              "points_required": null,
+              "reward_type": "",
+              "reward_name": "",
+              "cash_reward_amount": null,
+              "credit_game_amount": null,
+              "physical_reward_name": "",
+              "voucher_kind": "",
+              "note": ""
+            }
+          ]
+        }
+      ]
+    },
+    "tier_block": {
+      "tier_system": []
+    }
+  },
+
+  "referral_engine": {
+    "program_block": {
+      "enabled": false,
+      "referral_type": "",
+      "commission_basis": "",
+      "commission_rate": null,
+      "commission_unit": "",
+      "eligible_game_types": [],
+      "eligible_markets": [],
+      "min_downline_count": null,
+      "min_downline_turnover": null,
+      "downline_period_value": null,
+      "downline_period_unit": "",
+      "requires_downline_active": false,
+      "requires_referrer_kyc": false,
+      "requires_media_disclosure": false,
+      "is_lifetime": false
+    },
+    "commission_rule_block": {
+      "rules": [
+        {
+          "rule_id": "",
+          "game_type": "",
+          "market": "",
+          "basis": "",
+          "rate": null,
+          "rate_unit": "",
+          "min_downline": null,
+          "min_winlose": null,
+          "deposit_basis_anchor": "",
+          "condition_text": ""
+        }
+      ]
+    },
+    "deduction_block": {
+      "deductions": [
+        {
+          "deduction_id": "",
+          "deduction_type": "",
+          "amount": null,
+          "percent": null,
+          "note": ""
+        }
+      ]
+    },
+    "simulation_block": {
+      "rows": [
+        {
+          "row_id": "",
+          "downline_count": null,
+          "winlose": null,
+          "commission": null,
+          "cashback_deduction": null,
+          "fee_deduction": null,
+          "net_winlose": null,
+          "commission_rate": null,
+          "commission_result": null,
+          "note": ""
+        }
+      ]
+    },
+    "distribution_block": {
+      "distribution_frequency": "",
+      "distribution_day": "",
+      "distribution_time": "",
+      "auto_credit": false
+    },
+    "link_block": {
+      "requires_referral_link": false,
+      "link_format": "",
+      "example_link": ""
+    }
+  },
+
+  "result_event_engine": {
+    "result_match_block": {
+      "enabled": false,
+      "result_source": "",
+      "result_source_markets": [],
+      "match_target": "",
+      "match_digits": null,
+      "match_position": "",
+      "match_logic": "",
+      "claim_window_after_result_hours": null
+    },
+    "prize_block": {
+      "prizes": [
+        {
+          "prize_id": "",
+          "prize_tier": "",
+          "prize_label": "",
+          "prize_amount": null,
+          "prize_currency": "",
+          "requires_bet_on_match_target": false,
+          "minimum_bet_amount": null,
+          "max_winners_per_period": null,
+          "note": ""
+        }
+      ],
+      "prize_rules": []
+    }
+  },
+
+  "fulfillment_engine": {
+    "physical_reward_block": {
+      "enabled": false,
+      "requires_shipping": false,
+      "shipping_period_anchor": "",
+      "shipping_period_value": null,
+      "shipping_period_unit": "",
+      "shipping_method": "",
+      "recipient_data_required": [],
+      "stock_replacement_allowed": false,
+      "tax_borne_by": "",
+      "fee_required": false,
+      "fee_note": "",
+      "can_convert_to_credit": null
+    }
+  },
+
+  "variant_engine": {
+    "summary_block": {
+      "has_subcategories": false,
+      "expected_count": null,
+      "default_variant_id": ""
+    },
+    "items_block": {
+      "subcategories": [
+        {
+          "variant_id": "",
+          "variant_name": "",
+          "promo_code": "",
+
+          "calculation_basis": "",
+          "calculation_method": "",
+          "calculation_value": null,
+          "calculation_unit": "",
+
+          "min_deposit": null,
+          "max_reward": null,
+          "max_reward_unlimited": false,
+          "min_claim": null,
+
+          "claim_gate_block": {
+            "requires_deposit_before_claim": false,
+            "min_deposit_for_claim": null,
+
+            "requires_withdraw_before_claim": false,
+            "min_withdraw_for_claim": null,
+
+            "requires_claim_before_play": false,
+            "requires_claim_before_withdraw_form": false,
+            "requires_claim_after_event_result": false,
+
+            "claim_deadline_value": null,
+            "claim_deadline_unit": "",
+            "claim_deadline_anchor": "",
+
+            "claim_limit_per_period": null,
+            "claim_limit_period": "",
+            "claim_limit_scope": ""
+          },
+
+          "turnover_multiplier": null,
+          "turnover_rule_format": "",
+          "turnover_tier_by_deposit": [
+            {
+              "deposit_threshold_min": null,
+              "deposit_threshold_max": null,
+              "turnover_multiplier": null,
+              "note": ""
+            }
+          ],
+
+          "game_domain": "",
+          "game_types": [],
+          "markets": [],
+          "applicable_markets": [],
+          "eligible_providers": [],
+          "included_providers": [],
+          "excluded_providers": [],
+          "game_names": [],
+          "included_games": [],
+          "excluded_games": [],
+          "bet_types": [],
+          "match_types": [],
+          "market_types": [],
+
+          "blacklist": {
+            "enabled": false,
+            "types": [],
+            "providers": [],
+            "games": [],
+            "rules": [],
+            "note": ""
+          },
+
+          "reward_type": "",
+          "payout_direction": "",
+          "currency": "",
+
+          "physical_reward_name": "",
+          "physical_reward_quantity": null,
+          "cash_reward_amount": null,
+          "reward_quantity": null,
+
+          "voucher_kind": "",
+          "voucher_valid_from": null,
+          "voucher_valid_until": null,
+          "voucher_valid_unlimited": false,
+
+          "lucky_spin_id": "",
+          "lucky_spin_max_per_day": null,
+
+          "product_note": ""
+        }
+      ]
+    }
+  },
+
+  "dependency_engine": {
+    "exclusion_block": {
+      "mutually_exclusive_with": [],
+      "can_combine_with": []
+    },
+    "stacking_block": {
+      "stacking_allowed": false,
+      "stacking_policy": "",
+      "rules": [],
+      "max_concurrent": null
+    },
+    "prerequisite_block": {
+      "requires_promo": [],
+      "requires_achievement": []
+    }
+  },
+
+  "invalidation_engine": {
+    "void_conditions_block": [
+      {
+        "condition_id": "",
+        "condition_type": "",
+        "scope": "",
+        "description": "",
+        "voids_bonus": false,
+        "voids_winnings": false,
+        "voids_full_balance": false,
+        "evidence": ""
+      }
+    ],
+    "penalty_block": {
+      "void_action": "",
+      "penalty_type": "",
+      "penalty_scope": ""
+    },
+    "anti_fraud_block": {
+      "anti_fraud_rules": [],
+      "detection_methods": [],
+      "restricted_behaviors": []
+    }
+  },
+
+  "terms_engine": {
+    "conditions_block": {
+      "terms_conditions": []
+    },
+    "requirements_block": {
+      "special_requirements": []
+    }
+  },
+
+  "readiness_engine": {
+    "state_block": {
+      "state": "draft",
+      "state_changed_at": "",
+      "state_changed_by": ""
+    },
+    "commit_block": {
+      "ready_to_commit": false
+    },
+    "validation_block": {
+      "is_structurally_complete": false,
+      "status": "draft",
+      "warnings": []
+    },
+    "observability_block": {
+      "ambiguity_flags": [],
+      "contradiction_flags": [],
+      "review_required": true
+    }
+  },
+
+  "reasoning_engine": {
+    "intent_block": {
+      "primary_action": "",
+      "reward_nature": "",
+      "distribution_path": "",
+      "value_shape": ""
+    },
+    "selection_block": {
+      "mechanic_type": "",
+      "locked_fields": [],
+      "invariant_violations": []
+    }
+  },
+
+  "mechanics_engine": {
+    "source_block": {
+      "source": ""
+    },
+    "items_block": {
+      "items": []
+    }
+  },
+
+  "projection_engine": {
+    "_description": "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly. Naming follows V.10.2 canonical. Not source of truth.",
+    "summary_block": {
+      "promo_summary": "",
+      "main_trigger": "",
+      "main_reward_form": "",
+      "main_reward_percent": null,
+      "main_reward_value": null,
+      "main_reward_unit": "",
+      "max_reward": null,
+      "min_deposit": null,
+      "min_withdraw": null,
+      "payout_direction": "",
+      "turnover_multiplier": null,
+      "turnover_basis": "",
+      "_summary_skipped_reason": ""
+    },
+    "claim_summary_block": {
+      "primary_claim_method": "",
+      "primary_claim_platform": "",
+      "claim_channels": [],
+      "auto_credit": false,
+      "proof_required": false,
+      "claim_frequency": "",
+      "distribution_day": ""
+    },
+    "scope_summary_block": {
+      "game_domain": "",
+      "game_domains": [],
+      "game_types": [],
+      "eligible_providers": [],
+      "blacklist_summary": {
+        "types": [],
+        "providers": [],
+        "games": [],
+        "rules": []
+      },
+      "platform_access": "",
+      "apk_required": false,
+      "geo_restriction": "",
+      "stacking_policy": ""
+    },
+    "intent_summary_block": {
+      "intent_category": "",
+      "primary_action": "",
+      "reward_nature": "",
+      "distribution_path": "",
+      "value_shape": "",
+      "target_segment": ""
+    }
+  },
+
+  "risk_engine": {
+    "level_block": {
+      "promo_risk_level": ""
+    }
+  },
+
+  "meta_engine": {
+    "source_block": {
+      "source_url": "",
+      "raw_content": "",
+      "extraction_source": "",
+      "source_type": ""
+    },
+    "extraction_block": {
+      "has_rowspan_tables": false,
+      "html_was_normalized": false,
+      "client_id_source": "",
+      "propagated_fields": [],
+      "ambiguous_blacklists": null,
+      "extracted_at": "",
+      "classification_overridden": false,
+      "classification_override_reason": "",
+      "original_llm_category": ""
+    },
+    "unmodeled_evidence_block": {
+      "items": [
+        {
+          "evidence_id": "",
+          "captured_at": "",
+          "captured_by": "",
+          "field_candidate": "",
+          "source_text": "",
+          "reason_not_modeled": "",
+          "suggested_engine": "",
+          "suggested_path": "",
+          "occurrence_count": null,
+          "requires_schema_review": true,
+          "review_status": "pending",
+          "promoted_to_field": ""
+        }
+      ]
+    },
+    "schema_block": {
+      "schema_name": "PKB_Wolfbrain",
+      "schema_version": "V.10.2",
+      "base_locked_at": "2026-04-28",
+      "released_at": "2026-05-15",
+      "previous_version": "V.10.1",
+      "previous_released_at": "2026-05-04",
+      "created_by": "habe_raja",
+      "owner": "Habe Raja — Wolfbrain / Promo Knowledge Base",
+      "status": "candidate_locked",
+      "extractor": "wolfclaw@claude-sonnet-4-5",
+      "amendment_type": "major_schema_expansion",
+      "amendment_reason": "Coverage expansion based on observed promo corpus analysis. Adds claim gates, reward tables, matrix rewards, unit rewards, ticket mechanics, referral logic, loyalty exchange, result events, fulfillment, schedule variants, odds constraints, bet configuration, game segmentation, typed invalidation, and centralized unmodeled evidence governance.",
+      "record_type": "promo"
+    }
+  },
+
+  "ai_confidence": {},
+  "_field_status": {},
+  "_propagation_stats": {},
+  "_human_override_log": [],
+  "_ai_resolver_log": []
+}
