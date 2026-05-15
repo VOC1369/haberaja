@@ -1,9 +1,8 @@
 /**
- * PROMO EXTRACTOR — Phase 2C (V.10.2 native, voc-wolf-extractor severed)
+ * PROMO EXTRACTOR — V.10.2 native
  *
  * Single source of truth: `pkRecord: PkV10Record`.
- * NO extractedPromo state. NO mappedPreview. NO mapExtractedToPromoFormData.
- * NO V.09 bridge. NO category-classifier. NO field-status legacy detector.
+ * No legacy V.09 bridge, no field-status legacy detector, no category-classifier.
  *
  * Data plumbing:
  *  - Extraction → `extractPromoV10` (pk-extractor edge fn) → PkV10Record.
