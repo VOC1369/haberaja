@@ -585,8 +585,16 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     // (pure value-level normalization on existing fields, no question authority)
     commitNormalizerOutput(draft, normalizerOutput, ts);
 
+    // PATCH 2 — Bersihkan warning/ambiguity yang field-nya baru di-patch admin.
+    // Contradiction tidak ikut dibersihkan via path (lihat Jalur B).
+    clearFlagsByPatchedPaths(draft, patchedPaths);
+
     draft.updated_at = ts;
-    onApply(draft);
+
+    // PATCH 1 — Persist canonical V.10.2 ke localStorage agar Jalur A
+    // setara dengan Jalur B: state = session = localStorage.
+    const saved = savePkRecord(draft);
+    onApply(saved);
     setAnswers({});
   };
 
