@@ -163,6 +163,25 @@ export function createInertPkV10Record(
       platform_block: { platform_access: "", apk_required: false },
       geo_block: { geo_restriction: "" },
       blacklist_block: { types: [], providers: [], games: [], rules: [] },
+      // V.10.2 additive
+      odds_constraint_block: {
+        enabled: false,
+        min_odds: null,
+        max_odds: null,
+        min_odds_per_team: null,
+        applies_to_bet_types: [],
+        note: "",
+      },
+      bet_configuration_block: {
+        enabled: false,
+        min_team_count: null,
+        max_team_count: null,
+        min_stake: null,
+        max_stake: null,
+        required_market_segments: [],
+        required_market_segment_count: null,
+        configuration_notes: [],
+      },
     },
 
     reward_engine: {
@@ -172,6 +191,19 @@ export function createInertPkV10Record(
       matrix_reward_block: { axis_x_label: "", axis_y_label: "", matrix_cells: [] },
       conditional_reward_block: { conditions: [], default_reward: null },
       reward_identity_block: { item_name: null, quantity: null },
+      // V.10.2 additive
+      turnover_tier_by_deposit_block: { enabled: false, tiers: [] },
+      reward_table_block: { enabled: false, table_type: "", basis: "", rows: [] },
+      unit_reward_block: {
+        enabled: false,
+        trigger_unit: "",
+        value_per_unit: null,
+        value_unit: "",
+        is_accumulative: false,
+        max_units_per_claim: null,
+        max_reward: null,
+        note: "",
+      },
       calculation_basis: "",
       calculation_method: "",
       calculation_value: null,
@@ -184,10 +216,100 @@ export function createInertPkV10Record(
       currency: null,
     },
 
+    // V.10.2 additive — ticket / lucky-draw mechanic engine.
+    ticket_engine: {
+      ticket_block: {
+        enabled: false,
+        ticket_name: "",
+        ticket_source: "",
+        min_deposit_for_ticket: null,
+        deposit_per_ticket: null,
+        is_accumulative: false,
+        max_ticket_per_claim: null,
+        max_ticket_per_day: null,
+        validity_duration_value: null,
+        validity_duration_unit: "",
+        valid_until_time: "",
+        expires_on_reset: false,
+        ticket_payment_method_exclusion: [],
+      },
+      draw_block: {
+        draw_type: "",
+        draw_frequency: "",
+        draw_time: "",
+        winner_selection: "",
+        prize_pool: [],
+      },
+    },
+
     loyalty_engine: {
       mechanism_block: { point_name: "", earning_rule: "", loyalty_mode: "" },
       exchange_block: { exchange_groups: [] },
       tier_block: { tier_system: [] },
+    },
+
+    // V.10.2 additive — referral commission engine.
+    referral_engine: {
+      program_block: {
+        enabled: false,
+        referral_type: "",
+        commission_basis: "",
+        commission_rate: null,
+        commission_unit: "",
+        eligible_game_types: [],
+        eligible_markets: [],
+        min_downline_count: null,
+        min_downline_turnover: null,
+        downline_period_value: null,
+        downline_period_unit: "",
+        requires_downline_active: false,
+        requires_referrer_kyc: false,
+        requires_media_disclosure: false,
+        is_lifetime: false,
+      },
+      commission_rule_block: { rules: [] },
+      deduction_block: { deductions: [] },
+      simulation_block: { rows: [] },
+      distribution_block: {
+        distribution_frequency: "",
+        distribution_day: "",
+        distribution_time: "",
+        auto_credit: false,
+      },
+      link_block: { requires_referral_link: false, link_format: "", example_link: "" },
+    },
+
+    // V.10.2 additive — result-event mechanic (4D / SGP-style).
+    result_event_engine: {
+      result_match_block: {
+        enabled: false,
+        result_source: "",
+        result_source_markets: [],
+        match_target: "",
+        match_digits: null,
+        match_position: "",
+        match_logic: "",
+        claim_window_after_result_hours: null,
+      },
+      prize_block: { prizes: [], prize_rules: [] },
+    },
+
+    // V.10.2 additive — physical-reward fulfillment engine.
+    fulfillment_engine: {
+      physical_reward_block: {
+        enabled: false,
+        requires_shipping: false,
+        shipping_period_anchor: "",
+        shipping_period_value: null,
+        shipping_period_unit: "",
+        shipping_method: "",
+        recipient_data_required: [],
+        stock_replacement_allowed: false,
+        tax_borne_by: "",
+        fee_required: false,
+        fee_note: "",
+        can_convert_to_credit: null,
+      },
     },
 
     variant_engine: {
