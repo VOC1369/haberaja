@@ -478,6 +478,69 @@ function promoValidUntil(rec: PkV10Record): string | null {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
+// Step 8 (Phase 2C) — additional read-only selectors for header/list/terms.
+// Strict contract: leaf passthrough only. No transforms, no fallbacks.
+// ──────────────────────────────────────────────────────────────────────────
+
+/** Program classification — `classification_engine.result_block.program_classification`. */
+function programClassification(rec: PkV10Record): string | null {
+  return s(rec?.classification_engine?.result_block?.program_classification);
+}
+
+/** Promo type — `identity_engine.promo_block.promo_type`. */
+function promoType(rec: PkV10Record): string | null {
+  return s(rec?.identity_engine?.promo_block?.promo_type);
+}
+
+/** Promo mode — `identity_engine.promo_block.promo_mode`. ("single" | "multi" | …) */
+function promoMode(rec: PkV10Record): string | null {
+  return s(rec?.identity_engine?.promo_block?.promo_mode);
+}
+
+/** Tier archetype — `taxonomy_engine.mode_block.tier_archetype`. */
+function tierArchetype(rec: PkV10Record): string | null {
+  return s(rec?.taxonomy_engine?.mode_block?.tier_archetype);
+}
+
+/** Terms & conditions list — `terms_engine.conditions_block.terms_conditions`. */
+function termsConditions(rec: PkV10Record): string[] {
+  return arr(rec?.terms_engine?.conditions_block?.terms_conditions);
+}
+
+/** Special requirements list — `terms_engine.requirements_block.special_requirements`. */
+function specialRequirements(rec: PkV10Record): string[] {
+  return arr(rec?.terms_engine?.requirements_block?.special_requirements);
+}
+
+/** Applicable markets — `scope_engine.game_block.applicable_markets`. */
+function applicableMarkets(rec: PkV10Record): string[] {
+  return arr(rec?.scope_engine?.game_block?.applicable_markets);
+}
+
+/** Game domain at record-level — `scope_engine.game_block.game_domain`. */
+function gameDomain(rec: PkV10Record): string | null {
+  return s(rec?.scope_engine?.game_block?.game_domain);
+}
+
+/** All subcategories array (raw passthrough). */
+function subcategories(rec: PkV10Record): PkV10Subcategory[] {
+  return arr(rec?.variant_engine?.items_block?.subcategories) as PkV10Subcategory[];
+}
+
+/** Global blacklist active flag — true if any of providers/games/types/rules has entries. */
+function globalBlacklistActive(rec: PkV10Record): boolean {
+  const blk = rec?.scope_engine?.blacklist_block;
+  if (!blk) return false;
+  return (
+    arr(blk.providers).length +
+      arr(blk.games).length +
+      arr(blk.types).length +
+      arr(blk.rules).length >
+    0
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 // Public selector namespace
 // ──────────────────────────────────────────────────────────────────────────
 
