@@ -923,19 +923,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               }
               
               // ✅ Withdraw Bonus: use min_calculation as "Min WD", not min_deposit
-              // HOLD: trigger_event rebound to V.10.1; min_calculation* still on mappedPreview (gap, no V.10.1 path yet)
+              // GAP: min_calculation* belum punya path V.10.2 — tampilkan placeholder netral.
               const isWithdrawTrigger = sel.triggerEvent(pkRecord as PkV10Record) === 'Withdraw' || 
                 /withdraw|bonus.*wd|extra.*wd/i.test(extractedPromo?.promo_name || '');
               
               if (isWithdrawTrigger) {
-                const minWdValue = mappedPreview?.min_calculation_enabled 
-                  ? mappedPreview?.min_calculation 
-                  : null;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Min WD</span>
-                    <span className="text-foreground font-medium">
-                      {minWdValue ? `Rp ${Number(minWdValue).toLocaleString('id-ID')}` : "-"}
+                    <span className="text-muted-foreground/60 italic text-xs">
+                      Belum tersedia dari PromoKnowledgeRecord V.10.2
                     </span>
                   </>
                 );
@@ -1201,20 +1198,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 )}
                 <div className="bg-muted rounded-lg p-3">
                   <span className="text-muted-foreground text-xs block mb-1">Waktu Berlaku</span>
-                  <span className="text-foreground font-medium">
-                    {(() => {
-                      // Check validity mode from mappedPreview
-                      const validityMode = mappedPreview?.fixed_spin_validity_mode;
-                      if (mappedPreview?.fixed_voucher_valid_unlimited) return 'Tidak Terbatas';
-                      if (mappedPreview?.fixed_voucher_valid_until) return `s/d ${mappedPreview.fixed_voucher_valid_until}`;
-                      if (validityMode === 'relative') {
-                        const duration = mappedPreview?.fixed_spin_validity_duration;
-                        const unit = mappedPreview?.fixed_spin_validity_unit;
-                        if (duration === 24 && unit === 'hours') return 'Reset Harian';
-                        if (duration && unit) return `${duration} ${unit === 'hours' ? 'Jam' : unit === 'days' ? 'Hari' : unit}`;
-                      }
-                      return 'Reset Harian'; // Default fallback
-                    })()}
+                  <span className="text-muted-foreground/60 italic text-xs">
+                    Belum tersedia dari PromoKnowledgeRecord V.10.2
                   </span>
                 </div>
               </div>
@@ -2242,23 +2227,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   </Tooltip>
                 </TooltipProvider>
               )}
-              {/* BUG #4 — non-blocking mapper failure surface (preview only).
-                  pkRecord + Copy JSON remain available even when this shows. */}
-              {mappedPreviewError && extractedPromo && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-xs font-medium text-amber-700 dark:text-amber-300 cursor-help">
-                        <AlertTriangle className="w-3 h-3" />
-                        Preview failed, raw JSON still available
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-md">
-                      <p className="text-xs break-words">{mappedPreviewError}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+              {/* mappedPreviewError surface dihapus (Phase 1 legacy cleanup). */}
             </div>
             
             {/* Right: Copy JSON + Primary Action */}

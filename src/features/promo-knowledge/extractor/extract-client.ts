@@ -65,7 +65,3 @@ export async function extractPromoV10(req: ExtractRequest): Promise<ExtractRespo
   };
 }
 
-/**
- * @deprecated Use extractPromoV10. Kept as alias for transitional consumers.
- */
-export const extractPromoV09 = extractPromoV10;
