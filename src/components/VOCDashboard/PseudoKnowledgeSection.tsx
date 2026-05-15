@@ -9,7 +9,7 @@
  * - localStorage for final commit to KB (via promoKB)
  */
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { 
   Send, Sparkles, Loader2, FileText, ExternalLink, CheckCircle2, 
   AlertTriangle, Copy, XCircle, AlertCircle, ChevronDown,
@@ -50,7 +50,6 @@ import {
   fetchUrlContent, 
   getStatusBadgeStyle,
   getStatusLabel,
-  mapExtractedToPromoFormData,
   detectRewardArchetype,
   detectGameDomain,
   getFieldStatus,
@@ -70,7 +69,6 @@ import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } f
 import { formatPromoType, getPromoSubTypeDisplay } from "@/lib/utils";
 import { ClassificationOverride } from "./ClassificationOverride";
 import { ConfidenceGateModal } from "./ConfidenceGateModal";
-import type { PromoFormData } from "./PromoFormWizard/types";
 // STEP 2 — V.10 native: pk-extractor returns PkV10Record. No V.09 conversion.
 import { extractPromoV10 } from "@/features/promo-knowledge/extractor/extract-client";
 import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";
@@ -142,62 +140,10 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const [pkFailReason, setPkFailReason] = useState<string>("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionElapsedMs, setExtractionElapsedMs] = useState(0);
-  // BUG #4 FIX — non-blocking mapper failure surface.
-  // Previously: catch block called setExtractedPromo(null), wiping the
-  // successful V.09 extraction and forcing UI back to landing (data loss
-  // + Copy JSON unavailable). Now: extractedPromo + pkRecord stay intact;
-  // mappedPreview returns null and a non-blocking error message is shown
-  // via mappedPreviewError state. Copy JSON / V.09 result
-  // remain accessible because they read pkRecord, not mappedPreview.
-  const [mappedPreviewError, setMappedPreviewError] = useState<string | null>(null);
-
-  // ⚠️ TEMPORARY VISUAL DEBT — NOT source of truth.
-  // After PARTIAL SAFE REBIND, mappedPreview is retained ONLY for display
-  // gaps that have no authoritative V.10.1 path yet:
-  //   - fixed_voucher_valid_until / fixed_voucher_valid_unlimited
-  //   - fixed_spin_validity_mode / _duration / _unit
-  //   - min_calculation_enabled / min_calculation
-  // All other displays (reward_mode, reward_type, apk_required, trigger_event,
-  // min_deposit, lucky_spin_max_per_day, physical_item_name, physical_quantity,
-  // voucher_kind, subcategories[idx], RewardArchetypePicker rewardMode prop)
-  // now read directly from PkV10Record via `sel.*` selectors.
-  // DO NOT add new mappedPreview readers. Resolve gaps via V.10.1 schema first.
-  const mappedPreview = useMemo<PromoFormData | null>(() => {
-    if (!extractedPromo) {
-      // Reset error when there is nothing to map (avoid stale message).
-      if (mappedPreviewError !== null) setMappedPreviewError(null);
-      return null;
-    }
-    try {
-      console.log('[TRACE-6B] useMemo calling mapExtractedToPromoFormData...');
-      const result = mapExtractedToPromoFormData(extractedPromo);
-      console.log('[TRACE-6B] mapExtractedToPromoFormData succeeded', {
-        reward_mode: (result as any)?.reward_mode,
-        tier_archetype: (result as any)?.tier_archetype,
-        tiers_count: (result as any)?.tiers?.length ?? 0,
-      });
-      if (mappedPreviewError !== null) setMappedPreviewError(null);
-      return result;
-    } catch (err) {
-      console.error('[TRACE-6B] mapExtractedToPromoFormData FAILED:', err);
-      console.error(
-        '[PseudoKnowledgeSection] mapExtractedToPromoFormData failed — extraction preserved, preview unavailable:',
-        err,
-      );
-      // BUG #4: do NOT call setExtractedPromo(null). Preserve raw extraction
-      // and pkRecord so Copy JSON / V.09 result stay accessible.
-      const reason = err instanceof Error ? err.message : String(err);
-      const next = `Preview failed, raw JSON still available — ${reason}`;
-      // Guard: only update if changed, to avoid an infinite re-render loop
-      // (state setter inside useMemo would otherwise re-run on every render).
-      if (mappedPreviewError !== next) setMappedPreviewError(next);
-      return null;
-    }
-    // mappedPreviewError intentionally NOT in deps: it is a write-only side
-    // channel here, gated by equality checks above. Including it would risk
-    // a re-run loop because we setState inside the memo.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [extractedPromo]);
+  // LEGACY EXTRACTOR PATH REMOVED (Phase 1 cleanup).
+  // mappedPreview / mapExtractedToPromoFormData / mappedPreviewError dihapus.
+  // Source of truth tunggal: pkRecord (PkV10Record) via `sel.*` selectors.
+  // Field display yang belum punya path V.10.2 menampilkan placeholder netral.
   
   // Confidence Gate state (LLM Classifier)
   const [showConfidenceGate, setShowConfidenceGate] = useState(false);
@@ -977,19 +923,16 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
               }
               
               // ✅ Withdraw Bonus: use min_calculation as "Min WD", not min_deposit
-              // HOLD: trigger_event rebound to V.10.1; min_calculation* still on mappedPreview (gap, no V.10.1 path yet)
+              // GAP: min_calculation* belum punya path V.10.2 — tampilkan placeholder netral.
               const isWithdrawTrigger = sel.triggerEvent(pkRecord as PkV10Record) === 'Withdraw' || 
                 /withdraw|bonus.*wd|extra.*wd/i.test(extractedPromo?.promo_name || '');
               
               if (isWithdrawTrigger) {
-                const minWdValue = mappedPreview?.min_calculation_enabled 
-                  ? mappedPreview?.min_calculation 
-                  : null;
                 return (
                   <>
                     <span className="text-muted-foreground text-xs block mb-1">Min WD</span>
-                    <span className="text-foreground font-medium">
-                      {minWdValue ? `Rp ${Number(minWdValue).toLocaleString('id-ID')}` : "-"}
+                    <span className="text-muted-foreground/60 italic text-xs">
+                      Belum tersedia dari PromoKnowledgeRecord V.10.2
                     </span>
                   </>
                 );
@@ -1255,20 +1198,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                 )}
                 <div className="bg-muted rounded-lg p-3">
                   <span className="text-muted-foreground text-xs block mb-1">Waktu Berlaku</span>
-                  <span className="text-foreground font-medium">
-                    {(() => {
-                      // Check validity mode from mappedPreview
-                      const validityMode = mappedPreview?.fixed_spin_validity_mode;
-                      if (mappedPreview?.fixed_voucher_valid_unlimited) return 'Tidak Terbatas';
-                      if (mappedPreview?.fixed_voucher_valid_until) return `s/d ${mappedPreview.fixed_voucher_valid_until}`;
-                      if (validityMode === 'relative') {
-                        const duration = mappedPreview?.fixed_spin_validity_duration;
-                        const unit = mappedPreview?.fixed_spin_validity_unit;
-                        if (duration === 24 && unit === 'hours') return 'Reset Harian';
-                        if (duration && unit) return `${duration} ${unit === 'hours' ? 'Jam' : unit === 'days' ? 'Hari' : unit}`;
-                      }
-                      return 'Reset Harian'; // Default fallback
-                    })()}
+                  <span className="text-muted-foreground/60 italic text-xs">
+                    Belum tersedia dari PromoKnowledgeRecord V.10.2
                   </span>
                 </div>
               </div>
@@ -2296,23 +2227,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
                   </Tooltip>
                 </TooltipProvider>
               )}
-              {/* BUG #4 — non-blocking mapper failure surface (preview only).
-                  pkRecord + Copy JSON remain available even when this shows. */}
-              {mappedPreviewError && extractedPromo && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-xs font-medium text-amber-700 dark:text-amber-300 cursor-help">
-                        <AlertTriangle className="w-3 h-3" />
-                        Preview failed, raw JSON still available
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-md">
-                      <p className="text-xs break-words">{mappedPreviewError}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+              {/* mappedPreviewError surface dihapus (Phase 1 legacy cleanup). */}
             </div>
             
             {/* Right: Copy JSON + Primary Action */}
