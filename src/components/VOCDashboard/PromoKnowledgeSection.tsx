@@ -80,13 +80,11 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const [viewTermsItem, setViewTermsItem] = useState<PromoItem | null>(null);
   const [expandedPromos, setExpandedPromos] = useState<Set<string>>(new Set());
   
-  // Auto-classification states
-  const [classifyingIds, setClassifyingIds] = useState<Set<string>>(new Set());
-  
+  // Phase 2B: auto-classification removed — `classifyingIds` / `classifyQueueRef` dropped.
+
   // Regenerate S&K states
   const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set());
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
-  const classifyQueueRef = useRef<Set<string>>(new Set()); // To prevent duplicate calls
 
   // Delete All state
   const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
