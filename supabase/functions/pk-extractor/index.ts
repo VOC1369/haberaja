@@ -1707,6 +1707,25 @@ function subcategoryShape(): JSONSchema {
       lucky_spin_id: { type: ["string", "null"] },
       lucky_spin_max_per_day: { type: ["number", "null"] },
       product_note: { type: ["string", "null"] },
+      // V.10.2 additive — per-variant claim gate.
+      claim_gate_block: {
+        type: "object", additionalProperties: false,
+        properties: {
+          requires_deposit_before_claim: { type: "boolean" },
+          min_deposit_for_claim: { type: ["number", "null"] },
+          requires_withdraw_before_claim: { type: "boolean" },
+          min_withdraw_for_claim: { type: ["number", "null"] },
+          requires_claim_before_play: { type: "boolean" },
+          requires_claim_before_withdraw_form: { type: "boolean" },
+          requires_claim_after_event_result: { type: "boolean" },
+          claim_deadline_value: { type: ["number", "null"] },
+          claim_deadline_unit: enumStr("claim_deadline_unit"),
+          claim_deadline_anchor: enumStr("claim_deadline_anchor"),
+          claim_limit_per_period: { type: ["number", "null"] },
+          claim_limit_period: enumStr("claim_limit_period"),
+          claim_limit_scope: enumStr("claim_limit_scope"),
+        },
+      },
     },
   };
 }
