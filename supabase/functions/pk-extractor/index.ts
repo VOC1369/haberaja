@@ -1411,9 +1411,165 @@ function buildExtractorToolSchema(): AnyObj {
               original_llm_category: { type: "string" },
             },
           },
+          // V.10.2 additive — centralized governance for fields not modeled in schema.
+          unmodeled_evidence_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              items: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          // V.10.2 additive — schema_block lifecycle fields (system-set, but allowed in tool schema).
+          schema_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              record_type: enumStr("record_type"),
+              previous_version: { type: "string" },
+              previous_released_at: { type: "string" },
+            },
+          },
         },
       },
-      ai_confidence: {
+      // V.10.2 additive — 4 new root engines.
+      ticket_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          ticket_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              ticket_name: { type: "string" },
+              ticket_source: enumStr("ticket_source"),
+              min_deposit_for_ticket: { type: ["number", "null"] },
+              deposit_per_ticket: { type: ["number", "null"] },
+              is_accumulative: { type: "boolean" },
+              max_ticket_per_claim: { type: ["number", "null"] },
+              max_ticket_per_day: { type: ["number", "null"] },
+              validity_duration_value: { type: ["number", "null"] },
+              validity_duration_unit: enumStr("ticket_validity_duration_unit"),
+              valid_until_time: { type: "string" },
+              expires_on_reset: { type: "boolean" },
+              ticket_payment_method_exclusion: enumStrArray("ticket_payment_method_exclusion"),
+            },
+          },
+          draw_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              draw_type: enumStr("draw_type"),
+              draw_frequency: enumStr("draw_frequency"),
+              draw_time: { type: "string" },
+              winner_selection: { type: "string" },
+              prize_pool: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+        },
+      },
+      referral_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          program_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              referral_type: enumStr("referral_type"),
+              commission_basis: enumStr("commission_basis"),
+              commission_rate: { type: ["number", "null"] },
+              commission_unit: enumStr("commission_unit"),
+              eligible_game_types: enumStrArray("referral_eligible_game_types"),
+              eligible_markets: { type: "array", items: { type: "string" } },
+              min_downline_count: { type: ["number", "null"] },
+              min_downline_turnover: { type: ["number", "null"] },
+              downline_period_value: { type: ["number", "null"] },
+              downline_period_unit: enumStr("downline_period_unit"),
+              requires_downline_active: { type: "boolean" },
+              requires_referrer_kyc: { type: "boolean" },
+              requires_media_disclosure: { type: "boolean" },
+              is_lifetime: { type: "boolean" },
+            },
+          },
+          commission_rule_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              rules: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          deduction_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              deductions: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          simulation_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              rows: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
+          distribution_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              distribution_frequency: enumStr("referral_distribution_frequency"),
+              distribution_day: enumStr("distribution_day"),
+              distribution_time: { type: "string" },
+              auto_credit: { type: "boolean" },
+            },
+          },
+          link_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              requires_referral_link: { type: "boolean" },
+              link_format: { type: "string" },
+              example_link: { type: "string" },
+            },
+          },
+        },
+      },
+      result_event_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          result_match_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              result_source: enumStr("result_source"),
+              result_source_markets: enumStrArray("result_source_markets"),
+              match_target: enumStr("match_target"),
+              match_digits: { type: ["number", "null"] },
+              match_position: enumStr("match_position"),
+              match_logic: enumStr("match_logic"),
+              claim_window_after_result_hours: { type: ["number", "null"] },
+            },
+          },
+          prize_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              prizes: { type: "array", items: { type: "object", additionalProperties: true } },
+              prize_rules: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+      },
+      fulfillment_engine: {
+        type: "object", additionalProperties: false,
+        properties: {
+          physical_reward_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              requires_shipping: { type: "boolean" },
+              shipping_period_anchor: enumStr("shipping_period_anchor"),
+              shipping_period_value: { type: ["number", "null"] },
+              shipping_period_unit: enumStr("shipping_period_unit"),
+              shipping_method: enumStr("shipping_method"),
+              recipient_data_required: enumStrArray("recipient_data_required"),
+              stock_replacement_allowed: { type: "boolean" },
+              tax_borne_by: enumStr("tax_borne_by"),
+              fee_required: { type: "boolean" },
+              fee_note: { type: "string" },
+              can_convert_to_credit: { type: ["boolean", "null"] },
+            },
+          },
+        },
+      },
         type: "object",
         description: "Map field path → 0..1. WAJIB minimal 10 path penting.",
         additionalProperties: { type: "number", minimum: 0, maximum: 1 },
