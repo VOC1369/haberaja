@@ -493,6 +493,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         const newSibling = q.spec.readSibling(draft);
 
         draft._field_status[siblingPath] = "explicit";
+        patchedPaths.push(siblingPath);
 
         if (prevSibling !== newSibling) {
           log.push({
