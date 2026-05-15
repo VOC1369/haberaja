@@ -526,6 +526,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         // Explicit log entry distinguishes "all confirmed" from "not yet filled".
         draft._field_status[PROVIDER_WHITELIST_PATH] = "explicit";
         patchedPaths.push(PROVIDER_WHITELIST_PATH);
+        log.push({
+          field_path: PROVIDER_WHITELIST_PATH,
+          previous_value: [...prevWhitelist],
+          new_value: [],
           previous_ai_confidence: prevWConf,
           previous_field_status: prevWStatus,
           overridden_by: "admin",
