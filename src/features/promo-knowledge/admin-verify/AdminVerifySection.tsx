@@ -108,6 +108,62 @@ const isEmpty = (v: unknown): boolean => {
   return false;
 };
 
+/**
+ * PATCH 2 — Path-based flag clearer.
+ *
+ * Hapus item dari warnings[] / ambiguity_flags[] yang stringnya MENGANDUNG
+ * salah satu canonical path yang baru saja di-patch admin. Path adalah token
+ * dotted yang sangat spesifik (mis. `scope_engine.game_block.eligible_providers`)
+ * sehingga substring match tidak akan false-positive ke kalimat umum.
+ *
+ * Contradiction TIDAK pernah dibersihkan via path. Contradiction hanya boleh
+ * di-clear via exact source_text match di Jalur B (lihat onConfirmApply).
+ *
+ * Tidak ada regex / keyword logic. Murni equality + includes terhadap path.
+ */
+function clearFlagsByPatchedPaths(
+  draft: PkV10Record,
+  patchedPaths: string[],
+): void {
+  if (patchedPaths.length === 0) return;
+  const ob = draft.readiness_engine?.observability_block;
+  const vb = draft.readiness_engine?.validation_block;
+  const matches = (s: string) =>
+    patchedPaths.some((p) => p.length > 0 && s.includes(p));
+
+  if (vb && Array.isArray(vb.warnings)) {
+    vb.warnings = vb.warnings.filter((s) => !matches(s));
+  }
+  if (ob && Array.isArray(ob.ambiguity_flags)) {
+    ob.ambiguity_flags = ob.ambiguity_flags.filter((s) => !matches(s));
+  }
+  // contradiction_flags: NOT cleared by path. Only via Jalur B exact match.
+}
+
+/**
+ * PATCH 2 — Exact-string flag clearer for Jalur B.
+ * Removes the precise `source_text` from its severity bucket.
+ */
+function clearFlagByExactSource(
+  draft: PkV10Record,
+  severity: "warning" | "ambiguity" | "contradiction",
+  sourceText: string,
+): void {
+  const ob = draft.readiness_engine?.observability_block;
+  const vb = draft.readiness_engine?.validation_block;
+  if (severity === "warning" && vb && Array.isArray(vb.warnings)) {
+    vb.warnings = vb.warnings.filter((s) => s !== sourceText);
+  } else if (severity === "ambiguity" && ob && Array.isArray(ob.ambiguity_flags)) {
+    ob.ambiguity_flags = ob.ambiguity_flags.filter((s) => s !== sourceText);
+  } else if (
+    severity === "contradiction" &&
+    ob &&
+    Array.isArray(ob.contradiction_flags)
+  ) {
+    ob.contradiction_flags = ob.contradiction_flags.filter((s) => s !== sourceText);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────
