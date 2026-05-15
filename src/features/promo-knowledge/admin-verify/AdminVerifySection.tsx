@@ -449,6 +449,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       // Human verification is tracked SOLELY by _human_override_log.
       // ai_confidence is preserved as AI-draft provenance and never touched.
       draft._field_status[q.spec.path] = "explicit";
+      patchedPaths.push(q.spec.path);
 
       const entry: HumanOverrideEntry = {
         field_path: q.spec.path,
