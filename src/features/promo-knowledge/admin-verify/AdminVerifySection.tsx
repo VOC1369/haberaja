@@ -767,6 +767,9 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
                   (result.errors ?? ["Patch tidak valid."]).join("\n"),
                 );
               }
+              // PATCH 2 — Clear the exact flag string admin just resolved.
+              // Match by severity bucket + exact source_text (no fuzzy/keyword).
+              clearFlagByExactSource(result.record, q.severity, q.source_text);
               const saved = savePkRecord(result.record);
               onApply(saved);
               setIssueApplied((a) => ({ ...a, [q.task_id]: true }));
