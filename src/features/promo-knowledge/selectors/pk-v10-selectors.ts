@@ -606,6 +606,17 @@ export const sel = {
   maxRewardUnlimited,
   validUntilUnlimited,
   promoValidUntil,
+  // Phase 2C — additional read-only selectors
+  programClassification,
+  promoType,
+  promoMode,
+  tierArchetype,
+  termsConditions,
+  specialRequirements,
+  applicableMarkets,
+  gameDomain,
+  subcategories,
+  globalBlacklistActive,
 } as const;
 
 export type PkV10Selectors = typeof sel;
