@@ -872,6 +872,15 @@ function buildExtractorToolSchema(): AnyObj {
               distribution_day: enumStr("distribution_day"),
             },
           },
+          // V.10.2 additive
+          schedule_variant_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              variant_type: enumStr("schedule_variant_type"),
+              variants: { type: "array", items: { type: "object", additionalProperties: true } },
+            },
+          },
         },
       },
       time_window_engine: {
