@@ -1063,6 +1063,31 @@ function buildExtractorToolSchema(): AnyObj {
               rules: { type: "array", items: { type: "string" } },
             },
           },
+          // V.10.2 additive
+          odds_constraint_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              min_odds: { type: ["number", "null"] },
+              max_odds: { type: ["number", "null"] },
+              min_odds_per_team: { type: ["number", "null"] },
+              applies_to_bet_types: enumStrArray("odds_constraint_applies_to_bet_types"),
+              note: { type: "string" },
+            },
+          },
+          bet_configuration_block: {
+            type: "object", additionalProperties: false,
+            properties: {
+              enabled: { type: "boolean" },
+              min_team_count: { type: ["number", "null"] },
+              max_team_count: { type: ["number", "null"] },
+              min_stake: { type: ["number", "null"] },
+              max_stake: { type: ["number", "null"] },
+              required_market_segments: enumStrArray("bet_configuration_required_market_segments"),
+              required_market_segment_count: { type: ["number", "null"] },
+              configuration_notes: { type: "array", items: { type: "string" } },
+            },
+          },
         },
       },
       reward_engine: {
