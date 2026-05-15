@@ -565,6 +565,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
               ? (draft._field_status[PROVIDER_BLACKLIST_PATH] as string)
               : null;
           draft._field_status[PROVIDER_BLACKLIST_PATH] = "explicit";
+          patchedPaths.push(PROVIDER_BLACKLIST_PATH);
           log.push({
             field_path: PROVIDER_BLACKLIST_PATH,
             previous_value: [...prevBlacklist],
