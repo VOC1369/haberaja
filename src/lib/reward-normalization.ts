@@ -1,0 +1,299 @@
+/**
+ * Reward Normalization Utility v1.1
+ * 
+ * REASONING-BASED reward type inference (NO keyword guessing from name!)
+ * 
+ * Priority Order:
+ * 1. Explicit reward_type field (dari ekstraksi AI) - handles voucher/other
+ * 2. Physical reward indicators (physical_reward_name exists)
+ * 3. jenis_hadiah legacy field (structured, bukan keyword)
+ * 4. dinamis_reward_type legacy field
+ * 5. Promo archetype inference (cashback/bonus = credit_game by default)
+ * 6. Cash reward amount fallback
+ * 
+ * NEVER guess from sub.name keywords!
+ * 
+ * @see src/lib/apbe-enums.ts for canonical REWARD_TYPES enum
+ */
+
+import { APBE_ENUMS, type RewardTypeEnum } from './apbe-enums';
+
+// Re-export canonical type from apbe-enums (includes voucher, other)
+export type RewardType = 'hadiah_fisik' | 'credit_game' | 'uang_tunai';
+
+// Extended type that includes all enum values (for internal matching)
+type ExtendedRewardType = RewardTypeEnum;
+
+// ============================================
+// PROMO TYPE → REWARD TYPE MAPPING (LOGIC-BASED)
+// ============================================
+
+/**
+ * FORCE CREDIT GAME TYPES
+ * These promo types MUST ALWAYS return 'credit_game' regardless of other fields.
+ * This is the PRIORITY 0 override - highest precedence!
+ * 
+ * Rationale:
+ * - Cashback = bonus credit returned to game balance (NOT withdrawable cash)
+ * - Rebate = percentage of turnover credited to account
+ * - Rollingan = same as Rebate (Indonesian term)
+ * - Turnover Bonus = rewards based on betting volume
+ */
+const FORCE_CREDIT_GAME_TYPES = [
+  'cashback',
+  'rebate',
+  'rollingan',
+  'turnover_bonus',
+] as const;
+
+// Promo types yang default reward-nya adalah credit game (lower priority)
+const CREDIT_GAME_PROMO_TYPES = [
+  'deposit_bonus',
+  'welcome_bonus',
+  'referral',
+  'freebet',
+  'freechip',
+  'bonus_deposit',
+  'bonus_new_member',
+  'scatter_bonus',
+  'level_up',
+  'event_bonus',
+  'daily_bonus',
+  'weekly_bonus',
+];
+
+// Promo types yang default reward-nya adalah uang tunai
+const CASH_PROMO_TYPES = [
+  'cash_prize',
+  'tournament_cash',
+];
+
+/**
+ * Check if promo type is in FORCE_CREDIT_GAME_TYPES
+ * These types ALWAYS return credit_game unless explicit cash withdrawal is mentioned
+ */
+function isForceCreditGameType(promoType: string): boolean {
+  const normalized = promoType.toLowerCase().replace(/[-_\s]/g, '');
+  return FORCE_CREDIT_GAME_TYPES.some(t => normalized.includes(t.replace(/[-_\s]/g, '')));
+}
+
+/**
+ * Check for explicit cash withdrawal indicators
+ * These are the ONLY exceptions that can override FORCE_CREDIT_GAME_TYPES
+ */
+function hasExplicitCashWithdrawal(sub: Record<string, any>): boolean {
+  const textFields = [
+    sub.name,
+    sub.sub_name,
+    sub.reward_description,
+    sub.payout_note,
+  ].filter(Boolean).join(' ').toLowerCase();
+  
+  // Only these EXPLICIT phrases can trigger cash override
+  const cashPatterns = [
+    /tarik\s+tunai\s+langsung/i,
+    /withdraw\s+langsung/i,
+    /transfer\s+bank\s+langsung/i,
+    /wd\s+langsung/i,
+  ];
+  
+  return cashPatterns.some(p => p.test(textFields));
+}
+
+/**
+ * Normalize extended reward type to canonical 3-type system
+ * voucher → credit_game, other → null (fallthrough)
+ */
+function normalizeToCanonical(rt: ExtendedRewardType): RewardType | null {
+  switch (rt) {
+    case 'hadiah_fisik': return 'hadiah_fisik';
+    case 'credit_game': return 'credit_game';
+    case 'uang_tunai': return 'uang_tunai';
+    case 'voucher': return 'credit_game';  // Voucher treated as credit game
+    case 'other': return null;  // Unknown, let it fallthrough
+    default: return null;
+  }
+}
+
+/**
+ * Check if value is valid reward type from enum
+ */
+function isValidRewardType(value: string): value is ExtendedRewardType {
+  return (APBE_ENUMS.reward_type as readonly string[]).includes(value);
+}
+
+/**
+ * Infer reward type berdasarkan structured data (REASONING, bukan keyword)
+ * 
+ * Priority Order:
+ * 0. FORCE: Cashback/Rebate/Rollingan → ALWAYS credit_game (unless explicit cash withdrawal)
+ * 1. Explicit reward_type field (dari ekstraksi AI)
+ * 2. Physical reward indicators
+ * 3. jenis_hadiah legacy field
+ * 4. dinamis_reward_type legacy field
+ * 5. Promo archetype inference
+ * 6. Cash reward amount fallback
+ * 
+ * @param sub - Subcategory data
+ * @param promo - Parent promo data (optional, untuk archetype inference)
+ */
+export function inferRewardType(
+  sub: Record<string, any>,
+  promo?: Record<string, any>
+): RewardType | null {
+  // ============================================
+  // PRIORITY 0: FORCE OVERRIDE for Cashback/Rebate/Rollingan
+  // These promo types ALWAYS return credit_game!
+  // Exception: explicit "tarik tunai langsung" / "withdraw langsung"
+  // ============================================
+  if (promo?.promo_type && isForceCreditGameType(promo.promo_type)) {
+    // Check for explicit cash withdrawal exception
+    if (hasExplicitCashWithdrawal(sub)) {
+      console.log(`[inferRewardType] ${promo.promo_type} with explicit cash withdrawal → uang_tunai`);
+      return 'uang_tunai';
+    }
+    // Force credit_game for cashback/rebate/rollingan
+    console.log(`[inferRewardType] FORCE: ${promo.promo_type} → credit_game`);
+    return 'credit_game';
+  }
+
+  // PRIORITY 1: Explicit reward_type field dari AI extraction
+  if (sub.reward_type) {
+    const rt = String(sub.reward_type).toLowerCase();
+    
+    // Check if it's a valid enum value first
+    if (isValidRewardType(rt)) {
+      return normalizeToCanonical(rt);
+    }
+    
+    // Fallback string matching for flexibility
+    if (rt.includes('fisik') || rt === 'hadiah_fisik') return 'hadiah_fisik';
+    if (rt.includes('credit') || rt === 'credit_game') return 'credit_game';
+    if (rt.includes('tunai') || rt === 'uang_tunai') return 'uang_tunai';
+    if (rt === 'voucher') return 'credit_game';  // Voucher → credit_game
+    if (rt === 'other') return null;  // Other → fallthrough
+  }
+
+  // PRIORITY 2: Physical reward name exists = hadiah fisik
+  if (sub.physical_reward_name && String(sub.physical_reward_name).trim().length > 0) {
+    return 'hadiah_fisik';
+  }
+
+  // PRIORITY 3: jenis_hadiah legacy field (structured, bukan keyword)
+  if (sub.jenis_hadiah) {
+    const jh = String(sub.jenis_hadiah).toLowerCase();
+    if (jh.includes('fisik') || jh === 'hadiah_fisik') return 'hadiah_fisik';
+    if (jh.includes('credit') || jh === 'credit_game' || jh === 'freechip' || jh === 'freebet') return 'credit_game';
+    if (jh.includes('tunai') || jh === 'uang_tunai') return 'uang_tunai';
+    if (jh === 'voucher') return 'credit_game';  // Voucher → credit_game
+  }
+
+  // PRIORITY 4: dinamis_reward_type legacy field
+  if (sub.dinamis_reward_type) {
+    const drt = String(sub.dinamis_reward_type).toLowerCase();
+    if (drt.includes('fisik')) return 'hadiah_fisik';
+    if (drt.includes('credit') || drt === 'freechip' || drt === 'freebet') return 'credit_game';
+    if (drt.includes('tunai') || drt === 'cash') return 'uang_tunai';
+    if (drt === 'voucher') return 'credit_game';  // Voucher → credit_game
+  }
+
+  // PRIORITY 5: Promo type archetype inference
+  if (promo?.promo_type) {
+    const pt = String(promo.promo_type).toLowerCase().replace(/[-_\s]/g, '');
+    
+    // Check credit game archetypes
+    if (CREDIT_GAME_PROMO_TYPES.some(t => pt.includes(t.replace(/[-_\s]/g, '')))) {
+      return 'credit_game';
+    }
+    
+    // Check cash archetypes
+    if (CASH_PROMO_TYPES.some(t => pt.includes(t.replace(/[-_\s]/g, '')))) {
+      return 'uang_tunai';
+    }
+  }
+
+  // PRIORITY 6: Cash reward amount exists (dan bukan physical) = credit_game (default untuk bonus)
+  // Note: Di iGaming, cash bonus biasanya masuk sebagai credit game, bukan uang tunai langsung
+  if (sub.cash_reward_amount && Number(sub.cash_reward_amount) > 0) {
+    // Jika tidak ada physical reward, dan ada cash amount, kemungkinan besar credit game
+    return 'credit_game';
+  }
+
+  // Tidak bisa infer - return null
+  return null;
+}
+
+/**
+ * Get display quantity untuk subcategory
+ * 
+ * Rules:
+ * - Hadiah fisik: tampilkan quantity (default 1)
+ * - Credit game / uang tunai: return null (tidak perlu quantity di depan nama)
+ */
+export function getDisplayQuantity(
+  sub: Record<string, any>,
+  rewardType: RewardType | null
+): number | null {
+  if (rewardType === 'hadiah_fisik') {
+    return sub.physical_reward_quantity ?? 1;
+  }
+  // Credit game dan uang tunai tidak perlu quantity
+  return null;
+}
+
+/**
+ * Format subcategory name dengan quantity (jika applicable)
+ */
+export function formatSubcategoryName(
+  sub: Record<string, any>,
+  rewardType: RewardType | null,
+  fallbackName?: string
+): string {
+  const baseName = sub.name || fallbackName || 'Varian';
+  const qty = getDisplayQuantity(sub, rewardType);
+  
+  if (qty !== null && qty > 0) {
+    return `${qty} ${baseName}`;
+  }
+  return baseName;
+}
+
+/**
+ * Get badge info for reward type
+ */
+export function getRewardBadgeInfo(rewardType: RewardType | null): {
+  label: string;
+  emoji: string;
+  bgClass: string;
+  textClass: string;
+  borderClass: string;
+} | null {
+  switch (rewardType) {
+    case 'hadiah_fisik':
+      return {
+        label: 'Hadiah Fisik',
+        emoji: '🎁',
+        bgClass: 'bg-amber-500/20',
+        textClass: 'text-amber-400',
+        borderClass: 'border-amber-500/30',
+      };
+    case 'credit_game':
+      return {
+        label: 'Credit Game',
+        emoji: '🎮',
+        bgClass: 'bg-green-500/20',
+        textClass: 'text-green-400',
+        borderClass: 'border-green-500/30',
+      };
+    case 'uang_tunai':
+      return {
+        label: 'Uang Tunai',
+        emoji: '💰',
+        bgClass: 'bg-yellow-500/20',
+        textClass: 'text-yellow-400',
+        borderClass: 'border-yellow-500/30',
+      };
+    default:
+      return null;
+  }
+}

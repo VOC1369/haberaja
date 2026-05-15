@@ -1,0 +1,927 @@
+{
+  "governance_version": "V.06",
+  "domain_version": "PK-06.0",
+  "domain": "promo_knowledge",
+  "_schema": {
+    "version": "1.1",
+    "locked_at": "2026-04-24",
+    "ref": "pseudo-engine-schema-v06-spec.md"
+  },
+  "record_id": "b74ea03e-5ddc-4417-ab27-d203471b138f",
+  "created_at": "2026-04-25T07:19:20.667Z",
+  "updated_at": "2026-04-25T07:19:20.667Z",
+  "identity_engine": {
+    "client_block": {
+      "client_id": "lautan77",
+      "client_id_field_status": "explicit",
+      "client_name": "LAUTAN77"
+    },
+    "promo_block": {
+      "promo_name": "WELCOME BONUS UP TO Rp 15.000.000",
+      "promo_type": "welcome_bonus",
+      "target_user": "new_member",
+      "promo_mode": "multi_variant"
+    }
+  },
+  "classification_engine": {
+    "result_block": {
+      "program_classification": "A",
+      "secondary_classifications": [],
+      "review_confidence": "high"
+    },
+    "question_block": {
+      "q1": {
+        "answer": "ya",
+        "reasoning": "Program ini adalah Reward Program dengan 5 varian welcome bonus yang memberikan reward berbeda berdasarkan kategori game (Casino 50%, Sports 50%, Slot 30%, Casino 28%, Sports 20%) dengan struktur deposit-to-bonus yang jelas.",
+        "evidence": ""
+      },
+      "q2": {
+        "answer": "tidak",
+        "reasoning": "Tidak ada elemen kompetisi, ranking, atau leaderboard. Ini adalah program bonus deposit standar untuk member baru dengan reward otomatis berdasarkan deposit.",
+        "evidence": ""
+      },
+      "q3": {
+        "answer": "tidak",
+        "reasoning": "Bukan aturan sistem. Ini adalah program promosi aktif dengan periode terbatas (hingga 25 Mei 2050) dan mekanisme klaim spesifik.",
+        "evidence": ""
+      },
+      "q4": {
+        "answer": "ya",
+        "reasoning": "Semua varian memiliki struktur reward yang jelas: persentase bonus, max bonus, min deposit, dan turnover requirement yang spesifik untuk setiap varian.",
+        "evidence": ""
+      }
+    },
+    "meta_block": {
+      "quality_flags": [],
+      "evidence_count": 0,
+      "override": false,
+      "prompt_version": "v09",
+      "latency_ms": null
+    }
+  },
+  "taxonomy_engine": {
+    "mode_block": {
+      "mode": "multi_variant",
+      "tier_archetype": null
+    },
+    "logic_block": {
+      "conversion_formula": "",
+      "turnover_basis": "deposit_plus_bonus"
+    }
+  },
+  "period_engine": {
+    "validity_block": {
+      "valid_from": "",
+      "valid_until": "2050-05-25"
+    },
+    "distribution_block": {
+      "claim_frequency": "once",
+      "calculation_period": "one_time",
+      "distribution_day": "immediate"
+    }
+  },
+  "time_window_engine": {
+    "timezone_block": {
+      "timezone": "Asia/Jakarta",
+      "offset": ""
+    },
+    "claim_window_block": {
+      "open_ended": false
+    },
+    "distribution_window_block": {},
+    "reset_block": {}
+  },
+  "trigger_engine": {
+    "primary_trigger_block": {
+      "trigger_event": "first_deposit",
+      "action": "",
+      "evidence": ""
+    },
+    "trigger_rule_block": {
+      "rule_type": "",
+      "conditions": [
+        {
+          "field": "deposit_amount",
+          "operator": ">=",
+          "value": "50000",
+          "currency": "IDR"
+        },
+        {
+          "field": "user_status",
+          "operator": "==",
+          "value": "new_member",
+          "currency": ""
+        }
+      ],
+      "logic_operator": "AND"
+    },
+    "alternative_triggers_block": {
+      "or_conditions": [],
+      "and_conditions": []
+    }
+  },
+  "claim_engine": {
+    "method_block": {
+      "claim_method": "in_app_button",
+      "auto_credit": false
+    },
+    "channels_block": {
+      "channels": [
+        "in_app"
+      ],
+      "priority_order": [
+        "in_app"
+      ]
+    },
+    "proof_requirement_block": {
+      "proof_required": false,
+      "proof_types": [],
+      "proof_destinations": []
+    },
+    "instruction_block": {
+      "claim_steps": [
+        "Masuk ke halaman Klaim Bonus",
+        "Pilih promo yang diinginkan",
+        "Klik Ambil Promosi ini",
+        "Melakukan deposit terlebih dahulu",
+        "Transfer dana ke dompet sesuai pilihan bonus"
+      ],
+      "claim_url": ""
+    }
+  },
+  "proof_engine": {
+    "social_proof_block": {
+      "platforms": [],
+      "hashtags": [],
+      "content_requirements": []
+    },
+    "screenshot_proof_block": {
+      "ss_targets": [],
+      "rules": []
+    }
+  },
+  "payment_engine": {
+    "deposit_block": {
+      "deposit_method": "bank_transfer",
+      "deposit_rate": null
+    },
+    "method_whitelist_block": {
+      "methods": [],
+      "providers": []
+    },
+    "method_blacklist_block": {
+      "methods": [],
+      "providers": []
+    }
+  },
+  "scope_engine": {
+    "game_block": {
+      "game_domain": "mixed",
+      "markets": [],
+      "eligible_providers": [
+        "all_casino_providers",
+        "all_sports_providers",
+        "all_slot_providers"
+      ]
+    },
+    "blacklist_block": {
+      "types": [
+        "HEROES (Spadegaming)",
+        "MONEY ROLL (Pragmatic)",
+        "GOLDEN BEAUTY (Pragmatic)",
+        "BRONCO SPIRIT (Pragmatic)",
+        "CARD GAMES (Semua Slot)",
+        "SPACEMAN (Pragmatic)",
+        "Master Chen's Fortune (Pragmatic)",
+        "Prosperity Lion (PG Soft)",
+        "Semua yang 3 Gambar / 3 Line / 1 Line",
+        "Old game slot",
+        "Evolution Gaming (Casino)",
+        "Sexy Baccarat (Casino)",
+        "Mega888 (Slot)",
+        "Microgaming (Slot)",
+        "Playtech (Slot)",
+        "Game Play (Slot)"
+      ],
+      "providers": [],
+      "games": [],
+      "rules": []
+    }
+  },
+  "reward_engine": {
+    "event_block": {
+      "event_rewards": [],
+      "prizes": []
+    },
+    "requirement_block": {
+      "min_deposit": 50000,
+      "unlock_conditions": []
+    },
+    "combo_reward_block": {
+      "combo_items": []
+    },
+    "matrix_reward_block": {
+      "axis_x_label": "",
+      "axis_y_label": "",
+      "matrix_cells": []
+    },
+    "conditional_reward_block": {
+      "conditions": [],
+      "default_reward": null
+    },
+    "calculation_basis": "deposit",
+    "calculation_method": "percentage",
+    "calculation_value": null,
+    "calculation_unit": "percent",
+    "payout_direction": "upfront",
+    "reward_type": "credit_game",
+    "voucher_kind": null,
+    "max_reward": 15000000,
+    "currency": "IDR"
+  },
+  "loyalty_engine": {
+    "mechanism_block": {
+      "point_name": "",
+      "earning_rule": ""
+    },
+    "exchange_block": {
+      "exchange_groups": []
+    },
+    "tier_block": {
+      "tier_system": []
+    }
+  },
+  "variant_engine": {
+    "summary_block": {
+      "has_subcategories": true,
+      "expected_count": 5
+    },
+    "items_block": {
+      "subcategories": [
+        {
+          "variant_id": "v1_casino_50",
+          "variant_name": "WELCOME BONUS 50% CASINO",
+          "game_category": "casino",
+          "game_providers": [
+            "all_casino_providers"
+          ],
+          "game_exclusions": [
+            "evolution gaming",
+            "sexy baccarat"
+          ],
+          "min_deposit": 50000,
+          "max_bonus": 800000,
+          "bonus_percentage": 50,
+          "turnover_multiplier": 20,
+          "currency": "IDR"
+        },
+        {
+          "variant_id": "v2_sports_50",
+          "variant_name": "WELCOME BONUS 50% SPORTS",
+          "game_category": "sports",
+          "game_providers": [
+            "all_sports_providers"
+          ],
+          "game_exclusions": [],
+          "min_deposit": 0,
+          "max_bonus": 500000,
+          "bonus_percentage": 50,
+          "turnover_multiplier": 25,
+          "currency": "IDR"
+        },
+        {
+          "variant_id": "v3_slot_30",
+          "variant_name": "WELCOME BONUS 30% SLOT",
+          "game_category": "slot",
+          "game_providers": [
+            "all_slot_providers"
+          ],
+          "game_exclusions": [
+            "Mega888",
+            "Microgaming",
+            "Playtech",
+            "Game Play"
+          ],
+          "min_deposit": 50000,
+          "max_bonus": 15000000,
+          "bonus_percentage": 30,
+          "turnover_multiplier": 8,
+          "currency": "IDR"
+        },
+        {
+          "variant_id": "v4_casino_28",
+          "variant_name": "WELCOME BONUS 28% CASINO",
+          "game_category": "casino",
+          "game_providers": [
+            "all_casino_providers"
+          ],
+          "game_exclusions": [
+            "evolution gaming",
+            "sexy baccarat"
+          ],
+          "min_deposit": 0,
+          "max_bonus": 10000000,
+          "bonus_percentage": 28,
+          "turnover_multiplier": 12,
+          "currency": "IDR"
+        },
+        {
+          "variant_id": "v5_sports_20",
+          "variant_name": "WELCOME BONUS 20% SPORTS",
+          "game_category": "sports",
+          "game_providers": [
+            "all_sports_providers"
+          ],
+          "game_exclusions": [],
+          "min_deposit": 0,
+          "max_bonus": 6000000,
+          "bonus_percentage": 20,
+          "turnover_multiplier": 15,
+          "currency": "IDR"
+        }
+      ]
+    }
+  },
+  "dependency_engine": {
+    "exclusion_block": {
+      "mutually_exclusive_with": [],
+      "can_combine_with": []
+    },
+    "stacking_block": {
+      "stacking_allowed": true,
+      "stacking_policy": "non_stackable",
+      "rules": [],
+      "max_concurrent": null
+    },
+    "prerequisite_block": {
+      "requires_promo": [],
+      "requires_achievement": []
+    }
+  },
+  "invalidation_engine": {
+    "void_conditions_block": [
+      {
+        "trigger": "bonus_hunter"
+      },
+      {
+        "trigger": "hold_freespin"
+      },
+      {
+        "trigger": "ip_duplicate"
+      },
+      {
+        "trigger": "account_change"
+      },
+      {
+        "trigger": "wrong_bank_info"
+      }
+    ],
+    "penalty_block": {
+      "void_action": "void_bonus",
+      "penalty_type": "void_all",
+      "penalty_scope": "bonus_and_winnings"
+    },
+    "anti_fraud_block": {
+      "anti_fraud_rules": [
+        "bonus_hunter",
+        "hold_freespin",
+        "ip_duplicate",
+        "account_change",
+        "wrong_bank_info"
+      ],
+      "detection_methods": []
+    }
+  },
+  "terms_engine": {
+    "conditions_block": {
+      "terms_conditions": [
+        "Promosi ini hanya berlaku untuk member yang baru mendaftar di LAUTAN77",
+        "Promosi ini tidak dapat digabungkan dengan promo lainnya",
+        "Bonus diberikan khusus permainan SLOT",
+        "BONUS tidak di perbolehkan bermain di slot: HEROES (Spadegaming), MONEY ROLL (Pragmatic), GOLDEN BEAUTY (Pragmatic), BRONCO SPIRIT (Pragmatic), CARD GAMES (Semua Slot), SPACEMAN (Pragmatic), Master Chen's Fortune (Pragmatic), Prosperity Lion (PG Soft), Semua yang 3 Gambar / 3 Line / 1 Line, Old game slot",
+        "Cara Klaim: Masuk ke halaman Klaim Bonus, pilih promo dan klik Ambil Promosi ini dan harus melakukan deposit terlebih dahulu",
+        "Bonus & Kemenangan di batalkan apabila ditemukan adanya indikasi kecurangan seperti Bonus Hunter, Hold Freespin dan Kesamaan IP maka kami berhak menarik bonus dan semua kemenangan akan dihanguskan",
+        "Pastikan mengisi nomor dan nama rekening dengan benar saat pendaftaran",
+        "Jika terjadi pergantian rekening maka semua saldo akan kami hanguskan",
+        "Semua keputusan LAUTAN77 bersifat MUTLAK dan tidak bisa diganggu gugat",
+        "Member dapat mengklaim bonus satu kali setelah melakukan deposit pertama dan mentransfer dana ke dompet sesuai dengan pilihan bonus"
+      ]
+    },
+    "requirements_block": {
+      "special_requirements": []
+    }
+  },
+  "readiness_engine": {
+    "state_block": {
+      "state": "ai_draft",
+      "state_changed_at": "2026-04-25T07:19:20.668Z",
+      "state_changed_by": "extractor:pk-extractor"
+    },
+    "commit_block": {
+      "ready_to_commit": false
+    },
+    "validation_block": {
+      "is_structurally_complete": true,
+      "status": "needs_review",
+      "warnings": [
+        "Terdapat typo di sumber: 'Rp 15.000.0000' (seharusnya Rp 15.000.000)",
+        "Terdapat typo: 'Mircogaming' (seharusnya Microgaming)",
+        "Contoh perhitungan turnover hanya diberikan untuk Slot 30%, varian lain mengikuti pola yang sama: (deposit + bonus) × multiplier"
+      ]
+    },
+    "observability_block": {
+      "ambiguity_flags": [
+        "Min deposit untuk varian Sports 50% dan Casino 28% serta Sports 20% tidak disebutkan eksplisit di tabel, diasumsikan 0 atau mengikuti min deposit umum"
+      ],
+      "contradiction_flags": [],
+      "review_required": true
+    }
+  },
+  "reasoning_engine": {
+    "intent_block": {
+      "primary_action": "deposit_to_bonus",
+      "reward_nature": "upfront_credit",
+      "distribution_path": "wallet_transfer",
+      "value_shape": "percentage_capped"
+    },
+    "selection_block": {
+      "mechanic_type": "",
+      "locked_fields": [],
+      "invariant_violations": []
+    }
+  },
+  "mechanics_engine": {
+    "source_block": {
+      "source": "llm_multimodal_extraction"
+    },
+    "items_block": {
+      "items": [
+        {
+          "mechanic_id": "m_trigger_1",
+          "mechanic_type": "trigger",
+          "evidence": "Promosi ini hanya berlaku untuk member baru. Member dapat mengklaim bonus satu kali setelah melakukan deposit pertama",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "trigger_event": "first_deposit",
+            "period_type": "one_time",
+            "calculation_window": "immediate",
+            "calculation_basis": "deposit"
+          }
+        },
+        {
+          "mechanic_id": "m_eligibility_1",
+          "mechanic_type": "eligibility",
+          "evidence": "Promosi ini hanya berlaku untuk member yang baru mendaftar di LAUTAN77",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "user_status",
+            "threshold_value": "new_member"
+          },
+          "data": {
+            "user_segment": "new_member",
+            "min_threshold": 50000,
+            "threshold_unit": "IDR",
+            "currency": "IDR"
+          }
+        },
+        {
+          "mechanic_id": "m_calculation_1",
+          "mechanic_type": "calculation",
+          "evidence": "WELCOME BONUS 50% CASINO, Max Bonus Rp. 800.000, Turnover 20x",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "game_category",
+            "threshold_value": "casino"
+          },
+          "data": {
+            "calculation_basis": "deposit",
+            "calculation_method": "percentage",
+            "percentage": 50,
+            "max_reward": 800000,
+            "currency": "IDR",
+            "turnover_multiplier": 20
+          }
+        },
+        {
+          "mechanic_id": "m_calculation_2",
+          "mechanic_type": "calculation",
+          "evidence": "WELCOME BONUS 50% SPORTS, Max Bonus Rp. 500.000, Turnover 25x",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "game_category",
+            "threshold_value": "sports"
+          },
+          "data": {
+            "calculation_basis": "deposit",
+            "calculation_method": "percentage",
+            "percentage": 50,
+            "max_reward": 500000,
+            "currency": "IDR",
+            "turnover_multiplier": 25
+          }
+        },
+        {
+          "mechanic_id": "m_calculation_3",
+          "mechanic_type": "calculation",
+          "evidence": "WELCOME BONUS 30% SLOT, Min Deposit Rp. 50.000, Max Bonus Rp. 15.000.000, Turnover 8x",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "game_category",
+            "threshold_value": "slot"
+          },
+          "data": {
+            "calculation_basis": "deposit",
+            "calculation_method": "percentage",
+            "percentage": 30,
+            "max_reward": 15000000,
+            "min_deposit": 50000,
+            "currency": "IDR",
+            "turnover_multiplier": 8,
+            "turnover_formula": "(deposit + bonus) × 8"
+          }
+        },
+        {
+          "mechanic_id": "m_calculation_4",
+          "mechanic_type": "calculation",
+          "evidence": "WELCOME BONUS 28% CASINO, Max Bonus Rp. 10.000.000, Turnover 12x",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "game_category",
+            "threshold_value": "casino"
+          },
+          "data": {
+            "calculation_basis": "deposit",
+            "calculation_method": "percentage",
+            "percentage": 28,
+            "max_reward": 10000000,
+            "currency": "IDR",
+            "turnover_multiplier": 12
+          }
+        },
+        {
+          "mechanic_id": "m_calculation_5",
+          "mechanic_type": "calculation",
+          "evidence": "WELCOME BONUS 20% SPORTS, Max Bonus Rp. 6.000.000, Turnover 15x",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "game_category",
+            "threshold_value": "sports"
+          },
+          "data": {
+            "calculation_basis": "deposit",
+            "calculation_method": "percentage",
+            "percentage": 20,
+            "max_reward": 6000000,
+            "currency": "IDR",
+            "turnover_multiplier": 15
+          }
+        },
+        {
+          "mechanic_id": "m_reward_1",
+          "mechanic_type": "reward",
+          "evidence": "Member dapat mengklaim bonus satu kali setelah melakukan deposit pertama dan mentransfer dana ke dompet sesuai dengan pilihan bonus",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "reward_type": "credit_game",
+            "reward_form": "bonus_credit",
+            "reward_unit": "IDR",
+            "distribution_method": "wallet_transfer"
+          }
+        },
+        {
+          "mechanic_id": "m_distribution_1",
+          "mechanic_type": "distribution",
+          "evidence": "Cara Klaim: Masuk ke halaman Klaim Bonus, pilih promo dan klik Ambil Promosi ini dan harus melakukan deposit terlebih dahulu",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "distribution_method": "in_app_claim",
+            "distribution_day": "immediate",
+            "distribution_window": "after_deposit",
+            "auto_credit": false,
+            "manual_claim_required": true
+          }
+        },
+        {
+          "mechanic_id": "m_control_1",
+          "mechanic_type": "control",
+          "evidence": "Promosi ini tidak dapat digabungkan dengan promo lainnya",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "control_type": "stacking_restriction",
+            "stacking_policy": "non_stackable",
+            "max_concurrent": 1
+          }
+        },
+        {
+          "mechanic_id": "m_control_2",
+          "mechanic_type": "control",
+          "evidence": "Member dapat mengklaim bonus satu kali setelah melakukan deposit pertama",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "control_type": "claim_frequency",
+            "max_claims": 1,
+            "claim_period": "lifetime"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_1",
+          "mechanic_type": "invalidator",
+          "evidence": "Bonus & Kemenangan di batalkan apabila ditemukan adanya indikasi kecurangan seperti Bonus Hunter, Hold Freespin dan Kesamaan IP",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "fraud_detection",
+            "violation_types": [
+              "bonus_hunter",
+              "hold_freespin",
+              "ip_duplicate"
+            ]
+          },
+          "data": {
+            "void_trigger": "bonus_hunter",
+            "void_action": "void_bonus_and_winnings",
+            "penalty_scope": "all"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_2",
+          "mechanic_type": "invalidator",
+          "evidence": "Jika terjadi pergantian rekening maka semua saldo akan kami hanguskan",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "account_change",
+            "violation_types": [
+              "account_change"
+            ]
+          },
+          "data": {
+            "void_trigger": "account_change",
+            "void_action": "void_balance",
+            "penalty_scope": "all_balance"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_3",
+          "mechanic_type": "invalidator",
+          "evidence": "Pastikan mengisi nomor dan nama rekening dengan benar saat pendaftaran",
+          "confidence": 0.9,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "wrong_bank_info",
+            "violation_types": [
+              "wrong_bank_info"
+            ]
+          },
+          "data": {
+            "void_trigger": "wrong_bank_info",
+            "void_action": "void_bonus",
+            "penalty_scope": "bonus"
+          }
+        },
+        {
+          "mechanic_id": "m_constraint_1",
+          "mechanic_type": "constraint",
+          "evidence": "BONUS tidak di perbolehkan bermain di slot: HEROES (Spadegaming), MONEY ROLL (Pragmatic), GOLDEN BEAUTY (Pragmatic), BRONCO SPIRIT (Pragmatic), CARD GAMES (Semua Slot), SPACEMAN (Pragmatic), Master Chen's Fortune (Pragmatic), Prosperity Lion (PG Soft), Semua yang 3 Gambar / 3 Line / 1 Line, Old game slot",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "game_restriction"
+          },
+          "data": {
+            "constraint_type": "game_blacklist",
+            "blacklisted_games": [
+              "HEROES (Spadegaming)",
+              "MONEY ROLL (Pragmatic)",
+              "GOLDEN BEAUTY (Pragmatic)",
+              "BRONCO SPIRIT (Pragmatic)",
+              "CARD GAMES (Semua Slot)",
+              "SPACEMAN (Pragmatic)",
+              "Master Chen's Fortune (Pragmatic)",
+              "Prosperity Lion (PG Soft)",
+              "3 Gambar / 3 Line / 1 Line games",
+              "Old game slot"
+            ]
+          }
+        },
+        {
+          "mechanic_id": "m_constraint_2",
+          "mechanic_type": "constraint",
+          "evidence": "Semua Provider Casino, Kecuali evolution gaming dan sexy baccarat",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "provider_restriction",
+            "threshold_value": "casino"
+          },
+          "data": {
+            "constraint_type": "provider_blacklist",
+            "game_category": "casino",
+            "blacklisted_providers": [
+              "evolution gaming",
+              "sexy baccarat"
+            ]
+          }
+        },
+        {
+          "mechanic_id": "m_constraint_3",
+          "mechanic_type": "constraint",
+          "evidence": "Semua Provider Slots, kecuali Mega888, Mircogaming, Playtech & Game Play",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "provider_restriction",
+            "threshold_value": "slot"
+          },
+          "data": {
+            "constraint_type": "provider_blacklist",
+            "game_category": "slot",
+            "blacklisted_providers": [
+              "Mega888",
+              "Microgaming",
+              "Playtech",
+              "Game Play"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "projection_engine": {
+    "_description": "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
+    "summary_block": {
+      "summary": "WELCOME BONUS UP TO Rp 15.000.000 dari deposit.",
+      "promo_summary": "WELCOME BONUS UP TO Rp 15.000.000 dari deposit.",
+      "main_trigger": "first_deposit",
+      "main_reward_form": "credit_game",
+      "main_reward_percent": null,
+      "main_reward_value": null,
+      "main_reward_unit": "percent",
+      "max_bonus": 15000000,
+      "min_base": 50000,
+      "payout_direction": "upfront",
+      "turnover_multiplier": null,
+      "turnover_basis": "deposit_plus_bonus"
+    },
+    "claim_summary_block": {
+      "primary_claim_method": "in_app_button",
+      "primary_claim_platform": "in_app",
+      "claim_channels": [
+        "in_app"
+      ],
+      "auto_credit": false,
+      "proof_required": false,
+      "claim_frequency": "once",
+      "distribution_day": "immediate"
+    },
+    "scope_summary_block": {
+      "game_domain": "mixed",
+      "game_types": [],
+      "game_providers": [
+        "all_casino_providers",
+        "all_sports_providers",
+        "all_slot_providers"
+      ],
+      "game_exclusions": [
+        "HEROES (Spadegaming)",
+        "MONEY ROLL (Pragmatic)",
+        "GOLDEN BEAUTY (Pragmatic)",
+        "BRONCO SPIRIT (Pragmatic)",
+        "CARD GAMES (Semua Slot)",
+        "SPACEMAN (Pragmatic)",
+        "Master Chen's Fortune (Pragmatic)",
+        "Prosperity Lion (PG Soft)",
+        "Semua yang 3 Gambar / 3 Line / 1 Line",
+        "Old game slot",
+        "Evolution Gaming (Casino)",
+        "Sexy Baccarat (Casino)",
+        "Mega888 (Slot)",
+        "Microgaming (Slot)",
+        "Playtech (Slot)",
+        "Game Play (Slot)"
+      ],
+      "stacking_policy": "non_stackable"
+    },
+    "intent_summary_block": {
+      "intent_category": "acquisition",
+      "primary_action": "deposit_to_bonus",
+      "reward_nature": "upfront_credit",
+      "distribution_path": "wallet_transfer",
+      "value_shape": "percentage_capped",
+      "target_segment": "Member Baru"
+    }
+  },
+  "risk_engine": {
+    "level_block": {
+      "promo_risk_level": "medium"
+    }
+  },
+  "meta_engine": {
+    "source_block": {
+      "source_url": "",
+      "raw_content": "",
+      "extraction_source": "multimodal",
+      "source_type": "image_upload"
+    },
+    "extraction_block": {
+      "has_rowspan_tables": false,
+      "html_was_normalized": false,
+      "client_id_source": null,
+      "propagated_fields": [],
+      "ambiguous_blacklists": 0,
+      "extracted_at": "2026-04-25T07:19:20.668Z",
+      "classification_overridden": false,
+      "classification_override_reason": "",
+      "original_llm_category": ""
+    },
+    "schema_block": {
+      "schema_name": "Pseudo Engine Schema",
+      "schema_version": "1.1",
+      "created_by": "habe_raja",
+      "status": "locked",
+      "evolved_from": "1.0",
+      "extractor": "pk-extractor@claude-sonnet-4-5"
+    }
+  },
+  "ai_confidence": {
+    "identity_engine.client_block.client_id": 1,
+    "identity_engine.promo_block.promo_name": 1,
+    "identity_engine.promo_block.promo_type": 1,
+    "identity_engine.promo_block.target_user": 1,
+    "identity_engine.promo_block.promo_mode": 1,
+    "reward_engine.calculation_basis": 1,
+    "reward_engine.calculation_method": 1,
+    "reward_engine.payout_direction": 1,
+    "reward_engine.reward_type": 1,
+    "reward_engine.max_reward": 1,
+    "trigger_engine.trigger_event": 1,
+    "claim_engine.method_block.claim_method": 1,
+    "scope_engine.game_domain": 1,
+    "period_engine.valid_until": 1,
+    "period_engine.claim_frequency": 1,
+    "variant_engine.variants": 1,
+    "invalidation_engine.void_triggers": 1,
+    "mechanics_engine.items": 1,
+    "dependency_engine.stacking_policy": 1,
+    "time_window_engine.timezone": 0.9,
+    "reward_engine.calculation_value": 0,
+    "period_engine.valid_from": 0
+  },
+  "_field_status": {
+    "identity_engine.client_block.client_id": "explicit",
+    "identity_engine.promo_block.promo_name": "explicit",
+    "identity_engine.promo_block.promo_type": "explicit",
+    "identity_engine.promo_block.target_user": "explicit",
+    "identity_engine.promo_block.promo_mode": "derived",
+    "reward_engine.calculation_basis": "explicit",
+    "reward_engine.calculation_method": "explicit",
+    "reward_engine.payout_direction": "inferred",
+    "reward_engine.reward_type": "inferred",
+    "reward_engine.max_reward": "explicit",
+    "trigger_engine.trigger_event": "explicit",
+    "claim_engine.method_block.claim_method": "explicit",
+    "scope_engine.game_domain": "derived",
+    "period_engine.valid_until": "explicit",
+    "period_engine.claim_frequency": "explicit",
+    "variant_engine.variants": "explicit",
+    "invalidation_engine.void_triggers": "explicit",
+    "mechanics_engine.items": "derived",
+    "dependency_engine.stacking_policy": "explicit",
+    "time_window_engine.timezone": "inferred",
+    "reward_engine.calculation_value": "unknown",
+    "period_engine.valid_from": "unknown"
+  }
+}

@@ -1,0 +1,827 @@
+{
+  "governance_version": "V.06",
+  "domain_version": "PK-06.0",
+  "domain": "promo_knowledge",
+  "_schema": {
+    "version": "1.1",
+    "locked_at": "2026-04-24",
+    "ref": "pseudo-engine-schema-v06-spec.md"
+  },
+  "record_id": "5c4fdf21-4822-4387-82dc-c5b2e0ce21fd",
+  "created_at": "2026-04-25T07:27:38.018Z",
+  "updated_at": "2026-04-25T07:27:38.018Z",
+  "identity_engine": {
+    "client_block": {
+      "client_id": "lautan77",
+      "client_id_field_status": "explicit",
+      "client_name": "LAUTAN77"
+    },
+    "promo_block": {
+      "promo_name": "XTRA CUAN REFERRAL UP TO 15%",
+      "promo_type": "referral",
+      "target_user": "all_member",
+      "promo_mode": "tiered"
+    }
+  },
+  "classification_engine": {
+    "result_block": {
+      "program_classification": "A",
+      "secondary_classifications": [],
+      "review_confidence": "high"
+    },
+    "question_block": {
+      "q1": {
+        "answer": "ya",
+        "reasoning": "Program referral adalah reward program berkelanjutan yang memberikan komisi berdasarkan performa downline, bukan event terbatas waktu.",
+        "evidence": ""
+      },
+      "q2": {
+        "answer": "tidak",
+        "reasoning": "Tidak ada periode waktu terbatas yang disebutkan, tanggal akhir ditandai dengan '-', menunjukkan program ongoing.",
+        "evidence": ""
+      },
+      "q3": {
+        "answer": "tidak",
+        "reasoning": "Ini adalah program reward referral berkelanjutan, bukan event kompetisi atau promosi terbatas waktu.",
+        "evidence": ""
+      },
+      "q4": {
+        "answer": "tidak",
+        "reasoning": "Bukan aturan sistem umum, melainkan program reward spesifik untuk referral dengan tier komisi.",
+        "evidence": ""
+      }
+    },
+    "meta_block": {
+      "quality_flags": [],
+      "evidence_count": 0,
+      "override": false,
+      "prompt_version": "v09",
+      "latency_ms": null
+    }
+  },
+  "taxonomy_engine": {
+    "mode_block": {
+      "mode": "tiered",
+      "tier_archetype": "player_count"
+    },
+    "logic_block": {
+      "conversion_formula": "",
+      "turnover_basis": null
+    }
+  },
+  "period_engine": {
+    "validity_block": {
+      "valid_from": "",
+      "valid_until": ""
+    },
+    "distribution_block": {
+      "claim_frequency": "periodic",
+      "calculation_period": "monthly",
+      "distribution_day": ""
+    }
+  },
+  "time_window_engine": {
+    "timezone_block": {
+      "timezone": "Asia/Jakarta",
+      "offset": ""
+    },
+    "claim_window_block": {
+      "open_ended": true
+    },
+    "distribution_window_block": {},
+    "reset_block": {}
+  },
+  "trigger_engine": {
+    "primary_trigger_block": {
+      "trigger_event": "downline_activity",
+      "action": "",
+      "evidence": ""
+    },
+    "trigger_rule_block": {
+      "rule_type": "",
+      "conditions": [
+        {
+          "field": "downline_count",
+          "operator": ">=",
+          "value": "5",
+          "currency": ""
+        },
+        {
+          "field": "downline_winlose",
+          "operator": ">",
+          "value": "0",
+          "currency": "IDR"
+        }
+      ],
+      "logic_operator": "AND"
+    },
+    "alternative_triggers_block": {
+      "or_conditions": [],
+      "and_conditions": []
+    }
+  },
+  "claim_engine": {
+    "method_block": {
+      "claim_method": "manual_livechat",
+      "auto_credit": false
+    },
+    "channels_block": {
+      "channels": [
+        "livechat",
+        "customer_service"
+      ],
+      "priority_order": [
+        "livechat"
+      ]
+    },
+    "proof_requirement_block": {
+      "proof_required": true,
+      "proof_types": [
+        "kyc_verification",
+        "referral_media_info"
+      ],
+      "proof_destinations": [
+        "customer_service"
+      ]
+    },
+    "instruction_block": {
+      "claim_steps": [
+        "Pemilik referral WAJIB KYC dengan nama sesuai rekening yang terdaftar",
+        "Pada pencairan referral pertama kali, berikan informasi mengenai media penyebaran link referral",
+        "Tunggu proses verifikasi tim LAUTAN77",
+        "Klaim komisi sesuai tier yang dicapai"
+      ],
+      "claim_url": ""
+    }
+  },
+  "proof_engine": {
+    "social_proof_block": {
+      "platforms": [],
+      "hashtags": [],
+      "content_requirements": []
+    },
+    "screenshot_proof_block": {
+      "ss_targets": [
+        "customer_service"
+      ],
+      "rules": []
+    }
+  },
+  "payment_engine": {
+    "deposit_block": {
+      "deposit_method": "",
+      "deposit_rate": null
+    },
+    "method_whitelist_block": {
+      "methods": [],
+      "providers": []
+    },
+    "method_blacklist_block": {
+      "methods": [],
+      "providers": []
+    }
+  },
+  "scope_engine": {
+    "game_block": {
+      "game_domain": "all",
+      "markets": [],
+      "eligible_providers": []
+    },
+    "blacklist_block": {
+      "types": [],
+      "providers": [],
+      "games": [],
+      "rules": []
+    }
+  },
+  "reward_engine": {
+    "event_block": {
+      "event_rewards": [],
+      "prizes": []
+    },
+    "requirement_block": {
+      "min_deposit": null,
+      "unlock_conditions": []
+    },
+    "combo_reward_block": {
+      "combo_items": []
+    },
+    "matrix_reward_block": {
+      "axis_x_label": "",
+      "axis_y_label": "",
+      "matrix_cells": []
+    },
+    "conditional_reward_block": {
+      "conditions": [],
+      "default_reward": null
+    },
+    "calculation_basis": "downline_winlose",
+    "calculation_method": "tiered_percentage",
+    "calculation_value": 15,
+    "calculation_unit": "percent",
+    "payout_direction": "backend",
+    "reward_type": "cash",
+    "voucher_kind": null,
+    "max_reward": null,
+    "currency": "IDR"
+  },
+  "loyalty_engine": {
+    "mechanism_block": {
+      "point_name": "",
+      "earning_rule": ""
+    },
+    "exchange_block": {
+      "exchange_groups": []
+    },
+    "tier_block": {
+      "tier_system": []
+    }
+  },
+  "variant_engine": {
+    "summary_block": {
+      "has_subcategories": true,
+      "expected_count": 3
+    },
+    "items_block": {
+      "subcategories": [
+        {
+          "tier_id": "tier_1",
+          "tier_name": "5 ID",
+          "min_downline": 5,
+          "max_downline": 9,
+          "commission_percentage": 5,
+          "currency": "IDR",
+          "example_winlose": 10000000,
+          "example_commission_deduction": 300000,
+          "example_cashback_deduction": 700000,
+          "example_admin_fee": 2000000,
+          "example_net_winlose": 7000000,
+          "example_final_commission": 425000
+        },
+        {
+          "tier_id": "tier_2",
+          "tier_name": "10 ID",
+          "min_downline": 10,
+          "max_downline": 14,
+          "commission_percentage": 10,
+          "currency": "IDR",
+          "example_winlose": 50000000,
+          "example_commission_deduction": 2000000,
+          "example_cashback_deduction": 3000000,
+          "example_admin_fee": 10000000,
+          "example_net_winlose": 35000000,
+          "example_final_commission": 3500000
+        },
+        {
+          "tier_id": "tier_3",
+          "tier_name": "15 ID",
+          "min_downline": 15,
+          "max_downline": null,
+          "commission_percentage": 15,
+          "currency": "IDR",
+          "example_winlose": 100000000,
+          "example_commission_deduction": 3000000,
+          "example_cashback_deduction": 7000000,
+          "example_admin_fee": 20000000,
+          "example_net_winlose": 70000000,
+          "example_final_commission": 10500000
+        }
+      ]
+    }
+  },
+  "dependency_engine": {
+    "exclusion_block": {
+      "mutually_exclusive_with": [],
+      "can_combine_with": []
+    },
+    "stacking_block": {
+      "stacking_allowed": true,
+      "stacking_policy": "stackable_with_downline_promos",
+      "rules": [],
+      "max_concurrent": null
+    },
+    "prerequisite_block": {
+      "requires_promo": [],
+      "requires_achievement": []
+    }
+  },
+  "invalidation_engine": {
+    "void_conditions_block": [
+      {
+        "trigger": "multi_accounting"
+      },
+      {
+        "trigger": "self_referral"
+      },
+      {
+        "trigger": "traffic_fraud"
+      },
+      {
+        "trigger": "click_manipulation"
+      },
+      {
+        "trigger": "illegal_promotion"
+      },
+      {
+        "trigger": "phishing"
+      }
+    ],
+    "penalty_block": {
+      "void_action": "program_removal",
+      "penalty_type": "permanent_ban",
+      "penalty_scope": "all_commissions"
+    },
+    "anti_fraud_block": {
+      "anti_fraud_rules": [
+        "multi_accounting",
+        "self_referral",
+        "traffic_fraud",
+        "click_manipulation",
+        "illegal_promotion",
+        "phishing"
+      ],
+      "detection_methods": []
+    }
+  },
+  "terms_engine": {
+    "conditions_block": {
+      "terms_conditions": [
+        "Pemilik referral WAJIB KYC dengan nama sesuai rekening yang terdaftar",
+        "Pada pencairan referral pertama kali, pihak pertama harus memberikan informasi mengenai media penyebaran link referral yang dimiliki",
+        "Pendaftaran akan melalui proses verifikasi tim LAUTAN77",
+        "Dilarang mengubah materi promosi tanpa izin",
+        "Dilarang menggunakan brand untuk iklan berbayar tanpa persetujuan",
+        "LAUTAN77 berhak mengubah T&C kapan saja, perubahan diumumkan via email/dashboard",
+        "Melanjutkan promosi setelah perubahan dianggap menyetujui T&C baru",
+        "LAUTAN77 berhak menolak atau menutup akun referral tanpa pemberitahuan jika ada pelanggaran",
+        "Afiliasi akan dihapus dari program dan komisi akan dibatalkan jika melakukan: Multi-akun/self-referral, Traffic palsu, Manipulasi klik/konversi, Promosi di situs ilegal (pornografi, kekerasan, diskriminatif), Phishing yang merugikan pihak lain",
+        "Rumus Komisi: Winlose – Komisi – Cashback – Admin Fee 5% = Hasil x Persentase"
+      ]
+    },
+    "requirements_block": {
+      "special_requirements": []
+    }
+  },
+  "readiness_engine": {
+    "state_block": {
+      "state": "ai_draft",
+      "state_changed_at": "2026-04-25T07:27:38.019Z",
+      "state_changed_by": "extractor:pk-extractor"
+    },
+    "commit_block": {
+      "ready_to_commit": false
+    },
+    "validation_block": {
+      "is_structurally_complete": true,
+      "status": "needs_review",
+      "warnings": [
+        "Tanggal akhir ditandai dengan '-' menunjukkan program ongoing tanpa batas waktu",
+        "Tidak ada informasi tentang minimum payout atau threshold klaim",
+        "Tidak ada informasi tentang metode klaim spesifik (livechat/whatsapp/telegram), diasumsikan manual via CS"
+      ]
+    },
+    "observability_block": {
+      "ambiguity_flags": [
+        "Admin Fee disebutkan 5% di rumus teks tetapi contoh perhitungan menggunakan nilai absolut yang setara dengan ~20% dari winlose bersih",
+        "Tidak ada informasi eksplisit tentang frekuensi distribusi komisi (harian/mingguan/bulanan)"
+      ],
+      "contradiction_flags": [
+        "Rumus menyebutkan 'Admin Fee 5%' tetapi contoh perhitungan menunjukkan admin fee -2.000.000 dari winlose 10.000.000 (20%), -10.000.000 dari 50.000.000 (20%), -20.000.000 dari 100.000.000 (20%)"
+      ],
+      "review_required": true
+    }
+  },
+  "reasoning_engine": {
+    "intent_block": {
+      "primary_action": "refer_to_commission",
+      "reward_nature": "commission_based",
+      "distribution_path": "manual_claim",
+      "value_shape": "tiered_percentage"
+    },
+    "selection_block": {
+      "mechanic_type": "",
+      "locked_fields": [],
+      "invariant_violations": []
+    }
+  },
+  "mechanics_engine": {
+    "source_block": {
+      "source": "llm_multimodal_extraction"
+    },
+    "items_block": {
+      "items": [
+        {
+          "mechanic_id": "m_trigger_1",
+          "mechanic_type": "trigger",
+          "evidence": "Program referral yang memberikan komisi berdasarkan aktivitas downline dengan tier 5 ID, 10 ID, 15 ID",
+          "confidence": 0.95,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "downline_activity",
+            "threshold_value": 5,
+            "threshold_unit": "player_count"
+          },
+          "data": {
+            "trigger_event": "downline_activity",
+            "period_type": "ongoing",
+            "calculation_window": "periodic",
+            "calculation_basis": "downline_winlose"
+          }
+        },
+        {
+          "mechanic_id": "m_eligibility_1",
+          "mechanic_type": "eligibility",
+          "evidence": "Pemilik referral WAJIB KYC dengan nama sesuai rekening yang terdaftar. Pendaftaran akan melalui proses verifikasi tim LAUTAN77.",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "kyc_verification",
+            "verification_required": true
+          },
+          "data": {
+            "user_segment": "all_member",
+            "min_threshold": 5,
+            "threshold_unit": "downline_count",
+            "currency": "IDR",
+            "kyc_required": true,
+            "verification_process": "team_verification"
+          }
+        },
+        {
+          "mechanic_id": "m_eligibility_2",
+          "mechanic_type": "eligibility",
+          "evidence": "Pada pencairan referral pertama kali, pihak pertama harus memberikan informasi mengenai media penyebaran link referral yang dimiliki",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "first_claim",
+            "info_required": true
+          },
+          "data": {
+            "requirement_type": "referral_media_disclosure",
+            "timing": "first_claim",
+            "mandatory": true
+          }
+        },
+        {
+          "mechanic_id": "m_calculation_1",
+          "mechanic_type": "calculation",
+          "evidence": "Rumus Komisi: Winlose – Komisi – Cashback – Admin Fee 5% = Hasil x Persentase. Tier 5%: 5 ID, Tier 10%: 10 ID, Tier 15%: 15 ID",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "tier_based",
+            "tier_dimension": "downline_count"
+          },
+          "data": {
+            "calculation_basis": "downline_winlose",
+            "calculation_method": "tiered_percentage",
+            "formula": "net_winlose_after_deductions * tier_percentage",
+            "deductions": [
+              "commission",
+              "cashback",
+              "admin_fee_20_percent"
+            ],
+            "tier_1_percentage": 5,
+            "tier_1_min_players": 5,
+            "tier_2_percentage": 10,
+            "tier_2_min_players": 10,
+            "tier_3_percentage": 15,
+            "tier_3_min_players": 15,
+            "currency": "IDR"
+          }
+        },
+        {
+          "mechanic_id": "m_reward_1",
+          "mechanic_type": "reward",
+          "evidence": "KOMISI 5%, KOMISI 10%, KOMISI 15% berdasarkan tier downline",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "reward_type": "cash",
+            "reward_form": "commission",
+            "reward_unit": "IDR",
+            "voucher_kind": null,
+            "tiered_structure": true,
+            "max_percentage": 15
+          }
+        },
+        {
+          "mechanic_id": "m_distribution_1",
+          "mechanic_type": "distribution",
+          "evidence": "Pada pencairan referral pertama kali, pihak pertama harus memberikan informasi mengenai media penyebaran link referral yang dimiliki",
+          "confidence": 0.85,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "manual_claim",
+            "verification_required": true
+          },
+          "data": {
+            "distribution_method": "manual_claim",
+            "distribution_day": "",
+            "distribution_window": "periodic",
+            "auto_credit": false,
+            "claim_channel": "customer_service"
+          }
+        },
+        {
+          "mechanic_id": "m_control_1",
+          "mechanic_type": "control",
+          "evidence": "Dilarang mengubah materi promosi tanpa izin. Dilarang menggunakan brand untuk iklan berbayar tanpa persetujuan.",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "control_type": "promotional_material_restriction",
+            "material_modification": "prohibited_without_permission",
+            "paid_advertising": "prohibited_without_approval"
+          }
+        },
+        {
+          "mechanic_id": "m_control_2",
+          "mechanic_type": "control",
+          "evidence": "LAUTAN77 berhak mengubah T&C kapan saja, perubahan diumumkan via email/dashboard. Melanjutkan promosi setelah perubahan dianggap menyetujui T&C baru.",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": null,
+          "data": {
+            "control_type": "terms_modification_rights",
+            "modification_authority": "operator",
+            "notification_channels": [
+              "email",
+              "dashboard"
+            ],
+            "continuation_implies_acceptance": true
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_1",
+          "mechanic_type": "invalidator",
+          "evidence": "Multi-akun / self-referral",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "violation_detection",
+            "violation_types": [
+              "multi_accounting",
+              "self_referral"
+            ]
+          },
+          "data": {
+            "void_trigger": "multi_accounting",
+            "void_action": "program_removal",
+            "penalty_scope": "all_commissions",
+            "severity": "critical"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_2",
+          "mechanic_type": "invalidator",
+          "evidence": "Traffic palsu",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "violation_detection",
+            "violation_types": [
+              "traffic_fraud"
+            ]
+          },
+          "data": {
+            "void_trigger": "traffic_fraud",
+            "void_action": "commission_cancellation",
+            "penalty_scope": "all_commissions",
+            "severity": "critical"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_3",
+          "mechanic_type": "invalidator",
+          "evidence": "Manipulasi klik/konversi",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "violation_detection",
+            "violation_types": [
+              "click_manipulation"
+            ]
+          },
+          "data": {
+            "void_trigger": "click_manipulation",
+            "void_action": "commission_cancellation",
+            "penalty_scope": "all_commissions",
+            "severity": "critical"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_4",
+          "mechanic_type": "invalidator",
+          "evidence": "Promosi di situs ilegal (pornografi, kekerasan, diskriminatif)",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "violation_detection",
+            "violation_types": [
+              "illegal_promotion"
+            ]
+          },
+          "data": {
+            "void_trigger": "illegal_promotion",
+            "void_action": "program_removal",
+            "penalty_scope": "all_commissions",
+            "severity": "critical",
+            "prohibited_sites": [
+              "pornography",
+              "violence",
+              "discriminatory"
+            ]
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_5",
+          "mechanic_type": "invalidator",
+          "evidence": "Melakukan Phishing yang merugikan pihak lain",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "violation_detection",
+            "violation_types": [
+              "phishing"
+            ]
+          },
+          "data": {
+            "void_trigger": "phishing",
+            "void_action": "account_closure",
+            "penalty_scope": "all_commissions",
+            "severity": "critical"
+          }
+        },
+        {
+          "mechanic_id": "m_invalidator_6",
+          "mechanic_type": "invalidator",
+          "evidence": "LAUTAN77 berhak menolak atau menutup akun referral tanpa pemberitahuan jika ada pelanggaran",
+          "confidence": 1,
+          "ambiguity": false,
+          "ambiguity_reason": null,
+          "activation_rule": {
+            "condition_type": "violation_detection",
+            "operator_discretion": true
+          },
+          "data": {
+            "void_trigger": "any_violation",
+            "void_action": "account_closure",
+            "penalty_scope": "all_commissions",
+            "notification_required": false,
+            "operator_authority": "absolute"
+          }
+        }
+      ]
+    }
+  },
+  "projection_engine": {
+    "_description": "DERIVED ONLY. Generated post-extraction. Extractor must NOT write directly.",
+    "summary_block": {
+      "summary": "XTRA CUAN REFERRAL UP TO 15% — 15% dari downline_winlose.",
+      "promo_summary": "XTRA CUAN REFERRAL UP TO 15% — 15% dari downline_winlose.",
+      "main_trigger": "downline_activity",
+      "main_reward_form": "cash",
+      "main_reward_percent": null,
+      "main_reward_value": 15,
+      "main_reward_unit": "percent",
+      "max_bonus": null,
+      "min_base": null,
+      "payout_direction": "backend",
+      "turnover_multiplier": null,
+      "turnover_basis": null
+    },
+    "claim_summary_block": {
+      "primary_claim_method": "manual_livechat",
+      "primary_claim_platform": "livechat",
+      "claim_channels": [
+        "livechat"
+      ],
+      "auto_credit": false,
+      "proof_required": true,
+      "claim_frequency": "periodic",
+      "distribution_day": ""
+    },
+    "scope_summary_block": {
+      "game_domain": "all",
+      "game_types": [],
+      "game_providers": [],
+      "game_exclusions": [],
+      "stacking_policy": "stackable_with_downline_promos"
+    },
+    "intent_summary_block": {
+      "intent_category": "virality",
+      "primary_action": "refer_to_commission",
+      "reward_nature": "commission_based",
+      "distribution_path": "manual_claim",
+      "value_shape": "tiered_percentage",
+      "target_segment": "Semua"
+    }
+  },
+  "risk_engine": {
+    "level_block": {
+      "promo_risk_level": "high"
+    }
+  },
+  "meta_engine": {
+    "source_block": {
+      "source_url": "",
+      "raw_content": "",
+      "extraction_source": "multimodal",
+      "source_type": "image_upload"
+    },
+    "extraction_block": {
+      "has_rowspan_tables": false,
+      "html_was_normalized": false,
+      "client_id_source": null,
+      "propagated_fields": [],
+      "ambiguous_blacklists": 0,
+      "extracted_at": "2026-04-25T07:27:38.019Z",
+      "classification_overridden": false,
+      "classification_override_reason": "",
+      "original_llm_category": ""
+    },
+    "schema_block": {
+      "schema_name": "Pseudo Engine Schema",
+      "schema_version": "1.1",
+      "created_by": "habe_raja",
+      "status": "locked",
+      "evolved_from": "1.0",
+      "extractor": "pk-extractor@claude-sonnet-4-5"
+    }
+  },
+  "ai_confidence": {
+    "identity_engine.client_block.client_id": 1,
+    "identity_engine.promo_block.promo_name": 1,
+    "identity_engine.promo_block.promo_type": 1,
+    "identity_engine.promo_block.target_user": 0.9,
+    "identity_engine.promo_block.promo_mode": 1,
+    "reward_engine.calculation_basis": 1,
+    "reward_engine.calculation_value": 1,
+    "reward_engine.calculation_method": 1,
+    "reward_engine.payout_direction": 0.95,
+    "reward_engine.reward_type": 1,
+    "trigger_engine.trigger_event": 1,
+    "claim_engine.method_block.claim_method": 0.85,
+    "scope_engine.game_domain": 0.9,
+    "period_engine.valid_from": 0,
+    "period_engine.valid_until": 0,
+    "period_engine.claim_frequency": 0.8,
+    "variant_engine.tier_dimension": 1,
+    "variant_engine.variants": 1,
+    "invalidation_engine.void_triggers": 1,
+    "mechanics_engine.items": 0.95,
+    "classification_engine.result_block.program_classification": 1,
+    "time_window_engine.timezone": 0.7,
+    "time_window_engine.open_ended": 1,
+    "taxonomy_engine.mode": 1,
+    "taxonomy_engine.tier_archetype": 1,
+    "proof_engine.proof_required": 1,
+    "terms_engine.raw_terms": 1
+  },
+  "_field_status": {
+    "identity_engine.client_block.client_id": "explicit",
+    "identity_engine.promo_block.promo_name": "explicit",
+    "identity_engine.promo_block.promo_type": "explicit",
+    "identity_engine.promo_block.target_user": "inferred",
+    "identity_engine.promo_block.promo_mode": "explicit",
+    "reward_engine.calculation_basis": "explicit",
+    "reward_engine.calculation_value": "explicit",
+    "reward_engine.calculation_method": "explicit",
+    "reward_engine.payout_direction": "inferred",
+    "reward_engine.reward_type": "explicit",
+    "trigger_engine.trigger_event": "explicit",
+    "claim_engine.method_block.claim_method": "inferred",
+    "scope_engine.game_domain": "inferred",
+    "period_engine.valid_from": "unknown",
+    "period_engine.valid_until": "unknown",
+    "period_engine.claim_frequency": "inferred",
+    "variant_engine.tier_dimension": "explicit",
+    "variant_engine.variants": "explicit",
+    "invalidation_engine.void_triggers": "explicit",
+    "mechanics_engine.items": "derived",
+    "classification_engine.result_block.program_classification": "derived",
+    "time_window_engine.timezone": "inferred",
+    "time_window_engine.open_ended": "explicit",
+    "taxonomy_engine.mode": "explicit",
+    "taxonomy_engine.tier_archetype": "explicit",
+    "proof_engine.proof_required": "explicit",
+    "terms_engine.raw_terms": "explicit"
+  }
+}
