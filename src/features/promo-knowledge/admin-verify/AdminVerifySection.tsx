@@ -108,6 +108,62 @@ const isEmpty = (v: unknown): boolean => {
   return false;
 };
 
+/**
+ * PATCH 2 — Path-based flag clearer.
+ *
+ * Hapus item dari warnings[] / ambiguity_flags[] yang stringnya MENGANDUNG
+ * salah satu canonical path yang baru saja di-patch admin. Path adalah token
+ * dotted yang sangat spesifik (mis. `scope_engine.game_block.eligible_providers`)
+ * sehingga substring match tidak akan false-positive ke kalimat umum.
+ *
+ * Contradiction TIDAK pernah dibersihkan via path. Contradiction hanya boleh
+ * di-clear via exact source_text match di Jalur B (lihat onConfirmApply).
+ *
+ * Tidak ada regex / keyword logic. Murni equality + includes terhadap path.
+ */
+function clearFlagsByPatchedPaths(
+  draft: PkV10Record,
+  patchedPaths: string[],
+): void {
+  if (patchedPaths.length === 0) return;
+  const ob = draft.readiness_engine?.observability_block;
+  const vb = draft.readiness_engine?.validation_block;
+  const matches = (s: string) =>
+    patchedPaths.some((p) => p.length > 0 && s.includes(p));
+
+  if (vb && Array.isArray(vb.warnings)) {
+    vb.warnings = vb.warnings.filter((s) => !matches(s));
+  }
+  if (ob && Array.isArray(ob.ambiguity_flags)) {
+    ob.ambiguity_flags = ob.ambiguity_flags.filter((s) => !matches(s));
+  }
+  // contradiction_flags: NOT cleared by path. Only via Jalur B exact match.
+}
+
+/**
+ * PATCH 2 — Exact-string flag clearer for Jalur B.
+ * Removes the precise `source_text` from its severity bucket.
+ */
+function clearFlagByExactSource(
+  draft: PkV10Record,
+  severity: "warning" | "ambiguity" | "contradiction",
+  sourceText: string,
+): void {
+  const ob = draft.readiness_engine?.observability_block;
+  const vb = draft.readiness_engine?.validation_block;
+  if (severity === "warning" && vb && Array.isArray(vb.warnings)) {
+    vb.warnings = vb.warnings.filter((s) => s !== sourceText);
+  } else if (severity === "ambiguity" && ob && Array.isArray(ob.ambiguity_flags)) {
+    ob.ambiguity_flags = ob.ambiguity_flags.filter((s) => s !== sourceText);
+  } else if (
+    severity === "contradiction" &&
+    ob &&
+    Array.isArray(ob.contradiction_flags)
+  ) {
+    ob.contradiction_flags = ob.contradiction_flags.filter((s) => s !== sourceText);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────────────
@@ -303,15 +359,27 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   // Only required-to-answer when gap-reader marked the provider gap as a blocker.
   const providerPendingRequired =
     showProviderCard && providerPriority === "blocker" && !providerAnswered;
+  // PATCH 3 — Contradiction = critical. Verifikasi tidak boleh dianggap
+  // selesai selama contradiction_flags masih ada di JSON.
+  const contradictionFlags =
+    record.readiness_engine?.observability_block?.contradiction_flags ?? [];
+  const hasContradictions = contradictionFlags.length > 0;
+
   // Apply enabled if (admin answered AND no critical missing) OR normalizer has pending enum patches
   const canApply =
-    ((answeredCount > 0 || providerAnswered) &&
+    !hasContradictions &&
+    (((answeredCount > 0 || providerAnswered) &&
       unansweredCritical.length === 0 &&
       !providerPendingRequired) ||
-    (hasNormalizerPending && !providerPendingRequired);
+      (hasNormalizerPending && !providerPendingRequired));
 
-  // Empty state — only when truly nothing to do
-  if (questions.length === 0 && !hasNormalizerPending && !showProviderCard) {
+  // Empty state — only when truly nothing to do (and no critical contradictions)
+  if (
+    questions.length === 0 &&
+    !hasNormalizerPending &&
+    !showProviderCard &&
+    !hasContradictions
+  ) {
     return (
       <Card className="bg-card border border-border rounded-xl p-8">
         <div className="flex items-center gap-4">
@@ -348,6 +416,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     const draft: PkV10Record = JSON.parse(JSON.stringify(record));
     draft._field_status = { ...(draft._field_status ?? {}) };
     draft.ai_confidence = { ...(draft.ai_confidence ?? {}) };
+    const patchedPaths: string[] = [];
 
     const draftAny = draft as PkV10Record & { _human_override_log?: HumanOverrideEntry[] };
     const log: HumanOverrideEntry[] = Array.isArray(draftAny._human_override_log)
@@ -392,6 +461,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       // Human verification is tracked SOLELY by _human_override_log.
       // ai_confidence is preserved as AI-draft provenance and never touched.
       draft._field_status[q.spec.path] = "explicit";
+      patchedPaths.push(q.spec.path);
 
       const entry: HumanOverrideEntry = {
         field_path: q.spec.path,
@@ -435,6 +505,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         const newSibling = q.spec.readSibling(draft);
 
         draft._field_status[siblingPath] = "explicit";
+        patchedPaths.push(siblingPath);
 
         if (prevSibling !== newSibling) {
           log.push({
@@ -466,6 +537,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         // eligible_providers stays [] AND blacklist stays []
         // Explicit log entry distinguishes "all confirmed" from "not yet filled".
         draft._field_status[PROVIDER_WHITELIST_PATH] = "explicit";
+        patchedPaths.push(PROVIDER_WHITELIST_PATH);
         log.push({
           field_path: PROVIDER_WHITELIST_PATH,
           previous_value: [...prevWhitelist],
@@ -482,6 +554,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         draft.scope_engine.game_block.eligible_providers = newWhitelist as never;
         draft.scope_engine.blacklist_block.providers = newBlacklist as never;
         draft._field_status[PROVIDER_WHITELIST_PATH] = "explicit";
+        patchedPaths.push(PROVIDER_WHITELIST_PATH);
         log.push({
           field_path: PROVIDER_WHITELIST_PATH,
           previous_value: [...prevWhitelist],
@@ -504,6 +577,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
               ? (draft._field_status[PROVIDER_BLACKLIST_PATH] as string)
               : null;
           draft._field_status[PROVIDER_BLACKLIST_PATH] = "explicit";
+          patchedPaths.push(PROVIDER_BLACKLIST_PATH);
           log.push({
             field_path: PROVIDER_BLACKLIST_PATH,
             previous_value: [...prevBlacklist],
@@ -523,8 +597,16 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     // (pure value-level normalization on existing fields, no question authority)
     commitNormalizerOutput(draft, normalizerOutput, ts);
 
+    // PATCH 2 — Bersihkan warning/ambiguity yang field-nya baru di-patch admin.
+    // Contradiction tidak ikut dibersihkan via path (lihat Jalur B).
+    clearFlagsByPatchedPaths(draft, patchedPaths);
+
     draft.updated_at = ts;
-    onApply(draft);
+
+    // PATCH 1 — Persist canonical V.10.2 ke localStorage agar Jalur A
+    // setara dengan Jalur B: state = session = localStorage.
+    const saved = savePkRecord(draft);
+    onApply(saved);
     setAnswers({});
   };
 
@@ -556,6 +638,24 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
 
       {/* Questions stacked full-width; radio options inside use 2 cols when ≥3 */}
       <div className="space-y-6">
+        {hasContradictions && (
+          <div className="bg-destructive/10 border border-destructive/40 rounded-xl p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <div className="text-sm font-semibold text-destructive">
+                Kontradiksi terdeteksi — wajib diselesaikan
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Verifikasi tidak dapat diselesaikan selama kontradiksi berikut belum di-resolve oleh admin.
+              </p>
+              <ul className="list-disc list-inside text-xs text-foreground space-y-1">
+                {contradictionFlags.map((f, i) => (
+                  <li key={`${i}-${f}`}>{f}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
         {showProviderCard && (
           <ProviderVerifyCard
             domain={providerVisual.domain}
@@ -667,6 +767,9 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
                   (result.errors ?? ["Patch tidak valid."]).join("\n"),
                 );
               }
+              // PATCH 2 — Clear the exact flag string admin just resolved.
+              // Match by severity bucket + exact source_text (no fuzzy/keyword).
+              clearFlagByExactSource(result.record, q.severity, q.source_text);
               const saved = savePkRecord(result.record);
               onApply(saved);
               setIssueApplied((a) => ({ ...a, [q.task_id]: true }));
