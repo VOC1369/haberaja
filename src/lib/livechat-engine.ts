@@ -12,7 +12,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const AI_PROXY_URL = `${SUPABASE_URL}/functions/v1/ai-proxy`;
 import { loadInitialConfig } from './apbe-storage';
-import { promoKB } from './promo-storage';
+import { promoKB } from './legacy-promo-v09-storage';
 import { getPayloadContract } from './extractors/promo-taxonomy';
 import { createTicketFromChat, buildTicketFeedbackContext } from './ticket-storage';
 import { getGeneralKnowledge } from '@/types/knowledge';
