@@ -67,8 +67,8 @@ import {
 import { promoKB, localDraftKB, extractorSession, type InputMode, type EditHistoryItem } from "@/lib/promo-storage";
 import { parseEditCommand, executeEditCommand, COMMAND_EXAMPLES, formatValue } from "@/lib/edit-commands";
 import { formatPromoType, getPromoSubTypeDisplay } from "@/lib/utils";
-import { ClassificationOverride } from "./ClassificationOverride";
-import { ConfidenceGateModal } from "./ConfidenceGateModal";
+// Phase 2B: ClassificationOverride + ConfidenceGateModal removed (legacy V.09 modals).
+// Override path will be replaced by `readiness_engine` gap UI in V.10.2.
 // STEP 2 — V.10 native: pk-extractor returns PkV10Record. No V.09 conversion.
 import { extractPromoV10 } from "@/features/promo-knowledge/extractor/extract-client";
 import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";
@@ -146,7 +146,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // Field display yang belum punya path V.10.2 menampilkan placeholder netral.
   
   // Confidence Gate state (LLM Classifier)
-  const [showConfidenceGate, setShowConfidenceGate] = useState(false);
+  // Phase 2B: `showConfidenceGate` state removed (ConfidenceGateModal deleted).
   
   // Edit command state
   const [editInput, setEditInput] = useState('');
@@ -715,15 +715,8 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
       return;
     }
     
-    // ============================================
-    // CONFIDENCE GATE: Block commit if LOW confidence
-    // Human must acknowledge before proceeding
-    // ============================================
-    if (extractedPromo.classification_confidence === 'low') {
-      console.log('[ConfidenceGate] LOW confidence detected, showing gate modal');
-      setShowConfidenceGate(true);
-      return;
-    }
+    // Phase 2B: low-confidence gate removed. Confidence enforcement will move
+    // to `readiness_engine` in V.10.2 — no legacy modal trigger here.
     
     // Proceed with commit
     proceedWithCommit();
@@ -2007,50 +2000,9 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
           {/* RESULT SECTION */}
           {extractedPromo && (
             <>
-              {/* CLASSIFICATION OVERRIDE (LLM Classifier) */}
-              {extractedPromo.program_classification && (
-                <ClassificationOverride
-                  currentCategory={extractedPromo.program_classification}
-                  categoryName={extractedPromo.program_classification_name || 'Unknown'}
-                  confidence={extractedPromo.classification_confidence || 'medium'}
-                  qualityFlags={extractedPromo.quality_flags || []}
-                  rewardMode={sel.rewardMode(pkRecord as PkV10Record) === 'fixed' ? 'fixed' : undefined}
-                  promoSubType={getPromoSubTypeDisplay(
-                    extractedPromo.promo_name,
-                    extractedPromo.promo_type
-                  )}
-                  legacyReasoning={
-                    extractedPromo.classification_q1 ? {
-                      q1: extractedPromo.classification_q1,
-                      q2: extractedPromo.classification_q2!,
-                      q3: extractedPromo.classification_q3!,
-                      q4: extractedPromo.classification_q4!,
-                    } : undefined
-                  }
-                  onOverride={(newCategory, reason) => {
-                    // Apply override and update state
-                    const override = {
-                      from: extractedPromo.program_classification!,
-                      to: newCategory,
-                      reason,
-                      overridden_by: 'anonymous',
-                      timestamp: new Date().toISOString(),
-                    };
-                    
-                    console.log('[ClassificationOverride] Override applied:', override);
-                    
-                    const categoryNames = { A: 'Reward Program', B: 'Event Program', C: 'System Rule' };
-                    setExtractedPromo({
-                      ...extractedPromo,
-                      program_classification: newCategory,
-                      program_classification_name: categoryNames[newCategory],
-                      classification_override: override,
-                    });
-                    
-                    toast.success(`Klasifikasi diubah ke ${categoryNames[newCategory]}`);
-                  }}
-                />
-              )}
+              {/* Phase 2B: ClassificationOverride modal removed (legacy V.09).
+                  Classification edits will be reintroduced via `readiness_engine`
+                  gap UI in V.10.2. */}
               
               {/* SYSTEM RULE WARNING BANNER */}
               {extractedPromo.program_classification === 'C' && (
@@ -2369,18 +2321,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* CONFIDENCE GATE MODAL (LLM Classifier) */}
-      <ConfidenceGateModal
-        isOpen={showConfidenceGate}
-        onClose={() => setShowConfidenceGate(false)}
-        onConfirm={() => {
-          console.log('[ConfidenceGate] User confirmed commit despite LOW confidence');
-          setShowConfidenceGate(false);
-          proceedWithCommit();
-        }}
-        qualityFlags={extractedPromo?.quality_flags || []}
-        categoryName={extractedPromo?.program_classification_name || ''}
-      />
+      {/* Phase 2B: ConfidenceGateModal removed (legacy V.09 modal). */}
     </div>
   );
 }

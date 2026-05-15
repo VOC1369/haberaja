@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment, useRef } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,9 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Gift, Plus, Pencil, Trash2, ArrowLeft, Upload, Download, MoreHorizontal, Eye, Copy, ChevronRight, ChevronDown, Infinity, Loader2, Edit2, Zap, Trophy, Cog, RefreshCw, FileJson, Lock, Unlock } from "lucide-react";
-import { classifyContent, type ProgramCategory } from "@/lib/extractors/category-classifier";
+// Phase 2B: legacy `category-classifier` import dropped. `program_classification`
+// must come from PkV10Record / record_json — not from a runtime LLM call.
+type ProgramCategory = 'A' | 'B' | 'C';
 import { toast } from "@/lib/notify";
 import { PromoFormWizard } from "./PromoFormWizard";
 import { PromoItem, deletePromoDraft, duplicatePromo, normalizePromoData } from "./PromoFormWizard/types";
@@ -78,13 +80,11 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   const [viewTermsItem, setViewTermsItem] = useState<PromoItem | null>(null);
   const [expandedPromos, setExpandedPromos] = useState<Set<string>>(new Set());
   
-  // Auto-classification states
-  const [classifyingIds, setClassifyingIds] = useState<Set<string>>(new Set());
-  
+  // Phase 2B: auto-classification removed — `classifyingIds` / `classifyQueueRef` dropped.
+
   // Regenerate S&K states
   const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set());
   const [isRegeneratingAll, setIsRegeneratingAll] = useState(false);
-  const classifyQueueRef = useRef<Set<string>>(new Set()); // To prevent duplicate calls
 
   // Delete All state
   const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
@@ -538,52 +538,12 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
   // ============================================
   // AUTO-CLASSIFICATION LOGIC
   // ============================================
-  
-  const autoClassifyPromo = async (promo: PromoItem) => {
-    // Prevent duplicate calls
-    if (classifyingIds.has(promo.id) || classifyQueueRef.current.has(promo.id)) {
-      return;
-    }
-    
-    classifyQueueRef.current.add(promo.id);
-    setClassifyingIds(prev => new Set(prev).add(promo.id));
-    
-    try {
-      // Build content from promo data for classification
-      const content = [
-        promo.promo_name,
-        promo.promo_type,
-        promo.custom_terms || '',
-        promo.special_requirements?.join(' ') || '',
-      ].filter(Boolean).join('\n');
-      
-      console.log('[AutoClassify] Classifying promo:', promo.id, promo.promo_name);
-      
-      const result = await classifyContent(content);
-      
-      // Update promo in Supabase
-      const success = await promoKB.update(promo.id, {
-        program_classification: result.category,
-        classification_confidence: result.confidence,
-      } as Partial<PromoItem>);
-      
-      if (success) {
-        console.log('[AutoClassify] Saved classification:', result.category, 'for', promo.promo_name);
-        // Reload promos to reflect change
-        loadPromos();
-      }
-    } catch (error) {
-      console.error('[AutoClassify] Failed to classify promo:', promo.id, error);
-      toast.error(`Gagal mengklasifikasi ${promo.promo_name}`);
-    } finally {
-      setClassifyingIds(prev => {
-        const next = new Set(prev);
-        next.delete(promo.id);
-        return next;
-      });
-      classifyQueueRef.current.delete(promo.id);
-    }
-  };
+  // Phase 2B — Legacy auto-classification REMOVED.
+  // `classifyContent` from `lib/extractors/category-classifier` is gone.
+  // Classification authority lives on PkV10Record / record_json. If a promo
+  // has no `program_classification` we render "-" instead of triggering an
+  // LLM call from the list view.
+  // ============================================
 
   // ============================================
   // CATEGORY BADGE WITH OVERRIDE
@@ -594,43 +554,16 @@ export function PromoKnowledgeSection({ onBack, forceResetKey }: PromoKnowledgeS
     const [selectedCategory, setSelectedCategory] = useState<ProgramCategory>(promo.program_classification || 'A');
     const [overrideReason, setOverrideReason] = useState('');
     
-    const isClassifying = classifyingIds.has(promo.id);
-    
-    // For sub-promos, inherit classification from parent
+    // Phase 2B: auto-classification dropped — no `isClassifying` polling.
+    // For sub-promos, inherit classification from parent.
     const isSubPromo = !!(promo as any).parent_id;
-    const classification = isSubPromo && parentPromo?.program_classification 
-      ? parentPromo.program_classification 
+    const classification = isSubPromo && parentPromo?.program_classification
+      ? parentPromo.program_classification
       : promo.program_classification;
-    
-    // Only trigger auto-classification for main promos (not sub-promos)
-    useEffect(() => {
-      if (!isSubPromo && !classification && !isClassifying) {
-        autoClassifyPromo(promo);
-      }
-    }, [classification, isClassifying, promo, isSubPromo]);
-    
-    // Loading state (only for main promos)
-    if (!isSubPromo && isClassifying) {
-      return (
-        <Badge variant="outline" className="border-border text-muted-foreground animate-pulse">
-          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-          Menganalisis...
-        </Badge>
-      );
-    }
-    
-    // Not classified yet (fallback during loading)
+
+    // Not classified yet → render dash (no LLM auto-trigger anymore).
     if (!classification) {
-      if (isSubPromo) {
-        // Sub-promo without parent classification - show dash
-        return <span className="text-muted-foreground">-</span>;
-      }
-      return (
-        <Badge variant="outline" className="border-border text-muted-foreground animate-pulse">
-          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-          Menganalisis...
-        </Badge>
-      );
+      return <span className="text-muted-foreground">-</span>;
     }
     
     const getBadgeContent = () => {
