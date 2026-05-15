@@ -638,6 +638,24 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
 
       {/* Questions stacked full-width; radio options inside use 2 cols when ≥3 */}
       <div className="space-y-6">
+        {hasContradictions && (
+          <div className="bg-destructive/10 border border-destructive/40 rounded-xl p-4 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-2">
+              <div className="text-sm font-semibold text-destructive">
+                Kontradiksi terdeteksi — wajib diselesaikan
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Verifikasi tidak dapat diselesaikan selama kontradiksi berikut belum di-resolve oleh admin.
+              </p>
+              <ul className="list-disc list-inside text-xs text-foreground space-y-1">
+                {contradictionFlags.map((f, i) => (
+                  <li key={`${i}-${f}`}>{f}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
         {showProviderCard && (
           <ProviderVerifyCard
             domain={providerVisual.domain}
