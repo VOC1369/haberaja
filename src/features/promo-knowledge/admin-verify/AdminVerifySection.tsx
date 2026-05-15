@@ -542,6 +542,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         draft.scope_engine.game_block.eligible_providers = newWhitelist as never;
         draft.scope_engine.blacklist_block.providers = newBlacklist as never;
         draft._field_status[PROVIDER_WHITELIST_PATH] = "explicit";
+        patchedPaths.push(PROVIDER_WHITELIST_PATH);
         log.push({
           field_path: PROVIDER_WHITELIST_PATH,
           previous_value: [...prevWhitelist],
