@@ -404,6 +404,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     const draft: PkV10Record = JSON.parse(JSON.stringify(record));
     draft._field_status = { ...(draft._field_status ?? {}) };
     draft.ai_confidence = { ...(draft.ai_confidence ?? {}) };
+    const patchedPaths: string[] = [];
 
     const draftAny = draft as PkV10Record & { _human_override_log?: HumanOverrideEntry[] };
     const log: HumanOverrideEntry[] = Array.isArray(draftAny._human_override_log)
