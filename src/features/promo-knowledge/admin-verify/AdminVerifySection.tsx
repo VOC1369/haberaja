@@ -1353,7 +1353,7 @@ function ExtractorIssueCard({
   isApplying: boolean;
   applyErrorMessage?: string;
   isApplied: boolean;
-  onDraftChange: (v: string, meta?: { hint?: string; label?: string }) => void;
+  onDraftChange: (v: string, meta?: { hint?: string; label?: string; note?: string }) => void;
   onSave: () => void;
   onGeneratePreview: () => void;
   onConfirmApply: () => void;
