@@ -75,8 +75,12 @@ import {
   type FieldRegistryEntry,
   type AdminAnswer,
 } from "./field-registry";
-import { readGapsFromJson, type GapQuestion } from "./gap-reader";
-import { resolveCanonicalPath } from "./field-key-path-map";
+// V.10.2 REBUILD — gap-reader BYPASSED from runtime path.
+// Admin questions now come EXCLUSIVELY from extractor reasoning
+// (warnings / ambiguity_flags / contradiction_flags) and F3 compliance.
+// `gap-reader.ts` is retained on disk for legacy tests but never imported here.
+// `resolveCanonicalPath` no longer needed — no dedupe vs gap-reader.
+import type { GapQuestion } from "./gap-reader";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AUDIT LOG TYPE — sidecar at root, not in schema
