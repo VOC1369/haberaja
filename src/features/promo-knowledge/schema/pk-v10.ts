@@ -43,15 +43,16 @@
 // PKB_Wolfbrain V.10 Family Type Namespace
 //
 // OFFICIAL SCHEMA AUTHORITY:  V.10.2
-// CURRENT EXTRACTOR RUNTIME:  V.10.1
-// MIGRATION STATUS:           B1_TYPE_READY_ONLY
+// CURRENT EXTRACTOR RUNTIME:  V.10.2
+// MIGRATION STATUS:           POST_D4_RUNTIME_CUTOVER
 //
 // Important:
 //   - Project/doctrine/schema authority resmi sekarang adalah V.10.2.
 //   - File ini tetap bernama `pk-v10.ts` sebagai namespace keluarga V.10.x.
-//   - V.10.2 fields di Phase B1 sudah ditambahkan sebagai optional type-readiness.
-//   - Runtime extractor belum boleh diklaim fully V.10.2 sampai Phase D/E/F/G PASS.
-//   - Jangan confuse: authority = V.10.2, runtime migration = belum selesai.
+//   - Runtime extractor sudah cutover ke V.10.2 sejak D4.
+//   - FE local factory / legacy manual flow mungkin masih punya area terpisah
+//     yang tidak menjadi source of truth extractor.
+//   - Jangan gunakan komentar lama V.10.1 sebagai authority.
 //   - Marker ini bukan label UI; hanya audit/contract identity.
 // ──────────────────────────────────────────────────────────────────────────
 
