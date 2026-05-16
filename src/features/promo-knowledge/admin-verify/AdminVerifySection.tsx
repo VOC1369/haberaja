@@ -695,6 +695,59 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
             }))
           }
           onGeneratePreview={async (q) => {
+            const meta = issueAnswerMeta[q.task_id] ?? {};
+            const path = q.affected_paths[0];
+            const entry = path ? FIELD_REGISTRY_INDEX.get(path) : undefined;
+
+            // PATCH B — Deterministic registry shortcut.
+            // Skip LLM resolver entirely when admin picked a structured
+            // radio option that maps to a registry writer. Authority:
+            // admin's structured answer + FIELD_REGISTRY.
+            if (entry && isDeterministicHint(meta.hint)) {
+              setIssueApplyLoading((p) => ({ ...p, [q.task_id]: true }));
+              setIssueApplyErrors((e) => {
+                const n = { ...e };
+                delete n[q.task_id];
+                return n;
+              });
+              setIssuePreviewErrors((e) => {
+                const n = { ...e };
+                delete n[q.task_id];
+                return n;
+              });
+              try {
+                const result = applyDeterministicRegistryAnswer({
+                  record,
+                  entry,
+                  hint: meta.hint as string,
+                  note: meta.note,
+                  severity: q.severity,
+                  sourceText: q.source_text,
+                  actor: "admin",
+                  reason: q.issue_summary,
+                });
+                if (!result.ok || !result.record) {
+                  throw new Error(result.error ?? "Patch tidak valid.");
+                }
+                const saved = savePkRecord(result.record);
+                onApply(saved);
+                setIssueApplied((a) => ({ ...a, [q.task_id]: true }));
+                toast.success("Perubahan tersimpan", {
+                  description:
+                    "Status review masih perlu dicek ulang sebelum publish.",
+                });
+              } catch (err) {
+                const msg =
+                  err instanceof Error
+                    ? err.message
+                    : "Gagal menyimpan perubahan.";
+                setIssueApplyErrors((e) => ({ ...e, [q.task_id]: msg }));
+              } finally {
+                setIssueApplyLoading((p) => ({ ...p, [q.task_id]: false }));
+              }
+              return;
+            }
+
             setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: true }));
             setIssuePreviewErrors((e) => {
               const next = { ...e };
@@ -705,7 +758,6 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
               // PR-19C: live LLM resolver via ai-proxy (type=intent).
               // PR-22: pass selected_internal_hint + selected_label alongside
               // answer_text. Backward-compatible — resolver may ignore them.
-              const meta = issueAnswerMeta[q.task_id] ?? {};
               const result = await resolveAdminAnswerToPatchPreview({
                 record,
                 reviewTask: q,
