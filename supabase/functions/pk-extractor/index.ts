@@ -360,23 +360,6 @@ untuk data yang berbeda.
         Placeholder ("-", "N/A", kosong) BUKAN unlimited.
 
         ────────────────────────────────────────────────────────────
-        H3. STACKING CONSISTENCY
-        ────────────────────────────────────────────────────────────
-        Jika sumber menyatakan promo tidak dapat digabung:
-          - dependency_engine.stacking_block.stacking_policy = "no_stacking"
-          - Jangan partial. Jangan infer jika tidak disebut.
-
-        ────────────────────────────────────────────────────────────
-        H4. REWARD SEMANTIC CONSISTENCY
-        ────────────────────────────────────────────────────────────
-        Pisahkan dengan jelas:
-          - reward_type        → jenis (cash, spin, voucher, ...)
-          - reward_form        → bentuk distribusi (balance_credit, credit_game, ...)
-          - calculation_method → cara hitung (percentage, fixed, ...)
-        Jangan pakai label perhitungan (mis. "cashback") sebagai reward_form.
-        primary_action = aksi nyata user, bukan label marketing.
-
-        ────────────────────────────────────────────────────────────
         H5. ANTI OVER-INFERENCE
         ────────────────────────────────────────────────────────────
         JANGAN isi tanpa evidence jelas:
