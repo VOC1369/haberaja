@@ -613,11 +613,11 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-button-hover">Verifikasi Admin</h3>
           <p className="text-sm text-muted-foreground">
-            {criticalQuestions.length > 0
-              ? `${criticalQuestions.length} pertanyaan wajib dijawab. ${
-                  questions.length - criticalQuestions.length
-                } konfirmasi opsional.`
-              : `${questions.length} pertanyaan konfirmasi opsional.`}
+            {issueQuestions.length > 0
+              ? `${issueQuestions.length} pertanyaan dari reasoning extractor V.10.2.`
+              : hasContradictions
+                ? "Kontradiksi wajib diselesaikan sebelum publish."
+                : "Tidak ada verifikasi tambahan."}
           </p>
         </div>
         {answeredCount > 0 && (
