@@ -2,7 +2,7 @@
  * PR-19A.1 — F3 Compliance Issue Adapter (CONTRACT ONLY).
  *
  * Reads canonical PkV10Record paths and emits AdminVerifyIssueQuestion entries
- * when a value violates the F3 V.10.1 enum authority.
+ * when a value violates the F3 V.10.2 enum authority.
  *
  * Strict rules:
  *   - Deterministic and path-based. NO regex over warning text.
@@ -17,7 +17,7 @@ import type { PkV10Record } from "../schema/pk-v10";
 import type { AdminVerifyIssueQuestion } from "./extractor-issue-adapter";
 import { hasResolvedStructuredConditions } from "./condition-summary";
 
-// ─── F3 V.10.1 closed enums (authority) ────────────────────────────────
+// ─── F3 V.10.2 closed enums (authority) ────────────────────────────────
 const ALLOWED_RULE_TYPE = [
   "simple",
   "compound",
@@ -63,8 +63,15 @@ function isCurrencyShapeValid(v: unknown): boolean {
   if (typeof v !== "string") return false;
   const t = v.trim();
   if (t.length === 0) return true; // empty = skip
-  // Extensible but should look like 3-letter ISO uppercase code.
-  return /^[A-Z]{3}$/.test(t);
+  // V.10.2 — Extensible shape check (NO regex). Currency should look like a
+  // 3-letter ISO uppercase code (IDR, KHR, PHP, ...). Pure equality logic.
+  if (t.length !== 3) return false;
+  if (t !== t.toUpperCase()) return false;
+  for (let i = 0; i < 3; i++) {
+    const c = t.charCodeAt(i);
+    if (c < 65 || c > 90) return false; // A-Z only
+  }
+  return true;
 }
 
 function makeQuestion(args: {
@@ -81,7 +88,7 @@ function makeQuestion(args: {
       ? args.invalidValue
       : JSON.stringify(args.invalidValue);
   const source_text = args.allowed
-    ? `Path: ${args.path}\nNilai saat ini: ${valuePreview}\nAllowed F3 V.10.1: [${args.allowed.join(", ")}]`
+    ? `Path: ${args.path}\nNilai saat ini: ${valuePreview}\nAllowed F3 V.10.2: [${args.allowed.join(", ")}]`
     : `Path: ${args.path}\nNilai saat ini: ${valuePreview}`;
   return {
     task_id: `f3-${args.kind}-${shortHash(`${args.path}|${valuePreview}`)}`,
@@ -122,7 +129,7 @@ export function buildF3ComplianceQuestions(
               path,
               invalidValue: v,
               allowed: ALLOWED_RULE_TYPE,
-              issueSummary: "Jenis aturan trigger tidak sesuai F3 V.10.1.",
+              issueSummary: "Jenis aturan trigger tidak sesuai F3 V.10.2.",
               adminQuestion: `Nilai saat ini adalah '${v}'. Pilih jenis aturan yang paling sesuai (simple, compound, sequential, conditional, threshold, atau recurring).`,
             }),
           );
@@ -154,7 +161,7 @@ export function buildF3ComplianceQuestions(
                 path,
                 invalidValue: v,
                 allowed: ALLOWED_TURNOVER_RULE_FORMAT,
-                issueSummary: "Format aturan turnover varian tidak sesuai F3 V.10.1.",
+                issueSummary: "Format aturan turnover varian tidak sesuai F3 V.10.2.",
                 adminQuestion:
                   "Nilai saat ini terlihat seperti formula teks. Apakah format turnover ini multiplier atau min_rupiah?",
               }),
@@ -178,7 +185,7 @@ export function buildF3ComplianceQuestions(
             path,
             invalidValue: v,
             allowed: ALLOWED_STATE,
-            issueSummary: "State readiness tidak sesuai F3 V.10.1.",
+            issueSummary: "State readiness tidak sesuai F3 V.10.2.",
             adminQuestion: `Nilai state saat ini adalah '${v}'. Pilih state yang valid (draft, ready, published, atau rejected).`,
           }),
         );
@@ -199,7 +206,7 @@ export function buildF3ComplianceQuestions(
             path,
             invalidValue: v,
             allowed: ALLOWED_VALIDATION_STATUS,
-            issueSummary: "Status validation tidak sesuai F3 V.10.1.",
+            issueSummary: "Status validation tidak sesuai F3 V.10.2.",
             adminQuestion: `Nilai status validation saat ini adalah '${v}'. Pilih status yang valid (draft, ready, needs_review, atau rejected).`,
           }),
         );

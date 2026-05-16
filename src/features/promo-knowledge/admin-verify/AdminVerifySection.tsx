@@ -75,8 +75,12 @@ import {
   type FieldRegistryEntry,
   type AdminAnswer,
 } from "./field-registry";
-import { readGapsFromJson, type GapQuestion } from "./gap-reader";
-import { resolveCanonicalPath } from "./field-key-path-map";
+// V.10.2 REBUILD — gap-reader BYPASSED from runtime path.
+// Admin questions now come EXCLUSIVELY from extractor reasoning
+// (warnings / ambiguity_flags / contradiction_flags) and F3 compliance.
+// `gap-reader.ts` is retained on disk for legacy tests but never imported here.
+// `resolveCanonicalPath` no longer needed — no dedupe vs gap-reader.
+import type { GapQuestion } from "./gap-reader";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AUDIT LOG TYPE — sidecar at root, not in schema
@@ -96,7 +100,7 @@ interface HumanOverrideEntry {
 // CONFIDENCE_THRESHOLD removed — confidence is no longer a primary driver.
 // Decisions are owned by gap-reader.ts (JSON-driven from _field_status + flags).
 // FIELD_SPECS removed — replaced by FIELD_REGISTRY (./field-registry).
-// generateQuestions removed — replaced by readGapsFromJson (./gap-reader).
+// V.10.2 — generateQuestions / gap-reader removed from runtime path.
 
 /** Render-time view: GapQuestion joined with its UI descriptor. */
 type RenderQuestion = GapQuestion & { spec: FieldRegistryEntry };
@@ -193,7 +197,7 @@ interface ProviderState {
  * card is shown — that decision is owned exclusively by gap-reader.
  *
  * Do NOT read this function's output to drive show/hide, priority, or
- * required state. Use `readGapsFromJson(record)` instead.
+ * required state. (gap-reader is DROPPED in V.10.2 runtime.)
  */
 function readProviderVisualContext(record: PkV10Record): {
   domain: string;
@@ -240,20 +244,18 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     [record],
   );
 
-  // GapQuestion (JSON-driven) — single source of truth for missing-field cards.
-  const gaps = useMemo<GapQuestion[]>(
-    () => (record ? readGapsFromJson(record) : []),
-    [record],
-  );
+  // V.10.2 REBUILD — gap-reader DROPPED. No null-check / registry-iteration
+  // questions. The only source of admin questions is extractor reasoning.
+  const gaps = useMemo<GapQuestion[]>(() => [], []);
 
-  // PR-19A — Extractor + F3 issue questions.
-  // Path-first dedupe: suppress only when gap-reader is ACTIVELY showing
-  // the same canonical path (avoid duplicate cards for the same field).
-  // Issues whose path is in FIELD_REGISTRY but NOT in current gaps still
-  // render via humanize-issue → FIELD_REGISTRY question + universal options.
+  // V.10.2 — Sumber pertanyaan tunggal:
+  //   1. readiness_engine.validation_block.warnings[]
+  //   2. readiness_engine.observability_block.ambiguity_flags[]
+  //   3. readiness_engine.observability_block.contradiction_flags[]
+  //   4. F3 V.10.2 compliance issues (invalid enum / shape)
+  // NO template wording. NO null-check. NO field-registry iteration.
   const issueQuestions = useMemo<AdminVerifyIssueQuestion[]>(() => {
     if (!record) return [];
-    const gapPaths = new Set(gaps.map((g) => g.path));
     const merged = [
       ...buildIssueQuestions(record),
       ...buildF3ComplianceQuestions(record),
@@ -262,14 +264,9 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     return merged.filter((q) => {
       if (seen.has(q.task_id)) return false;
       seen.add(q.task_id);
-      // Resolve canonical path the same way humanize-issue does:
-      // affected_paths[0] → field_key → canonical token in source_text.
-      // Suppress when gap-reader is already showing the same path.
-      const canonical = resolveCanonicalPath(q);
-      if (canonical && gapPaths.has(canonical)) return false;
       return true;
     });
-  }, [record, gaps]);
+  }, [record]);
 
 
   // V.10.1 diagnostic — verifies record freshness for Admin Verify gate.
@@ -290,19 +287,22 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     });
   }, [record, gaps]);
 
-  // Provider card visibility = strictly derived from gap-reader output.
-  // No direct field inspection. No promo_type branching. No raw_content access.
-  const providerGap = useMemo(
+  // V.10.2 — Provider card visibility = strictly derived from extractor
+  // reasoning. Card shows ONLY when an extractor issue (warning / ambiguity
+  // / contradiction / F3) explicitly references a provider canonical path
+  // via `affected_paths`. NO "field kosong" trigger. Path-equality only.
+  const providerIssue = useMemo(
     () =>
-      gaps.find(
-        (g) =>
-          g.path === PROVIDER_WHITELIST_PATH || g.path === PROVIDER_BLACKLIST_PATH,
+      issueQuestions.find((q) =>
+        q.affected_paths.some(
+          (p) => p === PROVIDER_WHITELIST_PATH || p === PROVIDER_BLACKLIST_PATH,
+        ),
       ),
-    [gaps],
+    [issueQuestions],
   );
-  const showProviderCard = !!providerGap;
+  const showProviderCard = !!providerIssue;
   const providerPriority: "blocker" | "confirm" | "optional" =
-    providerGap?.priority ?? "confirm";
+    providerIssue?.severity === "contradiction" ? "blocker" : "confirm";
 
   const triggerKey = `${showProviderCard}|${providerVisual.domain}|${providerVisual.prefilledBlacklist.join(",")}|${providerVisual.initialMode}`;
   const [providerState, setProviderState] = useState<ProviderState>({
@@ -328,20 +328,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     [record],
   );
 
-  // Render-list excludes provider gap (provider has its own dedicated card).
-  const questions = useMemo<RenderQuestion[]>(() => {
-    const out: RenderQuestion[] = [];
-    for (const g of gaps) {
-      if (g.path === PROVIDER_WHITELIST_PATH || g.path === PROVIDER_BLACKLIST_PATH) {
-        continue;
-      }
-      const spec = FIELD_REGISTRY_INDEX.get(g.path);
-      if (!spec) continue;
-      out.push({ ...g, spec });
-    }
-    const rank: Record<string, number> = { blocker: 0, confirm: 1, optional: 2 };
-    return out.sort((a, b) => rank[a.priority] - rank[b.priority]);
-  }, [gaps]);
+  // V.10.2 — Registry-driven render list DROPPED. No question is generated
+  // from FIELD_REGISTRY iteration. All admin questions render through the
+  // ExtractorIssueSection (Jalur B). Provider card has its own dedicated UI.
+  const questions = useMemo<RenderQuestion[]>(() => [], []);
 
   if (!record) return null;
 
@@ -376,6 +366,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   // Empty state — only when truly nothing to do (and no critical contradictions)
   if (
     questions.length === 0 &&
+    issueQuestions.length === 0 &&
     !hasNormalizerPending &&
     !showProviderCard &&
     !hasContradictions
@@ -622,11 +613,11 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-button-hover">Verifikasi Admin</h3>
           <p className="text-sm text-muted-foreground">
-            {criticalQuestions.length > 0
-              ? `${criticalQuestions.length} pertanyaan wajib dijawab. ${
-                  questions.length - criticalQuestions.length
-                } konfirmasi opsional.`
-              : `${questions.length} pertanyaan konfirmasi opsional.`}
+            {issueQuestions.length > 0
+              ? `${issueQuestions.length} pertanyaan dari reasoning extractor V.10.2.`
+              : hasContradictions
+                ? "Kontradiksi wajib diselesaikan sebelum publish."
+                : "Tidak ada verifikasi tambahan."}
           </p>
         </div>
         {answeredCount > 0 && (
@@ -677,10 +668,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         ))}
       </div>
 
-      {/* Jalur B (ExtractorIssueSection) DI-DROP dari UI per doctrine field-first V.10.1.
-          Semua pertanyaan field-based hanya datang dari gap-reader → FIELD_REGISTRY.
-          Tidak ada generic bucket. Tidak ada duplicate. Infrastruktur tetap ada untuk reuse. */}
-      {false && issueQuestions.length > 0 && (
+      {/* V.10.2 REBUILD — Jalur B is now the ONLY question source.
+          Questions come exclusively from extractor reasoning:
+          warnings[] / ambiguity_flags[] / contradiction_flags[] + F3 V.10.2. */}
+      {issueQuestions.length > 0 && (
         <ExtractorIssueSection
           record={record}
           issues={issueQuestions}
