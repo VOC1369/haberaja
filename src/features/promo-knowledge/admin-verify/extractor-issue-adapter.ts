@@ -207,17 +207,51 @@ export function collectExtractorIssues(rec: PkV10Record | null): ExtractorIssue[
 export function buildIssueQuestions(
   rec: PkV10Record | null,
 ): AdminVerifyIssueQuestion[] {
-  return collectExtractorIssues(rec).map((iss) => ({
-    task_id: iss.task_id,
-    severity: iss.severity,
-    source_text: iss.source_text,
-    issue_summary: ISSUE_SUMMARY[iss.severity],
-    admin_question: ADMIN_QUESTION[iss.severity],
-    answer_mode: "free_text",
-    affected_paths: [],
-    evidence_paths: ["meta_engine.source_block.raw_content"],
-    requires_llm_resolution: true,
-  }));
+  return collectExtractorIssues(rec).map((iss) => {
+    // PATCH A — derive affected_paths deterministically.
+    //   1) If extractor prefixed the message with "dotted.path: rest", use it.
+    //   2) Else, resolve via canonical field-key map / token-in-source_text.
+    //   3) Else, leave empty (resolver/LLM territory).
+    const prefix = extractDottedPathPrefix(iss.source_text);
+    const canonical =
+      prefix ?? resolveCanonicalPath({ source_text: iss.source_text });
+    const affected_paths = canonical ? [canonical] : [];
+    return {
+      task_id: iss.task_id,
+      severity: iss.severity,
+      source_text: iss.source_text,
+      issue_summary: ISSUE_SUMMARY[iss.severity],
+      admin_question: ADMIN_QUESTION[iss.severity],
+      answer_mode: "free_text",
+      affected_paths,
+      evidence_paths: ["meta_engine.source_block.raw_content"],
+      requires_llm_resolution: true,
+    };
+  });
+}
+
+/**
+ * Detect leading "dotted.path: rest" prefix on a flag string.
+ * STRICT: no spaces, contains a dot, only [a-zA-Z0-9_.\[\]] chars. NOT a regex
+ * keyword scan — this is structural identity, not wording inference.
+ */
+function extractDottedPathPrefix(text: string): string | null {
+  if (typeof text !== "string") return null;
+  const colon = text.indexOf(":");
+  if (colon <= 0) return null;
+  const head = text.slice(0, colon).trim();
+  if (head.length === 0 || head.length > 200) return null;
+  if (!head.includes(".")) return null;
+  for (let i = 0; i < head.length; i++) {
+    const c = head.charCodeAt(i);
+    const ok =
+      (c >= 48 && c <= 57) || // 0-9
+      (c >= 65 && c <= 90) || // A-Z
+      (c >= 97 && c <= 122) || // a-z
+      c === 95 || c === 46 || c === 91 || c === 93; // _ . [ ]
+    if (!ok) return null;
+  }
+  return head;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
