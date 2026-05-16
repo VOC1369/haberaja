@@ -12,10 +12,10 @@
  *   - Whenever pk-v10.ts changes, mirror that change here.
  *   - Do NOT add values here without updating WB_F3 first.
  *
- * ─── PHASE C1-A — V.10.2 ADDITIVE (15 Mei 2026) ──────────────────────────
+ * ─── PHASE D4 — V.10.2 RUNTIME CUTOVER (16 Mei 2026) ─────────────────────
  * OFFICIAL SCHEMA AUTHORITY = V.10.2 (per F3_Enum_Registry V.10.2)
- * CURRENT EXTRACTOR RUNTIME = V.10.1 (PK_V10_SCHEMA_VERSION unchanged)
- * MIGRATION STATUS = C1A_EDGE_VOCABULARY_ADDITIVE_ONLY
+ * CURRENT EXTRACTOR RUNTIME = V.10.2
+ * MIGRATION STATUS = D4_CUTOVER_COMPLETE
  *
  * Per F3 V.10.2 changelog: "Backward compatibility: Strictly additive —
  * semua enum V.10.1 tetap berlaku." Every value present in V.10.1 stays.
