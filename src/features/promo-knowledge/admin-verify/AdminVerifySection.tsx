@@ -668,10 +668,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
         ))}
       </div>
 
-      {/* Jalur B (ExtractorIssueSection) DI-DROP dari UI per doctrine field-first V.10.1.
-          Semua pertanyaan field-based hanya datang dari gap-reader → FIELD_REGISTRY.
-          Tidak ada generic bucket. Tidak ada duplicate. Infrastruktur tetap ada untuk reuse. */}
-      {false && issueQuestions.length > 0 && (
+      {/* V.10.2 REBUILD — Jalur B is now the ONLY question source.
+          Questions come exclusively from extractor reasoning:
+          warnings[] / ambiguity_flags[] / contradiction_flags[] + F3 V.10.2. */}
+      {issueQuestions.length > 0 && (
         <ExtractorIssueSection
           record={record}
           issues={issueQuestions}
