@@ -510,7 +510,11 @@ C. classification_engine
    - question_block.q1..q4 .answer ∈ { "ya" | "tidak" } HURUF KECIL.
      JANGAN "Yes"/"No"/"Iya"/"Tidak" (kapital).
 
-D. mechanics_engine.items[] — STRUKTURAL TRUTH (F2 authority #1).
+D. mechanics_engine.items[] — AUXILIARY STRUCTURAL WITNESS / AUDIT TRAIL (V.10.2).
+   Bukan source of truth. Typed engines tetap PRIMARY (lihat S6).
+   mechanics_engine BOLEH diisi sebagai catatan pendukung untuk replay
+   reasoning dan audit, dan TIDAK WAJIB jika typed engines sudah lengkap.
+   Jika diisi:
    WAJIB pecah promo jadi unit-unit semantik:
      * 1 item per trigger event
      * 1 item per eligibility/syarat
