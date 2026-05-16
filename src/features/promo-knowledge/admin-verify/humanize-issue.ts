@@ -473,6 +473,14 @@ export function humanizeIssue(
           ? registryOptions
           : UNIVERSAL_FALLBACK_OPTIONS;
       const currentValue = asString(readPath(record, path));
+      // PATCH E — carry extractor reason/evidence into the question.
+      // Strip the leading "dotted.path:" prefix so the admin reads the
+      // human reason, not the path token. NO regex keyword logic — pure
+      // structural split on the first colon when the head is a dotted path.
+      const reason = stripPathPrefix(question.source_text);
+      const ctx: Array<{ key: string; value: string }> = [];
+      if (reason) ctx.push({ key: "Alasan sistem", value: reason });
+      if (currentValue) ctx.push({ key: "Nilai saat ini", value: currentValue });
       return {
         title: `${entry.label} perlu dikonfirmasi`,
         description:
@@ -481,9 +489,7 @@ export function humanizeIssue(
         // sudah tersedia di collapsible "Lihat detail teknis".
         objectLabel: undefined,
         objectValue: undefined,
-        contextLines: currentValue
-          ? [{ key: "Nilai saat ini", value: currentValue }]
-          : undefined,
+        contextLines: ctx.length > 0 ? ctx : undefined,
         mainQuestion: entry.question,
         options: finalOptions,
         badge,
