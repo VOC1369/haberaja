@@ -128,13 +128,36 @@ S5. GLOBAL FIELD RULE
      - _field_status = "not_applicable" di level global
      - nilai sebenarnya hidup di variant-level.
 
-S6. AUTHORITY (ringkas)
-   Urutan kebenaran struktural:
-     1. mechanics_engine.items[]    ← PALING UTAMA (structural truth)
-     2. taxonomy_engine
-     3. engine lain (trigger, claim, scope)
-     4. reward_engine               ← HANYA summary/display
-   JANGAN isi reward_engine tanpa data padanan di mechanics_engine.
+S6. AUTHORITY (PKB_Wolfbrain V.10.2 — DOCTRINE FLIP).
+   Authority engine dibagi 4 kelas:
+
+   (a) PRIMARY (typed engines — SOURCE OF TRUTH):
+       identity_engine, classification_engine, taxonomy_engine,
+       period_engine, time_window_engine, trigger_engine, claim_engine,
+       proof_engine, payment_engine, scope_engine, reward_engine,
+       ticket_engine, loyalty_engine, referral_engine,
+       result_event_engine, fulfillment_engine, variant_engine,
+       dependency_engine, invalidation_engine, terms_engine, risk_engine.
+       Setiap typed engine adalah PRIMARY truth untuk domainnya sendiri.
+       Reward value/calculation/payout → reward_engine + reward blocks.
+       Klaim & gating → claim_engine (incl. claim_gate_block).
+       Per-varian → variant_engine.items_block.subcategories[].
+
+   (b) OPERATIONAL:
+       readiness_engine, meta_engine.
+       Bukan truth domain; menangani lifecycle, observability, source, audit.
+
+   (c) AUXILIARY (audit / structural witness — BUKAN source of truth):
+       reasoning_engine, mechanics_engine.
+       mechanics_engine BOLEH diisi sebagai audit trail dan structural
+       witness (untuk replay/debug reasoning), TAPI:
+       - DILARANG dijadikan source of truth.
+       - DILARANG override typed engines.
+       - Tidak diwajibkan. Boleh kosong jika typed engines sudah lengkap.
+
+   (d) DERIVED:
+       projection_engine. Extractor DILARANG menulis projection_engine
+       sama sekali. Server menurunkannya post-extraction.
 
 S7. ANTI-HARDCODE
    DILARANG default tanpa evidence eksplisit untuk:
