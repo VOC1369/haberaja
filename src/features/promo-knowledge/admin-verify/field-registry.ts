@@ -20,6 +20,7 @@ import {
   PK_V10_CLAIM_METHOD,
   PK_V10_GEO_RESTRICTION,
   PK_V10_STACKING_POLICY,
+  PK_V10_TIER_ARCHETYPE,
   PK_V10_TURNOVER_BASIS,
 } from "@/features/promo-knowledge/schema/pk-v10";
 
