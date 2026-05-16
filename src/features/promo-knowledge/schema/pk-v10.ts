@@ -20,14 +20,16 @@
  *   2. All fields default to "" / null / [] / false — no auto-defaults
  *      ("dilarang hardcode" — F1 §8.1). AI fills based on promo content.
  *   3. `projection_engine` is DERIVED — extractor MUST NOT write directly.
- *   4. Authority order (F2 ATURAN KEBENARAN DATA):
- *        1. mechanics_engine.items[]   ← structural truth
+ *   4. Authority order (F2 ATURAN KEBENARAN DATA — V.10.2):
+ *        1. typed engines              ← PRIMARY truth
  *        2. reasoning_engine           ← semantic truth
  *        3. taxonomy_engine            ← structural mode
- *        4. reward_engine flat fields  ← display summary only
- *        5. projection_engine          ← derived only
- *        6. validator                  ← integrity gate, never rewrites
- *        7. keyword signals            ← weak signal only, never decides
+ *        4. reward_engine flat fields  ← display summary (AUXILIARY witness)
+ *        5. mechanics_engine.items[]   ← AUXILIARY / audit trail / structural witness
+ *        6. projection_engine          ← DERIVED only
+ *        7. validator                  ← integrity gate, never rewrites
+ *        8. keyword signals            ← weak signal only, never decides
+ *      If typed engine and mechanics_engine conflict, typed engine wins.
  *   5. Field naming follows F1 §8 — only names that exist in actual JSON.
  *      Legacy `_mechanics_v31` is FORBIDDEN. Use `mechanics_engine.items_block.items`.
  *   6. ENUM RULE (F3): values are vocabulary, NOT decision engines.
