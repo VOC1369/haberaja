@@ -207,87 +207,41 @@ untuk data yang berbeda.
       - templates
     Use semantic reasoning only.
 
-4.2 APPLICABILITY CONSISTENCY CHECK (MANDATORY)
+4.2 CONSISTENCY CHECK (MANDATORY — before output)
 
-    After filling all fields:
-
-    A. Coverage
+    A. Coverage & status discipline
        - Every relevant field MUST appear in _field_status.
-       - Do not omit paths.
+       - not_applicable = field has no logical role (use eksplisit; jangan
+         biarkan default ke not_stated untuk field yang memang tak relevan).
+       - not_stated = relevant tapi unknown. JANGAN dipakai untuk field
+         yang tidak relevan.
+       - "inferred" WAJIB disertai ai_confidence.
 
-    B. Not Applicable Enforcement
-       - If text implies absence of a requirement
-         → all related fields MUST be not_applicable.
+    B. Block-level propagation (WITH ANCHOR)
+       Jika satu block tidak relevan: tandai SEMUA child leaf = not_applicable
+       DAN parent block path itu sendiri = not_applicable (MANDATORY ANCHOR).
+       INVALID: parent missing dari _field_status sementara child not_applicable.
 
-    C. Not Stated Discipline
-       - Use only when relevant but unknown.
-       - NEVER use for irrelevant fields.
-
-    D. Consistency Sweep
-       - If one field is not_applicable
-         → check related fields for alignment.
-
-    E. Confidence Rule
-       - "inferred" MUST include ai_confidence.
-
-    F. Final Self-Check
-       Ask: "Did I incorrectly use not_stated instead of not_applicable?"
-       Fix before output.
-
-4.3 PROPAGATION CONSISTENCY (MANDATORY)
-
-    After applicability decisions:
-
-    A. Mirror Propagation
-       If a canonical field is not_applicable:
-         → all projection mirror fields MUST also be not_applicable.
-       Example:
+    C. Mirror propagation
+       Jika canonical field = not_applicable → semua projection mirror fields
+       MUST juga not_applicable. Contoh:
          taxonomy_engine.logic_block.turnover_basis = not_applicable
          → projection_engine.summary_block.turnover_basis      = not_applicable
          → projection_engine.summary_block.turnover_multiplier = not_applicable
 
-    B. Block-Level Propagation (WITH ANCHOR — MANDATORY)
-       If a block has no logical role:
-         - Mark ALL child leaf fields as not_applicable.
-         - ALSO mark the parent block path itself as not_applicable
-           (MANDATORY ANCHOR — required for downstream propagation).
-       Example:
-         reward_engine.combo_reward_block.combo_items = not_applicable
-         → reward_engine.combo_reward_block            = not_applicable
-       INVALID state (do NOT produce):
-         - parent missing from _field_status
-         - children = not_applicable
-       Both must be present and consistent.
+    D. Shape exclusivity
+       Jika satu struktur dipakai → alternatif kosong MUST not_applicable
+       (hanya bila benar-benar tidak ada konten / tidak terdefinisi eksplisit).
 
-    C. Shape Exclusivity
-       If one structure is used:
-         → all alternative empty structures MUST be not_applicable.
-       ONLY if:
-         - they have no content
-         - they are not explicitly defined.
+    E. No partial applicability
+       Jangan mix parent=not_applicable dengan child=not_stated. Harus konsisten.
 
-    D. No Partial Applicability
-       Do NOT mix:
-         - parent = not_applicable
-         - child  = not_stated
-       All related fields must be consistent.
+    F. Final sweep (MANDATORY)
+       Sebelum return, scan seluruh JSON: tidak boleh ada mirror mismatch,
+       block inconsistency, partial propagation, atau salah pakai not_stated
+       untuk field irrelevant. Fix sebelum output.
 
-    E. Final Sweep (MANDATORY)
-       Before returning output, scan entire JSON and ensure no:
-         - mirror mismatch
-         - block inconsistency
-         - partial applicability
-       Fix BEFORE output.
-
-    This is NOT template logic. This is structural consistency of the JSON.
-
-FINAL ASSERTION (before output)
-    Confirm:
-      - All irrelevant fields are marked not_applicable
-      - All relevant unknown fields are not_stated
-      - All mirrors and blocks are consistent
-      - No partial propagation exists
-    If not, fix before returning.
+    Ini BUKAN template logic — ini structural consistency JSON.
 
 5. STATE (F1 §1).
    readiness_engine.state_block.state = "draft" (default — server akan stamp).
