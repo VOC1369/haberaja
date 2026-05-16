@@ -44,6 +44,10 @@ import { buildF3ComplianceQuestions } from "./f3-compliance-adapter";
 import { resolveAdminAnswerToPatchPreview } from "./admin-answer-llm-resolver";
 import type { ResolveAdminAnswerResult } from "./extractor-issue-adapter";
 import { applyAdminPatchPreviewToPkRecord } from "./admin-patch-apply";
+import {
+  applyDeterministicRegistryAnswer,
+  isDeterministicHint,
+} from "./deterministic-apply";
 import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
