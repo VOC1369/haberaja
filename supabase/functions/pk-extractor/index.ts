@@ -580,42 +580,6 @@ M. MECHANICS DATA SHAPE DOCTRINE (Step 5D — Step 6.1 prompt-only).
           mengikatnya — gunakan scope="promo_period" hanya jika sumber
           eksplisit memisahkan window promo dari validity_block.
 
-   M.3  CARRY-OVER ke Step 6.2 (JANGAN populate sekarang).
-        Field-field berikut sudah masuk schema TS PkV10Record tapi tool
-        schema Anthropic BELUM dibuka (additionalProperties: false di
-        sub-engine terkait). Mengisi sekarang akan kena schema rejection.
-        Aturan reasoning-nya tetap dicatat di sini supaya doctrine align,
-        tapi extractor TIDAK BOLEH menulis field-field ini di Step 6.1:
-
-        - reward_engine.reward_identity_block
-            [CARRIES OVER TO STEP 6.2]
-            Hanya untuk reward_type === "physical".
-            Bentuk: { item_name: <string|null>, quantity: <number|null> }.
-            Untuk reward_type lain (cashback, lucky_spin, voucher, dll)
-            block ini WAJIB null. Detail item lucky-spin / voucher / dll
-            TIDAK boleh masuk ke sini — mereka pergi ke
-            mechanics_engine.items[] (reward + external_system).
-
-        - reward_engine.max_reward_unlimited
-            [CARRIES OVER TO STEP 6.2]
-            true HANYA jika sumber EKSPLISIT menyatakan tidak ada batas
-            atas reward DAN ada evidence string yang mendukung. Tidak ada
-            keyword/regex detection. Default false. Saat true, max_reward
-            harus null.
-
-        - period_engine.validity_block.valid_until_unlimited
-            [CARRIES OVER TO STEP 6.2]
-            true HANYA jika sumber EKSPLISIT menyatakan promo berlaku
-            tanpa batas waktu (mis. "berlaku selamanya"). Default false.
-            Saat true, valid_until harus null.
-
-        Catatan implementasi:
-        - Step 6.1 = validasi reasoning Claude pada data blob mechanics.
-        - Step 6.2 = tool schema additive untuk 3 field carry-over di atas.
-        - Step 6B = validator enforcement (max_reward_unlimited ↔ max_reward
-          null, valid_until_unlimited ↔ valid_until null, identity_block
-          hanya bila reward_type=physical).
-
 ================================================================
 V.10.2 HARD RULES (HEADER vs VARIANT, FORBIDDEN FIELDS, PROJECTION)
 ================================================================
