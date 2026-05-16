@@ -2016,6 +2016,7 @@ function scrubLegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: Scru
       "reward_engine.bonus_percentage",
       "reward_engine.payout_threshold",
       "reward_engine.requirement_block.min_base",
+      "reward_engine.requirement_block.min_withdraw",
       "scope_engine.game_block.game_category",
       "scope_engine.game_block.game_providers",
       "scope_engine.game_block.game_exclusions",
