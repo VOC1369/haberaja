@@ -20,14 +20,16 @@
  *   2. All fields default to "" / null / [] / false — no auto-defaults
  *      ("dilarang hardcode" — F1 §8.1). AI fills based on promo content.
  *   3. `projection_engine` is DERIVED — extractor MUST NOT write directly.
- *   4. Authority order (F2 ATURAN KEBENARAN DATA):
- *        1. mechanics_engine.items[]   ← structural truth
+ *   4. Authority order (F2 ATURAN KEBENARAN DATA — V.10.2):
+ *        1. typed engines              ← PRIMARY truth
  *        2. reasoning_engine           ← semantic truth
  *        3. taxonomy_engine            ← structural mode
- *        4. reward_engine flat fields  ← display summary only
- *        5. projection_engine          ← derived only
- *        6. validator                  ← integrity gate, never rewrites
- *        7. keyword signals            ← weak signal only, never decides
+ *        4. reward_engine flat fields  ← display summary (AUXILIARY witness)
+ *        5. mechanics_engine.items[]   ← AUXILIARY / audit trail / structural witness
+ *        6. projection_engine          ← DERIVED only
+ *        7. validator                  ← integrity gate, never rewrites
+ *        8. keyword signals            ← weak signal only, never decides
+ *      If typed engine and mechanics_engine conflict, typed engine wins.
  *   5. Field naming follows F1 §8 — only names that exist in actual JSON.
  *      Legacy `_mechanics_v31` is FORBIDDEN. Use `mechanics_engine.items_block.items`.
  *   6. ENUM RULE (F3): values are vocabulary, NOT decision engines.
@@ -41,21 +43,22 @@
 // PKB_Wolfbrain V.10 Family Type Namespace
 //
 // OFFICIAL SCHEMA AUTHORITY:  V.10.2
-// CURRENT EXTRACTOR RUNTIME:  V.10.1
-// MIGRATION STATUS:           B1_TYPE_READY_ONLY
+// CURRENT EXTRACTOR RUNTIME:  V.10.2
+// MIGRATION STATUS:           POST_D4_RUNTIME_CUTOVER
 //
 // Important:
 //   - Project/doctrine/schema authority resmi sekarang adalah V.10.2.
 //   - File ini tetap bernama `pk-v10.ts` sebagai namespace keluarga V.10.x.
-//   - V.10.2 fields di Phase B1 sudah ditambahkan sebagai optional type-readiness.
-//   - Runtime extractor belum boleh diklaim fully V.10.2 sampai Phase D/E/F/G PASS.
-//   - Jangan confuse: authority = V.10.2, runtime migration = belum selesai.
+//   - Runtime extractor sudah cutover ke V.10.2 sejak D4.
+//   - FE local factory / legacy manual flow mungkin masih punya area terpisah
+//     yang tidak menjadi source of truth extractor.
+//   - Jangan gunakan komentar lama V.10.1 sebagai authority.
 //   - Marker ini bukan label UI; hanya audit/contract identity.
 // ──────────────────────────────────────────────────────────────────────────
 
 export const PK_V10_OFFICIAL_SCHEMA_AUTHORITY = "V.10.2" as const;
-export const PK_V10_CURRENT_EXTRACTOR_RUNTIME = "V.10.1" as const;
-export const PK_V10_MIGRATION_STATUS = "B1_TYPE_READY_ONLY" as const;
+export const PK_V10_CURRENT_EXTRACTOR_RUNTIME = "V.10.2" as const;
+export const PK_V10_MIGRATION_STATUS = "POST_D4_RUNTIME_CUTOVER" as const;
 
 export const PK_V10_SCHEMA_NAME = "PKB_Wolfbrain" as const;
 export const PK_V10_SCHEMA_VERSION = "V.10.1" as const;
@@ -1365,14 +1368,15 @@ export interface PkV10RewardEngine {
    * "What the user gets" — physical reward identity ONLY.
    * For reward_type !== "physical", both fields stay null.
    * Execution metadata (validity, max_per_day, external_ref_id) lives in
-   * mechanics_engine.items[].data (Authority Order #1).
+   * typed engine fields (PRIMARY truth). mechanics_engine.items[].data serves
+   * as AUXILIARY / structural witness.
    */
   reward_identity_block: {
     item_name: string | null;
     quantity: number | null;
   };
-  // FLAT FIELDS — display summary only (authority order #4).
-  // Source of truth lives in mechanics_engine.items[].
+  // FLAT FIELDS — display summary only (AUXILIARY witness).
+  // Primary truth lives in typed engine fields.
   calculation_basis: string; // PkV10CalculationBasis when filled
   calculation_method: string; // PkV10CalculationMethod when filled
   calculation_value: number | null;
@@ -1688,7 +1692,7 @@ export interface PkV10MetaEngine {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// V.10.2 ADDITIVE ENGINES — optional on PkV10Record (runtime still V.10.1)
+// V.10.2 ADDITIVE ENGINES — optional on PkV10Record (runtime extractor emits V.10.2)
 // ──────────────────────────────────────────────────────────────────────────
 
 export interface PkV10TicketEngine {
@@ -1832,13 +1836,13 @@ export interface PkV10Record {
   risk_engine: PkV10RiskEngine;
   meta_engine: PkV10MetaEngine;
 
-  /** V.10.2 additive — optional, runtime extractor still emits V.10.1 (no ticket_engine). */
+  /** V.10.2 additive — optional, runtime extractor emits V.10.2 (includes ticket_engine). */
   ticket_engine?: PkV10TicketEngine;
-  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  /** V.10.2 additive — optional, runtime extractor emits V.10.2. */
   referral_engine?: PkV10ReferralEngine;
-  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  /** V.10.2 additive — optional, runtime extractor emits V.10.2. */
   result_event_engine?: PkV10ResultEventEngine;
-  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  /** V.10.2 additive — optional, runtime extractor emits V.10.2. */
   fulfillment_engine?: PkV10FulfillmentEngine;
 
   ai_confidence: Record<string, number>;
