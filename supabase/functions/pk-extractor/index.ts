@@ -1928,7 +1928,8 @@ function toAnthropicImage(img: string): AnyObj | null {
 }
 
 // ============================================================
-// V.10.1 SCRUB — drop legacy fields & projection_engine before merge
+// SCRUB — drop legacy fields, projection_engine, and forbidden paths
+// (V.10.2 doctrine: min_withdraw belongs to claim_gate_block, not reward_engine)
 // ============================================================
 type ScrubStats = {
   dropped_paths: string[];
@@ -1936,7 +1937,7 @@ type ScrubStats = {
   legacy_field_status_dropped: number;
 };
 
-function scrubV101LegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: ScrubStats } {
+function scrubLegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: ScrubStats } {
   const cleaned: AnyObj = JSON.parse(JSON.stringify(input ?? {}));
   const stats: ScrubStats = {
     dropped_paths: [],
