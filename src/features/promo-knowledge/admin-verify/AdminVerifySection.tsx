@@ -1271,7 +1271,7 @@ function ExtractorIssueSection({
   previews: Record<string, ResolveAdminAnswerResult>;
   loading: Record<string, boolean>;
   errors: Record<string, string>;
-  onDraftChange: (taskId: string, value: string, meta?: { hint?: string; label?: string }) => void;
+  onDraftChange: (taskId: string, value: string, meta?: { hint?: string; label?: string; note?: string }) => void;
   onSave: (taskId: string) => void;
   onGeneratePreview: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
   applyLoading: Record<string, boolean>;
