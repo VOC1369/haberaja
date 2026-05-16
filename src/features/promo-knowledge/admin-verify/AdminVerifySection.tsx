@@ -366,6 +366,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   // Empty state — only when truly nothing to do (and no critical contradictions)
   if (
     questions.length === 0 &&
+    issueQuestions.length === 0 &&
     !hasNormalizerPending &&
     !showProviderCard &&
     !hasContradictions
