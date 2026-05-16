@@ -1,7 +1,7 @@
 /**
- * pk-extractor — PKB_WOLFBRAIN V.10.1 NATIVE EXTRACTOR
+ * pk-extractor — PKB_WOLFBRAIN V.10.2 NATIVE EXTRACTOR
  *
- * V10.1-only. Zero V.09 fallback. Zero conversion layer.
+ * V10.2-only. Zero V.09 fallback. Zero conversion layer.
  *
  * Input  : { text?: string, images?: string[], client_id_hint?: string }
  * Output : { ok: true, record: PkV10Record, model, extraction_source, ... }
@@ -46,13 +46,13 @@ const corsHeaders = {
 // ============================================================
 // V10 SYSTEM PROMPT
 // ============================================================
-const SYSTEM_PROMPT = `Anda adalah Wolfclaw Extractor V.10.1 — extractor PKB_Wolfbrain V.10.1.
+const SYSTEM_PROMPT = `Anda adalah Wolfclaw Extractor V.10.2 — extractor PKB_Wolfbrain V.10.2.
 
 TUGAS
-Ekstrak konten promo (teks dan/atau gambar) ke struktur PkV10Record (V.10.1) via
+Ekstrak konten promo (teks dan/atau gambar) ke struktur PkV10Record (V.10.2) via
 tool '${TOOL_NAME}'. WAJIB panggil tool. JANGAN balas teks biasa.
 
-PRINSIP UTAMA (F1 + F2 + F3 V.10.1):
+PRINSIP UTAMA (F1 + F2 + F3 V.10.2):
 
 1. REASONING-FIRST. Anda BUKAN bot keyword. Pahami semantic, bukan cocok kata.
 
@@ -724,10 +724,10 @@ M. MECHANICS DATA SHAPE DOCTRINE (Step 5D — Step 6.1 prompt-only).
           hanya bila reward_type=physical).
 
 ================================================================
-V.10.1 HARD RULES (HEADER vs VARIANT, FORBIDDEN FIELDS, PROJECTION)
+V.10.2 HARD RULES (HEADER vs VARIANT, FORBIDDEN FIELDS, PROJECTION)
 ================================================================
 
-V10.1-R1. SINGLE vs MULTI (HEADER vs VARIANT — KERAS).
+V10.2-R1. SINGLE vs MULTI (HEADER vs VARIANT — KERAS).
    Tentukan promo_mode lebih dulu (single | multi).
 
    - promo_mode = "single":
@@ -750,7 +750,7 @@ V10.1-R1. SINGLE vs MULTI (HEADER vs VARIANT — KERAS).
      * Setiap subcategory WAJIB punya variant_id unik (mis. "v_1", "v_2", ...)
        dan variant_name verbatim dari sumber.
 
-V10.1-R2. LEGACY / FORBIDDEN FIELDS DILARANG.
+V10.2-R2. LEGACY / FORBIDDEN FIELDS DILARANG.
    JANGAN PERNAH menulis path/key berikut di output:
      - reward_engine.max_bonus           (gunakan reward_engine.max_reward)
      - reward_engine.bonus_percentage    (gunakan calculation_value+calculation_unit)
@@ -769,7 +769,7 @@ V10.1-R2. LEGACY / FORBIDDEN FIELDS DILARANG.
      - period_engine.validity_block.valid_from_unlimited
    Field-field tersebut akan di-strip server. Tetap JANGAN dikirim — itu noise.
 
-V10.1-R3. PROJECTION ENGINE — DERIVED ONLY.
+V10.2-R3. PROJECTION ENGINE — DERIVED ONLY.
    Extractor TIDAK BOLEH menulis projection_engine sama sekali.
    - JANGAN isi projection_engine.summary_block.* dengan apa pun.
    - JANGAN isi projection_engine.blacklist_summary.*
@@ -778,7 +778,7 @@ V10.1-R3. PROJECTION ENGINE — DERIVED ONLY.
    reward_engine + variant_engine + scope_engine.
    Setiap key projection_engine yang dikirim LLM akan di-drop.
 
-V10.1-R4. SUBCATEGORY SHAPE (ringkas — detail di tool schema).
+V10.2-R4. SUBCATEGORY SHAPE (ringkas — detail di tool schema).
    Field per subcategory mengikuti skeleton V.10.2:
      variant_id, variant_name, promo_code,
      calculation_basis, calculation_method, calculation_value, calculation_unit,
@@ -859,7 +859,7 @@ V10.2-CG2. variant_engine.items_block.subcategories[].claim_gate_block (PER-VARI
    dan isi per subcategory.
 
 V10.2-CG3. min_withdraw → claim gate, bukan reward.
-   Lihat V10.1-R2: min_withdraw DILARANG di reward_engine.requirement_block.
+   Lihat V10.2-R2: min_withdraw DILARANG di reward_engine.requirement_block.
    Selalu rute ke claim_gate_block (global atau per-varian).
 
 ================================================================
@@ -913,7 +913,7 @@ V10.2-AQ. Admin hanya boleh ditanya untuk:
    extractor benar-benar tidak bisa putuskan.
 
 OUTPUT
-Panggil tool '${TOOL_NAME}' dengan input PkV10Record V.10.1 (boleh partial — server
+Panggil tool '${TOOL_NAME}' dengan input PkV10Record V.10.2 (boleh partial — server
 akan merge ke inert full-shape). JANGAN balas teks. JANGAN mark-down.`;
 
 // ============================================================
@@ -1821,7 +1821,7 @@ function mechanicItemShape(): JSONSchema {
   };
 }
 
-// V.10.1 — Subcategory shape (per-variant). Strict: additionalProperties=false.
+// V.10.2 — Subcategory shape (per-variant). Strict: additionalProperties=false.
 // Mirrors PkV10Subcategory in src/features/promo-knowledge/schema/pk-v10.ts.
 function subcategoryShape(): JSONSchema {
   return {
@@ -2034,7 +2034,7 @@ function scrubLegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: Scru
 }
 
 // ============================================================
-// V.10.1 SINGLE vs MULTI ENFORCEMENT (post-merge)
+// V.10.2 SINGLE vs MULTI ENFORCEMENT (post-merge)
 // ============================================================
 type VariantEnforceResult = {
   promo_mode: string;
@@ -2081,7 +2081,7 @@ function enforceSingleVsMulti(record: AnyObj): VariantEnforceResult {
       summary.expected_count = subs.length;
       result.expected_count_set = subs.length;
     }
-    // V.10.1 hardening: pada multi-mode, subcategories[] adalah source of
+    // V.10.2 hardening: pada multi-mode, subcategories[] adalah source of
     // truth per-varian. Demote root reward numeric fields agar tidak
     // dianggap shared. Non-numeric (basis/method/unit/reward_type/
     // payout_direction/currency) dibiarkan — kalau benar shared, valid;
@@ -2158,7 +2158,7 @@ serve(async (req) => {
     // Build proxy request
     const tool = {
       name: TOOL_NAME,
-      description: "Ekstrak konten promo ke PKB_Wolfbrain V.10.1 (PkV10Record). Source of truth: PKB_Wolfbrain_V10.1_skeleton.json. WAJIB isi _field_status[path] untuk SETIAP field operasional (explicit / inferred / propagated / derived / not_stated / not_applicable) — Admin Verify pakai _field_status sebagai authority gate. promo_mode path resmi: identity_engine.promo_block.promo_mode. Multi-mode → variant_engine.items_block.subcategories[] = source of truth, root reward_engine.calculation_value/max_reward = null. projection_engine = derived-only, JANGAN ditulis langsung.",
+      description: "Ekstrak konten promo ke PKB_Wolfbrain V.10.2 (PkV10Record). Source of truth: PKB_Wolfbrain_V10.2_skeleton.json. WAJIB isi _field_status[path] untuk SETIAP field operasional (explicit / inferred / propagated / derived / not_stated / not_applicable) — Admin Verify pakai _field_status sebagai authority gate. promo_mode path resmi: identity_engine.promo_block.promo_mode. Multi-mode → variant_engine.items_block.subcategories[] = source of truth, root reward_engine.calculation_value/max_reward = null. projection_engine = derived-only, JANGAN ditulis langsung.",
       input_schema: buildExtractorToolSchema(),
     };
 
@@ -2256,7 +2256,7 @@ serve(async (req) => {
     }
 
     // ============================================================
-    // V.10.1 SCRUB — strip forbidden legacy fields + projection_engine
+    // V.10.2 SCRUB — strip forbidden legacy fields + projection_engine
     // from llmInput BEFORE merge. Single-brain rule: extractor never
     // writes projection_engine, never emits legacy V.10 paths.
     // ============================================================
@@ -2306,7 +2306,7 @@ serve(async (req) => {
     }
 
     // ============================================================
-    // V.10.1 SINGLE vs MULTI ENFORCEMENT (header vs variant)
+    // V.10.2 SINGLE vs MULTI ENFORCEMENT (header vs variant)
     // promo_mode=single → subcategories WAJIB []; multi → has_subcategories=true.
     // No new decisions: derived from promo_mode chosen by LLM.
     // ============================================================
@@ -2389,7 +2389,7 @@ serve(async (req) => {
     // GAP #1 — attach propagation stats as observability metadata
     (merged as AnyObj)._propagation_stats = propStats;
 
-    console.log("[pk-extractor V10.1] OK", {
+    console.log("[pk-extractor V10.2] OK", {
       model: modelUsed,
       stop_reason: stopReason,
       extraction_source,
@@ -2412,7 +2412,7 @@ serve(async (req) => {
         usage: aiData?.usage ?? null,
         latency_ms: latencyMs,
         stop_reason: stopReason,
-        schema_version: "V.10.1",
+        schema_version: "V.10.2",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );

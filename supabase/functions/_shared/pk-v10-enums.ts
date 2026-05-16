@@ -12,10 +12,10 @@
  *   - Whenever pk-v10.ts changes, mirror that change here.
  *   - Do NOT add values here without updating WB_F3 first.
  *
- * ─── PHASE C1-A — V.10.2 ADDITIVE (15 Mei 2026) ──────────────────────────
+ * ─── PHASE D4 — V.10.2 RUNTIME CUTOVER (16 Mei 2026) ─────────────────────
  * OFFICIAL SCHEMA AUTHORITY = V.10.2 (per F3_Enum_Registry V.10.2)
- * CURRENT EXTRACTOR RUNTIME = V.10.1 (PK_V10_SCHEMA_VERSION unchanged)
- * MIGRATION STATUS = C1A_EDGE_VOCABULARY_ADDITIVE_ONLY
+ * CURRENT EXTRACTOR RUNTIME = V.10.2
+ * MIGRATION STATUS = D4_CUTOVER_COMPLETE
  *
  * Per F3 V.10.2 changelog: "Backward compatibility: Strictly additive —
  * semua enum V.10.1 tetap berlaku." Every value present in V.10.1 stays.
@@ -31,17 +31,17 @@
  */
 
 export const PK_V10_SCHEMA_NAME = "PKB_Wolfbrain";
-export const PK_V10_SCHEMA_VERSION = "V.10.1";
+export const PK_V10_SCHEMA_VERSION = "V.10.2";
 export const PK_V10_BASE_LOCKED_AT = "2026-04-28";
-export const PK_V10_RELEASED_AT = "2026-05-04";
+export const PK_V10_RELEASED_AT = "2026-05-15";
 export const PK_V10_CREATED_BY = "habe_raja";
 export const PK_V10_OWNER =
   "Habe Raja — Wolfbrain / Promo Knowledge Base";
 export const PK_V10_EXTRACTOR = "wolfclaw@claude-sonnet-4-5";
-export const PK_V10_PROMPT_VERSION = "V.10.1_2026-05-04";
-export const PK_V10_AMENDMENT_TYPE = "minor";
+export const PK_V10_PROMPT_VERSION = "V.10.2_2026-05-15";
+export const PK_V10_AMENDMENT_TYPE = "major_schema_expansion";
 export const PK_V10_AMENDMENT_REASON =
-  "Naming cleanup, duplicate removal, variant field-level clarification";
+  "Authority inversion (typed engines PRIMARY, mechanics AUXILIARY, projection DERIVED); 4 new engines (ticket/referral/result_event/fulfillment); claim_gate_block; unmodeled_evidence_block; record_type lineage";
 /** @deprecated retained for backward import compatibility — use PK_V10_BASE_LOCKED_AT */
 export const PK_V10_LOCKED_AT = PK_V10_BASE_LOCKED_AT;
 
