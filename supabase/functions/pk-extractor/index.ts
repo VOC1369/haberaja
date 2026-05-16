@@ -912,6 +912,45 @@ V10.2-AQ. Admin hanya boleh ditanya untuk:
    PRINSIP: admin time itu mahal. Pertanyaan hanya untuk hal yang
    extractor benar-benar tidak bisa putuskan.
 
+OMIT-IF-IRRELEVANT RULE (V.10.2 Step 1B)
+  Anda TIDAK perlu "paint" engine atau block yang tidak punya evidence di source promo.
+  Jika tidak ada evidence, OMIT block/engine dari tool output — server inert merge akan
+  mengisi default null/empty/false. Ini bukan perubahan reasoning, hanya larangan
+  output painting yang tidak berbasis evidence.
+
+  Engine/block berikut WAJIB diomit jika tidak relevan (jangan kirim object kosong):
+    - mechanics_engine
+    - reasoning_engine.selection_block
+    - loyalty_engine
+    - ticket_engine
+    - referral_engine
+    - result_event_engine
+    - fulfillment_engine
+    - scope_engine.odds_constraint_block
+    - scope_engine.bet_configuration_block
+    - period_engine.schedule_variant_block
+    - proof_engine.social_proof_block
+    - invalidation_engine.anti_fraud_block
+    - meta_engine.unmodeled_evidence_block
+
+  TETAP WAJIB isi jika ada evidence / reasoning:
+    - typed engines yang relevan dengan promo
+    - readiness_engine.validation_block.warnings
+    - readiness_engine.observability_block.ambiguity_flags
+    - readiness_engine.observability_block.contradiction_flags
+    - readiness_engine.observability_block.review_required
+    - _field_status
+    - ai_confidence
+
+  JANGAN isi (server stamp):
+    - meta_engine.schema_block (semua field lifecycle)
+    - meta_engine.source_block.raw_content
+    - meta_engine.extraction_block.extracted_at
+    - readiness_engine.state_block
+    - readiness_engine.commit_block
+    - readiness_engine.validation_block.is_structurally_complete
+    - readiness_engine.validation_block.status
+
 OUTPUT
 Panggil tool '${TOOL_NAME}' dengan input PkV10Record V.10.2 (boleh partial — server
 akan merge ke inert full-shape). JANGAN balas teks. JANGAN mark-down.`;
@@ -1468,25 +1507,13 @@ function buildExtractorToolSchema(): AnyObj {
         },
       },
       readiness_engine: {
+        // V.10.2 Step 1A — state_block, commit_block, validation_block.{is_structurally_complete,status}
+        // dihapus dari tool schema. Server stamp dari inert + derive dari warnings/observability.
         type: "object", additionalProperties: false,
         properties: {
-          state_block: {
-            type: "object", additionalProperties: false,
-            properties: {
-              state: enumStr("readiness_state"),
-              state_changed_at: { type: "string" },
-              state_changed_by: { type: "string" },
-            },
-          },
-          commit_block: {
-            type: "object", additionalProperties: false,
-            properties: { ready_to_commit: { type: "boolean" } },
-          },
           validation_block: {
             type: "object", additionalProperties: false,
             properties: {
-              is_structurally_complete: { type: "boolean" },
-              status: enumStr("validation_status"),
               warnings: { type: "array", items: { type: "string" } },
             },
           },
@@ -1553,15 +1580,16 @@ function buildExtractorToolSchema(): AnyObj {
         type: "object", additionalProperties: false,
         properties: {
           source_block: {
+            // V.10.2 Step 1A — raw_content dihapus (server stamp dari input raw text).
             type: "object", additionalProperties: false,
             properties: {
               source_url: { type: "string" },
-              raw_content: { type: "string" },
               extraction_source: enumStr("extraction_source"),
               source_type: enumStr("source_type"),
             },
           },
           extraction_block: {
+            // V.10.2 Step 1A — extracted_at sudah tidak ada (server stamp timestamp).
             type: "object", additionalProperties: false,
             properties: {
               has_rowspan_tables: { type: "boolean" },
@@ -1581,15 +1609,9 @@ function buildExtractorToolSchema(): AnyObj {
               items: { type: "array", items: { type: "object", additionalProperties: true } },
             },
           },
-          // V.10.2 additive — schema_block lifecycle fields (system-set, but allowed in tool schema).
-          schema_block: {
-            type: "object", additionalProperties: false,
-            properties: {
-              record_type: enumStr("record_type"),
-              previous_version: { type: "string" },
-              previous_released_at: { type: "string" },
-            },
-          },
+          // V.10.2 Step 1A — schema_block dihapus dari tool schema.
+          // Server stamp dari inert (schema_version, record_type, previous_version,
+          // previous_released_at, amendment metadata). LLM tidak boleh tulis lifecycle.
         },
       },
       // V.10.2 additive — 4 new root engines.
