@@ -2260,7 +2260,7 @@ serve(async (req) => {
     // from llmInput BEFORE merge. Single-brain rule: extractor never
     // writes projection_engine, never emits legacy V.10 paths.
     // ============================================================
-    const v101Scrub = scrubV101LegacyAndProjection(llmInput);
+    const v101Scrub = scrubLegacyAndProjection(llmInput);
 
     // ============================================================
     // SERVER MERGE: build full-shape PkV10Record
