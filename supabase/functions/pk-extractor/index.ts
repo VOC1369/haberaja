@@ -635,27 +635,8 @@ V10.2-R3. PROJECTION ENGINE — DERIVED ONLY.
    reward_engine + variant_engine + scope_engine.
    Setiap key projection_engine yang dikirim LLM akan di-drop.
 
-V10.2-R4. SUBCATEGORY SHAPE (ringkas — detail di tool schema).
-   Field per subcategory mengikuti skeleton V.10.2:
-     variant_id, variant_name, promo_code,
-     calculation_basis, calculation_method, calculation_value, calculation_unit,
-     min_deposit, max_reward, max_reward_unlimited, min_claim,
-     claim_gate_block { requires_deposit_before_claim, min_deposit_for_claim,
-                        requires_withdraw_before_claim, min_withdraw_for_claim,
-                        requires_claim_before_play, requires_claim_before_withdraw_form,
-                        requires_claim_after_event_result,
-                        claim_deadline_value, claim_deadline_unit, claim_deadline_anchor,
-                        claim_limit_per_period, claim_limit_period, claim_limit_scope },
-     turnover_multiplier, turnover_rule_format,
-     game_domain, eligible_providers, game_names,
-     blacklist {enabled, types[], providers[], games[], rules[], note},
-     reward_type, payout_direction, currency,
-     physical_reward_name, physical_reward_quantity,
-     cash_reward_amount, reward_quantity,
-     voucher_kind, voucher_valid_from, voucher_valid_until, voucher_valid_unlimited,
-     lucky_spin_id, lucky_spin_max_per_day,
-     product_note.
-   Tidak boleh ada key di luar daftar ini.
+V10.2-R4. SUBCATEGORY SHAPE.
+   Subcategory shape mengikuti tool schema; jangan buat field di luar kontrak.
 
 ================================================================
 V.10.2 NEW ENGINES — DOCTRINE (DIISI HANYA JIKA RELEVAN)
