@@ -59,6 +59,9 @@ const REWARD_SHAPE_BLOCKS = [
   "reward_engine.conditional_reward_block",
   "reward_engine.event_block",
   "reward_engine.reward_identity_block",
+  "reward_engine.reward_table_block",
+  "reward_engine.unit_reward_block",
+  "reward_engine.turnover_tier_by_deposit_block",
 ];
 
 // --------------------------------------------------------------
