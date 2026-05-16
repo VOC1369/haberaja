@@ -750,14 +750,20 @@ V10.1-R1. SINGLE vs MULTI (HEADER vs VARIANT — KERAS).
      * Setiap subcategory WAJIB punya variant_id unik (mis. "v_1", "v_2", ...)
        dan variant_name verbatim dari sumber.
 
-V10.1-R2. LEGACY FIELDS DILARANG (V.10.1 schema).
-   JANGAN PERNAH menulis path/key berikut di output (sudah dihapus dari schema):
+V10.1-R2. LEGACY / FORBIDDEN FIELDS DILARANG.
+   JANGAN PERNAH menulis path/key berikut di output:
      - reward_engine.max_bonus           (gunakan reward_engine.max_reward)
      - reward_engine.bonus_percentage    (gunakan calculation_value+calculation_unit)
      - scope_engine.game_block.game_category   (gunakan game_domain)
      - scope_engine.game_block.game_providers  (gunakan eligible_providers)
      - scope_engine.game_block.game_exclusions (gunakan blacklist_block)
      - reward_engine.requirement_block.min_base (gunakan min_deposit)
+     - reward_engine.requirement_block.min_withdraw
+         → V.10.2 FORBIDDEN PATH. Minimum withdraw untuk klaim TIDAK pernah
+           hidup di reward_engine. Tempat benar:
+             claim_engine.claim_gate_block.min_withdraw_for_claim
+           atau per-varian:
+             variant_engine.items_block.subcategories[].claim_gate_block.min_withdraw_for_claim
      - reward_engine.payout_threshold
      - subcategories[].confidence
      - period_engine.validity_block.valid_from_unlimited
