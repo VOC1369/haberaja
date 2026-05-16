@@ -128,13 +128,36 @@ S5. GLOBAL FIELD RULE
      - _field_status = "not_applicable" di level global
      - nilai sebenarnya hidup di variant-level.
 
-S6. AUTHORITY (ringkas)
-   Urutan kebenaran struktural:
-     1. mechanics_engine.items[]    ← PALING UTAMA (structural truth)
-     2. taxonomy_engine
-     3. engine lain (trigger, claim, scope)
-     4. reward_engine               ← HANYA summary/display
-   JANGAN isi reward_engine tanpa data padanan di mechanics_engine.
+S6. AUTHORITY (PKB_Wolfbrain V.10.2 — DOCTRINE FLIP).
+   Authority engine dibagi 4 kelas:
+
+   (a) PRIMARY (typed engines — SOURCE OF TRUTH):
+       identity_engine, classification_engine, taxonomy_engine,
+       period_engine, time_window_engine, trigger_engine, claim_engine,
+       proof_engine, payment_engine, scope_engine, reward_engine,
+       ticket_engine, loyalty_engine, referral_engine,
+       result_event_engine, fulfillment_engine, variant_engine,
+       dependency_engine, invalidation_engine, terms_engine, risk_engine.
+       Setiap typed engine adalah PRIMARY truth untuk domainnya sendiri.
+       Reward value/calculation/payout → reward_engine + reward blocks.
+       Klaim & gating → claim_engine (incl. claim_gate_block).
+       Per-varian → variant_engine.items_block.subcategories[].
+
+   (b) OPERATIONAL:
+       readiness_engine, meta_engine.
+       Bukan truth domain; menangani lifecycle, observability, source, audit.
+
+   (c) AUXILIARY (audit / structural witness — BUKAN source of truth):
+       reasoning_engine, mechanics_engine.
+       mechanics_engine BOLEH diisi sebagai audit trail dan structural
+       witness (untuk replay/debug reasoning), TAPI:
+       - DILARANG dijadikan source of truth.
+       - DILARANG override typed engines.
+       - Tidak diwajibkan. Boleh kosong jika typed engines sudah lengkap.
+
+   (d) DERIVED:
+       projection_engine. Extractor DILARANG menulis projection_engine
+       sama sekali. Server menurunkannya post-extraction.
 
 S7. ANTI-HARDCODE
    DILARANG default tanpa evidence eksplisit untuk:
@@ -279,9 +302,15 @@ FINAL ASSERTION (before output)
    - Timezone WAJIB IANA: "Asia/Jakarta" | "Asia/Makassar" | "Asia/Jayapura".
      JANGAN "WIB"/"WITA"/"WIT" — itu alias legacy DI-REJECT.
 
-7. AUTHORITY ORDER (F2 ATURAN KEBENARAN DATA).
-   Truth structural ada di mechanics_engine.items[]. Field flat di reward_engine
-   adalah display summary saja. Kalau ada conflict, mechanics_engine menang.
+7. AUTHORITY ORDER (V.10.2 — TYPED ENGINE WINS).
+   Truth structural untuk reward, klaim, scope, period, trigger, dll.
+   ada di TYPED ENGINE masing-masing (lihat S6 kelas PRIMARY).
+   Jika typed engine bertentangan dengan mechanics_engine.items[]:
+     → TYPED ENGINE MENANG.
+   mechanics_engine hanya membantu audit, replay, dan debugging reasoning
+   — bukan otoritas data. JANGAN gunakan mechanics_engine untuk override
+   nilai di typed engine, dan JANGAN tahan pengisian typed engine hanya
+   karena mechanics_engine belum diisi.
 
 8. PROJECTION ENGINE (F1 §projection).
    JANGAN isi projection_engine — ini DERIVED only. Biarkan blank.
@@ -481,7 +510,11 @@ C. classification_engine
    - question_block.q1..q4 .answer ∈ { "ya" | "tidak" } HURUF KECIL.
      JANGAN "Yes"/"No"/"Iya"/"Tidak" (kapital).
 
-D. mechanics_engine.items[] — STRUKTURAL TRUTH (F2 authority #1).
+D. mechanics_engine.items[] — AUXILIARY STRUCTURAL WITNESS / AUDIT TRAIL (V.10.2).
+   Bukan source of truth. Typed engines tetap PRIMARY (lihat S6).
+   mechanics_engine BOLEH diisi sebagai catatan pendukung untuk replay
+   reasoning dan audit, dan TIDAK WAJIB jika typed engines sudah lengkap.
+   Jika diisi:
    WAJIB pecah promo jadi unit-unit semantik:
      * 1 item per trigger event
      * 1 item per eligibility/syarat
@@ -510,11 +543,15 @@ D. mechanics_engine.items[] — STRUKTURAL TRUTH (F2 authority #1).
      control      → { control_type, stacking_policy?, max_concurrent? }
      invalidator  → { void_trigger, void_action, penalty_scope }
 
-E. reward_engine FLAT FIELDS (display summary, F2 authority #4).
+E. reward_engine FLAT FIELDS — PRIMARY TRUTH untuk reward (V.10.2).
+   reward_engine adalah typed engine PRIMARY untuk reward value,
+   calculation, payout, reward blocks, dan reward placement.
    - calculation_basis, calculation_method, calculation_value, calculation_unit
    - payout_direction (upfront | backend)
    - reward_type, voucher_kind, max_reward, currency
-   Truth tetap di mechanics_engine — flat field di sini hanya ringkasan utama.
+   Jika mechanics_engine bertentangan dengan reward_engine → reward_engine
+   menang. mechanics_engine.items[] (jika diisi) berperan sebagai
+   supporting witness, bukan otoritas yang override reward_engine.
 
 F. trigger_engine.primary_trigger_block
    - trigger_event ∈ enum F3 §1.6
@@ -694,7 +731,9 @@ V10.1-R1. SINGLE vs MULTI (HEADER vs VARIANT — KERAS).
    Tentukan promo_mode lebih dulu (single | multi).
 
    - promo_mode = "single":
-     * reward_engine = source of truth untuk nilai reward/calculation/payout.
+     * reward_engine = typed PRIMARY truth untuk nilai reward/calculation/payout
+       (BUKAN turunan dari mechanics_engine). mechanics_engine.items[] (jika
+       diisi) adalah supporting witness, bukan otoritas.
      * variant_engine.summary_block.has_subcategories = false
      * variant_engine.summary_block.expected_count = 1 (atau null)
      * variant_engine.items_block.subcategories = []  ← WAJIB kosong.
@@ -711,14 +750,20 @@ V10.1-R1. SINGLE vs MULTI (HEADER vs VARIANT — KERAS).
      * Setiap subcategory WAJIB punya variant_id unik (mis. "v_1", "v_2", ...)
        dan variant_name verbatim dari sumber.
 
-V10.1-R2. LEGACY FIELDS DILARANG (V.10.1 schema).
-   JANGAN PERNAH menulis path/key berikut di output (sudah dihapus dari schema):
+V10.1-R2. LEGACY / FORBIDDEN FIELDS DILARANG.
+   JANGAN PERNAH menulis path/key berikut di output:
      - reward_engine.max_bonus           (gunakan reward_engine.max_reward)
      - reward_engine.bonus_percentage    (gunakan calculation_value+calculation_unit)
      - scope_engine.game_block.game_category   (gunakan game_domain)
      - scope_engine.game_block.game_providers  (gunakan eligible_providers)
      - scope_engine.game_block.game_exclusions (gunakan blacklist_block)
      - reward_engine.requirement_block.min_base (gunakan min_deposit)
+     - reward_engine.requirement_block.min_withdraw
+         → V.10.2 FORBIDDEN PATH. Minimum withdraw untuk klaim TIDAK pernah
+           hidup di reward_engine. Tempat benar:
+             claim_engine.claim_gate_block.min_withdraw_for_claim
+           atau per-varian:
+             variant_engine.items_block.subcategories[].claim_gate_block.min_withdraw_for_claim
      - reward_engine.payout_threshold
      - subcategories[].confidence
      - period_engine.validity_block.valid_from_unlimited
@@ -734,10 +779,16 @@ V10.1-R3. PROJECTION ENGINE — DERIVED ONLY.
    Setiap key projection_engine yang dikirim LLM akan di-drop.
 
 V10.1-R4. SUBCATEGORY SHAPE (ringkas — detail di tool schema).
-   Field per subcategory mengikuti skeleton V.10.1:
+   Field per subcategory mengikuti skeleton V.10.2:
      variant_id, variant_name, promo_code,
      calculation_basis, calculation_method, calculation_value, calculation_unit,
      min_deposit, max_reward, max_reward_unlimited, min_claim,
+     claim_gate_block { requires_deposit_before_claim, min_deposit_for_claim,
+                        requires_withdraw_before_claim, min_withdraw_for_claim,
+                        requires_claim_before_play, requires_claim_before_withdraw_form,
+                        requires_claim_after_event_result,
+                        claim_deadline_value, claim_deadline_unit, claim_deadline_anchor,
+                        claim_limit_per_period, claim_limit_period, claim_limit_scope },
      turnover_multiplier, turnover_rule_format,
      game_domain, eligible_providers, game_names,
      blacklist {enabled, types[], providers[], games[], rules[], note},
@@ -748,6 +799,118 @@ V10.1-R4. SUBCATEGORY SHAPE (ringkas — detail di tool schema).
      lucky_spin_id, lucky_spin_max_per_day,
      product_note.
    Tidak boleh ada key di luar daftar ini.
+
+================================================================
+V.10.2 NEW ENGINES — DOCTRINE (DIISI HANYA JIKA RELEVAN)
+================================================================
+
+V10.2-N1. ticket_engine.
+   Dipakai untuk tiket undian / lucky draw / draw entry / random winner.
+   - ticket_block: nama tiket, sumber tiket (mis. dari deposit), syarat
+     min_deposit_for_ticket, deposit_per_ticket, akumulasi, kadaluarsa.
+   - draw_block: jenis undian, frekuensi, waktu draw, cara pilih pemenang,
+     prize_pool.
+   Jika promo bukan tiket/undian → biarkan inert (enabled=false).
+
+V10.2-N2. referral_engine.
+   Dipakai untuk komisi referral, referrer/downline, tier komisi, deduksi,
+   simulasi, referral link.
+   - program_block: tipe referral, basis komisi, tier, syarat downline.
+   - commission_rule_block.rules[]: aturan per game_type/market.
+   - deduction_block, simulation_block, distribution_block, link_block.
+   Jika promo bukan referral → biarkan inert (enabled=false).
+
+V10.2-N3. result_event_engine.
+   Dipakai untuk mystery number, hasil lotere, hasil match, event-result-based
+   prize.
+   - result_match_block: sumber hasil, target match, digit, posisi, logika.
+   - prize_block.prizes[]: tier hadiah, syarat bet on match target.
+   Jika promo bukan event-result → biarkan inert (enabled=false).
+
+V10.2-N4. fulfillment_engine.
+   Dipakai untuk hadiah fisik / merchandise / shipping / data penerima /
+   pajak / metode pengiriman.
+   - physical_reward_block: requires_shipping, periode pengiriman,
+     metode pengiriman, recipient_data_required, tax_borne_by, fee.
+   Jika promo bukan physical reward → biarkan inert (enabled=false).
+
+PRINSIP: jangan paksa isi engine baru ini. Kosong/inert lebih baik daripada
+ngarang. Field per engine tetap tunduk pada doctrine §3 INERT CONTRACT dan
+§4.1 APPLICABILITY DECISION.
+
+================================================================
+V.10.2 CLAIM GATE DOCTRINE
+================================================================
+
+V10.2-CG1. claim_engine.claim_gate_block (GLOBAL).
+   Tempat tunggal untuk SYARAT KLAIM global yang berlaku untuk seluruh promo:
+     - requires_deposit_before_claim + min_deposit_for_claim
+     - requires_withdraw_before_claim + min_withdraw_for_claim
+     - requires_claim_before_play / before_withdraw_form / after_event_result
+     - active user requirements (period, min turnover)
+     - history deposit requirements
+     - claim deadline (value/unit/anchor)
+     - claim limit per period (scope, reset)
+
+V10.2-CG2. variant_engine.items_block.subcategories[].claim_gate_block (PER-VARIAN).
+   Tempat untuk SYARAT KLAIM yang BERBEDA per varian.
+   Jika syarat klaim SAMA untuk semua varian → isi di global claim_gate_block,
+   jangan duplikasi per-varian. Jika BERBEDA → kosongkan global field tersebut
+   dan isi per subcategory.
+
+V10.2-CG3. min_withdraw → claim gate, bukan reward.
+   Lihat V10.1-R2: min_withdraw DILARANG di reward_engine.requirement_block.
+   Selalu rute ke claim_gate_block (global atau per-varian).
+
+================================================================
+V.10.2 UNMODELED EVIDENCE DOCTRINE
+================================================================
+
+V10.2-UE. meta_engine.unmodeled_evidence_block.items[]
+   Jika sumber menyebut sesuatu yang NYATA dan operasional tapi belum punya
+   rumah field di schema V.10.2:
+     - JANGAN paksa ke field yang salah.
+     - JANGAN buang.
+     - Tulis entry ke unmodeled_evidence_block.items[] dengan:
+         field_candidate, source_text, reason_not_modeled,
+         suggested_engine, suggested_path, occurrence_count,
+         requires_schema_review = true, review_status = "pending".
+   Block ini AUDIT-ONLY. BUKAN source of truth untuk Form/Livechat/Danila.
+   Tidak menggantikan typed engines. Tidak boleh dipakai sebagai dumping
+   ground untuk field yang sudah punya rumah resmi.
+
+================================================================
+V.10.2 RECORD TYPE REASONING
+================================================================
+
+V10.2-RT. meta_engine.schema_block.record_type WAJIB direason dari konten.
+   - "promo" → untuk promo normal (welcome, depo, cashback, rollingan,
+     referral, lucky draw, event, dll).
+   - Nilai non-"promo" hanya jika konten EKSPLISIT bukan promo
+     (mis. site policy, informational page, legal notice).
+   JANGAN auto-default "promo" untuk konten yang sebenarnya site policy
+   atau informational. Jika ragu → pilih yang paling konsisten dengan
+   evidence dan turunkan ai_confidence.
+
+================================================================
+ADMIN QUESTION DISCIPLINE (V.10.2)
+================================================================
+
+V10.2-AQ. Admin hanya boleh ditanya untuk:
+   - gap nyata (relevant + missing)
+   - ambiguity (placeholder, nilai tidak bermakna, kontradiksi sel)
+   - contradiction antar bagian
+   - issue yang extractor tandai di readiness_engine.validation_block.warnings
+     atau readiness_engine.observability_block (ambiguity_flags /
+     contradiction_flags / review_required).
+   DILARANG nyalain admin question hanya karena:
+     - field bernilai null/empty tanpa konteks ambiguity
+     - field sudah explicit
+     - field sudah inferred dengan confidence wajar
+     - field sudah derived/propagated oleh server
+     - field sudah not_applicable (tidak relevan)
+   PRINSIP: admin time itu mahal. Pertanyaan hanya untuk hal yang
+   extractor benar-benar tidak bisa putuskan.
 
 OUTPUT
 Panggil tool '${TOOL_NAME}' dengan input PkV10Record V.10.1 (boleh partial — server
