@@ -197,7 +197,7 @@ interface ProviderState {
  * card is shown — that decision is owned exclusively by gap-reader.
  *
  * Do NOT read this function's output to drive show/hide, priority, or
- * required state. Use `readGapsFromJson(record)` instead.
+ * required state. (gap-reader is DROPPED in V.10.2 runtime.)
  */
 function readProviderVisualContext(record: PkV10Record): {
   domain: string;
