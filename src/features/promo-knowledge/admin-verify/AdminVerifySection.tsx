@@ -100,7 +100,7 @@ interface HumanOverrideEntry {
 // CONFIDENCE_THRESHOLD removed — confidence is no longer a primary driver.
 // Decisions are owned by gap-reader.ts (JSON-driven from _field_status + flags).
 // FIELD_SPECS removed — replaced by FIELD_REGISTRY (./field-registry).
-// generateQuestions removed — replaced by readGapsFromJson (./gap-reader).
+// V.10.2 — generateQuestions / gap-reader removed from runtime path.
 
 /** Render-time view: GapQuestion joined with its UI descriptor. */
 type RenderQuestion = GapQuestion & { spec: FieldRegistryEntry };
