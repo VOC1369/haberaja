@@ -484,23 +484,12 @@ J. reasoning_engine.intent_block
      * "Rollingan"  → primary_action: bet_to_rollingan, payout_direction: backend
      * "Referral"   → primary_action: refer_to_commission
 
-K. ai_confidence MAP (WAJIB minimal 10 path penting).
+K. ai_confidence MAP (WAJIB).
    Format: { "engine.block.field": 0.85, ... }
-   Path-path penting yang biasanya dinilai:
-     identity_engine.promo_block.promo_name
-     identity_engine.promo_block.promo_type
-     identity_engine.promo_block.target_user
-     identity_engine.promo_block.promo_mode
-     identity_engine.client_block.client_id
-     reward_engine.calculation_basis
-     reward_engine.calculation_value
-     reward_engine.payout_direction
-     reward_engine.reward_type
-     trigger_engine.primary_trigger_block.trigger_event
-     claim_engine.method_block.claim_method
-     scope_engine.game_block.game_domain
-     period_engine.validity_block.valid_from
-     period_engine.validity_block.valid_until
+   Isi ai_confidence untuk critical paths yang benar-benar dipakai, minimal
+   pada field keputusan utama: identity, classification, reward, trigger,
+   claim, scope, period, variant, readiness. Setiap path dengan
+   _field_status="inferred" WAJIB punya ai_confidence.
 
 L. _field_status MAP (WAJIB).
    Format: { "engine.block.field": "explicit" | "inferred" | "not_applicable" | ... }
