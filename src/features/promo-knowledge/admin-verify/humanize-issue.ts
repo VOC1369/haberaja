@@ -184,6 +184,31 @@ function asString(v: unknown): string {
   }
 }
 
+/**
+ * PATCH E — Strip leading "dotted.path:" prefix from an extractor flag so
+ * the human reason can be presented to the admin. Pure structural split:
+ * the head must look like a dotted path (no spaces, has dot, charset
+ * [a-zA-Z0-9_.\[\]]). Returns trimmed remainder, or the original text.
+ */
+function stripPathPrefix(text: string | null | undefined): string {
+  if (!text || typeof text !== "string") return "";
+  const colon = text.indexOf(":");
+  if (colon <= 0) return text.trim();
+  const head = text.slice(0, colon).trim();
+  if (head.length === 0 || head.length > 200) return text.trim();
+  if (!head.includes(".")) return text.trim();
+  for (let i = 0; i < head.length; i++) {
+    const c = head.charCodeAt(i);
+    const ok =
+      (c >= 48 && c <= 57) ||
+      (c >= 65 && c <= 90) ||
+      (c >= 97 && c <= 122) ||
+      c === 95 || c === 46 || c === 91 || c === 93;
+    if (!ok) return text.trim();
+  }
+  return text.slice(colon + 1).trim();
+}
+
 // ─── Condition humanizer (presentation-only) ───────────────────────────
 
 const FIELD_LABELS: Record<string, string> = {
