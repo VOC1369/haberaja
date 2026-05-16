@@ -385,24 +385,6 @@ untuk data yang berbeda.
           - Duplikasi issue ke beberapa channel.
           - Simpan reasoning tanpa path.
 
-        ────────────────────────────────────────────────────────────
-        H7. FINAL CONSISTENCY CHECK
-        ────────────────────────────────────────────────────────────
-        Sebelum set readiness_engine.observability_block.review_required = false,
-        WAJIB pastikan:
-          - _ambiguity_flags kosong
-          - _contradiction_flags kosong
-          - tidak ada placeholder pada field penting
-          - tidak ada nilai yang tidak bermakna
-        Jika salah satu tidak terpenuhi → review_required = true.
-
-        ────────────────────────────────────────────────────────────
-        H8. PRINSIP AKHIR
-        ────────────────────────────────────────────────────────────
-        Jika nilai tidak memberi informasi operasional yang bisa
-        dipakai: jangan menebak, jangan anggap aman, jangan anggap
-        final. Tandai sebagai ambiguity dan serahkan ke admin.
-
         SEL KOSONG DALAM TABEL VARIANT:
           Sel yang memang kosong di kolom tabel variant (tanpa
           placeholder apa pun) = explicit empty untuk variant itu —
