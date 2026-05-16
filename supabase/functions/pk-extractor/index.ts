@@ -1468,25 +1468,13 @@ function buildExtractorToolSchema(): AnyObj {
         },
       },
       readiness_engine: {
+        // V.10.2 Step 1A — state_block, commit_block, validation_block.{is_structurally_complete,status}
+        // dihapus dari tool schema. Server stamp dari inert + derive dari warnings/observability.
         type: "object", additionalProperties: false,
         properties: {
-          state_block: {
-            type: "object", additionalProperties: false,
-            properties: {
-              state: enumStr("readiness_state"),
-              state_changed_at: { type: "string" },
-              state_changed_by: { type: "string" },
-            },
-          },
-          commit_block: {
-            type: "object", additionalProperties: false,
-            properties: { ready_to_commit: { type: "boolean" } },
-          },
           validation_block: {
             type: "object", additionalProperties: false,
             properties: {
-              is_structurally_complete: { type: "boolean" },
-              status: enumStr("validation_status"),
               warnings: { type: "array", items: { type: "string" } },
             },
           },
