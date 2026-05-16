@@ -1928,7 +1928,8 @@ function toAnthropicImage(img: string): AnyObj | null {
 }
 
 // ============================================================
-// V.10.1 SCRUB — drop legacy fields & projection_engine before merge
+// SCRUB — drop legacy fields, projection_engine, and forbidden paths
+// (V.10.2 doctrine: min_withdraw belongs to claim_gate_block, not reward_engine)
 // ============================================================
 type ScrubStats = {
   dropped_paths: string[];
@@ -1936,7 +1937,7 @@ type ScrubStats = {
   legacy_field_status_dropped: number;
 };
 
-function scrubV101LegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: ScrubStats } {
+function scrubLegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: ScrubStats } {
   const cleaned: AnyObj = JSON.parse(JSON.stringify(input ?? {}));
   const stats: ScrubStats = {
     dropped_paths: [],
@@ -1961,9 +1962,16 @@ function scrubV101LegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: 
       }
     }
     const req = reward.requirement_block as AnyObj | undefined;
-    if (req && typeof req === "object" && "min_base" in req) {
-      delete req.min_base;
-      stats.dropped_paths.push("reward_engine.requirement_block.min_base");
+    if (req && typeof req === "object") {
+      if ("min_base" in req) {
+        delete req.min_base;
+        stats.dropped_paths.push("reward_engine.requirement_block.min_base");
+      }
+      // V.10.2 FORBIDDEN: min_withdraw must live in claim_gate_block.min_withdraw_for_claim
+      if ("min_withdraw" in req) {
+        delete req.min_withdraw;
+        stats.dropped_paths.push("reward_engine.requirement_block.min_withdraw");
+      }
     }
   }
 
@@ -2008,6 +2016,7 @@ function scrubV101LegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: 
       "reward_engine.bonus_percentage",
       "reward_engine.payout_threshold",
       "reward_engine.requirement_block.min_base",
+      "reward_engine.requirement_block.min_withdraw",
       "scope_engine.game_block.game_category",
       "scope_engine.game_block.game_providers",
       "scope_engine.game_block.game_exclusions",
@@ -2251,7 +2260,7 @@ serve(async (req) => {
     // from llmInput BEFORE merge. Single-brain rule: extractor never
     // writes projection_engine, never emits legacy V.10 paths.
     // ============================================================
-    const v101Scrub = scrubV101LegacyAndProjection(llmInput);
+    const v101Scrub = scrubLegacyAndProjection(llmInput);
 
     // ============================================================
     // SERVER MERGE: build full-shape PkV10Record
