@@ -421,21 +421,73 @@ untuk data yang berbeda.
             sehingga admin dapat memilih.
 
         ────────────────────────────────────────────────────────────
-        H8. SCOPE PRECONDITION (PER-TIER vs GLOBAL)
+        H8. SCOPE PRECONDITION (PER-TIER vs GLOBAL) — STRICT
         ────────────────────────────────────────────────────────────
-        Prasyarat (mis. "history deposit Rp100.000") yang sumber
-        sebut dalam konteks SPESIFIK satu tier/varian (mis.
-        "Bronze → Silver WAJIB ...") TIDAK boleh dipromosikan ke
-        scope global (root claim_gate_block) tanpa evidence.
+        Root `claim_engine.claim_gate_block.*` HANYA boleh diisi jika
+        sumber menyatakan prasyarat berlaku GLOBAL untuk semua klaim /
+        semua level / semua user.
 
-        ATURAN:
-          - Tulis nilai pada level yang sumber sebut (variant/tier
-            terkait) jika schema mengizinkan.
-          - Jika belum jelas apakah berlaku per-tier atau global →
-            JANGAN paksa ke root. Tulis _ambiguity_flags[] pada path
-            root claim_gate field dengan reason yang menjelaskan
-            placement-nya ambigu (sumber menyebut spesifik untuk
-            satu transisi tier).
+        ROOT-PROMOTION GATE (wajib dijawab sebelum menulis ke root
+        claim_gate_block field apapun):
+          "Apakah sumber secara eksplisit menyatakan syarat ini
+           berlaku untuk SEMUA klaim / SEMUA level / SEMUA user?"
+          - YA, dengan kalimat eksplisit global → boleh tulis ke root.
+          - TIDAK / TIDAK JELAS → JANGAN tulis ke root. Biarkan root
+            field neutral (false / null / ""), dan tambahkan
+            _ambiguity_flags[] pada path root claim_gate field.
+
+        Bahasa GLOBAL yang sah (contoh, bukan keyword match — pahami
+        maknanya):
+          - "semua klaim reward level wajib ..."
+          - "untuk mengikuti event ini, semua member wajib ..."
+          - "syarat berlaku untuk semua level / semua varian"
+          - "semua bonus level up wajib ..."
+
+        Bahasa TIER/VARIANT-SPECIFIC (tidak boleh promote ke root):
+          - "Bronze → Silver wajib ..."
+          - "khusus Silver ..."
+          - "untuk tier X ..."
+          - "varian X ..."
+          - "level X ..."
+          - prasyarat yang muncul DI DALAM baris tabel tier/varian
+            tanpa pernyataan global terpisah.
+
+        ATURAN PLACEMENT:
+          1. Jika tier/varian-specific DAN schema punya placement
+             per-varian (mis. variant_engine.items_block.subcategories[].
+             claim_gate_block.*) → tulis di placement spesifik itu.
+          2. Jika placement spesifik belum jelas atau tier-level belum
+             ter-model → simpan teks verbatim di
+             terms_engine.requirements_block.special_requirements[],
+             biarkan root claim_gate field neutral, dan tambahkan
+             _ambiguity_flags[]:
+               "Syarat [X] disebut pada konteks
+                [tier/transition/variant]; tidak jelas apakah hanya
+                untuk konteks tersebut atau global."
+          3. Jangan promote ke root hanya karena angka deposit
+             disebut. Angka tanpa pernyataan global ≠ syarat global.
+          4. Jika ragu: root tetap neutral + ambiguity. Admin yang
+             memutuskan via Admin Question.
+
+        CONTOH WAJIB:
+          Source: "Tier Bronze to Silver WAJIB memiliki History
+                   Deposit Sebesar Rp.100.000"
+          Expected:
+            - claim_engine.claim_gate_block.requires_history_deposit
+              = false (neutral)
+            - claim_engine.claim_gate_block.min_history_deposit_amount
+              = null
+            - terms_engine.requirements_block.special_requirements[]
+              berisi teks verbatim
+            - _ambiguity_flags[] pada
+              claim_engine.claim_gate_block.min_history_deposit_amount
+              menjelaskan placement ambigu (tier-transition specific).
+
+        Larangan:
+          - Jangan pakai regex/keyword matcher (ini instruksi semantic).
+          - Jangan mengarang scope global yang tidak ada di sumber.
+          - Jangan menghapus requirement; selalu simpan minimal di
+            terms/special_requirements bila tidak bisa di-placement.
 
      PRINSIP: jangan asumsi tanpa evidence; jangan perbaiki sumber;
      jangan hapus tanpa catatan; semua keputusan harus dapat dijelaskan.
