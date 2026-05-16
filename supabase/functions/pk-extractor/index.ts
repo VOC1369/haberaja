@@ -912,6 +912,45 @@ V10.2-AQ. Admin hanya boleh ditanya untuk:
    PRINSIP: admin time itu mahal. Pertanyaan hanya untuk hal yang
    extractor benar-benar tidak bisa putuskan.
 
+OMIT-IF-IRRELEVANT RULE (V.10.2 Step 1B)
+  Anda TIDAK perlu "paint" engine atau block yang tidak punya evidence di source promo.
+  Jika tidak ada evidence, OMIT block/engine dari tool output — server inert merge akan
+  mengisi default null/empty/false. Ini bukan perubahan reasoning, hanya larangan
+  output painting yang tidak berbasis evidence.
+
+  Engine/block berikut WAJIB diomit jika tidak relevan (jangan kirim object kosong):
+    - mechanics_engine
+    - reasoning_engine.selection_block
+    - loyalty_engine
+    - ticket_engine
+    - referral_engine
+    - result_event_engine
+    - fulfillment_engine
+    - scope_engine.odds_constraint_block
+    - scope_engine.bet_configuration_block
+    - period_engine.schedule_variant_block
+    - proof_engine.social_proof_block
+    - invalidation_engine.anti_fraud_block
+    - meta_engine.unmodeled_evidence_block
+
+  TETAP WAJIB isi jika ada evidence / reasoning:
+    - typed engines yang relevan dengan promo
+    - readiness_engine.validation_block.warnings
+    - readiness_engine.observability_block.ambiguity_flags
+    - readiness_engine.observability_block.contradiction_flags
+    - readiness_engine.observability_block.review_required
+    - _field_status
+    - ai_confidence
+
+  JANGAN isi (server stamp):
+    - meta_engine.schema_block (semua field lifecycle)
+    - meta_engine.source_block.raw_content
+    - meta_engine.extraction_block.extracted_at
+    - readiness_engine.state_block
+    - readiness_engine.commit_block
+    - readiness_engine.validation_block.is_structurally_complete
+    - readiness_engine.validation_block.status
+
 OUTPUT
 Panggil tool '${TOOL_NAME}' dengan input PkV10Record V.10.2 (boleh partial — server
 akan merge ke inert full-shape). JANGAN balas teks. JANGAN mark-down.`;
