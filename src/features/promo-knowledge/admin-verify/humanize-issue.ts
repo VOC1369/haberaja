@@ -443,39 +443,49 @@ export function humanizeIssue(
 
   // ── E. Path-resolved or generic fallback ─────────────────────────────
   // Sub-cases:
-  //   E0. Canonical path resolved + ada di FIELD_REGISTRY → render question
-  //       + options dari registry, dilengkapi 2 opsi universal:
-  //       "Tidak disebutkan di sumber" + "Jelaskan manual".
+  //   E0. Canonical path resolved + ada di FIELD_REGISTRY → render question.
+  //       SINGLE OPTION AUTHORITY: pakai registry.options jika ada,
+  //       kalau registry tidak punya options → fallback universal.
+  //       JANGAN merge field-specific + universal (mencegah opsi double).
   //   E1. Path resolved tapi BUKAN di FIELD_REGISTRY → debug card.
   //   E2. Path tidak teridentifikasi sama sekali → routing-bucket / contradiction.
   const isContradiction = question.severity === "contradiction";
   const source = (question.source_text ?? "").trim();
   const hasPath = path.length > 0;
 
+  // Universal fallback — hanya dipakai jika registry tidak menyediakan options.
+  const UNIVERSAL_FALLBACK_OPTIONS: HumanOption[] = [
+    { value: "__not_stated__", label: "Tidak disebutkan di sumber" },
+    { value: "__manual__", label: "Jelaskan manual" },
+  ];
+
   // E0 — registry-driven humanized card.
   if (hasPath) {
     const entry = FIELD_REGISTRY_INDEX.get(path);
     if (entry) {
-      const baseOptions: HumanOption[] = (entry.options ?? []).map((o) => ({
+      const registryOptions: HumanOption[] = (entry.options ?? []).map((o) => ({
         value: o.value,
         label: o.label,
       }));
-      const universalExtras: HumanOption[] = [
-        { value: "__not_stated__", label: "Tidak disebutkan di sumber" },
-        { value: "__manual__", label: "Jelaskan manual" },
-      ];
+      // Single option authority: registry wins. Fallback only if empty.
+      const finalOptions: HumanOption[] =
+        registryOptions.length > 0
+          ? registryOptions
+          : UNIVERSAL_FALLBACK_OPTIONS;
       const currentValue = asString(readPath(record, path));
       return {
         title: `${entry.label} perlu dikonfirmasi`,
         description:
           "Sistem menemukan data yang perlu Anda pastikan untuk field ini.",
-        objectLabel: source ? "Catatan dari extractor:" : undefined,
-        objectValue: source || undefined,
+        // source_text tidak ditampilkan sebagai card utama —
+        // sudah tersedia di collapsible "Lihat detail teknis".
+        objectLabel: undefined,
+        objectValue: undefined,
         contextLines: currentValue
           ? [{ key: "Nilai saat ini", value: currentValue }]
           : undefined,
         mainQuestion: entry.question,
-        options: [...baseOptions, ...universalExtras],
+        options: finalOptions,
         badge,
         shouldRenderAsAdminQuestion: true,
       };
