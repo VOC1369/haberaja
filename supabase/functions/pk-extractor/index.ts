@@ -391,6 +391,52 @@ untuk data yang berbeda.
           bukan placeholder. Jangan ambiguity_flag kecuali header
           kolomnya sendiri placeholder.
 
+        ────────────────────────────────────────────────────────────
+        H7. CAUSAL BASIS vs TRIGGER (REASONING-ONLY)
+        ────────────────────────────────────────────────────────────
+        Pisahkan dua hal yang sering dicampur:
+
+          (a) TRIGGER reward → peristiwa yang memicu pembayaran reward
+              (mis. "player naik level", "deposit pertama", "menang
+              undian").
+          (b) CAUSAL BASIS → mekanisme yang menyebabkan peristiwa itu
+              terjadi (mis. dasar kenaikan level: loyalty point,
+              akumulasi deposit, turnover, sistem VIP/internal, atau
+              keputusan operator).
+
+        ATURAN:
+          - Trigger boleh diisi jika peristiwa pemicu disebut sumber
+            (mis. trigger_event = "level_up_achieved" untuk promo
+            level-up).
+          - Causal basis HANYA boleh diisi jika sumber EKSPLISIT
+            menyebut dasarnya (mis. "loyalty point", "poin",
+            "akumulasi turnover", "total deposit", "VIP tier").
+          - JANGAN isi reward_engine.reward_table_block.basis (atau
+            taxonomy_engine.mode_block.tier_archetype) dengan asumsi
+            seperti "loyalty_points" hanya karena ada struktur tier.
+          - Jika trigger jelas tapi causal basis tidak disebut →
+            kosongkan basis + tulis _ambiguity_flags[] dengan path
+            field basis dan reason yang menjelaskan opsi-opsi yang
+            mungkin (loyalty point / deposit / turnover / VIP / manual)
+            sehingga admin dapat memilih.
+
+        ────────────────────────────────────────────────────────────
+        H8. SCOPE PRECONDITION (PER-TIER vs GLOBAL)
+        ────────────────────────────────────────────────────────────
+        Prasyarat (mis. "history deposit Rp100.000") yang sumber
+        sebut dalam konteks SPESIFIK satu tier/varian (mis.
+        "Bronze → Silver WAJIB ...") TIDAK boleh dipromosikan ke
+        scope global (root claim_gate_block) tanpa evidence.
+
+        ATURAN:
+          - Tulis nilai pada level yang sumber sebut (variant/tier
+            terkait) jika schema mengizinkan.
+          - Jika belum jelas apakah berlaku per-tier atau global →
+            JANGAN paksa ke root. Tulis _ambiguity_flags[] pada path
+            root claim_gate field dengan reason yang menjelaskan
+            placement-nya ambigu (sumber menyebut spesifik untuk
+            satu transisi tier).
+
      PRINSIP: jangan asumsi tanpa evidence; jangan perbaiki sumber;
      jangan hapus tanpa catatan; semua keputusan harus dapat dijelaskan.
 
