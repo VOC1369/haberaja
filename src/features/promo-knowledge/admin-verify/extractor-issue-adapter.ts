@@ -30,6 +30,7 @@
  */
 
 import type { PkV10Record } from "../schema/pk-v10";
+import { resolveCanonicalPath } from "./field-key-path-map";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Types — public contract
