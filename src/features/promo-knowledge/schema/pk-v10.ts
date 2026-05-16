@@ -1836,13 +1836,13 @@ export interface PkV10Record {
   risk_engine: PkV10RiskEngine;
   meta_engine: PkV10MetaEngine;
 
-  /** V.10.2 additive — optional, runtime extractor still emits V.10.1 (no ticket_engine). */
+  /** V.10.2 additive — optional, runtime extractor emits V.10.2 (includes ticket_engine). */
   ticket_engine?: PkV10TicketEngine;
-  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  /** V.10.2 additive — optional, runtime extractor emits V.10.2. */
   referral_engine?: PkV10ReferralEngine;
-  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  /** V.10.2 additive — optional, runtime extractor emits V.10.2. */
   result_event_engine?: PkV10ResultEventEngine;
-  /** V.10.2 additive — optional, runtime extractor still emits V.10.1. */
+  /** V.10.2 additive — optional, runtime extractor emits V.10.2. */
   fulfillment_engine?: PkV10FulfillmentEngine;
 
   ai_confidence: Record<string, number>;
