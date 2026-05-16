@@ -1368,14 +1368,15 @@ export interface PkV10RewardEngine {
    * "What the user gets" — physical reward identity ONLY.
    * For reward_type !== "physical", both fields stay null.
    * Execution metadata (validity, max_per_day, external_ref_id) lives in
-   * mechanics_engine.items[].data (Authority Order #1).
+   * typed engine fields (PRIMARY truth). mechanics_engine.items[].data serves
+   * as AUXILIARY / structural witness.
    */
   reward_identity_block: {
     item_name: string | null;
     quantity: number | null;
   };
-  // FLAT FIELDS — display summary only (authority order #4).
-  // Source of truth lives in mechanics_engine.items[].
+  // FLAT FIELDS — display summary only (AUXILIARY witness).
+  // Primary truth lives in typed engine fields.
   calculation_basis: string; // PkV10CalculationBasis when filled
   calculation_method: string; // PkV10CalculationMethod when filled
   calculation_value: number | null;
