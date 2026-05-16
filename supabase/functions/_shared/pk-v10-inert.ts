@@ -452,11 +452,10 @@ export function createInertPkV10Record(
         extractor: PK_V10_EXTRACTOR,
         amendment_type: PK_V10_AMENDMENT_TYPE,
         amendment_reason: PK_V10_AMENDMENT_REASON,
-        // V.10.2 additive — record_type & previous-version lineage.
-        // Defaults stay blank; runtime stays V.10.1 until D4 cutover.
-        record_type: "",
-        previous_version: "",
-        previous_released_at: "",
+        // V.10.2 lineage — D4 cutover (16 Mei 2026).
+        record_type: "promo",
+        previous_version: "V.10.1",
+        previous_released_at: "2026-05-04",
       },
     },
 
