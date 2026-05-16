@@ -244,20 +244,18 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     [record],
   );
 
-  // GapQuestion (JSON-driven) — single source of truth for missing-field cards.
-  const gaps = useMemo<GapQuestion[]>(
-    () => (record ? readGapsFromJson(record) : []),
-    [record],
-  );
+  // V.10.2 REBUILD — gap-reader DROPPED. No null-check / registry-iteration
+  // questions. The only source of admin questions is extractor reasoning.
+  const gaps = useMemo<GapQuestion[]>(() => [], []);
 
-  // PR-19A — Extractor + F3 issue questions.
-  // Path-first dedupe: suppress only when gap-reader is ACTIVELY showing
-  // the same canonical path (avoid duplicate cards for the same field).
-  // Issues whose path is in FIELD_REGISTRY but NOT in current gaps still
-  // render via humanize-issue → FIELD_REGISTRY question + universal options.
+  // V.10.2 — Sumber pertanyaan tunggal:
+  //   1. readiness_engine.validation_block.warnings[]
+  //   2. readiness_engine.observability_block.ambiguity_flags[]
+  //   3. readiness_engine.observability_block.contradiction_flags[]
+  //   4. F3 V.10.2 compliance issues (invalid enum / shape)
+  // NO template wording. NO null-check. NO field-registry iteration.
   const issueQuestions = useMemo<AdminVerifyIssueQuestion[]>(() => {
     if (!record) return [];
-    const gapPaths = new Set(gaps.map((g) => g.path));
     const merged = [
       ...buildIssueQuestions(record),
       ...buildF3ComplianceQuestions(record),
@@ -266,14 +264,9 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     return merged.filter((q) => {
       if (seen.has(q.task_id)) return false;
       seen.add(q.task_id);
-      // Resolve canonical path the same way humanize-issue does:
-      // affected_paths[0] → field_key → canonical token in source_text.
-      // Suppress when gap-reader is already showing the same path.
-      const canonical = resolveCanonicalPath(q);
-      if (canonical && gapPaths.has(canonical)) return false;
       return true;
     });
-  }, [record, gaps]);
+  }, [record]);
 
 
   // V.10.1 diagnostic — verifies record freshness for Admin Verify gate.
