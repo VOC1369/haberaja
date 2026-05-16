@@ -243,8 +243,6 @@ untuk data yang berbeda.
 
     Ini BUKAN template logic — ini structural consistency JSON.
 
-5. STATE (F1 §1).
-   readiness_engine.state_block.state = "draft" (default — server akan stamp).
 
 6. ENUM STRICT (F3).
    - Gunakan HANYA value yang ada di enum spec di tool schema.
