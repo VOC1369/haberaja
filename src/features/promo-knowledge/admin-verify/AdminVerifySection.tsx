@@ -220,7 +220,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   // PR-22 — internal hint + label per issue (from radio selection). Travel
   // alongside answer_text to the resolver as `selected_internal_hint`.
   const [issueAnswerMeta, setIssueAnswerMeta] = useState<
-    Record<string, { hint?: string; label?: string }>
+    Record<string, { hint?: string; label?: string; note?: string }>
   >({});
   const [savedIssueAnswers, setSavedIssueAnswers] = useState<Record<string, string>>({});
   const [issuePreviews, setIssuePreviews] = useState<Record<string, ResolveAdminAnswerResult>>({});
