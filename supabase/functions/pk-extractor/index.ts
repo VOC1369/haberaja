@@ -207,90 +207,42 @@ untuk data yang berbeda.
       - templates
     Use semantic reasoning only.
 
-4.2 APPLICABILITY CONSISTENCY CHECK (MANDATORY)
+4.2 CONSISTENCY CHECK (MANDATORY — before output)
 
-    After filling all fields:
-
-    A. Coverage
+    A. Coverage & status discipline
        - Every relevant field MUST appear in _field_status.
-       - Do not omit paths.
+       - not_applicable = field has no logical role (use eksplisit; jangan
+         biarkan default ke not_stated untuk field yang memang tak relevan).
+       - not_stated = relevant tapi unknown. JANGAN dipakai untuk field
+         yang tidak relevan.
+       - "inferred" WAJIB disertai ai_confidence.
 
-    B. Not Applicable Enforcement
-       - If text implies absence of a requirement
-         → all related fields MUST be not_applicable.
+    B. Block-level propagation (WITH ANCHOR)
+       Jika satu block tidak relevan: tandai SEMUA child leaf = not_applicable
+       DAN parent block path itu sendiri = not_applicable (MANDATORY ANCHOR).
+       INVALID: parent missing dari _field_status sementara child not_applicable.
 
-    C. Not Stated Discipline
-       - Use only when relevant but unknown.
-       - NEVER use for irrelevant fields.
-
-    D. Consistency Sweep
-       - If one field is not_applicable
-         → check related fields for alignment.
-
-    E. Confidence Rule
-       - "inferred" MUST include ai_confidence.
-
-    F. Final Self-Check
-       Ask: "Did I incorrectly use not_stated instead of not_applicable?"
-       Fix before output.
-
-4.3 PROPAGATION CONSISTENCY (MANDATORY)
-
-    After applicability decisions:
-
-    A. Mirror Propagation
-       If a canonical field is not_applicable:
-         → all projection mirror fields MUST also be not_applicable.
-       Example:
+    C. Mirror propagation
+       Jika canonical field = not_applicable → semua projection mirror fields
+       MUST juga not_applicable. Contoh:
          taxonomy_engine.logic_block.turnover_basis = not_applicable
          → projection_engine.summary_block.turnover_basis      = not_applicable
          → projection_engine.summary_block.turnover_multiplier = not_applicable
 
-    B. Block-Level Propagation (WITH ANCHOR — MANDATORY)
-       If a block has no logical role:
-         - Mark ALL child leaf fields as not_applicable.
-         - ALSO mark the parent block path itself as not_applicable
-           (MANDATORY ANCHOR — required for downstream propagation).
-       Example:
-         reward_engine.combo_reward_block.combo_items = not_applicable
-         → reward_engine.combo_reward_block            = not_applicable
-       INVALID state (do NOT produce):
-         - parent missing from _field_status
-         - children = not_applicable
-       Both must be present and consistent.
+    D. Shape exclusivity
+       Jika satu struktur dipakai → alternatif kosong MUST not_applicable
+       (hanya bila benar-benar tidak ada konten / tidak terdefinisi eksplisit).
 
-    C. Shape Exclusivity
-       If one structure is used:
-         → all alternative empty structures MUST be not_applicable.
-       ONLY if:
-         - they have no content
-         - they are not explicitly defined.
+    E. No partial applicability
+       Jangan mix parent=not_applicable dengan child=not_stated. Harus konsisten.
 
-    D. No Partial Applicability
-       Do NOT mix:
-         - parent = not_applicable
-         - child  = not_stated
-       All related fields must be consistent.
+    F. Final sweep (MANDATORY)
+       Sebelum return, scan seluruh JSON: tidak boleh ada mirror mismatch,
+       block inconsistency, partial propagation, atau salah pakai not_stated
+       untuk field irrelevant. Fix sebelum output.
 
-    E. Final Sweep (MANDATORY)
-       Before returning output, scan entire JSON and ensure no:
-         - mirror mismatch
-         - block inconsistency
-         - partial applicability
-       Fix BEFORE output.
+    Ini BUKAN template logic — ini structural consistency JSON.
 
-    This is NOT template logic. This is structural consistency of the JSON.
-
-FINAL ASSERTION (before output)
-    Confirm:
-      - All irrelevant fields are marked not_applicable
-      - All relevant unknown fields are not_stated
-      - All mirrors and blocks are consistent
-      - No partial propagation exists
-    If not, fix before returning.
-
-5. STATE (F1 §1).
-   readiness_engine.state_block.state = "draft" (default — server akan stamp).
 
 6. ENUM STRICT (F3).
    - Gunakan HANYA value yang ada di enum spec di tool schema.
@@ -302,19 +254,6 @@ FINAL ASSERTION (before output)
    - Timezone WAJIB IANA: "Asia/Jakarta" | "Asia/Makassar" | "Asia/Jayapura".
      JANGAN "WIB"/"WITA"/"WIT" — itu alias legacy DI-REJECT.
 
-7. AUTHORITY ORDER (V.10.2 — TYPED ENGINE WINS).
-   Truth structural untuk reward, klaim, scope, period, trigger, dll.
-   ada di TYPED ENGINE masing-masing (lihat S6 kelas PRIMARY).
-   Jika typed engine bertentangan dengan mechanics_engine.items[]:
-     → TYPED ENGINE MENANG.
-   mechanics_engine hanya membantu audit, replay, dan debugging reasoning
-   — bukan otoritas data. JANGAN gunakan mechanics_engine untuk override
-   nilai di typed engine, dan JANGAN tahan pengisian typed engine hanya
-   karena mechanics_engine belum diisi.
-
-8. PROJECTION ENGINE (F1 §projection).
-   JANGAN isi projection_engine — ini DERIVED only. Biarkan blank.
-   (Server akan generate post-extraction.)
 
 9. ANOMALY REASONING (REASONING-FIRST — BUKAN PATTERN MATCHING).
    Selama membaca sumber, gunakan reasoning untuk mendeteksi 3 jenis
@@ -421,23 +360,6 @@ FINAL ASSERTION (before output)
         Placeholder ("-", "N/A", kosong) BUKAN unlimited.
 
         ────────────────────────────────────────────────────────────
-        H3. STACKING CONSISTENCY
-        ────────────────────────────────────────────────────────────
-        Jika sumber menyatakan promo tidak dapat digabung:
-          - dependency_engine.stacking_block.stacking_policy = "no_stacking"
-          - Jangan partial. Jangan infer jika tidak disebut.
-
-        ────────────────────────────────────────────────────────────
-        H4. REWARD SEMANTIC CONSISTENCY
-        ────────────────────────────────────────────────────────────
-        Pisahkan dengan jelas:
-          - reward_type        → jenis (cash, spin, voucher, ...)
-          - reward_form        → bentuk distribusi (balance_credit, credit_game, ...)
-          - calculation_method → cara hitung (percentage, fixed, ...)
-        Jangan pakai label perhitungan (mis. "cashback") sebagai reward_form.
-        primary_action = aksi nyata user, bukan label marketing.
-
-        ────────────────────────────────────────────────────────────
         H5. ANTI OVER-INFERENCE
         ────────────────────────────────────────────────────────────
         JANGAN isi tanpa evidence jelas:
@@ -462,24 +384,6 @@ FINAL ASSERTION (before output)
           - Taruh issue per-field di validation_block.warnings.
           - Duplikasi issue ke beberapa channel.
           - Simpan reasoning tanpa path.
-
-        ────────────────────────────────────────────────────────────
-        H7. FINAL CONSISTENCY CHECK
-        ────────────────────────────────────────────────────────────
-        Sebelum set readiness_engine.observability_block.review_required = false,
-        WAJIB pastikan:
-          - _ambiguity_flags kosong
-          - _contradiction_flags kosong
-          - tidak ada placeholder pada field penting
-          - tidak ada nilai yang tidak bermakna
-        Jika salah satu tidak terpenuhi → review_required = true.
-
-        ────────────────────────────────────────────────────────────
-        H8. PRINSIP AKHIR
-        ────────────────────────────────────────────────────────────
-        Jika nilai tidak memberi informasi operasional yang bisa
-        dipakai: jangan menebak, jangan anggap aman, jangan anggap
-        final. Tandai sebagai ambiguity dan serahkan ke admin.
 
         SEL KOSONG DALAM TABEL VARIANT:
           Sel yang memang kosong di kolom tabel variant (tanpa
@@ -580,23 +484,12 @@ J. reasoning_engine.intent_block
      * "Rollingan"  → primary_action: bet_to_rollingan, payout_direction: backend
      * "Referral"   → primary_action: refer_to_commission
 
-K. ai_confidence MAP (WAJIB minimal 10 path penting).
+K. ai_confidence MAP (WAJIB).
    Format: { "engine.block.field": 0.85, ... }
-   Path-path penting yang biasanya dinilai:
-     identity_engine.promo_block.promo_name
-     identity_engine.promo_block.promo_type
-     identity_engine.promo_block.target_user
-     identity_engine.promo_block.promo_mode
-     identity_engine.client_block.client_id
-     reward_engine.calculation_basis
-     reward_engine.calculation_value
-     reward_engine.payout_direction
-     reward_engine.reward_type
-     trigger_engine.primary_trigger_block.trigger_event
-     claim_engine.method_block.claim_method
-     scope_engine.game_block.game_domain
-     period_engine.validity_block.valid_from
-     period_engine.validity_block.valid_until
+   Isi ai_confidence untuk critical paths yang benar-benar dipakai, minimal
+   pada field keputusan utama: identity, classification, reward, trigger,
+   claim, scope, period, variant, readiness. Setiap path dengan
+   _field_status="inferred" WAJIB punya ai_confidence.
 
 L. _field_status MAP (WAJIB).
    Format: { "engine.block.field": "explicit" | "inferred" | "not_applicable" | ... }
@@ -687,42 +580,6 @@ M. MECHANICS DATA SHAPE DOCTRINE (Step 5D — Step 6.1 prompt-only).
           mengikatnya — gunakan scope="promo_period" hanya jika sumber
           eksplisit memisahkan window promo dari validity_block.
 
-   M.3  CARRY-OVER ke Step 6.2 (JANGAN populate sekarang).
-        Field-field berikut sudah masuk schema TS PkV10Record tapi tool
-        schema Anthropic BELUM dibuka (additionalProperties: false di
-        sub-engine terkait). Mengisi sekarang akan kena schema rejection.
-        Aturan reasoning-nya tetap dicatat di sini supaya doctrine align,
-        tapi extractor TIDAK BOLEH menulis field-field ini di Step 6.1:
-
-        - reward_engine.reward_identity_block
-            [CARRIES OVER TO STEP 6.2]
-            Hanya untuk reward_type === "physical".
-            Bentuk: { item_name: <string|null>, quantity: <number|null> }.
-            Untuk reward_type lain (cashback, lucky_spin, voucher, dll)
-            block ini WAJIB null. Detail item lucky-spin / voucher / dll
-            TIDAK boleh masuk ke sini — mereka pergi ke
-            mechanics_engine.items[] (reward + external_system).
-
-        - reward_engine.max_reward_unlimited
-            [CARRIES OVER TO STEP 6.2]
-            true HANYA jika sumber EKSPLISIT menyatakan tidak ada batas
-            atas reward DAN ada evidence string yang mendukung. Tidak ada
-            keyword/regex detection. Default false. Saat true, max_reward
-            harus null.
-
-        - period_engine.validity_block.valid_until_unlimited
-            [CARRIES OVER TO STEP 6.2]
-            true HANYA jika sumber EKSPLISIT menyatakan promo berlaku
-            tanpa batas waktu (mis. "berlaku selamanya"). Default false.
-            Saat true, valid_until harus null.
-
-        Catatan implementasi:
-        - Step 6.1 = validasi reasoning Claude pada data blob mechanics.
-        - Step 6.2 = tool schema additive untuk 3 field carry-over di atas.
-        - Step 6B = validator enforcement (max_reward_unlimited ↔ max_reward
-          null, valid_until_unlimited ↔ valid_until null, identity_block
-          hanya bila reward_type=physical).
-
 ================================================================
 V.10.2 HARD RULES (HEADER vs VARIANT, FORBIDDEN FIELDS, PROJECTION)
 ================================================================
@@ -778,27 +635,8 @@ V10.2-R3. PROJECTION ENGINE — DERIVED ONLY.
    reward_engine + variant_engine + scope_engine.
    Setiap key projection_engine yang dikirim LLM akan di-drop.
 
-V10.2-R4. SUBCATEGORY SHAPE (ringkas — detail di tool schema).
-   Field per subcategory mengikuti skeleton V.10.2:
-     variant_id, variant_name, promo_code,
-     calculation_basis, calculation_method, calculation_value, calculation_unit,
-     min_deposit, max_reward, max_reward_unlimited, min_claim,
-     claim_gate_block { requires_deposit_before_claim, min_deposit_for_claim,
-                        requires_withdraw_before_claim, min_withdraw_for_claim,
-                        requires_claim_before_play, requires_claim_before_withdraw_form,
-                        requires_claim_after_event_result,
-                        claim_deadline_value, claim_deadline_unit, claim_deadline_anchor,
-                        claim_limit_per_period, claim_limit_period, claim_limit_scope },
-     turnover_multiplier, turnover_rule_format,
-     game_domain, eligible_providers, game_names,
-     blacklist {enabled, types[], providers[], games[], rules[], note},
-     reward_type, payout_direction, currency,
-     physical_reward_name, physical_reward_quantity,
-     cash_reward_amount, reward_quantity,
-     voucher_kind, voucher_valid_from, voucher_valid_until, voucher_valid_unlimited,
-     lucky_spin_id, lucky_spin_max_per_day,
-     product_note.
-   Tidak boleh ada key di luar daftar ini.
+V10.2-R4. SUBCATEGORY SHAPE.
+   Subcategory shape mengikuti tool schema; jangan buat field di luar kontrak.
 
 ================================================================
 V.10.2 NEW ENGINES — DOCTRINE (DIISI HANYA JIKA RELEVAN)
