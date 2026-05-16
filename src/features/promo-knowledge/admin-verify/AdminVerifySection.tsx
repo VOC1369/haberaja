@@ -287,19 +287,22 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     });
   }, [record, gaps]);
 
-  // Provider card visibility = strictly derived from gap-reader output.
-  // No direct field inspection. No promo_type branching. No raw_content access.
-  const providerGap = useMemo(
+  // V.10.2 — Provider card visibility = strictly derived from extractor
+  // reasoning. Card shows ONLY when an extractor issue (warning / ambiguity
+  // / contradiction / F3) explicitly references a provider canonical path
+  // via `affected_paths`. NO "field kosong" trigger. Path-equality only.
+  const providerIssue = useMemo(
     () =>
-      gaps.find(
-        (g) =>
-          g.path === PROVIDER_WHITELIST_PATH || g.path === PROVIDER_BLACKLIST_PATH,
+      issueQuestions.find((q) =>
+        q.affected_paths.some(
+          (p) => p === PROVIDER_WHITELIST_PATH || p === PROVIDER_BLACKLIST_PATH,
+        ),
       ),
-    [gaps],
+    [issueQuestions],
   );
-  const showProviderCard = !!providerGap;
+  const showProviderCard = !!providerIssue;
   const providerPriority: "blocker" | "confirm" | "optional" =
-    providerGap?.priority ?? "confirm";
+    providerIssue?.severity === "contradiction" ? "blocker" : "confirm";
 
   const triggerKey = `${showProviderCard}|${providerVisual.domain}|${providerVisual.prefilledBlacklist.join(",")}|${providerVisual.initialMode}`;
   const [providerState, setProviderState] = useState<ProviderState>({
@@ -325,20 +328,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
     [record],
   );
 
-  // Render-list excludes provider gap (provider has its own dedicated card).
-  const questions = useMemo<RenderQuestion[]>(() => {
-    const out: RenderQuestion[] = [];
-    for (const g of gaps) {
-      if (g.path === PROVIDER_WHITELIST_PATH || g.path === PROVIDER_BLACKLIST_PATH) {
-        continue;
-      }
-      const spec = FIELD_REGISTRY_INDEX.get(g.path);
-      if (!spec) continue;
-      out.push({ ...g, spec });
-    }
-    const rank: Record<string, number> = { blocker: 0, confirm: 1, optional: 2 };
-    return out.sort((a, b) => rank[a.priority] - rank[b.priority]);
-  }, [gaps]);
+  // V.10.2 — Registry-driven render list DROPPED. No question is generated
+  // from FIELD_REGISTRY iteration. All admin questions render through the
+  // ExtractorIssueSection (Jalur B). Provider card has its own dedicated UI.
+  const questions = useMemo<RenderQuestion[]>(() => [], []);
 
   if (!record) return null;
 
