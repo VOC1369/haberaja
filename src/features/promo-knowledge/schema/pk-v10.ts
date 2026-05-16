@@ -1692,7 +1692,7 @@ export interface PkV10MetaEngine {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// V.10.2 ADDITIVE ENGINES — optional on PkV10Record (runtime still V.10.1)
+// V.10.2 ADDITIVE ENGINES — optional on PkV10Record (runtime extractor emits V.10.2)
 // ──────────────────────────────────────────────────────────────────────────
 
 export interface PkV10TicketEngine {
