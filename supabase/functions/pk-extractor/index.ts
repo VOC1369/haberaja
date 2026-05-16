@@ -302,9 +302,15 @@ FINAL ASSERTION (before output)
    - Timezone WAJIB IANA: "Asia/Jakarta" | "Asia/Makassar" | "Asia/Jayapura".
      JANGAN "WIB"/"WITA"/"WIT" — itu alias legacy DI-REJECT.
 
-7. AUTHORITY ORDER (F2 ATURAN KEBENARAN DATA).
-   Truth structural ada di mechanics_engine.items[]. Field flat di reward_engine
-   adalah display summary saja. Kalau ada conflict, mechanics_engine menang.
+7. AUTHORITY ORDER (V.10.2 — TYPED ENGINE WINS).
+   Truth structural untuk reward, klaim, scope, period, trigger, dll.
+   ada di TYPED ENGINE masing-masing (lihat S6 kelas PRIMARY).
+   Jika typed engine bertentangan dengan mechanics_engine.items[]:
+     → TYPED ENGINE MENANG.
+   mechanics_engine hanya membantu audit, replay, dan debugging reasoning
+   — bukan otoritas data. JANGAN gunakan mechanics_engine untuk override
+   nilai di typed engine, dan JANGAN tahan pengisian typed engine hanya
+   karena mechanics_engine belum diisi.
 
 8. PROJECTION ENGINE (F1 §projection).
    JANGAN isi projection_engine — ini DERIVED only. Biarkan blank.
