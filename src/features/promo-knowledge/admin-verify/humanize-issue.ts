@@ -184,6 +184,31 @@ function asString(v: unknown): string {
   }
 }
 
+/**
+ * PATCH E — Strip leading "dotted.path:" prefix from an extractor flag so
+ * the human reason can be presented to the admin. Pure structural split:
+ * the head must look like a dotted path (no spaces, has dot, charset
+ * [a-zA-Z0-9_.\[\]]). Returns trimmed remainder, or the original text.
+ */
+function stripPathPrefix(text: string | null | undefined): string {
+  if (!text || typeof text !== "string") return "";
+  const colon = text.indexOf(":");
+  if (colon <= 0) return text.trim();
+  const head = text.slice(0, colon).trim();
+  if (head.length === 0 || head.length > 200) return text.trim();
+  if (!head.includes(".")) return text.trim();
+  for (let i = 0; i < head.length; i++) {
+    const c = head.charCodeAt(i);
+    const ok =
+      (c >= 48 && c <= 57) ||
+      (c >= 65 && c <= 90) ||
+      (c >= 97 && c <= 122) ||
+      c === 95 || c === 46 || c === 91 || c === 93;
+    if (!ok) return text.trim();
+  }
+  return text.slice(colon + 1).trim();
+}
+
 // ─── Condition humanizer (presentation-only) ───────────────────────────
 
 const FIELD_LABELS: Record<string, string> = {
@@ -473,6 +498,14 @@ export function humanizeIssue(
           ? registryOptions
           : UNIVERSAL_FALLBACK_OPTIONS;
       const currentValue = asString(readPath(record, path));
+      // PATCH E — carry extractor reason/evidence into the question.
+      // Strip the leading "dotted.path:" prefix so the admin reads the
+      // human reason, not the path token. NO regex keyword logic — pure
+      // structural split on the first colon when the head is a dotted path.
+      const reason = stripPathPrefix(question.source_text);
+      const ctx: Array<{ key: string; value: string }> = [];
+      if (reason) ctx.push({ key: "Alasan sistem", value: reason });
+      if (currentValue) ctx.push({ key: "Nilai saat ini", value: currentValue });
       return {
         title: `${entry.label} perlu dikonfirmasi`,
         description:
@@ -481,9 +514,7 @@ export function humanizeIssue(
         // sudah tersedia di collapsible "Lihat detail teknis".
         objectLabel: undefined,
         objectValue: undefined,
-        contextLines: currentValue
-          ? [{ key: "Nilai saat ini", value: currentValue }]
-          : undefined,
+        contextLines: ctx.length > 0 ? ctx : undefined,
         mainQuestion: entry.question,
         options: finalOptions,
         badge,

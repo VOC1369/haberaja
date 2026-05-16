@@ -20,6 +20,7 @@ import {
   PK_V10_CLAIM_METHOD,
   PK_V10_GEO_RESTRICTION,
   PK_V10_STACKING_POLICY,
+  PK_V10_TIER_ARCHETYPE,
   PK_V10_TURNOVER_BASIS,
 } from "@/features/promo-knowledge/schema/pk-v10";
 
@@ -377,6 +378,80 @@ export const FIELD_REGISTRY: FieldRegistryEntry[] = [
     read: (r) => r.scope_engine?.geo_block?.geo_restriction,
     write: (d, a) => {
       d.scope_engine.geo_block.geo_restriction = a.choice;
+    },
+  },
+  {
+    // PATCH D — Causal basis for tiered/level-up rewards. Extractor leaves
+    // this empty + flags ambiguity when the source does not explicitly state
+    // the mechanism behind level/tier progression.
+    path: "reward_engine.reward_table_block.basis",
+    label: "Dasar reward / kenaikan level",
+    question: "Apa dasar kenaikan level / reward pada promo ini?",
+    inputKind: "radio",
+    options: [
+      { value: "loyalty_points", label: "Loyalty / VIP points" },
+      { value: "deposit_accumulation", label: "Akumulasi deposit" },
+      { value: "turnover_accumulation", label: "Akumulasi turnover" },
+      { value: "win_loss", label: "Win / Loss member" },
+      { value: "manual_operator", label: "Diputuskan operator (manual)" },
+      { value: "not_stated_confirmed", label: "Tidak disebutkan di sumber" },
+      { value: "manual_note", label: "Jelaskan manual" },
+    ],
+    read: (r) => r.reward_engine?.reward_table_block?.basis,
+    write: (d, a) => {
+      if (!d.reward_engine.reward_table_block) {
+        d.reward_engine.reward_table_block = {
+          enabled: false,
+          table_type: "",
+          basis: "",
+          rows: [],
+        };
+      }
+      if (a.choice === "not_stated_confirmed" || a.choice === "manual_note") {
+        d.reward_engine.reward_table_block.basis = "";
+      } else {
+        d.reward_engine.reward_table_block.basis = a.choice;
+      }
+    },
+    getAdminNote: (a) => {
+      if (a.choice === "not_stated_confirmed") {
+        return "Admin confirmed reward_table_block.basis is not stated in source";
+      }
+      if (a.choice === "manual_note") {
+        const v = (a.customValue ?? "").trim();
+        return v.length > 0 ? v : undefined;
+      }
+      return undefined;
+    },
+  },
+  {
+    // PATCH D — Tier archetype: the ladder/tier mechanism shape.
+    path: "taxonomy_engine.mode_block.tier_archetype",
+    label: "Tipe ladder / tier",
+    question: "Tier promo ini berdasarkan apa?",
+    inputKind: "radio",
+    options: [
+      ...enumToOptions(PK_V10_TIER_ARCHETYPE),
+      { value: "not_stated_confirmed", label: "Tidak disebutkan di sumber" },
+      { value: "manual_note", label: "Jelaskan manual" },
+    ],
+    read: (r) => r.taxonomy_engine?.mode_block?.tier_archetype,
+    write: (d, a) => {
+      if (a.choice === "not_stated_confirmed" || a.choice === "manual_note") {
+        d.taxonomy_engine.mode_block.tier_archetype = null as never;
+      } else {
+        d.taxonomy_engine.mode_block.tier_archetype = a.choice as never;
+      }
+    },
+    getAdminNote: (a) => {
+      if (a.choice === "not_stated_confirmed") {
+        return "Admin confirmed tier_archetype is not stated in source";
+      }
+      if (a.choice === "manual_note") {
+        const v = (a.customValue ?? "").trim();
+        return v.length > 0 ? v : undefined;
+      }
+      return undefined;
     },
   },
 ];

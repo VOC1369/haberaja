@@ -26,6 +26,7 @@ export const FIELD_KEY_TO_PATH: Record<string, string> = {
   trigger_event: "trigger_engine.primary_trigger_block.trigger_event",
   rule_type: "trigger_engine.trigger_rule_block.rule_type",
   calculation_period: "period_engine.distribution_block.calculation_period",
+  tier_archetype: "taxonomy_engine.mode_block.tier_archetype",
   // turnover_rule_format is per-variant — handled separately by F3 adapter.
 };
 

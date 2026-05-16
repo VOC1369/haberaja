@@ -732,9 +732,8 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
                 const saved = savePkRecord(result.record);
                 onApply(saved);
                 setIssueApplied((a) => ({ ...a, [q.task_id]: true }));
-                toast.success("Perubahan tersimpan", {
-                  description:
-                    "Status review masih perlu dicek ulang sebelum publish.",
+                toast.success("Jawaban admin diterapkan", {
+                  description: "JSON draft diperbarui. Status review masih perlu dicek ulang sebelum publish.",
                 });
               } catch (err) {
                 const msg =
