@@ -731,7 +731,9 @@ V10.1-R1. SINGLE vs MULTI (HEADER vs VARIANT — KERAS).
    Tentukan promo_mode lebih dulu (single | multi).
 
    - promo_mode = "single":
-     * reward_engine = source of truth untuk nilai reward/calculation/payout.
+     * reward_engine = typed PRIMARY truth untuk nilai reward/calculation/payout
+       (BUKAN turunan dari mechanics_engine). mechanics_engine.items[] (jika
+       diisi) adalah supporting witness, bukan otoritas.
      * variant_engine.summary_block.has_subcategories = false
      * variant_engine.summary_block.expected_count = 1 (atau null)
      * variant_engine.items_block.subcategories = []  ← WAJIB kosong.
