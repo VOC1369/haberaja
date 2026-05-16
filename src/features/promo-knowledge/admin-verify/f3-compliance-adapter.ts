@@ -63,8 +63,15 @@ function isCurrencyShapeValid(v: unknown): boolean {
   if (typeof v !== "string") return false;
   const t = v.trim();
   if (t.length === 0) return true; // empty = skip
-  // Extensible but should look like 3-letter ISO uppercase code.
-  return /^[A-Z]{3}$/.test(t);
+  // V.10.2 — Extensible shape check (NO regex). Currency should look like a
+  // 3-letter ISO uppercase code (IDR, KHR, PHP, ...). Pure equality logic.
+  if (t.length !== 3) return false;
+  if (t !== t.toUpperCase()) return false;
+  for (let i = 0; i < 3; i++) {
+    const c = t.charCodeAt(i);
+    if (c < 65 || c > 90) return false; // A-Z only
+  }
+  return true;
 }
 
 function makeQuestion(args: {
