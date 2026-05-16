@@ -147,7 +147,9 @@ describe("V.10.2 Admin Question Engine — reasoning-only", () => {
       "src/features/promo-knowledge/admin-verify/AdminVerifySection.tsx",
       "utf8",
     );
-    expect(src.includes("readGapsFromJson")).toBe(false);
+    // Allow doc-comments mentioning the name, but forbid runtime call/import.
+    expect(src.includes("readGapsFromJson(")).toBe(false);
+    expect(/import\s*\{[^}]*\breadGapsFromJson\b/.test(src)).toBe(false);
   });
 
   it("F3 enum labels reference V.10.2 (no V.10.1 leftover in source_text)", async () => {
