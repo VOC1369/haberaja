@@ -1434,7 +1434,7 @@ function ExtractorIssueCard({
     const label = opt
       ? human.options?.find((o) => o.value === opt)?.label
       : undefined;
-    onDraftChange(text, { hint, label });
+    onDraftChange(text, { hint, label, note: note.trim() || undefined });
   };
 
   const handleOptionChange = (v: string) => {
