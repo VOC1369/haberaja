@@ -57,8 +57,8 @@
 // ──────────────────────────────────────────────────────────────────────────
 
 export const PK_V10_OFFICIAL_SCHEMA_AUTHORITY = "V.10.2" as const;
-export const PK_V10_CURRENT_EXTRACTOR_RUNTIME = "V.10.1" as const;
-export const PK_V10_MIGRATION_STATUS = "B1_TYPE_READY_ONLY" as const;
+export const PK_V10_CURRENT_EXTRACTOR_RUNTIME = "V.10.2" as const;
+export const PK_V10_MIGRATION_STATUS = "POST_D4_RUNTIME_CUTOVER" as const;
 
 export const PK_V10_SCHEMA_NAME = "PKB_Wolfbrain" as const;
 export const PK_V10_SCHEMA_VERSION = "V.10.1" as const;
