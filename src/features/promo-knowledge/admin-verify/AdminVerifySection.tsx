@@ -44,6 +44,10 @@ import { buildF3ComplianceQuestions } from "./f3-compliance-adapter";
 import { resolveAdminAnswerToPatchPreview } from "./admin-answer-llm-resolver";
 import type { ResolveAdminAnswerResult } from "./extractor-issue-adapter";
 import { applyAdminPatchPreviewToPkRecord } from "./admin-patch-apply";
+import {
+  applyDeterministicRegistryAnswer,
+  isDeterministicHint,
+} from "./deterministic-apply";
 import { saveRecord as savePkRecord } from "@/features/promo-knowledge/storage/local-storage";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -216,7 +220,7 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
   // PR-22 — internal hint + label per issue (from radio selection). Travel
   // alongside answer_text to the resolver as `selected_internal_hint`.
   const [issueAnswerMeta, setIssueAnswerMeta] = useState<
-    Record<string, { hint?: string; label?: string }>
+    Record<string, { hint?: string; label?: string; note?: string }>
   >({});
   const [savedIssueAnswers, setSavedIssueAnswers] = useState<Record<string, string>>({});
   const [issuePreviews, setIssuePreviews] = useState<Record<string, ResolveAdminAnswerResult>>({});
@@ -691,6 +695,59 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
             }))
           }
           onGeneratePreview={async (q) => {
+            const meta = issueAnswerMeta[q.task_id] ?? {};
+            const path = q.affected_paths[0];
+            const entry = path ? FIELD_REGISTRY_INDEX.get(path) : undefined;
+
+            // PATCH B — Deterministic registry shortcut.
+            // Skip LLM resolver entirely when admin picked a structured
+            // radio option that maps to a registry writer. Authority:
+            // admin's structured answer + FIELD_REGISTRY.
+            if (entry && isDeterministicHint(meta.hint)) {
+              setIssueApplyLoading((p) => ({ ...p, [q.task_id]: true }));
+              setIssueApplyErrors((e) => {
+                const n = { ...e };
+                delete n[q.task_id];
+                return n;
+              });
+              setIssuePreviewErrors((e) => {
+                const n = { ...e };
+                delete n[q.task_id];
+                return n;
+              });
+              try {
+                const result = applyDeterministicRegistryAnswer({
+                  record,
+                  entry,
+                  hint: meta.hint as string,
+                  note: meta.note,
+                  severity: q.severity,
+                  sourceText: q.source_text,
+                  actor: "admin",
+                  reason: q.issue_summary,
+                });
+                if (!result.ok || !result.record) {
+                  throw new Error(result.error ?? "Patch tidak valid.");
+                }
+                const saved = savePkRecord(result.record);
+                onApply(saved);
+                setIssueApplied((a) => ({ ...a, [q.task_id]: true }));
+                toast.success("Perubahan tersimpan", {
+                  description:
+                    "Status review masih perlu dicek ulang sebelum publish.",
+                });
+              } catch (err) {
+                const msg =
+                  err instanceof Error
+                    ? err.message
+                    : "Gagal menyimpan perubahan.";
+                setIssueApplyErrors((e) => ({ ...e, [q.task_id]: msg }));
+              } finally {
+                setIssueApplyLoading((p) => ({ ...p, [q.task_id]: false }));
+              }
+              return;
+            }
+
             setIssuePreviewLoading((p) => ({ ...p, [q.task_id]: true }));
             setIssuePreviewErrors((e) => {
               const next = { ...e };
@@ -701,7 +758,6 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
               // PR-19C: live LLM resolver via ai-proxy (type=intent).
               // PR-22: pass selected_internal_hint + selected_label alongside
               // answer_text. Backward-compatible — resolver may ignore them.
-              const meta = issueAnswerMeta[q.task_id] ?? {};
               const result = await resolveAdminAnswerToPatchPreview({
                 record,
                 reviewTask: q,
@@ -1215,7 +1271,7 @@ function ExtractorIssueSection({
   previews: Record<string, ResolveAdminAnswerResult>;
   loading: Record<string, boolean>;
   errors: Record<string, string>;
-  onDraftChange: (taskId: string, value: string, meta?: { hint?: string; label?: string }) => void;
+  onDraftChange: (taskId: string, value: string, meta?: { hint?: string; label?: string; note?: string }) => void;
   onSave: (taskId: string) => void;
   onGeneratePreview: (q: AdminVerifyIssueQuestion) => Promise<void> | void;
   applyLoading: Record<string, boolean>;
@@ -1297,7 +1353,7 @@ function ExtractorIssueCard({
   isApplying: boolean;
   applyErrorMessage?: string;
   isApplied: boolean;
-  onDraftChange: (v: string, meta?: { hint?: string; label?: string }) => void;
+  onDraftChange: (v: string, meta?: { hint?: string; label?: string; note?: string }) => void;
   onSave: () => void;
   onGeneratePreview: () => void;
   onConfirmApply: () => void;
@@ -1378,7 +1434,7 @@ function ExtractorIssueCard({
     const label = opt
       ? human.options?.find((o) => o.value === opt)?.label
       : undefined;
-    onDraftChange(text, { hint, label });
+    onDraftChange(text, { hint, label, note: note.trim() || undefined });
   };
 
   const handleOptionChange = (v: string) => {
