@@ -1541,15 +1541,16 @@ function buildExtractorToolSchema(): AnyObj {
         type: "object", additionalProperties: false,
         properties: {
           source_block: {
+            // V.10.2 Step 1A — raw_content dihapus (server stamp dari input raw text).
             type: "object", additionalProperties: false,
             properties: {
               source_url: { type: "string" },
-              raw_content: { type: "string" },
               extraction_source: enumStr("extraction_source"),
               source_type: enumStr("source_type"),
             },
           },
           extraction_block: {
+            // V.10.2 Step 1A — extracted_at sudah tidak ada (server stamp timestamp).
             type: "object", additionalProperties: false,
             properties: {
               has_rowspan_tables: { type: "boolean" },
@@ -1569,15 +1570,9 @@ function buildExtractorToolSchema(): AnyObj {
               items: { type: "array", items: { type: "object", additionalProperties: true } },
             },
           },
-          // V.10.2 additive — schema_block lifecycle fields (system-set, but allowed in tool schema).
-          schema_block: {
-            type: "object", additionalProperties: false,
-            properties: {
-              record_type: enumStr("record_type"),
-              previous_version: { type: "string" },
-              previous_released_at: { type: "string" },
-            },
-          },
+          // V.10.2 Step 1A — schema_block dihapus dari tool schema.
+          // Server stamp dari inert (schema_version, record_type, previous_version,
+          // previous_released_at, amendment metadata). LLM tidak boleh tulis lifecycle.
         },
       },
       // V.10.2 additive — 4 new root engines.
