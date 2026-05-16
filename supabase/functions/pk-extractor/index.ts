@@ -543,11 +543,15 @@ D. mechanics_engine.items[] — AUXILIARY STRUCTURAL WITNESS / AUDIT TRAIL (V.10
      control      → { control_type, stacking_policy?, max_concurrent? }
      invalidator  → { void_trigger, void_action, penalty_scope }
 
-E. reward_engine FLAT FIELDS (display summary, F2 authority #4).
+E. reward_engine FLAT FIELDS — PRIMARY TRUTH untuk reward (V.10.2).
+   reward_engine adalah typed engine PRIMARY untuk reward value,
+   calculation, payout, reward blocks, dan reward placement.
    - calculation_basis, calculation_method, calculation_value, calculation_unit
    - payout_direction (upfront | backend)
    - reward_type, voucher_kind, max_reward, currency
-   Truth tetap di mechanics_engine — flat field di sini hanya ringkasan utama.
+   Jika mechanics_engine bertentangan dengan reward_engine → reward_engine
+   menang. mechanics_engine.items[] (jika diisi) berperan sebagai
+   supporting witness, bukan otoritas yang override reward_engine.
 
 F. trigger_engine.primary_trigger_block
    - trigger_event ∈ enum F3 §1.6
