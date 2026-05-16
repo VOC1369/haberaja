@@ -1962,9 +1962,16 @@ function scrubLegacyAndProjection(input: AnyObj): { cleaned: AnyObj; stats: Scru
       }
     }
     const req = reward.requirement_block as AnyObj | undefined;
-    if (req && typeof req === "object" && "min_base" in req) {
-      delete req.min_base;
-      stats.dropped_paths.push("reward_engine.requirement_block.min_base");
+    if (req && typeof req === "object") {
+      if ("min_base" in req) {
+        delete req.min_base;
+        stats.dropped_paths.push("reward_engine.requirement_block.min_base");
+      }
+      // V.10.2 FORBIDDEN: min_withdraw must live in claim_gate_block.min_withdraw_for_claim
+      if ("min_withdraw" in req) {
+        delete req.min_withdraw;
+        stats.dropped_paths.push("reward_engine.requirement_block.min_withdraw");
+      }
     }
   }
 
