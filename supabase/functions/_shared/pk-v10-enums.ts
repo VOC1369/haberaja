@@ -22,10 +22,10 @@
  * V.10.2 contributions appended in-place; brand-new V.10.2 enums added
  * as new exports below + wired into ENUMS map.
  *
- * NOT TOUCHED in C1-A:
- *   - PK_V10_SCHEMA_VERSION (still V.10.1)
- *   - src/features/promo-knowledge/schema/enums.ts (FE)
- *   - extractor logic / tool schema / FormWizard / livechat
+ * NOT TOUCHED in D4 (FE-side, untouched by design):
+ *   - src/features/promo-knowledge/schema/enums.ts (FE enum)
+ *   - src/features/promo-knowledge/schema/pk-v10.ts (FE schema/factory)
+ *   - FormWizard / livechat
  *   - No rename, no removal of any existing value
  * ─────────────────────────────────────────────────────────────────────────
  */
