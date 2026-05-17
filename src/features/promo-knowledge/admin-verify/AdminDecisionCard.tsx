@@ -112,20 +112,28 @@ export function AdminDecisionCard({
       ) : null}
 
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
-        {applyDisabledReason ? (
-          <p className="text-xs text-muted-foreground flex items-center gap-2">
-            <Lightbulb className="h-3.5 w-3.5 shrink-0" />
-            <span>{applyDisabledReason}</span>
-          </p>
-        ) : (
-          <span />
-        )}
-        <Button
-          onClick={onApply}
-          disabled={!canApply}
-          size="sm"
-        >
-          Terapkan Jawaban ke JSON
+        <div className="flex-1 min-w-0">
+          {applyStatus === "error" && applyError ? (
+            <p className="text-xs text-destructive flex items-center gap-2">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>{applyError}</span>
+            </p>
+          ) : applyStatus === "applied" ? (
+            <p className="text-xs text-success flex items-center gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+              <span>Jawaban telah diterapkan.</span>
+            </p>
+          ) : null}
+        </div>
+        <Button onClick={onApply} disabled={!canApply} size="sm">
+          {applyStatus === "applying" ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+              Menerapkan...
+            </>
+          ) : (
+            "Terapkan Jawaban"
+          )}
         </Button>
       </div>
     </Card>
