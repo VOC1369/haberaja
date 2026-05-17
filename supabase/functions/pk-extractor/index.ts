@@ -423,7 +423,7 @@ untuk data yang berbeda.
         ────────────────────────────────────────────────────────────
         H8. SCOPE PRECONDITION (PER-TIER vs GLOBAL) — STRICT
         ────────────────────────────────────────────────────────────
-        Root `claim_engine.claim_gate_block.*` HANYA boleh diisi jika
+        Root 'claim_engine.claim_gate_block.*' HANYA boleh diisi jika
         sumber menyatakan prasyarat berlaku GLOBAL untuk semua klaim /
         semua level / semua user.
 
@@ -2054,6 +2054,183 @@ function enforceSingleVsMulti(record: AnyObj): VariantEnforceResult {
 }
 
 // ============================================================
+// STRUCTURED AMBIGUITY NEUTRALIZATION GUARD
+// ------------------------------------------------------------
+// Reads structured flag arrays (warnings / ambiguity_flags /
+// contradiction_flags) and root sidecars (_ambiguity_flags /
+// _warnings). For each high-risk canonical path that appears
+// inside any flag string, neutralize the primary value on that
+// path so the JSON stops asserting a "certain" value while an
+// ambiguity is open.
+//
+// HARD RULE: only canonical path-token matching. No regex on
+// promo text, no keyword matchers, no promo-specific branches.
+// ============================================================
+type GuardStats = {
+  neutralized: string[];
+  preserved_special_requirements: number;
+};
+
+const HIGH_RISK_PATHS = [
+  "reward_engine.reward_table_block.basis",
+  "taxonomy_engine.mode_block.tier_archetype",
+  "claim_engine.claim_gate_block.min_history_deposit_amount",
+  "claim_engine.claim_gate_block.requires_history_deposit",
+  "period_engine.validity_block.valid_until",
+  "period_engine.validity_block.valid_until_unlimited",
+] as const;
+
+function collectFlagStrings(record: AnyObj): string[] {
+  const out: string[] = [];
+  const push = (v: unknown) => {
+    if (Array.isArray(v)) {
+      for (const x of v) if (typeof x === "string") out.push(x);
+    }
+  };
+  const re = (record.readiness_engine as AnyObj) ?? {};
+  const vb = (re.validation_block as AnyObj) ?? {};
+  const ob = (re.observability_block as AnyObj) ?? {};
+  push(vb.warnings);
+  push(ob.ambiguity_flags);
+  push(ob.contradiction_flags);
+  // Root sidecars (LLM may write here per prompt)
+  push((record as AnyObj)._ambiguity_flags);
+  push((record as AnyObj)._warnings);
+  push((record as AnyObj)._contradiction_flags);
+  return out;
+}
+
+function pathInFlags(path: string, flags: string[]): boolean {
+  // Structural token match: flag string contains the canonical dotted path.
+  for (const f of flags) {
+    if (f.includes(path)) return true;
+  }
+  return false;
+}
+
+function getByPath(obj: AnyObj, path: string): unknown {
+  const parts = path.split(".");
+  let cur: unknown = obj;
+  for (const p of parts) {
+    if (cur && typeof cur === "object" && p in (cur as AnyObj)) {
+      cur = (cur as AnyObj)[p];
+    } else {
+      return undefined;
+    }
+  }
+  return cur;
+}
+
+function setByPath(obj: AnyObj, path: string, value: unknown): boolean {
+  const parts = path.split(".");
+  let cur: AnyObj = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const p = parts[i];
+    if (!(p in cur) || typeof cur[p] !== "object" || cur[p] === null) return false;
+    cur = cur[p] as AnyObj;
+  }
+  cur[parts[parts.length - 1]] = value;
+  return true;
+}
+
+function applyAmbiguityNeutralizationGuard(record: AnyObj): GuardStats {
+  const stats: GuardStats = { neutralized: [], preserved_special_requirements: 0 };
+  const flags = collectFlagStrings(record);
+  if (flags.length === 0) return stats;
+
+  // CASE A — reward_table_block.basis
+  if (pathInFlags("reward_engine.reward_table_block.basis", flags)) {
+    const cur = getByPath(record, "reward_engine.reward_table_block.basis");
+    if (typeof cur === "string" && cur !== "") {
+      if (setByPath(record, "reward_engine.reward_table_block.basis", "")) {
+        stats.neutralized.push("reward_engine.reward_table_block.basis");
+      }
+    }
+  }
+
+  // CASE B — taxonomy_engine.mode_block.tier_archetype
+  if (pathInFlags("taxonomy_engine.mode_block.tier_archetype", flags)) {
+    const cur = getByPath(record, "taxonomy_engine.mode_block.tier_archetype");
+    if (cur !== null && cur !== "" && cur !== undefined) {
+      if (setByPath(record, "taxonomy_engine.mode_block.tier_archetype", null)) {
+        stats.neutralized.push("taxonomy_engine.mode_block.tier_archetype");
+      }
+    }
+  }
+
+  // CASE C — root history deposit placement (either field flagged → neutralize pair)
+  const histAmtFlagged = pathInFlags(
+    "claim_engine.claim_gate_block.min_history_deposit_amount",
+    flags,
+  );
+  const histReqFlagged = pathInFlags(
+    "claim_engine.claim_gate_block.requires_history_deposit",
+    flags,
+  );
+  if (histAmtFlagged || histReqFlagged) {
+    const amt = getByPath(record, "claim_engine.claim_gate_block.min_history_deposit_amount");
+    const req = getByPath(record, "claim_engine.claim_gate_block.requires_history_deposit");
+    let neutralized = false;
+    if (amt !== null && amt !== undefined) {
+      setByPath(record, "claim_engine.claim_gate_block.min_history_deposit_amount", null);
+      stats.neutralized.push("claim_engine.claim_gate_block.min_history_deposit_amount");
+      neutralized = true;
+    }
+    if (req === true) {
+      setByPath(record, "claim_engine.claim_gate_block.requires_history_deposit", false);
+      stats.neutralized.push("claim_engine.claim_gate_block.requires_history_deposit");
+      neutralized = true;
+    }
+    // Preserve structural requirement note in special_requirements
+    if (neutralized && amt != null) {
+      try {
+        const terms = (record.terms_engine as AnyObj) ?? {};
+        const reqBlock = (terms.requirements_block as AnyObj) ?? {};
+        const arr = Array.isArray(reqBlock.special_requirements)
+          ? (reqBlock.special_requirements as unknown[])
+          : [];
+        const marker = `[ambiguity-neutralized] history_deposit min_amount=${String(amt)} (placement ambiguous; see ambiguity_flags)`;
+        const exists = arr.some(
+          (x) => typeof x === "string" && x.startsWith("[ambiguity-neutralized] history_deposit"),
+        );
+        if (!exists) {
+          arr.push(marker);
+          reqBlock.special_requirements = arr;
+          terms.requirements_block = reqBlock;
+          (record as AnyObj).terms_engine = terms;
+          stats.preserved_special_requirements++;
+        }
+      } catch (_e) {
+        // structural shape missing — skip silently
+      }
+    }
+  }
+
+  // CASE D — valid_until placeholder ambiguous
+  const vuFlagged = pathInFlags("period_engine.validity_block.valid_until", flags);
+  const vuuFlagged = pathInFlags("period_engine.validity_block.valid_until_unlimited", flags);
+  if (vuFlagged || vuuFlagged) {
+    const vu = getByPath(record, "period_engine.validity_block.valid_until");
+    const vuu = getByPath(record, "period_engine.validity_block.valid_until_unlimited");
+    if (vu !== null && vu !== undefined && vu !== "") {
+      if (setByPath(record, "period_engine.validity_block.valid_until", null)) {
+        stats.neutralized.push("period_engine.validity_block.valid_until");
+      }
+    }
+    if (vuu === true) {
+      if (setByPath(record, "period_engine.validity_block.valid_until_unlimited", false)) {
+        stats.neutralized.push("period_engine.validity_block.valid_until_unlimited");
+      }
+    }
+  }
+
+  if (stats.neutralized.length > 0) {
+    console.log("[pk-extractor V10.2] ambiguity-guard neutralized", stats);
+  }
+  return stats;
+}
+
+// ============================================================
 // HANDLER
 // ============================================================
 serve(async (req) => {
@@ -2346,6 +2523,20 @@ serve(async (req) => {
 
     // GAP #1 — attach propagation stats as observability metadata
     (merged as AnyObj)._propagation_stats = propStats;
+
+    // ============================================================
+    // STRUCTURED AMBIGUITY GUARD (post-LLM, post-merge)
+    // ------------------------------------------------------------
+    // Doctrine: if a canonical path has an ambiguity/warning/contradiction
+    // flag, the JSON cannot keep a "certain" primary value on that same
+    // path. Neutralize the value, keep the flag, let Admin Verify decide.
+    //
+    // Pure structural: reads only flag strings + canonical path tokens.
+    // No regex on raw promo text. No keyword matchers. No promo-specific
+    // branches.
+    // ============================================================
+    const guardStats = applyAmbiguityNeutralizationGuard(merged as AnyObj);
+    (merged as AnyObj)._ambiguity_guard_stats = guardStats;
 
     console.log("[pk-extractor V10.2] OK", {
       model: modelUsed,
