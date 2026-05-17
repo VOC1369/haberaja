@@ -169,8 +169,6 @@ export async function applyAdminDecision(
   }
 
   // Sanity (defensive): signature should differ from input now.
-  void extractAdminReviewerSignals;
-
   return {
     ok: true,
     record: cleared,
