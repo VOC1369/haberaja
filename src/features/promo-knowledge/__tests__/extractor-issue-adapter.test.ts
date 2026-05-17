@@ -230,4 +230,73 @@ describe("PR-18 extractor-issue-adapter", () => {
       expect(buildIssueQuestions(buildRec())).toEqual([]);
     });
   });
+
+  // ──────────────────────────────────────────────────────────────────
+  // Final-pass dedup (extractor + F3 merge)
+  // ──────────────────────────────────────────────────────────────────
+  describe("dedupIssueQuestions (final pass)", () => {
+    const mk = (
+      task_id: string,
+      severity: AdminVerifyIssueQuestion["severity"],
+      source_text: string,
+      affected_paths: string[] = [],
+    ): AdminVerifyIssueQuestion => ({
+      task_id,
+      severity,
+      source_text,
+      issue_summary: "x",
+      admin_question: "x",
+      answer_mode: "free_text",
+      affected_paths,
+      evidence_paths: [],
+      requires_llm_resolution: true,
+    });
+
+    it("collapses extractor + F3 about the same canonical path into ONE card", () => {
+      const path = "variant_engine.items_block.subcategories[2].turnover_rule_format";
+      const a = mk("ex-1", "warning", "Aturan turnover varian 2 perlu cek", [path]);
+      const b = mk(
+        "f3-turnover_rule_format_2-xx",
+        "contradiction",
+        `Path: ${path}\nNilai saat ini: (D+B) x 8\nAllowed F3 V.10.2: [multiplier, min_rupiah]`,
+        [path],
+      );
+      const out = dedupIssueQuestions([a, b]);
+      expect(out).toHaveLength(1);
+      expect(out[0].severity).toBe("contradiction");
+      expect(out[0].affected_paths[0]).toBe(path);
+    });
+
+    it("collapses path-less items when one text is contained in the other", () => {
+      const a = mk("c1", "contradiction", "S&K SLOT vs tabel CASINO/SPORTS");
+      const b = mk(
+        "w1",
+        "warning",
+        "Catatan: S&K SLOT vs tabel CASINO/SPORTS — tidak konsisten",
+      );
+      const out = dedupIssueQuestions([a, b]);
+      expect(out).toHaveLength(1);
+      expect(out[0].severity).toBe("contradiction");
+    });
+
+    it("keeps genuinely distinct path-less items separate", () => {
+      const a = mk("c1", "contradiction", "Periode promo tidak jelas");
+      const b = mk("c2", "contradiction", "Mata uang tidak disebut");
+      const out = dedupIssueQuestions([a, b]);
+      expect(out).toHaveLength(2);
+    });
+
+    it("regression — SLOT vs CASINO/SPORTS triple-emit yields ONE card", () => {
+      const text =
+        "S&K khusus SLOT tidak konsisten dengan tabel CASINO/SPORTS";
+      const items = [
+        mk("c-1", "contradiction", text),
+        mk("w-1", "warning", `Catatan: ${text}`),
+        mk("a-1", "ambiguity", text),
+      ];
+      const out = dedupIssueQuestions(items);
+      expect(out).toHaveLength(1);
+      expect(out[0].severity).toBe("contradiction");
+    });
+  });
 });
