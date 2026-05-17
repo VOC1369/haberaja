@@ -2347,6 +2347,20 @@ serve(async (req) => {
     // GAP #1 — attach propagation stats as observability metadata
     (merged as AnyObj)._propagation_stats = propStats;
 
+    // ============================================================
+    // STRUCTURED AMBIGUITY GUARD (post-LLM, post-merge)
+    // ------------------------------------------------------------
+    // Doctrine: if a canonical path has an ambiguity/warning/contradiction
+    // flag, the JSON cannot keep a "certain" primary value on that same
+    // path. Neutralize the value, keep the flag, let Admin Verify decide.
+    //
+    // Pure structural: reads only flag strings + canonical path tokens.
+    // No regex on raw promo text. No keyword matchers. No promo-specific
+    // branches.
+    // ============================================================
+    const guardStats = applyAmbiguityNeutralizationGuard(merged as AnyObj);
+    (merged as AnyObj)._ambiguity_guard_stats = guardStats;
+
     console.log("[pk-extractor V10.2] OK", {
       model: modelUsed,
       stop_reason: stopReason,
