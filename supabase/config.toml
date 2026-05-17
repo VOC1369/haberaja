@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.parser]
 verify_jwt = false
+
+[functions.admin-reviewer]
+verify_jwt = false
