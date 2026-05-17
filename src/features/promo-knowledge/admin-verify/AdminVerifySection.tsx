@@ -1,37 +1,62 @@
 /**
- * ADMIN VERIFY SECTION — Phase 3 (LLM Reviewer renderer)
+ * ADMIN VERIFY SECTION — Phase 4 (LLM Reviewer renderer + Apply orchestration)
  *
  * The legacy registry / gap reader / extractor issue / F3 compliance
  * pipeline is no longer imported at runtime. The single source of admin
- * questions is the `admin-reviewer` edge function, surfaced via
- * `useAdminDecisions`.
+ * questions is the `admin-reviewer` edge function (Phase 1).
  *
- * Hard rules:
- *   - Never mutate PkV10Record from this component.
- *   - Never store decisions on PkV10Record (cache lives in localStorage).
- *   - On reviewer error, render a blocking banner. No fallback to raw signals.
- *   - Legacy adapter modules are retained on disk for tests only.
- *
- * Apply flow blocker (reported, not patched):
- *   AdminDecision does not yet carry typed paths the existing patcher needs.
- *   The bridge from AdminDecision to a record patch is scheduled for Phase 4.
- *   Until then, each card surfaces an inline note and Apply stays disabled.
- *   No dummy patches are emitted.
+ * Phase 4 adds:
+ *   - onApplyDecision handler → `applyAdminDecision` orchestrator
+ *   - On success: parent state is updated via `onApply(updatedRecord)`,
+ *     record is saved via savePkRecord (inside orchestrator), related
+ *     signals are cleared. The renderer marks the card as applied.
+ *   - On failure: record is NOT mutated, signals NOT cleared, card shows
+ *     "Jawaban belum bisa diterapkan. Coba ulang."
  */
 
+import { useCallback } from "react";
 import type { PkV10Record } from "@/features/promo-knowledge/schema/pk-v10";
 import { useAdminDecisions } from "./useAdminDecisions";
 import { AdminDecisionsRenderer } from "./AdminDecisionsRenderer";
+import { applyAdminDecision } from "./apply-admin-decision";
+import type { AdminDecision } from "./admin-decision-types";
 
 export interface AdminVerifySectionProps {
   record: PkV10Record | null;
-  // Kept in the contract so the parent (PseudoKnowledgeSection) does not
-  // change. Phase 4 will wire this when the bridge ships.
   onApply: (next: PkV10Record) => void;
 }
 
-export function AdminVerifySection({ record }: AdminVerifySectionProps) {
+export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
   const { state, decisions, error, retry } = useAdminDecisions(record);
+
+  const handleApplyDecision = useCallback(
+    async (args: {
+      decision: AdminDecision;
+      selectedValue: string;
+      selectedLabel: string;
+      note: string;
+    }): Promise<{ ok: boolean; errorMessage?: string }> => {
+      if (!record) {
+        return { ok: false, errorMessage: "Data promo tidak tersedia." };
+      }
+      const result = await applyAdminDecision({
+        record,
+        decision: args.decision,
+        selectedValue: args.selectedValue,
+        selectedLabel: args.selectedLabel,
+        note: args.note,
+      });
+      if (!result.ok || !result.record) {
+        return {
+          ok: false,
+          errorMessage: "Jawaban belum bisa diterapkan. Coba ulang.",
+        };
+      }
+      onApply(result.record);
+      return { ok: true };
+    },
+    [record, onApply],
+  );
 
   return (
     <AdminDecisionsRenderer
@@ -39,6 +64,7 @@ export function AdminVerifySection({ record }: AdminVerifySectionProps) {
       decisions={decisions}
       error={error}
       onRetry={retry}
+      onApplyDecision={record ? handleApplyDecision : undefined}
     />
   );
 }

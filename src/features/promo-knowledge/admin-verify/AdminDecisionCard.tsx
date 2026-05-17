@@ -17,8 +17,10 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { HelpCircle, Lightbulb } from "lucide-react";
+import { HelpCircle, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
 import type { AdminDecision } from "./admin-decision-types";
+
+export type AdminDecisionApplyStatus = "idle" | "applying" | "applied" | "error";
 
 export interface AdminDecisionCardProps {
   decision: AdminDecision;
@@ -26,12 +28,9 @@ export interface AdminDecisionCardProps {
   note: string;
   onSelect: (value: string) => void;
   onChangeNote: (note: string) => void;
-  /**
-   * Phase 4 hook. Currently the parent passes `undefined` and the button
-   * renders disabled with an explanatory inline note.
-   */
   onApply?: () => void;
-  applyDisabledReason?: string;
+  applyStatus?: AdminDecisionApplyStatus;
+  applyError?: string | null;
 }
 
 export function AdminDecisionCard({
@@ -41,12 +40,12 @@ export function AdminDecisionCard({
   onSelect,
   onChangeNote,
   onApply,
-  applyDisabledReason,
+  applyStatus = "idle",
+  applyError = null,
 }: AdminDecisionCardProps) {
+  const hasSelection = selectedValue.trim().length > 0;
   const canApply =
-    !!onApply &&
-    (selectedValue.trim().length > 0 ||
-      (decision.manual_note_enabled && note.trim().length > 0));
+    !!onApply && hasSelection && applyStatus !== "applying" && applyStatus !== "applied";
 
   return (
     <Card className="bg-card border border-border rounded-xl p-6 space-y-5">
@@ -113,20 +112,28 @@ export function AdminDecisionCard({
       ) : null}
 
       <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
-        {applyDisabledReason ? (
-          <p className="text-xs text-muted-foreground flex items-center gap-2">
-            <Lightbulb className="h-3.5 w-3.5 shrink-0" />
-            <span>{applyDisabledReason}</span>
-          </p>
-        ) : (
-          <span />
-        )}
-        <Button
-          onClick={onApply}
-          disabled={!canApply}
-          size="sm"
-        >
-          Terapkan Jawaban ke JSON
+        <div className="flex-1 min-w-0">
+          {applyStatus === "error" && applyError ? (
+            <p className="text-xs text-destructive flex items-center gap-2">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+              <span>{applyError}</span>
+            </p>
+          ) : applyStatus === "applied" ? (
+            <p className="text-xs text-success flex items-center gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+              <span>Jawaban telah diterapkan.</span>
+            </p>
+          ) : null}
+        </div>
+        <Button onClick={onApply} disabled={!canApply} size="sm">
+          {applyStatus === "applying" ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+              Menerapkan...
+            </>
+          ) : (
+            "Terapkan Jawaban"
+          )}
         </Button>
       </div>
     </Card>

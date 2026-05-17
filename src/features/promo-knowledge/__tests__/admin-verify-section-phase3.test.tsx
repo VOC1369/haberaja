@@ -15,9 +15,7 @@ import type {
   AdminReviewerError,
 } from "../admin-verify/admin-decision-types";
 
-// NOTE: "JSON" is intentionally excluded from the rendered-UI guard because
-// Phase 3 spec explicitly mandates the button label "Terapkan Jawaban ke JSON".
-// All other technical terms remain forbidden in user-visible text.
+// Phase 4: button label is "Terapkan Jawaban" — "JSON" is now forbidden too.
 const FORBIDDEN_TECHNICAL_TERMS = [
   "field_path",
   "schema",
@@ -28,6 +26,7 @@ const FORBIDDEN_TECHNICAL_TERMS = [
   "warning",
   "ambiguity",
   "contradiction",
+  "json",
 ];
 
 function assertNoTechnicalTerms(html: string) {
@@ -129,9 +128,8 @@ describe("AdminDecisionsRenderer — state machine", () => {
     expect(html).toContain(sampleDecision.question);
     expect(html).toContain("Rp 100.000");
     expect(html).toContain("Rp 150.000");
-    expect(html).toContain("Terapkan Jawaban ke JSON");
-    // Phase 3 blocker note must be visible
-    expect(html).toContain("Penerapan jawaban ke data");
+    expect(html).toContain("Terapkan Jawaban");
+    expect(html).not.toContain("JSON");
   });
 
   it("ready cards must not contain technical terms in non-content chrome", () => {
@@ -179,7 +177,6 @@ describe("AdminVerifySection — legacy runtime imports removed", () => {
     "deterministic-apply",
     "enum-normalizer",
     "admin-answer-llm-resolver",
-    "admin-patch-apply",
   ];
 
   for (const token of forbiddenImports) {
