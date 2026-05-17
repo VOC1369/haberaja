@@ -1,16 +1,16 @@
 /**
- * AdminDecisionsRenderer — Phase 3
+ * AdminDecisionsRenderer — Phase 4
  *
- * Pure presentational view of the Admin Reviewer lifecycle. State is
- * provided by `useAdminDecisions` upstream; this component does not call
- * the hook so it can be rendered in isolation (testing, storybook).
+ * Pure presentational view + apply state machine PER decision. The actual
+ * record mutation happens upstream (apply-admin-decision) — this component
+ * owns only the answer/apply-status local state and the wiring.
  *
- * State map:
+ * State map (overall):
  *   idle    → nothing
  *   empty   → "Tidak ada verifikasi tambahan"
  *   loading → "Reviewer sedang menyusun pertanyaan..."
  *   error   → blocking banner with retry
- *   ready   → one AdminDecisionCard per decision
+ *   ready   → one AdminDecisionCard per decision (each card has its own apply state)
  *
  * No fallback to legacy flag rendering. No raw signals shown.
  */
@@ -24,28 +24,49 @@ import type {
   AdminDecisionsState,
   AdminReviewerError,
 } from "./admin-decision-types";
-import { AdminDecisionCard } from "./AdminDecisionCard";
+import {
+  AdminDecisionCard,
+  type AdminDecisionApplyStatus,
+} from "./AdminDecisionCard";
 
 export interface AdminDecisionsRendererProps {
   state: AdminDecisionsState;
   decisions: AdminDecision[];
   error: AdminReviewerError | null;
   onRetry: () => void;
+  /**
+   * Phase 4: called when admin clicks "Terapkan Jawaban" on a card.
+   * Must resolve with `true` on success (renderer marks card as applied)
+   * or `false` on failure (renderer surfaces `errorMessage`).
+   */
+  onApplyDecision?: (args: {
+    decision: AdminDecision;
+    selectedValue: string;
+    selectedLabel: string;
+    note: string;
+  }) => Promise<{ ok: boolean; errorMessage?: string }>;
 }
 
 interface AnswerState {
   selectedValue: string;
   note: string;
+  status: AdminDecisionApplyStatus;
+  errorMessage: string | null;
 }
 
-const APPLY_BLOCKER_NOTE =
-  "Penerapan jawaban ke data sedang dipersiapkan. Jawaban tersimpan lokal.";
+const DEFAULT_ANSWER: AnswerState = {
+  selectedValue: "",
+  note: "",
+  status: "idle",
+  errorMessage: null,
+};
 
 export function AdminDecisionsRenderer({
   state,
   decisions,
   error,
   onRetry,
+  onApplyDecision,
 }: AdminDecisionsRendererProps) {
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
 
@@ -118,9 +139,35 @@ export function AdminDecisionsRenderer({
   }
 
   // state === "ready"
-  if (decisions.length === 0) {
-    return null;
-  }
+  if (decisions.length === 0) return null;
+
+  const getAnswer = (id: string): AnswerState => answers[id] ?? DEFAULT_ANSWER;
+  const setAnswer = (id: string, patch: Partial<AnswerState>) =>
+    setAnswers((prev) => ({ ...prev, [id]: { ...getAnswer(id), ...patch } }));
+
+  const handleApply = async (d: AdminDecision) => {
+    if (!onApplyDecision) return;
+    const a = getAnswer(d.id);
+    if (!a.selectedValue.trim()) return;
+    const opt = d.options.find((o) => o.value === a.selectedValue);
+    setAnswer(d.id, { status: "applying", errorMessage: null });
+    const result = await onApplyDecision({
+      decision: d,
+      selectedValue: a.selectedValue,
+      selectedLabel: opt?.label ?? "",
+      note: a.note,
+    });
+    if (result.ok) {
+      setAnswer(d.id, { status: "applied", errorMessage: null });
+    } else {
+      setAnswer(d.id, {
+        status: "error",
+        errorMessage:
+          result.errorMessage?.trim() ||
+          "Jawaban belum bisa diterapkan. Coba ulang.",
+      });
+    }
+  };
 
   return (
     <Card className="bg-card border border-border rounded-xl p-6 space-y-5">
@@ -140,7 +187,7 @@ export function AdminDecisionsRenderer({
 
       <div className="space-y-4">
         {decisions.map((d) => {
-          const a = answers[d.id] ?? { selectedValue: "", note: "" };
+          const a = getAnswer(d.id);
           return (
             <AdminDecisionCard
               key={d.id}
@@ -148,18 +195,12 @@ export function AdminDecisionsRenderer({
               selectedValue={a.selectedValue}
               note={a.note}
               onSelect={(value) =>
-                setAnswers((prev) => ({
-                  ...prev,
-                  [d.id]: { ...(prev[d.id] ?? { note: "" }), selectedValue: value },
-                }))
+                setAnswer(d.id, { selectedValue: value, status: "idle", errorMessage: null })
               }
-              onChangeNote={(note) =>
-                setAnswers((prev) => ({
-                  ...prev,
-                  [d.id]: { ...(prev[d.id] ?? { selectedValue: "" }), note },
-                }))
-              }
-              applyDisabledReason={APPLY_BLOCKER_NOTE}
+              onChangeNote={(note) => setAnswer(d.id, { note })}
+              onApply={onApplyDecision ? () => handleApply(d) : undefined}
+              applyStatus={a.status}
+              applyError={a.errorMessage}
             />
           );
         })}
