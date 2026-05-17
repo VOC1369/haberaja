@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Phase 2 — Admin Reviewer client tests.
  *
