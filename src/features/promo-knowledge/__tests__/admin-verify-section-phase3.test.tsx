@@ -20,9 +20,12 @@ import type {
 // All other technical terms remain forbidden in user-visible text.
 const FORBIDDEN_TECHNICAL_TERMS = [
   "field_path",
+  "schema",
   "engine",
   "severity",
+  "flags",
   "source_text",
+  "warning",
   "ambiguity",
   "contradiction",
 ];
