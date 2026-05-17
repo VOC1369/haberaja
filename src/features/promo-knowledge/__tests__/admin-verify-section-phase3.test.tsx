@@ -128,8 +128,30 @@ describe("AdminDecisionsRenderer — state machine", () => {
     expect(html).toContain(sampleDecision.question);
     expect(html).toContain("Rp 100.000");
     expect(html).toContain("Rp 150.000");
-    expect(html).toContain("Terapkan Jawaban");
+    expect(html).toContain("Terapkan Semua Jawaban");
     expect(html).not.toContain("JSON");
+    // Global button only — must not appear per-card.
+    const matches = html.match(/Terapkan Semua Jawaban/g) ?? [];
+    expect(matches.length).toBe(1);
+    expect(html).not.toContain(">Terapkan Jawaban<");
+  });
+
+  it("ready with 3 decisions → still exactly 1 global apply button", () => {
+    const decisions = [1, 2, 3].map((i) => ({
+      ...sampleDecision,
+      id: `dec-${i}`,
+      title: `Pertanyaan ${i}`,
+    }));
+    const html = renderToStaticMarkup(
+      <AdminDecisionsRenderer
+        state="ready"
+        decisions={decisions}
+        error={null}
+        onRetry={() => {}}
+      />,
+    );
+    const matches = html.match(/Terapkan Semua Jawaban/g) ?? [];
+    expect(matches.length).toBe(1);
   });
 
   it("ready cards must not contain technical terms in non-content chrome", () => {
