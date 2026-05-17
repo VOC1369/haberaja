@@ -162,9 +162,17 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   const scrollBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const extractTimeoutRef = useRef<number | null>(null);
 
   const handleCancelExtract = () => {
-    abortControllerRef.current?.abort();
+    if (extractTimeoutRef.current !== null) {
+      window.clearTimeout(extractTimeoutRef.current);
+      extractTimeoutRef.current = null;
+    }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort("USER_CANCELLED");
+      abortControllerRef.current = null;
+    }
     setIsExtracting(false);
     setPkStatus("idle");
     toast.info("Ekstraksi dibatalkan");
@@ -373,6 +381,23 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
   // MAIN EXTRACT — V.10 native only
   // ============================================
   const handleExtract = async () => {
+    // Abort any stale in-flight request before starting a new one.
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort("SUPERSEDED");
+      abortControllerRef.current = null;
+    }
+    if (extractTimeoutRef.current !== null) {
+      window.clearTimeout(extractTimeoutRef.current);
+      extractTimeoutRef.current = null;
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    // 180s client-side timeout guard (backend baseline 105–116s, hard risk 150s).
+    extractTimeoutRef.current = window.setTimeout(() => {
+      controller.abort("CLIENT_TIMEOUT");
+    }, 180_000);
+
     setIsExtracting(true);
     setPkStatus("loading");
     setPkRecord(null);
@@ -422,6 +447,7 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         text: textPayload,
         images: imagePayloads,
         client_id_hint: "",
+        signal: controller.signal,
       });
 
       if (pk.ok && pk.record) {
@@ -458,13 +484,40 @@ export function PseudoKnowledgeSection({ onNavigateToPromo }: PseudoKnowledgeSec
         });
       }
     } catch (error) {
-      console.error("Extraction error:", error);
-      setPkStatus("failed");
-      setPkFailReason("EXCEPTION");
-      toast.error("Gagal mengekstrak promo", {
-        description: error instanceof Error ? error.message : "Unknown error",
-      });
+      const isAbort =
+        (error instanceof DOMException && error.name === "AbortError") ||
+        (error instanceof Error && error.name === "AbortError");
+      const reason = controller.signal.reason;
+
+      if (isAbort && reason === "USER_CANCELLED") {
+        // Cancel toast already shown by handleCancelExtract; just reset.
+        setPkStatus("idle");
+        setPkFailReason("");
+      } else if (isAbort && reason === "CLIENT_TIMEOUT") {
+        setPkStatus("failed");
+        setPkFailReason("CLIENT_TIMEOUT");
+        toast.error("Extraction melewati batas waktu 180 detik", {
+          description: "Coba ulangi atau pecah input menjadi lebih kecil.",
+        });
+      } else if (isAbort && reason === "SUPERSEDED") {
+        // Replaced by newer request — stay silent, new run controls UI.
+        return;
+      } else {
+        console.error("Extraction error:", error);
+        setPkStatus("failed");
+        setPkFailReason("EXCEPTION");
+        toast.error("Gagal mengekstrak promo", {
+          description: error instanceof Error ? error.message : "Unknown error",
+        });
+      }
     } finally {
+      if (extractTimeoutRef.current !== null) {
+        window.clearTimeout(extractTimeoutRef.current);
+        extractTimeoutRef.current = null;
+      }
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
       setIsExtracting(false);
     }
   };
