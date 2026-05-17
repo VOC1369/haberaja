@@ -61,27 +61,34 @@ function task(partial: Partial<AdminVerifyIssueQuestion>): AdminVerifyIssueQuest
 }
 
 describe("PR-22 humanizeIssue — concrete object & specific question", () => {
-  it("generic warning surfaces source_text and asks classification, not 'apa penjelasannya'", () => {
+  it("generic warning uses operational copy, NOT evidence-classification", () => {
     const q = task({
       severity: "warning",
       source_text: "Bonus 100% berlaku semua provider kecuali ini",
     });
     const h = humanizeIssue(q, makeRec());
     expect(h.objectValue).toContain("Bonus 100%");
-    expect(h.mainQuestion).toMatch(/diperlakukan sebagai apa/i);
-    expect(h.mainQuestion).not.toMatch(/apa penjelasan yang benar/i);
-    expect(h.options?.length ?? 0).toBeGreaterThan(0);
+    // Wording lama harus hilang.
+    expect(h.mainQuestion).not.toMatch(/diperlakukan sebagai apa/i);
+    expect(h.mainQuestion).toMatch(/keputusan admin/i);
+    const labels = (h.options ?? []).map((o) => o.label);
+    expect(labels).not.toContain("Masuk ke Syarat & Ketentuan");
+    expect(labels).toContain("Gunakan data seperti yang tertulis");
     expect(h.shouldRenderAsAdminQuestion).toBe(true);
   });
 
-  it("contradiction asks 'bagian mana yang harus dijadikan acuan'", () => {
+  it("contradiction asks resolution-based question with operational options", () => {
     const q = task({
       severity: "contradiction",
       source_text: "Tabel bilang 100%, S&K bilang 50%.",
     });
     const h = humanizeIssue(q, makeRec());
-    expect(h.mainQuestion).toMatch(/bagian mana yang harus dijadikan acuan/i);
+    expect(h.mainQuestion).toMatch(/mana yang harus dipakai/i);
     expect(h.objectValue).toContain("Tabel bilang");
+    const labels = (h.options ?? []).map((o) => o.label);
+    expect(labels).not.toContain("Masuk ke Syarat & Ketentuan");
+    expect(labels).toContain("Ikuti tabel / paket promo");
+    expect(labels).toContain("Ikuti Syarat & Ketentuan");
     expect(h.options?.some((o) => o.value === "trust_variant_table")).toBe(true);
   });
 
