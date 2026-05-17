@@ -26,6 +26,42 @@ export interface AdminVerifySectionProps {
   onApply: (next: PkV10Record) => void;
 }
 
+// Words that must never appear in admin-facing error copy.
+const FORBIDDEN_TECH_TERMS = [
+  "target_path",
+  "json",
+  "schema",
+  "resolver",
+  "patch",
+  "array",
+  "field",
+  "enum",
+  "old_value_preview",
+  "new_value_preview",
+];
+
+function containsTechTerm(text: string): boolean {
+  const lower = text.toLowerCase();
+  return FORBIDDEN_TECH_TERMS.some((t) => lower.includes(t));
+}
+
+const FRIENDLY_FALLBACK =
+  "Jawaban ini belum bisa diterapkan karena data tersimpan tidak memiliki bagian yang cocok untuk diubah. Pilih jawaban lain atau isi penjelasan manual.";
+
+function toAdminFriendlyError(args: {
+  errors?: string[];
+  unresolved_questions?: string[];
+}): string {
+  // Prefer reviewer-authored clarifications when they are admin-safe.
+  for (const q of args.unresolved_questions ?? []) {
+    if (q && q.trim() && !containsTechTerm(q)) return q.trim();
+  }
+  for (const e of args.errors ?? []) {
+    if (e && e.trim() && !containsTechTerm(e)) return e.trim();
+  }
+  return FRIENDLY_FALLBACK;
+}
+
 export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps) {
   const { state, decisions, error, retry } = useAdminDecisions(record);
 
@@ -49,7 +85,10 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       if (!result.ok || !result.record) {
         return {
           ok: false,
-          errorMessage: "Jawaban belum bisa diterapkan. Coba ulang.",
+          errorMessage: toAdminFriendlyError({
+            errors: result.errors,
+            unresolved_questions: result.unresolved_questions,
+          }),
         };
       }
       onApply(result.record);
