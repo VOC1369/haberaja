@@ -128,9 +128,8 @@ describe("AdminDecisionsRenderer — state machine", () => {
     expect(html).toContain(sampleDecision.question);
     expect(html).toContain("Rp 100.000");
     expect(html).toContain("Rp 150.000");
-    expect(html).toContain("Terapkan Jawaban ke JSON");
-    // Phase 3 blocker note must be visible
-    expect(html).toContain("Penerapan jawaban ke data");
+    expect(html).toContain("Terapkan Jawaban");
+    expect(html).not.toContain("JSON");
   });
 
   it("ready cards must not contain technical terms in non-content chrome", () => {
