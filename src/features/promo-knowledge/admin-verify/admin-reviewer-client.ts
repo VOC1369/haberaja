@@ -17,6 +17,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PkV10Record } from "../schema/pk-v10";
 import type {
+  AdminDecision,
   AdminReviewerContext,
   AdminReviewerRequest,
   AdminReviewerResponse,
@@ -262,12 +263,9 @@ export async function invokeAdminReviewer(
 
   return {
     ok: true,
-    decisions: decisions as AdminReviewerSuccessDecisions,
+    decisions: decisions as AdminDecision[],
   };
 }
-
-type AdminReviewerSuccessDecisions =
-  AdminReviewerResponse extends { ok: true; decisions: infer D } ? D : never;
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0;
