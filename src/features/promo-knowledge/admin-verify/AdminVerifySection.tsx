@@ -1,7 +1,7 @@
 /**
  * ADMIN VERIFY SECTION — Phase 3 (LLM Reviewer renderer)
  *
- * The legacy registry / gap-reader / extractor-issue / F3-compliance
+ * The legacy registry / gap reader / extractor issue / F3 compliance
  * pipeline is no longer imported at runtime. The single source of admin
  * questions is the `admin-reviewer` edge function, surfaced via
  * `useAdminDecisions`.
