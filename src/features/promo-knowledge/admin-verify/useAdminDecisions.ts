@@ -20,6 +20,7 @@ import type {
   AdminReviewerError,
   AdminReviewerResponse,
 } from "./admin-decision-types";
+import { isAdminReviewerError } from "./admin-decision-types";
 import {
   clearCached,
   countSignals,
@@ -100,16 +101,16 @@ export function useAdminDecisions(
     )
       .then((resp: AdminReviewerResponse) => {
         if (!aliveRef.current) return;
-        if (resp.ok) {
-          saveCached(recordId, sig, resp);
-          setDecisions(resp.decisions);
-          setError(null);
-          setState("ready");
-        } else {
+        if (isAdminReviewerError(resp)) {
           // Never cache errors — let retry hit the network again.
           setError(resp);
           setDecisions([]);
           setState("error");
+        } else {
+          saveCached(recordId, sig, resp);
+          setDecisions(resp.decisions);
+          setError(null);
+          setState("ready");
         }
       })
       .catch((err: unknown) => {

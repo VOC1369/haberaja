@@ -71,6 +71,12 @@ export interface AdminReviewerError {
 
 export type AdminReviewerResponse = AdminReviewerSuccess | AdminReviewerError;
 
+export function isAdminReviewerError(
+  r: AdminReviewerResponse,
+): r is AdminReviewerError {
+  return r.ok === false;
+}
+
 export type AdminDecisionsState =
   | "idle"
   | "empty"

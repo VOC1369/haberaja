@@ -37,6 +37,7 @@ import {
   signalsSignature,
 } from "../admin-verify/admin-reviewer-client";
 import type { AdminReviewerResponse } from "../admin-verify/admin-decision-types";
+import { isAdminReviewerError } from "../admin-verify/admin-decision-types";
 
 function makeRecord(
   overrides: Partial<{
@@ -192,7 +193,7 @@ describe("invokeAdminReviewer", () => {
       { fetchImpl },
     );
     expect(resp.ok).toBe(false);
-    if (!resp.ok) {
+    if (isAdminReviewerError(resp)) {
       expect(resp.error).toBe("RATE_LIMITED");
       expect(resp.status).toBe(429);
     }
@@ -214,7 +215,7 @@ describe("invokeAdminReviewer", () => {
       { fetchImpl },
     );
     expect(resp.ok).toBe(false);
-    if (!resp.ok) expect(resp.error).toBe("INVALID_OUTPUT");
+    if (isAdminReviewerError(resp)) expect(resp.error).toBe("INVALID_OUTPUT");
   });
 });
 
