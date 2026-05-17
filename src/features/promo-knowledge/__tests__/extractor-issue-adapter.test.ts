@@ -298,5 +298,38 @@ describe("PR-18 extractor-issue-adapter", () => {
       expect(out).toHaveLength(1);
       expect(out[0].severity).toBe("contradiction");
     });
+
+    it("regression — SLOT vs CASINO/SPORTS 3 paraphrases yield ONE card", () => {
+      const t1 =
+        "S&K poin 3 menyebut 'Bonus diberikan khusus permainan SLOT' " +
+        "namun tabel bonus mencakup CASINO dan SPORTS. Kemungkinan " +
+        "kontradiksi atau S&K poin 3 hanya berlaku untuk varian tertentu.";
+      const t2 =
+        "Header promo menyebut 'UP TO RP 15.000.000' yang sesuai dengan " +
+        "max bonus varian SLOT 30%, namun S&K poin 3 menyatakan 'Bonus " +
+        "diberikan khusus permainan SLOT' sementara tabel bonus mencakup " +
+        "CASINO dan SPORTS juga. Tidak jelas apakah S&K poin 3 adalah " +
+        "kesalahan atau hanya berlaku untuk subset tertentu.";
+      const t3 =
+        "Terdapat inkonsistensi antara S&K poin 3 ('Bonus diberikan khusus " +
+        "permainan SLOT') dengan keberadaan varian CASINO dan SPORTS di " +
+        "tabel bonus. Perlu klarifikasi apakah S&K poin 3 adalah kesalahan " +
+        "copy-paste atau memang ada pembatasan tambahan.";
+      const items = [
+        mk("a-1", "ambiguity", t1),
+        mk("c-1", "contradiction", t2),
+        mk("w-1", "warning", t3),
+      ];
+      const out = dedupIssueQuestions(items);
+      expect(out).toHaveLength(1);
+      expect(out[0].severity).toBe("contradiction");
+    });
+
+    it("does NOT fold short distinct messages with low token overlap", () => {
+      const a = mk("c1", "contradiction", "Periode promo tidak jelas tanggal hilang");
+      const b = mk("c2", "warning", "Mata uang reward tidak disebut di promo");
+      const out = dedupIssueQuestions([a, b]);
+      expect(out).toHaveLength(2);
+    });
   });
 });
