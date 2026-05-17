@@ -13,6 +13,7 @@ import { describe, it, expect } from "vitest";
 import {
   collectExtractorIssues,
   buildIssueQuestions,
+  dedupIssueQuestions,
   mockedAdminAnswerResolver,
   type AdminVerifyIssueQuestion,
 } from "../admin-verify/extractor-issue-adapter";
