@@ -544,14 +544,15 @@ export function humanizeIssue(
     };
   }
 
-  // E2 — path-less generic.
+  // E2 — path-less generic. Bahasa operasional, bukan klasifikasi struktur data.
   if (isContradiction) {
     return {
-      title: "Ada informasi promo yang saling bertentangan",
-      description: "Sistem menemukan bagian promo yang tidak konsisten.",
-      objectLabel: "Sistem menemukan:",
+      title: "Data promo saling bertentangan",
+      description:
+        "Sistem menemukan dua informasi yang tidak cocok. Admin perlu menentukan mana yang benar.",
+      objectLabel: source ? "Sistem menemukan:" : undefined,
       objectValue: source || undefined,
-      mainQuestion: "Bagian mana yang harus dijadikan acuan?",
+      mainQuestion: "Mana yang harus dipakai?",
       options: CONTRADICTION_RESOLUTION_OPTIONS,
       badge,
       shouldRenderAsAdminQuestion: source.length > 0,
@@ -559,13 +560,13 @@ export function humanizeIssue(
   }
 
   return {
-    title: "Teks atau data dari extractor perlu dikonfirmasi",
+    title: "Data promo perlu dikonfirmasi",
     description:
-      "Sistem menemukan teks/data berikut yang belum jelas cara memasukkannya ke data promo.",
-    objectLabel: "Sistem menemukan:",
+      "Sistem menemukan informasi yang belum jelas. Admin perlu menentukan keputusan final.",
+    objectLabel: source ? "Sistem menemukan:" : undefined,
     objectValue: source || undefined,
-    mainQuestion: "Teks/data di atas seharusnya diperlakukan sebagai apa?",
-    options: GENERIC_CATEGORY_OPTIONS,
+    mainQuestion: "Bagaimana keputusan admin?",
+    options: WARNING_RESOLUTION_OPTIONS,
     badge,
     shouldRenderAsAdminQuestion: source.length > 0,
   };
