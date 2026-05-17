@@ -15,9 +15,7 @@ import type {
   AdminReviewerError,
 } from "../admin-verify/admin-decision-types";
 
-// NOTE: "JSON" is intentionally excluded from the rendered-UI guard because
-// Phase 3 spec explicitly mandates the button label "Terapkan Jawaban ke JSON".
-// All other technical terms remain forbidden in user-visible text.
+// Phase 4: button label is "Terapkan Jawaban" — "JSON" is now forbidden too.
 const FORBIDDEN_TECHNICAL_TERMS = [
   "field_path",
   "schema",
@@ -28,6 +26,7 @@ const FORBIDDEN_TECHNICAL_TERMS = [
   "warning",
   "ambiguity",
   "contradiction",
+  "json",
 ];
 
 function assertNoTechnicalTerms(html: string) {
