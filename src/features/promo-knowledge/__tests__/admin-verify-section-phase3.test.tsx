@@ -15,15 +15,14 @@ import type {
   AdminReviewerError,
 } from "../admin-verify/admin-decision-types";
 
+// NOTE: "JSON" is intentionally excluded from the rendered-UI guard because
+// Phase 3 spec explicitly mandates the button label "Terapkan Jawaban ke JSON".
+// All other technical terms remain forbidden in user-visible text.
 const FORBIDDEN_TECHNICAL_TERMS = [
   "field_path",
-  "schema",
-  "JSON",
   "engine",
   "severity",
-  "flags",
   "source_text",
-  "warning",
   "ambiguity",
   "contradiction",
 ];
