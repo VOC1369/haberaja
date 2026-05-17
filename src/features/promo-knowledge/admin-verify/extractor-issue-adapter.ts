@@ -367,16 +367,29 @@ export function dedupIssueQuestions(
     byPath.set(p, pickWinner(prev, q));
   }
 
-  // ── Phase 2: pathless pass with containment ──────────────────────────
+  // ── Phase 2: pathless pass with containment + token-overlap fold ─────
+  // Token-overlap is STRUCTURAL similarity (split on non-alphanumeric,
+  // lowercase, drop tokens shorter than 3 chars). It is NOT keyword/regex
+  // business logic: no domain words are matched; we only count set overlap
+  // between two flag strings. This catches paraphrases of the same fact
+  // that text-equality / containment cannot see (e.g. extractor emitting
+  // 3 differently worded sentences about the same S&K vs tabel issue).
+  //
+  // Fold rule: containment ratio = |A ∩ B| / min(|A|, |B|) ≥ 0.55, AND
+  // min(|A|, |B|) ≥ 8 distinct tokens to avoid folding short distinct
+  // messages. Higher severity wins, longer text wins on tie.
+  const CONTAINMENT_THRESHOLD = 0.55;
+  const MIN_TOKEN_OVERLAP_SIZE = 8;
   const keptPathless: AdminVerifyIssueQuestion[] = [];
+  const keptTokens: Set<string>[] = [];
   for (const q of pathless) {
     const k = dedupKey(q.source_text ?? "");
     if (k.length === 0) {
       keptPathless.push(q);
+      keptTokens.push(new Set());
       continue;
     }
-    // Try to fold into an existing pathless item via key equality OR
-    // containment in either direction.
+    const tokens = tokenSet(q.source_text ?? "");
     let folded = false;
     for (let i = 0; i < keptPathless.length; i++) {
       const prev = keptPathless[i];
@@ -384,14 +397,59 @@ export function dedupIssueQuestions(
       if (pk.length === 0) continue;
       if (pk === k || pk.includes(k) || k.includes(pk)) {
         keptPathless[i] = pickWinner(prev, q);
+        // Pool tokens so subsequent paraphrases keep matching the cluster.
+        for (const t of tokens) keptTokens[i].add(t);
+        folded = true;
+        break;
+      }
+      const prevTokens = keptTokens[i];
+      const minSize = Math.min(prevTokens.size, tokens.size);
+      if (minSize < MIN_TOKEN_OVERLAP_SIZE) continue;
+      let shared = 0;
+      const [small, large] =
+        prevTokens.size <= tokens.size ? [prevTokens, tokens] : [tokens, prevTokens];
+      for (const t of small) if (large.has(t)) shared++;
+      const containment = shared / minSize;
+      if (containment >= CONTAINMENT_THRESHOLD) {
+        keptPathless[i] = pickWinner(prev, q);
+        for (const t of tokens) keptTokens[i].add(t);
         folded = true;
         break;
       }
     }
-    if (!folded) keptPathless.push(q);
+    if (!folded) {
+      keptPathless.push(q);
+      keptTokens.push(tokens);
+    }
   }
 
   return [...pathOrder.map((p) => byPath.get(p)!), ...keptPathless];
+}
+
+/**
+ * Structural tokenizer: split on non-[A-Za-z0-9], lowercase, drop tokens
+ * shorter than 3 chars. NOT a keyword matcher — no domain vocabulary is
+ * inspected. Used only for set-overlap similarity in dedup.
+ */
+function tokenSet(text: string): Set<string> {
+  const out = new Set<string>();
+  if (typeof text !== "string" || text.length === 0) return out;
+  let buf = "";
+  const flush = () => {
+    if (buf.length >= 3) out.add(buf.toLowerCase());
+    buf = "";
+  };
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    const isAlnum =
+      (c >= 48 && c <= 57) ||
+      (c >= 65 && c <= 90) ||
+      (c >= 97 && c <= 122);
+    if (isAlnum) buf += text[i];
+    else flush();
+  }
+  flush();
+  return out;
 }
 
 /** Severity + length tiebreak winner. Pure. */
