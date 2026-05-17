@@ -423,7 +423,7 @@ untuk data yang berbeda.
         ────────────────────────────────────────────────────────────
         H8. SCOPE PRECONDITION (PER-TIER vs GLOBAL) — STRICT
         ────────────────────────────────────────────────────────────
-        Root `claim_engine.claim_gate_block.*` HANYA boleh diisi jika
+        Root 'claim_engine.claim_gate_block.*' HANYA boleh diisi jika
         sumber menyatakan prasyarat berlaku GLOBAL untuk semua klaim /
         semua level / semua user.
 
