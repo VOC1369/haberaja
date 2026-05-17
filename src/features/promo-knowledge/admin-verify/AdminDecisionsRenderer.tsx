@@ -1,24 +1,29 @@
 /**
- * AdminDecisionsRenderer — Phase 4
- *
- * Pure presentational view + apply state machine PER decision. The actual
- * record mutation happens upstream (apply-admin-decision) — this component
- * owns only the answer/apply-status local state and the wiring.
+ * AdminDecisionsRenderer — global apply button.
  *
  * State map (overall):
  *   idle    → nothing
  *   empty   → "Tidak ada verifikasi tambahan"
  *   loading → "Reviewer sedang menyusun pertanyaan..."
  *   error   → blocking banner with retry
- *   ready   → one AdminDecisionCard per decision (each card has its own apply state)
+ *   ready   → list of AdminDecisionCard (controlled) + 1 global apply button
  *
- * No fallback to legacy flag rendering. No raw signals shown.
+ * The global "Terapkan Semua Jawaban" button is enabled only when every
+ * decision has a selected option. Clicking it applies all decisions
+ * sequentially. Per-decision failures are surfaced inline on the failed
+ * card; their related signals are NOT cleared (handled by the orchestrator).
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, Sparkles, AlertTriangle, Loader2 } from "lucide-react";
+import {
+  ShieldCheck,
+  Sparkles,
+  AlertTriangle,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
 import type {
   AdminDecision,
   AdminDecisionsState,
@@ -35,9 +40,8 @@ export interface AdminDecisionsRendererProps {
   error: AdminReviewerError | null;
   onRetry: () => void;
   /**
-   * Phase 4: called when admin clicks "Terapkan Jawaban" on a card.
-   * Must resolve with `true` on success (renderer marks card as applied)
-   * or `false` on failure (renderer surfaces `errorMessage`).
+   * Called once per answered decision when admin clicks the global button.
+   * Must resolve with `{ ok, errorMessage? }`.
    */
   onApplyDecision?: (args: {
     decision: AdminDecision;
@@ -61,6 +65,8 @@ const DEFAULT_ANSWER: AnswerState = {
   errorMessage: null,
 };
 
+type GlobalStatus = "idle" | "applying" | "success" | "partial_error";
+
 export function AdminDecisionsRenderer({
   state,
   decisions,
@@ -69,6 +75,7 @@ export function AdminDecisionsRenderer({
   onApplyDecision,
 }: AdminDecisionsRendererProps) {
   const [answers, setAnswers] = useState<Record<string, AnswerState>>({});
+  const [globalStatus, setGlobalStatus] = useState<GlobalStatus>("idle");
 
   if (state === "idle") return null;
 
@@ -145,28 +152,53 @@ export function AdminDecisionsRenderer({
   const setAnswer = (id: string, patch: Partial<AnswerState>) =>
     setAnswers((prev) => ({ ...prev, [id]: { ...getAnswer(id), ...patch } }));
 
-  const handleApply = async (d: AdminDecision) => {
+  const allAnswered = useMemo(
+    () => decisions.every((d) => (answers[d.id]?.selectedValue ?? "").trim().length > 0),
+    [decisions, answers],
+  );
+
+  const isApplying = globalStatus === "applying";
+  const canApply = !!onApplyDecision && allAnswered && !isApplying;
+
+  const handleApplyAll = async () => {
     if (!onApplyDecision) return;
-    const a = getAnswer(d.id);
-    if (!a.selectedValue.trim()) return;
-    const opt = d.options.find((o) => o.value === a.selectedValue);
-    setAnswer(d.id, { status: "applying", errorMessage: null });
-    const result = await onApplyDecision({
-      decision: d,
-      selectedValue: a.selectedValue,
-      selectedLabel: opt?.label ?? "",
-      note: a.note,
+    setGlobalStatus("applying");
+    // Mark every pending card as applying (visual only; status overwritten per result)
+    setAnswers((prev) => {
+      const next = { ...prev };
+      for (const d of decisions) {
+        const a = next[d.id] ?? DEFAULT_ANSWER;
+        if (a.status !== "applied") {
+          next[d.id] = { ...a, status: "applying", errorMessage: null };
+        }
+      }
+      return next;
     });
-    if (result.ok) {
-      setAnswer(d.id, { status: "applied", errorMessage: null });
-    } else {
-      setAnswer(d.id, {
-        status: "error",
-        errorMessage:
-          result.errorMessage?.trim() ||
-          "Jawaban belum bisa diterapkan. Coba ulang.",
+
+    let anyFailed = false;
+    for (const d of decisions) {
+      const a = answers[d.id] ?? DEFAULT_ANSWER;
+      if (a.status === "applied") continue;
+      const opt = d.options.find((o) => o.value === a.selectedValue);
+      const result = await onApplyDecision({
+        decision: d,
+        selectedValue: a.selectedValue,
+        selectedLabel: opt?.label ?? "",
+        note: a.note,
       });
+      if (result.ok) {
+        setAnswer(d.id, { status: "applied", errorMessage: null });
+      } else {
+        anyFailed = true;
+        setAnswer(d.id, {
+          status: "error",
+          errorMessage:
+            result.errorMessage?.trim() ||
+            "Jawaban belum bisa diterapkan. Coba ulang.",
+        });
+      }
     }
+    setGlobalStatus(anyFailed ? "partial_error" : "success");
   };
 
   return (
@@ -195,15 +227,51 @@ export function AdminDecisionsRenderer({
               selectedValue={a.selectedValue}
               note={a.note}
               onSelect={(value) =>
-                setAnswer(d.id, { selectedValue: value, status: "idle", errorMessage: null })
+                setAnswer(d.id, {
+                  selectedValue: value,
+                  status: a.status === "applied" ? "applied" : "idle",
+                  errorMessage: null,
+                })
               }
               onChangeNote={(note) => setAnswer(d.id, { note })}
-              onApply={onApplyDecision ? () => handleApply(d) : undefined}
-              applyStatus={a.status}
-              applyError={a.errorMessage}
+              status={a.status}
+              errorMessage={a.errorMessage}
+              disabled={isApplying || a.status === "applied"}
             />
           );
         })}
+      </div>
+
+      <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+        <div className="flex-1 min-w-0">
+          {globalStatus === "success" ? (
+            <p className="text-xs text-success flex items-center gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+              <span>Jawaban berhasil diterapkan.</span>
+            </p>
+          ) : globalStatus === "partial_error" ? (
+            <p className="text-xs text-destructive flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                Beberapa jawaban belum bisa diterapkan. Periksa kembali pilihan Anda.
+              </span>
+            </p>
+          ) : !allAnswered ? (
+            <p className="text-xs text-muted-foreground">
+              Jawab semua pertanyaan untuk melanjutkan.
+            </p>
+          ) : null}
+        </div>
+        <Button onClick={handleApplyAll} disabled={!canApply}>
+          {isApplying ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+              Menerapkan jawaban...
+            </>
+          ) : (
+            "Terapkan Semua Jawaban"
+          )}
+        </Button>
       </div>
     </Card>
   );
