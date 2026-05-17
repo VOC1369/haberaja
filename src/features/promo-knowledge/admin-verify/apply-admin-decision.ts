@@ -49,6 +49,8 @@ export interface ApplyAdminDecisionResult {
   record?: PkV10Record;
   applied_patches?: AppliedPatchSummary[];
   errors?: string[];
+  /** Reviewer/resolver clarification questions, separated from raw errors. */
+  unresolved_questions?: string[];
 }
 
 /**
@@ -138,6 +140,7 @@ export async function applyAdminDecision(
         resolved.unresolved_questions && resolved.unresolved_questions.length > 0
           ? resolved.unresolved_questions
           : ["no actionable patch"],
+      unresolved_questions: resolved.unresolved_questions ?? [],
     };
   }
 
@@ -152,7 +155,11 @@ export async function applyAdminDecision(
   });
 
   if (!applyResult.ok || !applyResult.record) {
-    return { ok: false, errors: applyResult.errors ?? ["apply failed"] };
+    return {
+      ok: false,
+      errors: applyResult.errors ?? ["apply failed"],
+      unresolved_questions: resolved.unresolved_questions ?? [],
+    };
   }
 
   // 3. Clear related signals (AFTER successful apply).
