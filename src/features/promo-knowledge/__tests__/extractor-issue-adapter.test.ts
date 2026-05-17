@@ -144,4 +144,89 @@ describe("PR-18 extractor-issue-adapter", () => {
       expect(q.requires_llm_resolution).toBe(true);
     }
   });
+
+  // ──────────────────────────────────────────────────────────────────
+  // Cross-bucket dedup (contradiction > ambiguity > warning)
+  // ──────────────────────────────────────────────────────────────────
+  describe("cross-bucket dedup", () => {
+    it("collapses duplicate warning + contradiction into one contradiction", () => {
+      const text =
+        "S&K khusus SLOT tidak konsisten dengan tabel CASINO/SPORTS";
+      const rec = buildRec({
+        warnings: [text],
+        contradictions: [text],
+      });
+      const issues = collectExtractorIssues(rec);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].severity).toBe("contradiction");
+
+      const qs = buildIssueQuestions(rec);
+      expect(qs).toHaveLength(1);
+      expect(qs[0].severity).toBe("contradiction");
+    });
+
+    it("collapses duplicate ambiguity + warning into ambiguity", () => {
+      const text = "Periode promo tidak jelas";
+      const rec = buildRec({
+        warnings: [text],
+        ambiguity: [text],
+      });
+      const issues = collectExtractorIssues(rec);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].severity).toBe("ambiguity");
+    });
+
+    it("dedup is whitespace + case insensitive", () => {
+      const rec = buildRec({
+        warnings: ["  Foo   bar BAZ  "],
+        contradictions: ["foo bar baz"],
+      });
+      const issues = collectExtractorIssues(rec);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].severity).toBe("contradiction");
+    });
+
+    it("dedup strips leading dotted.path prefix", () => {
+      const rec = buildRec({
+        warnings: ["reward_engine.currency: nilai tidak dikenali"],
+        contradictions: ["nilai tidak dikenali"],
+      });
+      const issues = collectExtractorIssues(rec);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].severity).toBe("contradiction");
+    });
+
+    it("keeps distinct issues separate when text differs", () => {
+      const rec = buildRec({
+        warnings: ["Periode promo tidak jelas"],
+        contradictions: [
+          "S&K khusus SLOT tidak konsisten dengan tabel CASINO/SPORTS",
+        ],
+      });
+      const issues = collectExtractorIssues(rec);
+      expect(issues).toHaveLength(2);
+      const sevs = issues.map((i) => i.severity).sort();
+      expect(sevs).toEqual(["contradiction", "warning"]);
+    });
+
+    it("regression — SLOT vs CASINO/SPORTS double-emit produces ONE card", () => {
+      const factual =
+        "S&K point 3 menyebut 'Bonus diberikan khusus permainan SLOT', " +
+        "namun tabel bonus mencakup CASINO dan SPORTS. " +
+        "Kontradiksi antara S&K dan tabel bonus.";
+      const rec = buildRec({
+        warnings: [factual],
+        contradictions: [factual],
+      });
+      const qs = buildIssueQuestions(rec);
+      expect(qs).toHaveLength(1);
+      expect(qs[0].severity).toBe("contradiction");
+      expect(qs[0].source_text).toBe(factual);
+    });
+
+    it("clean record stays empty (no template regression)", () => {
+      expect(collectExtractorIssues(buildRec())).toEqual([]);
+      expect(buildIssueQuestions(buildRec())).toEqual([]);
+    });
+  });
 });

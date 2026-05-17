@@ -178,9 +178,52 @@ function readArray(rec: PkV10Record, path: string[]): string[] {
   return Array.isArray(cur) ? (cur.filter((x) => typeof x === "string") as string[]) : [];
 }
 
+/**
+ * Severity priority for cross-bucket dedup.
+ * contradiction (3) > ambiguity (2) > warning (1).
+ */
+const SEVERITY_PRIORITY: Record<ExtractorIssueSeverity, number> = {
+  warning: 1,
+  ambiguity: 2,
+  contradiction: 3,
+};
+
+/**
+ * Build a canonical dedup key for an extractor flag.
+ * Pure structural normalization — NO keyword/regex business logic:
+ *   - strip leading "dotted.path:" prefix (already used elsewhere)
+ *   - lowercase
+ *   - collapse all whitespace runs to a single space
+ *   - trim
+ * Severity is intentionally NOT part of the key, so the same fact
+ * emitted to two buckets collapses into one issue.
+ */
+function dedupKey(text: string): string {
+  if (typeof text !== "string") return "";
+  const stripped = extractDottedPathPrefix(text)
+    ? text.slice(text.indexOf(":") + 1)
+    : text;
+  // Whitespace normalization (structural, not keyword inference).
+  const parts: string[] = [];
+  let buf = "";
+  for (let i = 0; i < stripped.length; i++) {
+    const c = stripped.charCodeAt(i);
+    const isWs = c === 32 || c === 9 || c === 10 || c === 13;
+    if (isWs) {
+      if (buf.length > 0) {
+        parts.push(buf);
+        buf = "";
+      }
+    } else {
+      buf += stripped[i];
+    }
+  }
+  if (buf.length > 0) parts.push(buf);
+  return parts.join(" ").toLowerCase();
+}
+
 export function collectExtractorIssues(rec: PkV10Record | null): ExtractorIssue[] {
   if (!rec) return [];
-  const out: ExtractorIssue[] = [];
 
   const groups: Array<{ sev: ExtractorIssueSeverity; path: string[] }> = [
     { sev: "warning", path: ["readiness_engine", "validation_block", "warnings"] },
@@ -188,20 +231,66 @@ export function collectExtractorIssues(rec: PkV10Record | null): ExtractorIssue[
     { sev: "contradiction", path: ["readiness_engine", "observability_block", "contradiction_flags"] },
   ];
 
+  // Phase 1 — collect raw with original bucket index for stable task_id.
+  type Raw = ExtractorIssue & { _key: string };
+  const raw: Raw[] = [];
   for (const g of groups) {
     const items = readArray(rec, g.path);
     items.forEach((text, idx) => {
       const task_id = `${g.sev}-${idx}-${shortHash(text)}`;
-      out.push({
+      raw.push({
         task_id,
         severity: g.sev,
         source_text: text,
         source_path: SOURCE_PATHS[g.sev],
+        _key: dedupKey(text),
       });
     });
   }
 
-  return out;
+  // Phase 2 — dedup cross-bucket. Empty key (defensive) is never deduped.
+  const winners = new Map<string, Raw>();
+  const passthrough: Raw[] = [];
+  for (const iss of raw) {
+    if (iss._key.length === 0) {
+      passthrough.push(iss);
+      continue;
+    }
+    const prev = winners.get(iss._key);
+    if (!prev) {
+      winners.set(iss._key, iss);
+      continue;
+    }
+    const prevPri = SEVERITY_PRIORITY[prev.severity];
+    const curPri = SEVERITY_PRIORITY[iss.severity];
+    if (curPri > prevPri) {
+      // Higher severity wins. Preserve longest evidence text.
+      const merged: Raw = {
+        ...iss,
+        source_text:
+          iss.source_text.length >= prev.source_text.length
+            ? iss.source_text
+            : prev.source_text,
+      };
+      winners.set(iss._key, merged);
+    } else if (curPri === prevPri) {
+      // Same severity — keep the one with longer source_text.
+      if (iss.source_text.length > prev.source_text.length) {
+        winners.set(iss._key, iss);
+      }
+    } else {
+      // Lower priority loses, but may upgrade the kept issue's evidence
+      // if it's strictly longer.
+      if (iss.source_text.length > prev.source_text.length) {
+        winners.set(iss._key, { ...prev, source_text: iss.source_text });
+      }
+    }
+  }
+
+  const deduped: ExtractorIssue[] = [...winners.values(), ...passthrough].map(
+    ({ _key: _omit, ...rest }) => rest,
+  );
+  return deduped;
 }
 
 export function buildIssueQuestions(
