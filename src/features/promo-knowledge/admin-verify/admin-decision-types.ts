@@ -35,11 +35,34 @@ export interface AdminReviewerSignals {
   contradiction_flags: string[];
 }
 
+/**
+ * Snapshot of canonical fields the patcher is actually allowed to touch.
+ * Sent to the reviewer so it cannot invent options that have nothing to
+ * map onto in the stored record (e.g. "renumber poin 7/8" when the
+ * canonical array stores items without explicit numbering).
+ */
+export interface AdminReviewerCanonicalEditable {
+  /** Current items of `terms_engine.conditions_block.terms_conditions`. */
+  terms_conditions?: string[];
+  /** Current value of `trigger_engine.trigger_rule_block.rule_type`. */
+  trigger_rule_type?: string | null;
+  /** Current value of `reward_engine.currency`. */
+  reward_currency?: string | null;
+  /** Per-variant turnover_rule_format values. */
+  variant_turnover_rule_formats?: Array<string | null>;
+  /**
+   * Plain-language list of what the patcher can actually do. The reviewer
+   * MUST only propose options that map to one of these actions.
+   */
+  allowed_actions?: string[];
+}
+
 export interface AdminReviewerContext {
   promo_name?: string;
   promo_type?: string;
   variants_summary?: string;
   raw_content_excerpt?: string;
+  canonical_editable?: AdminReviewerCanonicalEditable;
 }
 
 export interface AdminReviewerRequest {

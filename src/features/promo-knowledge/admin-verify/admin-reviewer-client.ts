@@ -72,6 +72,59 @@ export function extractAdminReviewerContext(
     promo_type: promo?.promo_type || undefined,
     variants_summary: variants || undefined,
     raw_content_excerpt: raw ? raw.slice(0, MAX_RAW_EXCERPT) : undefined,
+    canonical_editable: extractCanonicalEditable(record),
+  };
+}
+
+/**
+ * Snapshot of the canonical fields the patcher is allowed to edit, plus a
+ * plain-language list of supported actions. Reviewer uses this to avoid
+ * proposing options that cannot be applied (e.g. "renumber" when the
+ * canonical array has no numbering to match against).
+ */
+function extractCanonicalEditable(
+  record: PkV10Record,
+): NonNullable<AdminReviewerContext["canonical_editable"]> {
+  const rec = record as unknown as {
+    trigger_engine?: { trigger_rule_block?: { rule_type?: string } };
+    reward_engine?: { currency?: string | null };
+    terms_engine?: { conditions_block?: { terms_conditions?: unknown } };
+    variant_engine?: {
+      items_block?: { subcategories?: Array<{ turnover_rule_format?: string | null }> };
+    };
+  };
+
+  const rawTerms = rec.terms_engine?.conditions_block?.terms_conditions;
+  const terms = Array.isArray(rawTerms)
+    ? rawTerms
+        .filter((x): x is string => typeof x === "string")
+        .slice(0, 40)
+        .map((s) => (s.length > 240 ? s.slice(0, 240) + "…" : s))
+    : undefined;
+
+  const subs = rec.variant_engine?.items_block?.subcategories;
+  const variantTurnover = Array.isArray(subs)
+    ? subs.map((s) =>
+        typeof s?.turnover_rule_format === "string" ? s.turnover_rule_format : null,
+      )
+    : undefined;
+
+  const allowed_actions: string[] = [
+    "Ganti teks satu item Syarat & Ketentuan dengan teks lain (item tersebut harus benar-benar ada di daftar canonical yang diberikan).",
+    "Ubah nilai 'rule_type' pada trigger menjadi salah satu enum yang valid.",
+    "Ubah 'currency' pada reward menjadi kode ISO 3-huruf.",
+    "Ubah 'turnover_rule_format' per varian ke salah satu nilai yang diizinkan.",
+    "Tidak bisa menambah / menghapus item di daftar canonical pada fase ini.",
+    "Tidak bisa menulis ulang seluruh daftar Syarat & Ketentuan sekaligus.",
+    "Tidak bisa mengubah penomoran item jika item canonical tidak memiliki nomor eksplisit.",
+  ];
+
+  return {
+    terms_conditions: terms,
+    trigger_rule_type: rec.trigger_engine?.trigger_rule_block?.rule_type ?? null,
+    reward_currency: rec.reward_engine?.currency ?? null,
+    variant_turnover_rule_formats: variantTurnover,
+    allowed_actions,
   };
 }
 

@@ -82,6 +82,18 @@ ATURAN KEPUTUSAN:
 - Selalu sertakan opsi terakhir { "label": "Saya ingin menjelaskan manual", "value": "manual" }.
 - decision_type adalah enum internal — boleh dipakai HANYA di field "decision_type", tidak boleh muncul di teks lain.
 
+ATURAN OPSI HARUS BISA DITERAPKAN (WAJIB):
+- Sistem hanya bisa mengubah data canonical yang diberikan di "context.canonical_editable".
+- Baca "context.canonical_editable.allowed_actions" sebelum membuat opsi.
+- JANGAN PERNAH menawarkan opsi yang tidak bisa dipetakan ke salah satu allowed_actions tersebut.
+- Contoh terlarang: menawarkan "lanjutkan penomoran menjadi poin 9 dan 10" padahal "context.canonical_editable.terms_conditions" berisi item-item tanpa nomor eksplisit. Sistem tidak akan bisa menerapkannya.
+- Contoh terlarang: menawarkan "tulis ulang seluruh Syarat & Ketentuan" — sistem tidak mengizinkan rewrite massal.
+- Jika masalah yang terdeteksi memang tidak punya tindakan canonical yang cocok, buat opsi yang tetap aman, misalnya:
+  1. "Abaikan masalah ini karena data tersimpan sudah benar."
+  2. "Tandai sebagai catatan admin saja."
+  3. "Saya ingin menjelaskan manual."
+- Untuk opsi yang mengganti teks satu item Syarat & Ketentuan, pastikan teks lama yang dimaksud BENAR-BENAR muncul persis di "context.canonical_editable.terms_conditions".
+
 Kembalikan HANYA objek JSON. Tanpa markdown. Tanpa komentar.`;
 
 type Signals = {
