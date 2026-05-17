@@ -320,6 +320,93 @@ export function buildIssueQuestions(
 }
 
 /**
+ * FINAL-PASS DEDUP for the merged AdminVerifyIssueQuestion[] (extractor + F3).
+ *
+ * The in-bucket dedup inside `collectExtractorIssues` is keyed on the raw
+ * `source_text`. That collapses literal double-emits, but it does NOT collapse:
+ *   (a) extractor + F3 referring to the same canonical path with different
+ *       wording (e.g. F3 emits "Path: ...\nNilai saat ini: ...\nAllowed ...",
+ *       extractor emits a free-text contradiction about the same path), or
+ *   (b) two different worded flags about the same fact when one text is
+ *       fully contained inside the other.
+ *
+ * Rules (pure structural — NO regex / keyword business logic):
+ *   1. Primary key = `affected_paths[0]` when present.
+ *      Two items with the same canonical path collapse into one. Higher
+ *      severity wins (contradiction > ambiguity > warning); on tie, the
+ *      item with the longer `source_text` wins.
+ *   2. Path-less items are deduped by normalized `source_text`. Containment
+ *      (one normalized text fully contained in the other) also collapses,
+ *      with the longer text kept and the higher severity preserved.
+ *   3. Order is preserved by first-seen-key.
+ *
+ * NEVER mutates inputs. NEVER touches the record. Presentation layer only.
+ */
+export function dedupIssueQuestions(
+  items: AdminVerifyIssueQuestion[],
+): AdminVerifyIssueQuestion[] {
+  if (!Array.isArray(items) || items.length === 0) return [];
+
+  // ── Phase 1: path-keyed pass ─────────────────────────────────────────
+  const byPath = new Map<string, AdminVerifyIssueQuestion>();
+  const pathOrder: string[] = [];
+  const pathless: AdminVerifyIssueQuestion[] = [];
+
+  for (const q of items) {
+    const p = (q.affected_paths && q.affected_paths[0]) || "";
+    if (!p) {
+      pathless.push(q);
+      continue;
+    }
+    const prev = byPath.get(p);
+    if (!prev) {
+      byPath.set(p, q);
+      pathOrder.push(p);
+      continue;
+    }
+    byPath.set(p, pickWinner(prev, q));
+  }
+
+  // ── Phase 2: pathless pass with containment ──────────────────────────
+  const keptPathless: AdminVerifyIssueQuestion[] = [];
+  for (const q of pathless) {
+    const k = dedupKey(q.source_text ?? "");
+    if (k.length === 0) {
+      keptPathless.push(q);
+      continue;
+    }
+    // Try to fold into an existing pathless item via key equality OR
+    // containment in either direction.
+    let folded = false;
+    for (let i = 0; i < keptPathless.length; i++) {
+      const prev = keptPathless[i];
+      const pk = dedupKey(prev.source_text ?? "");
+      if (pk.length === 0) continue;
+      if (pk === k || pk.includes(k) || k.includes(pk)) {
+        keptPathless[i] = pickWinner(prev, q);
+        folded = true;
+        break;
+      }
+    }
+    if (!folded) keptPathless.push(q);
+  }
+
+  return [...pathOrder.map((p) => byPath.get(p)!), ...keptPathless];
+}
+
+/** Severity + length tiebreak winner. Pure. */
+function pickWinner(
+  a: AdminVerifyIssueQuestion,
+  b: AdminVerifyIssueQuestion,
+): AdminVerifyIssueQuestion {
+  const pa = SEVERITY_PRIORITY[a.severity] ?? 0;
+  const pb = SEVERITY_PRIORITY[b.severity] ?? 0;
+  if (pb > pa) return b;
+  if (pa > pb) return a;
+  return (b.source_text ?? "").length > (a.source_text ?? "").length ? b : a;
+}
+
+/**
  * Detect leading "dotted.path: rest" prefix on a flag string.
  * STRICT: no spaces, contains a dot, only [a-zA-Z0-9_.\[\]] chars. NOT a regex
  * keyword scan — this is structural identity, not wording inference.

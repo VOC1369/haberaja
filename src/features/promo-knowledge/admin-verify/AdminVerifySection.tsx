@@ -38,6 +38,7 @@ import { useMemo, useState } from "react";
 import { ShieldCheck, CheckCircle2, Sparkles, AlertTriangle, HelpCircle, GitCompareArrows } from "lucide-react";
 import {
   buildIssueQuestions,
+  dedupIssueQuestions,
   type AdminVerifyIssueQuestion,
 } from "./extractor-issue-adapter";
 import { buildF3ComplianceQuestions } from "./f3-compliance-adapter";
@@ -264,12 +265,19 @@ export function AdminVerifySection({ record, onApply }: AdminVerifySectionProps)
       ...buildIssueQuestions(record),
       ...buildF3ComplianceQuestions(record),
     ];
-    const seen = new Set<string>();
-    return merged.filter((q) => {
-      if (seen.has(q.task_id)) return false;
-      seen.add(q.task_id);
+    // Phase 1: drop literal task_id duplicates (defensive — F3 + extractor
+    // use disjoint id namespaces, but cheap guard).
+    const seenId = new Set<string>();
+    const idUnique = merged.filter((q) => {
+      if (seenId.has(q.task_id)) return false;
+      seenId.add(q.task_id);
       return true;
     });
+    // Phase 2: final-pass dedup across extractor + F3.
+    //   - Same canonical path → collapse (severity priority).
+    //   - Path-less items → collapse on normalized-text equality or
+    //     containment (severity priority).
+    return dedupIssueQuestions(idUnique);
   }, [record]);
 
 
