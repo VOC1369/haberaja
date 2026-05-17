@@ -121,14 +121,17 @@ describe("humanizeIssue — path-first routing", () => {
     expect(labels).not.toContain("Masuk ke Syarat & Ketentuan");
   });
 
-  it("Test 3: no field/path → generic free-text bucket", () => {
+  it("Test 3: no field/path → operational resolution bucket (NOT evidence-classification)", () => {
     const h = humanizeIssue(
       task({ source_text: "Sesuatu yang tidak terkait field manapun." }),
       makeRec(),
     );
-    expect(h.mainQuestion).toMatch(/diperlakukan sebagai apa/i);
+    expect(h.mainQuestion).toMatch(/keputusan admin|mana yang harus dipakai/i);
+    expect(h.mainQuestion).not.toMatch(/diperlakukan sebagai apa/i);
     const labels = (h.options ?? []).map((o) => o.label);
-    expect(labels).toContain("Masuk ke Syarat & Ketentuan");
+    expect(labels).not.toContain("Masuk ke Syarat & Ketentuan");
+    expect(labels).not.toContain("Masuk ke cara klaim");
+    expect(labels).toContain("Gunakan data seperti yang tertulis");
   });
 
   it("Test 4: source_text has 'tanggal' but NO field_key/path → still generic (no inference)", () => {

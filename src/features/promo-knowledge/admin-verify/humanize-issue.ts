@@ -137,25 +137,32 @@ export const CURRENCY_OPTIONS: HumanOption[] = [
   { value: "", label: "Tidak disebutkan di promo" },
 ];
 
+/**
+ * @deprecated Tidak dipakai lagi di fallback. Opsi evidence-classification
+ * ("Masuk ke S&K / tabel / cara klaim") tidak cocok untuk admin operasional.
+ * Diganti CONTRADICTION_RESOLUTION_OPTIONS / WARNING_RESOLUTION_OPTIONS.
+ * Disimpan agar import lama tidak pecah; jangan dipakai untuk render baru.
+ */
 export const GENERIC_CATEGORY_OPTIONS: HumanOption[] = [
-  { value: "terms_conditions", label: "Masuk ke Syarat & Ketentuan" },
-  { value: "variant_table", label: "Masuk ke tabel / paket bonus" },
-  { value: "claim_method", label: "Masuk ke cara klaim" },
-  { value: "turnover_rule", label: "Masuk ke aturan turnover / perhitungan" },
-  { value: "providers_games", label: "Masuk ke provider / game yang berlaku" },
-  { value: "wrong_promo", label: "Ini salah tempel dari promo lain" },
-  { value: "discard", label: "Tidak perlu dimasukkan ke data promo" },
+  { value: "wrong_promo", label: "Anggap ini salah tulis / salah tempel" },
+  { value: "discard", label: "Abaikan data ini dari promo" },
   { value: "manual", label: "Saya ingin menjelaskan manual" },
 ];
 
+/** Opsi resolusi untuk issue contradiction tanpa canonical path. */
 export const CONTRADICTION_RESOLUTION_OPTIONS: HumanOption[] = [
-  {
-    value: "trust_variant_table",
-    label: "Tabel / struktur paket promo yang benar",
-  },
-  { value: "trust_terms", label: "Syarat & Ketentuan yang benar" },
-  { value: "fix_both", label: "Keduanya perlu diperbaiki" },
-  { value: "wrong_promo", label: "Ini salah tempel dari promo lain" },
+  { value: "trust_variant_table", label: "Ikuti tabel / paket promo" },
+  { value: "trust_terms", label: "Ikuti Syarat & Ketentuan" },
+  { value: "wrong_promo", label: "Anggap salah satu bagian salah tulis" },
+  { value: "discard", label: "Abaikan data yang bermasalah" },
+  { value: "manual", label: "Saya ingin menjelaskan manual" },
+];
+
+/** Opsi resolusi untuk issue warning / ambiguity tanpa canonical path. */
+export const WARNING_RESOLUTION_OPTIONS: HumanOption[] = [
+  { value: "trust_as_is", label: "Gunakan data seperti yang tertulis" },
+  { value: "wrong_promo", label: "Anggap data ini salah tulis / salah tempel" },
+  { value: "discard", label: "Abaikan data ini dari promo" },
   { value: "manual", label: "Saya ingin menjelaskan manual" },
 ];
 
@@ -537,14 +544,15 @@ export function humanizeIssue(
     };
   }
 
-  // E2 — path-less generic.
+  // E2 — path-less generic. Bahasa operasional, bukan klasifikasi struktur data.
   if (isContradiction) {
     return {
-      title: "Ada informasi promo yang saling bertentangan",
-      description: "Sistem menemukan bagian promo yang tidak konsisten.",
-      objectLabel: "Sistem menemukan:",
+      title: "Data promo saling bertentangan",
+      description:
+        "Sistem menemukan dua informasi yang tidak cocok. Admin perlu menentukan mana yang benar.",
+      objectLabel: source ? "Sistem menemukan:" : undefined,
       objectValue: source || undefined,
-      mainQuestion: "Bagian mana yang harus dijadikan acuan?",
+      mainQuestion: "Mana yang harus dipakai?",
       options: CONTRADICTION_RESOLUTION_OPTIONS,
       badge,
       shouldRenderAsAdminQuestion: source.length > 0,
@@ -552,13 +560,13 @@ export function humanizeIssue(
   }
 
   return {
-    title: "Teks atau data dari extractor perlu dikonfirmasi",
+    title: "Data promo perlu dikonfirmasi",
     description:
-      "Sistem menemukan teks/data berikut yang belum jelas cara memasukkannya ke data promo.",
-    objectLabel: "Sistem menemukan:",
+      "Sistem menemukan informasi yang belum jelas. Admin perlu menentukan keputusan final.",
+    objectLabel: source ? "Sistem menemukan:" : undefined,
     objectValue: source || undefined,
-    mainQuestion: "Teks/data di atas seharusnya diperlakukan sebagai apa?",
-    options: GENERIC_CATEGORY_OPTIONS,
+    mainQuestion: "Bagaimana keputusan admin?",
+    options: WARNING_RESOLUTION_OPTIONS,
     badge,
     shouldRenderAsAdminQuestion: source.length > 0,
   };
