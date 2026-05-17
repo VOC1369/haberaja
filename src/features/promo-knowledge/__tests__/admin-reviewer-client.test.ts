@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 /**
  * Phase 2 — Admin Reviewer client tests.
  *
@@ -14,6 +13,18 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// Lightweight in-memory localStorage polyfill (vitest env=node).
+class MemStorage {
+  private m = new Map<string, string>();
+  get length() { return this.m.size; }
+  clear() { this.m.clear(); }
+  getItem(k: string) { return this.m.has(k) ? this.m.get(k)! : null; }
+  setItem(k: string, v: string) { this.m.set(k, String(v)); }
+  removeItem(k: string) { this.m.delete(k); }
+  key(i: number) { return Array.from(this.m.keys())[i] ?? null; }
+}
+(globalThis as unknown as { localStorage: Storage }).localStorage = new MemStorage() as unknown as Storage;
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
