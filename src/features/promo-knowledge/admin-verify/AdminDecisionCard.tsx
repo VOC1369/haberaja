@@ -1,23 +1,20 @@
 /**
- * AdminDecisionCard — Phase 3
+ * AdminDecisionCard — controlled, no apply button.
  *
- * Renders ONE AdminDecision from the LLM Admin Reviewer.
+ * Renders ONE AdminDecision. The apply action is global (lives in the
+ * parent renderer). Each card only collects: selected option + optional
+ * admin note. Per-card error message is surfaced inline when the global
+ * apply pass fails specifically for this decision.
  *
- * Hard UI rules (forbidden terms — must never appear as user-visible text):
- *   field_path, schema, JSON, engine, severity, flags, source_text,
- *   warning, ambiguity, contradiction.
- *
- * Phase 3 scope: render-only. The "Terapkan Jawaban ke JSON" button is
- * intentionally disabled with an inline note — the bridge from
- * AdminDecision → PkV10Record patch lands in Phase 4.
+ * Forbidden user-visible terms: field_path, schema, JSON, engine, severity,
+ * flags, source_text, warning, ambiguity, contradiction.
  */
 
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { HelpCircle, AlertCircle, Loader2, CheckCircle2 } from "lucide-react";
+import { HelpCircle, AlertCircle, CheckCircle2 } from "lucide-react";
 import type { AdminDecision } from "./admin-decision-types";
 
 export type AdminDecisionApplyStatus = "idle" | "applying" | "applied" | "error";
@@ -28,9 +25,9 @@ export interface AdminDecisionCardProps {
   note: string;
   onSelect: (value: string) => void;
   onChangeNote: (note: string) => void;
-  onApply?: () => void;
-  applyStatus?: AdminDecisionApplyStatus;
-  applyError?: string | null;
+  status?: AdminDecisionApplyStatus;
+  errorMessage?: string | null;
+  disabled?: boolean;
 }
 
 export function AdminDecisionCard({
@@ -39,14 +36,10 @@ export function AdminDecisionCard({
   note,
   onSelect,
   onChangeNote,
-  onApply,
-  applyStatus = "idle",
-  applyError = null,
+  status = "idle",
+  errorMessage = null,
+  disabled = false,
 }: AdminDecisionCardProps) {
-  const hasSelection = selectedValue.trim().length > 0;
-  const canApply =
-    !!onApply && hasSelection && applyStatus !== "applying" && applyStatus !== "applied";
-
   return (
     <Card className="bg-card border border-border rounded-xl p-6 space-y-5">
       <div className="flex items-start gap-3">
@@ -75,6 +68,7 @@ export function AdminDecisionCard({
             value={selectedValue}
             onValueChange={onSelect}
             className="space-y-2"
+            disabled={disabled}
           >
             {decision.options.map((opt) => {
               const id = `${decision.id}__${opt.value}`;
@@ -107,35 +101,22 @@ export function AdminDecisionCard({
             onChange={(e) => onChangeNote(e.target.value)}
             placeholder="Tulis penjelasan tambahan jika perlu."
             className="min-h-[72px]"
+            disabled={disabled}
           />
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
-        <div className="flex-1 min-w-0">
-          {applyStatus === "error" && applyError ? (
-            <p className="text-xs text-destructive flex items-center gap-2">
-              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-              <span>{applyError}</span>
-            </p>
-          ) : applyStatus === "applied" ? (
-            <p className="text-xs text-success flex items-center gap-2">
-              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-              <span>Jawaban telah diterapkan.</span>
-            </p>
-          ) : null}
-        </div>
-        <Button onClick={onApply} disabled={!canApply} size="sm">
-          {applyStatus === "applying" ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
-              Menerapkan...
-            </>
-          ) : (
-            "Terapkan Jawaban"
-          )}
-        </Button>
-      </div>
+      {status === "error" && errorMessage ? (
+        <p className="text-xs text-destructive flex items-center gap-2">
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          <span>{errorMessage}</span>
+        </p>
+      ) : status === "applied" ? (
+        <p className="text-xs text-success flex items-center gap-2">
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+          <span>Jawaban telah diterapkan.</span>
+        </p>
+      ) : null}
     </Card>
   );
 }
