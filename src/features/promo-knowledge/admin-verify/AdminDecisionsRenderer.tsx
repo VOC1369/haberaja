@@ -39,7 +39,7 @@ interface AnswerState {
 }
 
 const APPLY_BLOCKER_NOTE =
-  "Bridge ke patch JSON sedang dipersiapkan. Jawaban tersimpan lokal.";
+  "Penerapan jawaban ke data sedang dipersiapkan. Jawaban tersimpan lokal.";
 
 export function AdminDecisionsRenderer({
   state,
