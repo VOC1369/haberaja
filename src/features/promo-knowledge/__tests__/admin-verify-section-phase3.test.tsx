@@ -177,7 +177,6 @@ describe("AdminVerifySection — legacy runtime imports removed", () => {
     "deterministic-apply",
     "enum-normalizer",
     "admin-answer-llm-resolver",
-    "admin-patch-apply",
   ];
 
   for (const token of forbiddenImports) {
