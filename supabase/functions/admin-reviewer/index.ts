@@ -346,7 +346,48 @@ export async function handleAdminReviewer(
   return jsonResponse({ decisions: validated.decisions }, 200);
 }
 
+// Defense-in-depth: also require an authenticated user session in code.
+// `verify_jwt = true` (platform) blocks fully-anonymous requests, but accepts
+// any valid JWT — including the public anon key. This extra check restricts
+// the endpoint to real logged-in users only.
+async function requireAuthenticatedUser(req: Request): Promise<Response | null> {
+  const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
+  if (!authHeader || !authHeader.toLowerCase().startsWith("bearer ")) {
+    return jsonResponse({ error: "UNAUTHORIZED", message: "Login diperlukan." }, 401);
+  }
+  const token = authHeader.slice(7).trim();
+  const url = Deno.env.get("SUPABASE_URL");
+  const anon = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!url || !anon) {
+    return jsonResponse(
+      { error: "SERVER_MISCONFIGURED", message: "Reviewer gagal membuat pertanyaan. Coba ulang." },
+      500,
+    );
+  }
+  try {
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const sb = createClient(url, anon, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data, error } = await sb.auth.getClaims(token);
+    const role = (data?.claims as { role?: string } | undefined)?.role;
+    if (error || !data?.claims || role !== "authenticated") {
+      return jsonResponse({ error: "UNAUTHORIZED", message: "Sesi tidak valid." }, 401);
+    }
+  } catch {
+    return jsonResponse({ error: "UNAUTHORIZED", message: "Sesi tidak valid." }, 401);
+  }
+  return null;
+}
+
 // Only start the HTTP server when run as the entrypoint (not when imported by tests).
 if (import.meta.main) {
-  serve((req) => handleAdminReviewer(req));
+  serve(async (req) => {
+    if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+    if (req.method === "POST") {
+      const denied = await requireAuthenticatedUser(req);
+      if (denied) return denied;
+    }
+    return handleAdminReviewer(req);
+  });
 }
