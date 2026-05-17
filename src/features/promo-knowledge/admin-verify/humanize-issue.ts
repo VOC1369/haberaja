@@ -137,25 +137,32 @@ export const CURRENCY_OPTIONS: HumanOption[] = [
   { value: "", label: "Tidak disebutkan di promo" },
 ];
 
+/**
+ * @deprecated Tidak dipakai lagi di fallback. Opsi evidence-classification
+ * ("Masuk ke S&K / tabel / cara klaim") tidak cocok untuk admin operasional.
+ * Diganti CONTRADICTION_RESOLUTION_OPTIONS / WARNING_RESOLUTION_OPTIONS.
+ * Disimpan agar import lama tidak pecah; jangan dipakai untuk render baru.
+ */
 export const GENERIC_CATEGORY_OPTIONS: HumanOption[] = [
-  { value: "terms_conditions", label: "Masuk ke Syarat & Ketentuan" },
-  { value: "variant_table", label: "Masuk ke tabel / paket bonus" },
-  { value: "claim_method", label: "Masuk ke cara klaim" },
-  { value: "turnover_rule", label: "Masuk ke aturan turnover / perhitungan" },
-  { value: "providers_games", label: "Masuk ke provider / game yang berlaku" },
-  { value: "wrong_promo", label: "Ini salah tempel dari promo lain" },
-  { value: "discard", label: "Tidak perlu dimasukkan ke data promo" },
+  { value: "wrong_promo", label: "Anggap ini salah tulis / salah tempel" },
+  { value: "discard", label: "Abaikan data ini dari promo" },
   { value: "manual", label: "Saya ingin menjelaskan manual" },
 ];
 
+/** Opsi resolusi untuk issue contradiction tanpa canonical path. */
 export const CONTRADICTION_RESOLUTION_OPTIONS: HumanOption[] = [
-  {
-    value: "trust_variant_table",
-    label: "Tabel / struktur paket promo yang benar",
-  },
-  { value: "trust_terms", label: "Syarat & Ketentuan yang benar" },
-  { value: "fix_both", label: "Keduanya perlu diperbaiki" },
-  { value: "wrong_promo", label: "Ini salah tempel dari promo lain" },
+  { value: "trust_variant_table", label: "Ikuti tabel / paket promo" },
+  { value: "trust_terms", label: "Ikuti Syarat & Ketentuan" },
+  { value: "wrong_promo", label: "Anggap salah satu bagian salah tulis" },
+  { value: "discard", label: "Abaikan data yang bermasalah" },
+  { value: "manual", label: "Saya ingin menjelaskan manual" },
+];
+
+/** Opsi resolusi untuk issue warning / ambiguity tanpa canonical path. */
+export const WARNING_RESOLUTION_OPTIONS: HumanOption[] = [
+  { value: "trust_as_is", label: "Gunakan data seperti yang tertulis" },
+  { value: "wrong_promo", label: "Anggap data ini salah tulis / salah tempel" },
+  { value: "discard", label: "Abaikan data ini dari promo" },
   { value: "manual", label: "Saya ingin menjelaskan manual" },
 ];
 
