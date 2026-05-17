@@ -38,6 +38,7 @@ import { useMemo, useState } from "react";
 import { ShieldCheck, CheckCircle2, Sparkles, AlertTriangle, HelpCircle, GitCompareArrows } from "lucide-react";
 import {
   buildIssueQuestions,
+  dedupIssueQuestions,
   type AdminVerifyIssueQuestion,
 } from "./extractor-issue-adapter";
 import { buildF3ComplianceQuestions } from "./f3-compliance-adapter";
